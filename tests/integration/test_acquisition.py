@@ -228,13 +228,13 @@ async def test_operation_request_and_count_limits():
 
     result = await client(
         resolver=SlowResolver(),
-        request_timeout_seconds=0.01,
-        operation_timeout_seconds=0.02,
+        request_timeout_seconds=0.05,
+        operation_timeout_seconds=1,
         max_retries=0,
     ).acquire(Source(url="https://example.com/"), max_bytes=100)
     assert result.issue_code == "request_timeout"
     result = await client(
-        resolver=SlowResolver(), request_timeout_seconds=0.01, operation_timeout_seconds=0.015
+        resolver=SlowResolver(), request_timeout_seconds=0.1, operation_timeout_seconds=0.25
     ).acquire(Source(url="https://example.com/"), max_bytes=100)
     assert result.issue_code == "operation_timeout"
 

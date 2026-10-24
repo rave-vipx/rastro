@@ -39,6 +39,22 @@ own result, including restrictions and failures. Cancellation propagates and
 cancels active workers. Use one client per event loop; reuse it for shared host
 limits. No asynchronous context manager is needed: each transfer closes its session.
 
+### Windows event loop
+
+curl_cffi requires `add_reader` support. The tested HTTP path uses a selector loop,
+which is also selected by `examples/web.py`. For a standalone script:
+
+```python
+import asyncio
+
+with asyncio.Runner(loop_factory=asyncio.SelectorEventLoop) as runner:
+    result = runner.run(extract_article())
+```
+
+This works on the supported Python versions without changing global loop policy.
+Windows' default Proactor loop makes curl_cffi start a fallback selector thread and
+emit a warning; use the selector configuration above when warnings are errors.
+
 ## Policy defaults
 
 | Setting | Default | Meaning |

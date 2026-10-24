@@ -38,4 +38,5 @@ async def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(asyncio.run(main()))
+    with asyncio.Runner(loop_factory=asyncio.SelectorEventLoop) as runner:
+        raise SystemExit(runner.run(main()))

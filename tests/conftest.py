@@ -46,7 +46,8 @@ def pytest_asyncio_loop_factories(config, item):
     def factory():
         with pytest.MonkeyPatch.context() as patch:
             patch.setattr(socket, "socket", _ORIGINAL_SOCKET)
-            return asyncio.new_event_loop()
+            # curl_cffi requires add_reader; use the same portable loop as the HTTP example.
+            return asyncio.SelectorEventLoop()
 
     return {"offline": factory}
 
