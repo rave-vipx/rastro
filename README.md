@@ -20,7 +20,7 @@ Rastro is a Python library for turning web content into **validated records with
 
 The long-term goal is reliable, continuously updated web datasets. We are building that engine incrementally, starting with deterministic extraction and explicit quality signals.
 
-> **Development preview — v0.1 is in progress.** Today, Rastro processes supplied HTML offline using JSON-LD or CSS recipes. Network acquisition, SQLite recipe persistence, and optional Ollama assistance are planned for the remaining v0.1 milestones. No PyPI release has been published by this project.
+> **Development preview — v0.1 is in progress.** Rastro extracts supplied HTML or permitted HTTP sources using JSON-LD or CSS recipes. HTTP is an optional extra with destination controls, robots enforcement, and bounded asynchronous execution. SQLite recipe persistence and optional Ollama assistance remain planned. No PyPI release has been published by this project.
 
 ## Why Rastro?
 
@@ -94,6 +94,17 @@ recipe = Recipe(
 
 See the [getting started guide](docs/getting-started.md), [API contracts](docs/api.md), and [runnable example](examples/offline.py).
 
+## Acquire a permitted source
+
+Install the HTTP extra with `uv sync --extra http`, then create a client with
+`Rastro.web(AcquisitionPolicy(allowed_hosts=("example.com",)))`. Its asynchronous
+`extract` and `extract_many` methods use the same schema, recipe, validation and
+evidence contracts. Hosts must be explicitly permitted; robots rules, redirects,
+DNS destinations, request budgets, and server restrictions are checked.
+
+See the [HTTP guide](docs/acquisition.md) for a complete example, defaults and limitations.
+The transport uses curl_cffi, Scrapling’s HTTP engine; the [ADR](docs/decisions/0002-policy-aware-acquisition.md) explains why DNS pinning requires its public API.
+
 ## What works today
 
 | Capability | Status |
@@ -102,7 +113,7 @@ See the [getting started guide](docs/getting-started.md), [API contracts](docs/a
 | Pydantic validation and per-field provenance | Available |
 | Explicit outcomes, input budgets, JSON logs and processing timings | Available |
 | Offline CLI demo, diagnostics, recipe validation | Available |
-| Scrapling HTTP acquisition and source policies | Planned for v0.1 |
+| Optional HTTP acquisition, source policies and bounded async batches | Available |
 | SQLite recipe storage and deterministic reuse | Planned for v0.1 |
 | Optional local Ollama recipe generation | Planned for v0.1 |
 | Controlled repair and drift monitoring | Planned for v0.2 |

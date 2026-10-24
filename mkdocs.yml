@@ -25,11 +25,13 @@ theme:
 nav:
   - Overview: index.md
   - Getting started: getting-started.md
+  - HTTP acquisition: acquisition.md
   - API and outcomes: api.md
   - Architecture: architecture.md
   - Roadmap: roadmap.md
   - Release checklist: releasing.md
   - Engineering decisions:
+      - HTTP transport boundary: decisions/0002-policy-aware-acquisition.md
       - Offline first slice: decisions/0001-offline-vertical-slice.md
 markdown_extensions:
   - admonition
