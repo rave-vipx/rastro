@@ -44,12 +44,15 @@ class Recipe(Contract):
 
     strategy: Literal["jsonld", "css"]
     fields: dict[str, str] = Field(min_length=1, max_length=100)
-    version: int = Field(default=1, ge=1)
+    version: int = Field(default=1, ge=1, le=2_147_483_647)
+    fallbacks: tuple[Recipe, ...] = Field(default=(), max_length=3)
     item_type: str | None = Field(default=None, min_length=1, max_length=256)
     record_selector: str | None = Field(default=None, min_length=1, max_length=1024)
 
     @model_validator(mode="after")
     def check_mapping(self) -> Self:
+        if any(item.fallbacks or item.version != self.version for item in self.fallbacks):
+            raise ValueError("Fallbacks must be flat and share the recipe version")
         for name, expression in self.fields.items():
             if not name or len(name) > 256 or not expression or len(expression) > 1024:
                 raise ValueError("Field names and expressions must be nonempty and bounded")
