@@ -1441,12 +1441,10 @@ Illustrative target:
 from pydantic import BaseModel
 from rastro import Rastro, Source
 
-
 class Product(BaseModel):
     name: str
     price: float | None = None
     currency: str | None = None
-
 
 rastro = Rastro.local(
     database="sqlite:///rastro.db",

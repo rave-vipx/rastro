@@ -62,6 +62,7 @@ include = ["/src", "/tests", "/examples", "/docs", "/README.md", "/LICENSE", "/C
 required-version = ">=0.13.1,<0.14"
 
 [tool.ruff]
+extend-exclude = ["RASTRO_MASTER_SPEC.md"]
 target-version = "py312"
 line-length = 100
 
