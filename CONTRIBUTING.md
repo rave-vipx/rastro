@@ -19,7 +19,12 @@ uv sync --locked --group docs
 uv run rastro demo
 ```
 
-Create a short-lived branch. Keep each commit focused, with a descriptive `feat:`, `fix:`, `test:`, or `docs:` message. Commit `uv.lock` whenever dependency resolution changes.
+Create a short-lived branch from `staging` and target `staging` in your pull request.
+`staging` is the integration branch: CI runs on every push and PR, and passing checks
+are required before merging. Promote reviewed changes to `main` through a separate
+PR; documentation deploys only from `main`.
+
+Keep each commit focused, with a descriptive `feat:`, `fix:`, `test:`, or `docs:` message. Commit `uv.lock` whenever dependency resolution changes.
 
 ## Verify
 
