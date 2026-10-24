@@ -39,7 +39,11 @@ def test_validate_recipe(tmp_path, capsys, recipe):
     assert json.loads(capsys.readouterr().out)["strategy"] == "jsonld"
 
 
-@pytest.mark.parametrize("content", [None, '{"code":"PRIVATE"}', "x" * 65_537])
+@pytest.mark.parametrize(
+    "content",
+    [None, '{"code":"PRIVATE"}', "x" * 65_537],
+    ids=["missing-file", "invalid-recipe", "oversized-recipe"],
+)
 def test_invalid_recipe_fails_safely(tmp_path, capsys, content):
     path = tmp_path / "recipe.json"
     if content is not None:
