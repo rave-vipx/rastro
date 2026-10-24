@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 340" role="img" aria-labelledby="title desc">
+  <title id="title">Rastro — The open source web data engine</title>
+  <desc id="desc">An orange path links source nodes to structured data on a dark green background.</desc>
+  <defs><pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0V32" fill="none" stroke="#213b35" stroke-width="1"/></pattern></defs>
+  <rect width="1200" height="340" rx="20" fill="#102b25"/>
+  <rect width="1200" height="340" rx="20" fill="url(#grid)"/>
+  <g fill="none" stroke="#ffab66" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M860 90h60v80h80v80h105"/><path d="M860 250h60v-80" opacity=".45"/><path d="M1000 170h105" opacity=".45"/>
+    <circle cx="850" cy="90" r="10" fill="#102b25"/><circle cx="850" cy="250" r="10" fill="#102b25"/>
+    <rect x="1094" y="154" width="30" height="30" rx="6" fill="#102b25"/><rect x="1094" y="234" width="30" height="30" rx="6" fill="#102b25"/>
+  </g>
+  <text x="70" y="100" fill="#ffab66" font-family="system-ui,sans-serif" font-size="17" letter-spacing="4">THE OPEN SOURCE WEB DATA ENGINE</text>
+  <text x="64" y="211" fill="#f4f1e9" font-family="system-ui,sans-serif" font-size="100" font-weight="700" letter-spacing="-5">rastro</text>
+  <text x="70" y="270" fill="#b7cbc1" font-family="system-ui,sans-serif" font-size="25">Web data, with evidence.</text>
+</svg>

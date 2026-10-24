@@ -1,0 +1,73 @@
+# API and result contracts
+
+## `Rastro`
+
+```python
+Rastro(*, parser=None, limits=None)
+Rastro.extract_html(html, *, source, schema, recipe)
+```
+
+`html` is a UTF-8-compatible Python string. `schema` is a Pydantic `BaseModel` subclass with declared fields. `recipe.fields` maps model field names to extraction expressions. Aliases and root models are outside this milestone's supported schema contract. Custom validators run as trusted caller code.
+
+The call is synchronous, does no fetching or persistence, and returns `ExtractionResult[YourModel]`. Parser injection is an infrastructure seam for trusted adapters implementing `DocumentParser`.
+
+## Inputs
+
+| Object | Fields and behavior |
+| --- | --- |
+| `Source` | HTTP(S) `url`, `locale` (default `und`), `timezone` (default `UTC`). Credentials are rejected. Region values are metadata, not localization or egress controls yet. |
+| `Recipe` | `strategy` (`jsonld` or `css`), required `fields`, positive `version` (default `1`), optional `item_type` for JSON-LD, required `record_selector` for CSS. |
+| `Limits` | `max_html_bytes` (2,000,000), `max_records` (1,000), `max_jsonld_blocks` (100). |
+
+CSS fields must end in `::text` or `::attr(name)` and match at most one value in each record. Multiple matches reject the record as ambiguous, even if the values happen to be equal. Missing matches omit the field; Pydantic decides whether the omission is allowed. CSS `::text` follows Scrapling's direct-text semantics; it does not join descendant text automatically.
+
+JSON-LD type matching is exact and accepts an `@type` string or array. Nested field values are traversed only by explicit JSON pointers. The object count budget includes filtered-out objects to bound scanning. Malformed blocks, duplicate JSON keys, and nonstandard `NaN`/`Infinity` values are reported as invalid JSON-LD.
+
+Recipes serialize using `recipe.model_dump_json()` and load with `Recipe.model_validate_json(text)`. Loading a recipe never evaluates Python. Schema compatibility is checked before parsing.
+
+## Results
+
+`ExtractionResult` contains:
+
+- A unique `job_id`, start/completion timestamps, and `status`.
+- Source URL with query/fragment removed, locale, and timezone metadata.
+- A SHA-256 fingerprint of the schema's canonical JSON Schema.
+- `records`: validated Pydantic models with a dictionary of evidence keyed by observed field name.
+- `issues`: safe categories, candidate indices, and field names where applicable.
+- `metrics`: input bytes, candidate/accepted/rejected counts, extraction/validation/total seconds.
+
+The schema fingerprint does not hash Python validators; custom validator changes need deliberate recipe/version review. Metrics count accepted and rejected **candidates**; malformed metadata blocks are reported separately and do not count as candidates. Timings are local processing measurements, not network or inference metrics.
+
+### Outcomes currently emitted
+
+| Outcome | Meaning |
+| --- | --- |
+| `success` | At least one record accepted and no reported issues. |
+| `partial_success` | At least one record accepted and at least one reported issue. |
+| `missing_data` | No matching candidates or no mapped values were observed. |
+| `invalid_data` | No accepted records; malformed JSON-LD or schema validation failed. |
+| `insufficient_evidence` | No accepted records; ambiguous selection or missing field evidence. |
+
+If all records fail and both ambiguity and validation issues exist, the summary is `insufficient_evidence`; all issues remain available. Network outcomes (`access_restriction`, `transient_failure`, `permanent_failure`) are reserved in the contract and are not emitted by offline parsing.
+
+### Evidence and privacy
+
+Each observed field has a sanitized source URL, observation timestamp, recipe version, extraction method, and locator. JSON-LD locators identify the script index and JSON pointer; CSS locators identify the record selector, match index, and field selector. Pydantic defaults have no source evidence. A custom validator may normalize or transform a value; evidence refers to the original observation path, not an independent proof of the transformed value.
+
+No raw HTML or excerpt is retained. User values and custom validator messages are omitted from diagnostics. Accepted data is intentionally returned to the caller and may be sensitive. URLs can also contain sensitive information in paths. Apply your own access and retention policy.
+
+### Exceptions
+
+`ConfigurationError` reports invalid selector syntax, unknown schema fields, or unsupported aliases. `ResourceLimitError` rejects oversized input or too many candidates/blocks. Both derive from `RastroError`. Invalid public input models raise Pydantic `ValidationError`. Exceptions do not produce a truncated successful result.
+
+Programmer errors in custom validators or adapters propagate. This service does not hide arbitrary application failures.
+
+## Logging
+
+Rastro uses a standard `logging` logger named `rastro` with structlog JSON serialization. It does not configure global logging on import. Enable the logger in your host application, or use CLI `--verbose`.
+
+Each completion event contains a correlation `job_id`, status, accepted/rejected counts, and total processing time. Records, source URLs, and source content are not logged.
+
+## Boundaries
+
+HTML recovery follows Scrapling/libxml behavior; content discarded by its parser is not independently recovered or verified. Input budgets are not a hostile-code sandbox or a wall-clock deadline. Browser rendering, DOM heuristics, automatic fallback discovery, source fetching, recipe persistence, model inference, and durable execution history remain pending.

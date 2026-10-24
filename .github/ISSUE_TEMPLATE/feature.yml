@@ -1,0 +1,23 @@
+name: Feature proposal
+description: Propose a focused improvement aligned with the active roadmap.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem and use case
+      description: What workflow is difficult today? Include a concrete example.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Include an API example, alternatives, and relevant specification requirements.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: How would a test demonstrate that this works? Note relevant privacy and performance constraints.
