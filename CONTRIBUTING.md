@@ -1,6 +1,6 @@
 # Contributing to Rastro
 
-Thanks for helping make web data more reliable. Rastro is at the first milestone of v0.1; the public API may change before a stable release.
+Thanks for helping make web data more reliable. Rastro is in development toward v0.1; the public API may change before a stable release.
 
 ## Find a useful change
 
@@ -32,11 +32,11 @@ uv run python examples/offline.py
 uv run --group docs mkdocs build --strict
 uv build
 uv run twine check dist/*
-uv export --locked --no-dev --no-emit-project --format requirements-txt --output-file /tmp/rastro-runtime.txt
+uv export --locked --extra http --no-dev --no-emit-project --format requirements-txt --output-file /tmp/rastro-runtime.txt
 uv run pip-audit --require-hashes -r /tmp/rastro-runtime.txt
 ```
 
-The audit requires network access. Tests do not: pytest blocks sockets by default. Unit, integration, parser-contract, property, and boundary tests run together. Keep the branch-aware coverage floor at 90% or higher. Add a regression test for each behavior bug. Prefer observable behavior to implementation assertions.
+The audit requires network access. Tests do not: pytest blocks Python sockets and native curl transfers by default. Event-loop construction briefly allows its internal wake-up socket before any task runs. Unit, integration, parser-contract, property, and boundary tests run together. Keep the branch-aware coverage floor at 90% or higher. Add a regression test for each behavior bug. Prefer observable behavior to implementation assertions.
 
 CI tests Python 3.12, 3.13, and 3.14 on Linux, plus Python 3.12 on macOS and Windows. It separately installs the built wheel in a clean environment and runs the public demo.
 

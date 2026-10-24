@@ -2,13 +2,14 @@
 
 ![Rastro — the open source web data engine](assets/rastro-banner.svg)
 
-Rastro converts supplied HTML into validated Python records and explains where each observed field came from. Its long-term goal is reliable, continuously updated web datasets.
+Rastro converts supplied HTML or permitted web sources into validated Python records and explains where each observed field came from. Its long-term goal is reliable, continuously updated web datasets.
 
-**Status: pre-alpha; first v0.1 milestone.** JSON-LD and CSS extraction work offline today. Web acquisition, persistent recipes, and optional local AI are still being built. There is no published package release from this project yet.
+**Status: pre-alpha; v0.1 in progress.** JSON-LD/CSS extraction and optional policy-aware HTTP acquisition are implemented. Persistent recipes and optional local AI remain planned. There is no published package release from this project yet.
 
 ## Start here
 
 - [Run the offline example](getting-started.md).
+- [Acquire permitted URLs](acquisition.md).
 - [Understand results, evidence, and limits](api.md).
 - [See the architecture and tradeoffs](architecture.md).
 - [Follow the milestone plan](roadmap.md).

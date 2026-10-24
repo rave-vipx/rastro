@@ -43,6 +43,31 @@ jobs:
         run: |
           "$RUNNER_TEMP/rastro-wheel/bin/rastro" demo
           "$RUNNER_TEMP/rastro-wheel/bin/rastro" doctor
+          "$RUNNER_TEMP/rastro-wheel/bin/python" -c 'import importlib.util; assert importlib.util.find_spec("curl_cffi") is None'
+      - name: Install HTTP extra from the built wheel
+        run: |
+          for wheel in dist/*.whl; do
+            uv pip install --python "$RUNNER_TEMP/rastro-wheel/bin/python" "${wheel}[http]"
+          done
+      - name: Verify installed HTTP policy without network access
+        working-directory: ${{ runner.temp }}
+        run: |
+          "$RUNNER_TEMP/rastro-wheel/bin/python" - <<'PYTHON'
+          import asyncio
+          from pydantic import BaseModel
+          from rastro import AcquisitionPolicy, Outcome, Rastro, Recipe, Source
+          class Page(BaseModel):
+              title: str
+          async def check():
+              engine = Rastro.web(AcquisitionPolicy(allowed_hosts=("127.0.0.1",)))
+              result = await engine.extract(
+                  source=Source(url="https://127.0.0.1/"), schema=Page,
+                  recipe=Recipe(strategy="css", record_selector="h1", fields={"title": "::text"}),
+              )
+              assert result.status == Outcome.ACCESS_RESTRICTION
+              assert result.issues[0].code == "destination_denied"
+          asyncio.run(check())
+          PYTHON
 
   tests:
     name: Test (${{ matrix.os }}, Python ${{ matrix.python }})
@@ -85,7 +110,7 @@ jobs:
           python-version: '3.12'
           enable-cache: true
       - run: uv sync --locked
-      - run: uv export --locked --no-dev --no-emit-project --format requirements-txt --output-file "$RUNNER_TEMP/rastro-runtime.txt"
+      - run: uv export --locked --extra http --no-dev --no-emit-project --format requirements-txt --output-file "$RUNNER_TEMP/rastro-runtime.txt"
       - run: uv run --no-sync pip-audit --require-hashes -r "$RUNNER_TEMP/rastro-runtime.txt"
 
   gate:
