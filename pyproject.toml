@@ -28,6 +28,9 @@ dependencies = [
   "structlog>=26.1.0,<27",
 ]
 
+[project.optional-dependencies]
+http = ["curl-cffi>=0.16.1,<0.17", "protego>=0.6.2,<0.7"]
+
 [project.urls]
 Homepage = "https://github.com/rave-vipx/rastro"
 Documentation = "https://rave-vipx.github.io/rastro/"
@@ -40,11 +43,13 @@ rastro = "rastro.cli:main"
 
 [dependency-groups]
 dev = [
+  "curl-cffi>=0.16.1,<0.17",
+  "protego>=0.6.2,<0.7",
   "hypothesis>=6,<7",
   "mypy>=1.19,<2",
   "pip-audit>=2.9,<3",
   "pytest>=9,<10",
-  "pytest-asyncio>=1,<2",
+  "pytest-asyncio>=1.4,<2",
   "pytest-cov>=7,<8",
   "pytest-socket>=0.7,<1",
   "ruff>=0.14,<1",

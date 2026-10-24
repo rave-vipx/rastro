@@ -105,9 +105,17 @@ class ExtractionRecord[T: BaseModel](Contract):
 
 
 class Metrics(Contract):
+    acquisition_method: Literal["provided_html", "http"] = "provided_html"
+    acquisition_seconds: float = 0
+    network_seconds: float = 0
+    request_count: int = 0
+    retry_count: int = 0
+    redirect_count: int = 0
+    bytes_received: int = 0
     input_bytes: int
     candidates: int
     accepted: int
+    fields_validated: int = 0
     rejected: int
     extraction_seconds: float
     validation_seconds: float
@@ -115,6 +123,9 @@ class Metrics(Contract):
 
 
 class ExtractionResult[T: BaseModel](Contract):
+    requested_url: str | None = None
+    http_status: int | None = None
+    retry_after_seconds: float | None = None
     job_id: str
     status: Outcome
     source_url: str

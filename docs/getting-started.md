@@ -71,6 +71,10 @@ Always inspect `result.status` and `result.issues`, including when records are p
 
 See the [result contract](api.md) for details.
 
+## Fetch permitted URLs
+
+Use the optional HTTP extra and asynchronous SDK described in the [acquisition guide](acquisition.md). `extract_many` supplies a bounded worker pool, preserves input order, and reports restrictions per source. The runnable `examples/web.py` requires an explicit `--allow-host`.
+
 ## CLI
 
 ```bash
