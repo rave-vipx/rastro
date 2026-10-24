@@ -1,6 +1,6 @@
 # Roadmap and requirement coverage
 
-**Active release: v0.1 — Rastro Engine.** The repository delivers M1 offline extraction and M2 optional policy-aware HTTP acquisition. This is a development preview, not a completed v0.1 release.
+**Active release: v0.1 — Rastro Engine.** The repository delivers M1 offline extraction and M2 optional policy-aware HTTP acquisition, and M3 SQLite recipe memory. This is a development preview, not a completed v0.1 release.
 
 ## v0.1 milestones
 
@@ -12,25 +12,26 @@
 | M4 — Optional intelligence | Ollama adapter, structured candidate recipes, prompt boundary, execution budgets, validation before activation | M2, M3 | No mandatory model; bounded model use; invalid model output cannot become an active recipe |
 | M5 — Release evidence | Competent Scrapling baseline, reproducible results, end-to-end URL example, license/name review, package release | M1–M4 | All v0.1 acceptance criteria demonstrably pass; no unsupported quality/performance claims |
 
-M1 and M2 are implemented with offline regression tests and quality checks. M3–M5 are pending. No release dates are promised.
+M1–M3 are implemented with offline regression tests and quality checks. M4–M5 are pending. No release dates are promised.
 
 ## Current requirement mapping
 
 | Requirement | Evidence / current boundary |
 | --- | --- |
 | INT-001 | Pydantic schemas, supplied HTML, explicit URL acquisition, bounded batches, and acquisition policy. Automatic source discovery remains out of scope. |
-| INT-002 | Partial: explicit deterministic JSON-LD and CSS recipes. Ordered strategy discovery and fallback pending. |
+| INT-002 | Partial: verified memory reuse and bounded explicit JSON-LD/CSS fallback recipes. Automatic strategy discovery remains pending. |
 | INT-003 | Five extraction outcomes plus explicit access restrictions, transient failures, and permanent failures. |
 | INT-004, QUAL-001–004 | Field provenance, Pydantic/custom validation, explicit rejection. No source excerpt retained; defaults have no evidence. |
 | REC-002 | Declarative serialization with unknown/executable fields rejected. |
-| REC-001/003/004 | Pending persistence, lifecycle metadata, schema compatibility and candidate activation workflows. |
+| REC-001/003 | SQLite versions keyed by source/template/schema/region; mappings/fallback definitions, validation-contract references, creation/last-success timestamps and successful-run counts. Advanced lifecycle/health remains v0.2. |
+| REC-004 | Pending M4 AI-generated recipe validation; M3 remembers only successfully validated caller-supplied alternatives. |
 | AI-001–004 | Pending M4; the current engine has no inference path. |
-| GEO-001–003 | Partial: locale drives Accept-Language, timezone is metadata, egress is local. Locale-aware value interpretation and recipe/cache isolation remain pending. |
+| GEO-001–003 | Partial: locale drives Accept-Language, timezone is metadata, egress is local. Recipe memory isolates locale/timezone/region. Locale-aware value interpretation and acquisition caching remain pending. |
 | OBS-001 | Partial: job ID, source metadata, acquisition/network/parsing/validation/total durations, request/record/field counts. Inference and durable history pending. |
 | OBS-002 | JSON completion logs with correlation IDs; no source content in events. |
 | SEC-001/002/003 | Exact host policy, public destination checks, DNS pinning, per-hop validation, robots enforcement, throttling and restriction outcomes. See ADR 0002 and HTTP tests. |
 | SEC-004/005/007/008 | Recipe and diagnostic boundaries, no recipe code execution, input/candidate/request/body/deadline budgets. Process sandboxing remains the host’s responsibility. |
-| SEC-009/010 | No persistent data or management server in M1. Controls required when those subsystems arrive. |
+| SEC-009/010 | Scoped deletion and last-success retention for recipe memory; no management server. External backups and OS access controls remain the host’s responsibility. |
 | DIFF-001 | Pending M5. No comparative performance claims published. |
 
 ## M1 progress record
@@ -51,6 +52,16 @@ M1 and M2 are implemented with offline regression tests and quality checks. M3�
 - **Limitations:** public HTML only; no browser rendering, authenticated sessions, egress selection, discovery crawler, persistence, or inference. DNS and validator threads may finish after cancellation.
 - **Architecture:** [ADR 0002](decisions/0002-policy-aware-acquisition.md).
 - **Next milestone:** M3, SQLite recipe memory and deterministic reuse.
+
+## M3 progress record
+
+- **Milestone:** durable recipe memory and deterministic reuse, v0.1 development preview.
+- **Requirements:** REC-001–003, GEO-003, SEC-004/009; additive OBS-001/002 metadata.
+- **Files:** memory domain/port, SQLite adapter, shared extraction/memory services, SDK, persistence tests, repeated-extraction example and guides.
+- **Evidence:** actual process restart; context/validator revision isolation; fallback activation boundaries; concurrent writes; immutable versions; migrations/corruption; deletion/retention; async offloading, redirects and cancellation. CI also exercises the installed core wheel.
+- **Limitations:** explicit identity tags; no JSON Schema/validator code persisted; success metadata only; no discovery, automatic repair, scheduler or inference. A started storage write can finish after cancellation.
+- **Architecture:** [ADR 0003](decisions/0003-sqlite-recipe-memory.md).
+- **Next milestone:** M4, optional bounded Ollama-assisted recipe generation.
 
 ## Later releases
 

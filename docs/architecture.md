@@ -10,6 +10,8 @@ application.Rastro
        │
        ├── domain: source, recipe, outcomes, evidence, limits
        │
+       ├── ports.RecipeRepository ◄── adapters.SQLiteRecipeRepository
+       │
        ├── ports.DocumentParser ◄── adapters.ScraplingParser
        │
        └── ports.AcquisitionPort ◄── application.WebAcquirer
@@ -27,19 +29,25 @@ The SDK and CLI call the same service. Public imports live in `rastro.__init__`;
 - `domain/models.py`: explicit, serializable contracts and configuration/resource errors.
 - `ports/parser.py`: candidate and parsed-document contracts independent of Scrapling.
 - `adapters/scrapling.py`: deterministic JSON-LD discovery and CSS selection without fetching.
-- `application/engine.py`: validation, evidence, outcomes, metrics, and bounded asynchronous batch workers.
+- `application/engine.py`: public SDK, acquisition orchestration and bounded async batch workers.
+- `application/extraction.py`: deterministic parsing, validation and field evidence.
+- `application/memory.py`: context lookup, explicit fallback attempts and success-only persistence.
+- `domain/memory.py`, `ports/recipes.py`: identity, metadata, errors and repository contract.
+- `adapters/sqlite.py`: transactional versioned persistence, migrations, retention and deletion.
 - `domain/acquisition.py`, `ports/acquisition.py`: policies, pinned destination and transport contracts.
 - `application/acquisition.py`, `application/destinations.py`: source rules, destination checks, retries and budgets.
 - `adapters/dns.py`, `adapters/http.py`: asynchronous system DNS and optional pinned curl_cffi transfers.
 - `cli.py`: offline demo, package diagnostics, and recipe validation.
 
-There are no empty modules for later releases. Add SQLite and inference ports when their milestones implement a real caller and adapter.
+There are no empty modules for later releases. Add inference ports when M4 implements a real caller and adapter.
 
 ## Decisions and references
 
 The [offline first-slice ADR](decisions/0001-offline-vertical-slice.md) explains why the first usable milestone stops before network acquisition.
 
 The [HTTP transport ADR](decisions/0002-policy-aware-acquisition.md) records the Scrapling API limitation that requires using its underlying HTTP engine through the transport port.
+
+The [recipe memory ADR](decisions/0003-sqlite-recipe-memory.md) records identity, validation, versioning, privacy and asynchronous storage decisions.
 
 Implementation references:
 
