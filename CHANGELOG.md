@@ -6,6 +6,11 @@ All notable user-facing changes will be recorded here. No public release has bee
 
 ### Added
 
+- Optional SQLite recipe memory with exact source/template/schema/region identity, immutable versions, success metadata, retention and deletion.
+- Deterministic reuse across restarts in offline and asynchronous SDKs, with worker-thread storage and explicit persistence failures.
+- Bounded explicit fallback recipes; only the alternative validated successfully becomes reusable.
+- Recipe version/reuse/attempt metadata, storage timings, a repeated-extraction example and persistence/security/concurrency tests.
+
 - Optional policy-aware HTTP SDK with exact host allowlists, DNS pinning, robots rules, redirect checks, bounded retries and host pacing.
 - Asynchronous single-source and ordered batch extraction, cancellation, request/body budgets, and explicit network outcomes.
 - Acquisition metrics, regional Accept-Language, HTTP example, and offline transport/security regression tests.
@@ -18,6 +23,6 @@ All notable user-facing changes will be recorded here. No public release has bee
 
 ### Known limitations
 
-- Recipe persistence, Ollama, and the comparison benchmark remain pending.
+- Ollama and the comparison benchmark remain pending. Recipe memory requires explicit template/region/validator revisions; it stores successful-run metadata, not a durable job history.
 - HTTP supports public standard-port HTML sources; no JavaScript, authentication, proxies, or discovery crawling.
 - Schema aliases, automatic recipe discovery, and cross-document synchronization are not supported.

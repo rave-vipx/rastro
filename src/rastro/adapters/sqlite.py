@@ -172,7 +172,7 @@ class SQLiteRecipeRepository:
 
     @staticmethod
     def _check_version(version: int | None) -> None:
-        if version is not None and (isinstance(version, bool) or not 1 <= version <= 2_147_483_647):
+        if version is not None and (type(version) is not int or not 1 <= version <= 2_147_483_647):
             raise ConfigurationError("Recipe version is out of range")
 
     def delete(self, key: RecipeKey, *, version: int | None = None) -> int:

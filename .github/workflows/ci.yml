@@ -44,6 +44,11 @@ jobs:
           "$RUNNER_TEMP/rastro-wheel/bin/rastro" demo
           "$RUNNER_TEMP/rastro-wheel/bin/rastro" doctor
           "$RUNNER_TEMP/rastro-wheel/bin/python" -c 'import importlib.util; assert importlib.util.find_spec("curl_cffi") is None'
+      - name: Verify recipe memory across installed-package restarts
+        working-directory: ${{ runner.temp }}
+        run: |
+          "$RUNNER_TEMP/rastro-wheel/bin/python" "$GITHUB_WORKSPACE/examples/memory.py" --database "$RUNNER_TEMP/rastro-memory.db"
+          "$RUNNER_TEMP/rastro-wheel/bin/python" "$GITHUB_WORKSPACE/examples/memory.py" --database "$RUNNER_TEMP/rastro-memory.db"
       - name: Install HTTP extra from the built wheel
         run: |
           for wheel in dist/*.whl; do

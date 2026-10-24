@@ -20,7 +20,7 @@ Rastro is a Python library for turning web content into **validated records with
 
 The long-term goal is reliable, continuously updated web datasets. We are building that engine incrementally, starting with deterministic extraction and explicit quality signals.
 
-> **Development preview — v0.1 is in progress.** Rastro extracts supplied HTML or permitted HTTP sources using JSON-LD or CSS recipes. HTTP is an optional extra with destination controls, robots enforcement, and bounded asynchronous execution. SQLite recipe persistence and optional Ollama assistance remain planned. No PyPI release has been published by this project.
+> **Development preview — v0.1 is in progress.** Rastro extracts supplied HTML or permitted HTTP sources using JSON-LD or CSS recipes. HTTP is an optional extra with destination controls, robots enforcement, and bounded asynchronous execution. SQLite recipe memory reuses validated strategies across restarts. Optional Ollama assistance remains planned. No PyPI release has been published by this project.
 
 ## Why Rastro?
 
@@ -105,6 +105,15 @@ DNS destinations, request budgets, and server restrictions are checked.
 See the [HTTP guide](docs/acquisition.md) for a complete example, defaults and limitations.
 The transport uses curl_cffi, Scrapling’s HTTP engine; the [ADR](docs/decisions/0002-policy-aware-acquisition.md) explains why DNS pinning requires its public API.
 
+## Remember successful recipes
+
+Supply `repository=SQLiteRecipeRepository("rastro-recipes.db")` to `Rastro` or
+`Rastro.web`. After a successful extraction, omit `recipe` to reuse its validated
+version. Source, schema, locale, timezone, template and region remain isolated.
+
+Run `uv run python examples/memory.py` twice to see reuse across process restarts,
+or read the [recipe memory guide](docs/memory.md) for versions, fallbacks and deletion.
+
 ## What works today
 
 | Capability | Status |
@@ -114,7 +123,7 @@ The transport uses curl_cffi, Scrapling’s HTTP engine; the [ADR](docs/decision
 | Explicit outcomes, input budgets, JSON logs and processing timings | Available |
 | Offline CLI demo, diagnostics, recipe validation | Available |
 | Optional HTTP acquisition, source policies and bounded async batches | Available |
-| SQLite recipe storage and deterministic reuse | Planned for v0.1 |
+| SQLite recipe storage and deterministic reuse | Available |
 | Optional local Ollama recipe generation | Planned for v0.1 |
 | Controlled repair and drift monitoring | Planned for v0.2 |
 | Continuous synchronization | Planned for v0.3 |

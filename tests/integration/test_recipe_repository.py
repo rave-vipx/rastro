@@ -103,12 +103,15 @@ def test_no_urls_records_or_schema_defaults_persisted(tmp_path, source, schema, 
     path = tmp_path / "private.db"
     repo = SQLiteRecipeRepository(path)
     key = RecipeKey.for_source(source, schema)
+    marker = "DELETE_THIS_PRIVATE_SELECTOR"
+    recipe = Recipe(strategy="jsonld", fields={"name": "/" + marker})
     repo.save_success(key, recipe, selected_index=0, at=NOW)
     data = path.read_bytes()
+    assert marker.encode() in data
     for forbidden in [b"private", b"secret", b"example.com", b"https://", b"$defs"]:
         assert forbidden not in data
     assert repo.delete(key) == 1
-    assert recipe.model_dump_json().encode() not in path.read_bytes()
+    assert marker.encode() not in path.read_bytes()
 
 
 def test_configuration_and_timestamp_boundaries(tmp_path, source, schema, recipe):
@@ -120,7 +123,7 @@ def test_configuration_and_timestamp_boundaries(tmp_path, source, schema, recipe
             SQLiteRecipeRepository(tmp_path / "x", timeout=timeout)
     repo = SQLiteRecipeRepository(tmp_path / "x")
     key = RecipeKey.for_source(source, schema)
-    for version in [0, -1, 2**63, True]:
+    for version in [0, -1, 2**63, True, 1.5, "1"]:
         with pytest.raises(ConfigurationError):
             repo.get(key, version=version)
         with pytest.raises(ConfigurationError):
@@ -128,3 +131,71 @@ def test_configuration_and_timestamp_boundaries(tmp_path, source, schema, recipe
     with pytest.raises(ValueError, match="timezone-aware"):
         repo.prune(before=NOW.replace(tzinfo=None))
     assert not (tmp_path / "x").exists()
+
+
+@pytest.mark.parametrize(
+    "column,value",
+    [
+        ("version", 7),
+        ("selected_index", 3),
+        ("last_success_at", "2025-01-01T00:00:00+00:00"),
+        ("payload", '{"strategy":"python","code":"PRIVATE"}'),
+    ],
+)
+def test_corrupt_metadata_cannot_be_reused(tmp_path, source, schema, recipe, column, value):
+    path = tmp_path / "db"
+    repo = SQLiteRecipeRepository(path)
+    key = RecipeKey.for_source(source, schema)
+    repo.save_success(key, recipe, selected_index=0, at=NOW)
+    with closing(sqlite3.connect(path)) as db:
+        # The column comes only from this fixed test parameter list.
+        db.execute(f"UPDATE recipes SET {column} = ?", (value,))
+        db.commit()
+    with pytest.raises(RecipeStorageError):
+        repo.get(key)
+
+
+def test_oversized_serialization_and_unavailable_path_fail_explicitly(tmp_path, source, schema):
+    key = RecipeKey.for_source(source, schema)
+    huge = Recipe(strategy="jsonld", fields={str(i): "/" + "\U0001f600" * 1023 for i in range(100)})
+    with pytest.raises(RecipeStorageError, match="budget"):
+        SQLiteRecipeRepository(tmp_path / "size").save_success(key, huge, selected_index=0, at=NOW)
+    assert not (tmp_path / "size").exists()
+    with pytest.raises(RecipeStorageError):
+        SQLiteRecipeRepository(tmp_path / "missing-parent" / "db").get(key)
+
+
+def test_concurrent_conflicting_writes_preserve_one_definition(tmp_path, source, schema, recipe):
+    repo = SQLiteRecipeRepository(tmp_path / "db")
+    key = RecipeKey.for_source(source, schema)
+    changed = Recipe(strategy="jsonld", fields={"name": "/different"})
+
+    def save(candidate):
+        try:
+            return repo.save_success(key, candidate, selected_index=0, at=NOW)
+        except RecipeConflictError:
+            return None
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(save, (recipe, changed)))
+    winner = next(item for item in results if item is not None)
+    assert sum(item is None for item in results) == 1
+    assert repo.get(key) == winner and winner.successful_runs == 1
+
+
+def test_delete_is_scoped_and_sql_values_are_parameters(tmp_path, source, schema, recipe):
+    repo = SQLiteRecipeRepository(tmp_path / "db")
+    normal = RecipeKey.for_source(source, schema)
+    hostile = normal.model_copy(update={"locale": "x'; DROP TABLE recipes;--"})
+    for key in (normal, hostile):
+        repo.save_success(key, recipe, selected_index=0, at=NOW)
+    assert repo.delete(hostile, version=1) == 1
+    assert repo.get(normal).recipe == recipe
+
+
+def test_migration_records_application_and_schema_version(tmp_path, source, schema):
+    path = tmp_path / "db"
+    assert SQLiteRecipeRepository(path).get(RecipeKey.for_source(source, schema)) is None
+    with closing(sqlite3.connect(path)) as db:
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 1
+        assert db.execute("PRAGMA application_id").fetchone()[0] == 0x52535452
