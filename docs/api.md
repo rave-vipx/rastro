@@ -3,19 +3,24 @@
 ## `Rastro`
 
 ```python
-Rastro(*, parser=None, limits=None)
+Rastro(*, parser=None, limits=None, acquisition=None, policy=None)
+Rastro.web(policy, *, limits=None)
 Rastro.extract_html(html, *, source, schema, recipe)
+await Rastro.extract(*, source, schema, recipe)
+await Rastro.extract_many(sources, *, schema, recipe)
 ```
 
 `html` is a UTF-8-compatible Python string. `schema` is a Pydantic `BaseModel` subclass with declared fields. `recipe.fields` maps model field names to extraction expressions. Aliases and root models are outside this milestone's supported schema contract. Custom validators run as trusted caller code.
 
-The call is synchronous, does no fetching or persistence, and returns `ExtractionResult[YourModel]`. Parser injection is an infrastructure seam for trusted adapters implementing `DocumentParser`.
+The `extract_html` call is synchronous, does no fetching or persistence, and returns `ExtractionResult[YourModel]`. Parser injection is an infrastructure seam for trusted adapters implementing `DocumentParser`.
+
+For HTTP acquisition, construct `Rastro.web(AcquisitionPolicy(...))` and use the asynchronous methods. An injected `AcquisitionPort` is trusted infrastructure; it must enforce its own acquisition policy. See the [HTTP guide](acquisition.md) for budgets, outcomes, cancellation and transport controls.
 
 ## Inputs
 
 | Object | Fields and behavior |
 | --- | --- |
-| `Source` | HTTP(S) `url`, `locale` (default `und`), `timezone` (default `UTC`). Credentials are rejected. Region values are metadata, not localization or egress controls yet. |
+| `Source` | HTTP(S) `url`, `locale` (default `und`), `timezone` (default `UTC`). Credentials are rejected. HTTP uses a valid locale as Accept-Language; timezone remains metadata. Neither controls egress. |
 | `Recipe` | `strategy` (`jsonld` or `css`), required `fields`, positive `version` (default `1`), optional `item_type` for JSON-LD, required `record_selector` for CSS. |
 | `Limits` | `max_html_bytes` (2,000,000), `max_records` (1,000), `max_jsonld_blocks` (100). |
 
@@ -34,9 +39,10 @@ Recipes serialize using `recipe.model_dump_json()` and load with `Recipe.model_v
 - A SHA-256 fingerprint of the schema's canonical JSON Schema.
 - `records`: validated Pydantic models with a dictionary of evidence keyed by observed field name.
 - `issues`: safe categories, candidate indices, and field names where applicable.
-- `metrics`: input bytes, candidate/accepted/rejected counts, extraction/validation/total seconds.
+- `metrics`: input bytes, candidate/accepted/rejected and validated-field counts, extraction/validation/total seconds, plus HTTP acquisition and transfer metrics.
+- For HTTP: sanitized `requested_url`, last `http_status`, and optional `retry_after_seconds`.
 
-The schema fingerprint does not hash Python validators; custom validator changes need deliberate recipe/version review. Metrics count accepted and rejected **candidates**; malformed metadata blocks are reported separately and do not count as candidates. Timings are local processing measurements, not network or inference metrics.
+The schema fingerprint does not hash Python validators; custom validator changes need deliberate recipe/version review. Metrics count accepted and rejected **candidates**; malformed metadata blocks are reported separately and do not count as candidates. Offline timings measure local processing. HTTP adds separate network and acquisition durations; no inference metrics are claimed.
 
 ### Outcomes currently emitted
 
@@ -48,7 +54,7 @@ The schema fingerprint does not hash Python validators; custom validator changes
 | `invalid_data` | No accepted records; malformed JSON-LD or schema validation failed. |
 | `insufficient_evidence` | No accepted records; ambiguous selection or missing field evidence. |
 
-If all records fail and both ambiguity and validation issues exist, the summary is `insufficient_evidence`; all issues remain available. Network outcomes (`access_restriction`, `transient_failure`, `permanent_failure`) are reserved in the contract and are not emitted by offline parsing.
+If all records fail and both ambiguity and validation issues exist, the summary is `insufficient_evidence`; all issues remain available. HTTP additionally emits `access_restriction`, `transient_failure`, and `permanent_failure`; see the [failure policy](acquisition.md#source-rules-and-failures). Offline parsing does not emit network outcomes.
 
 ### Evidence and privacy
 
@@ -66,8 +72,8 @@ Programmer errors in custom validators or adapters propagate. This service does 
 
 Rastro uses a standard `logging` logger named `rastro` with structlog JSON serialization. It does not configure global logging on import. Enable the logger in your host application, or use CLI `--verbose`.
 
-Each completion event contains a correlation `job_id`, status, accepted/rejected counts, and total processing time. Records, source URLs, and source content are not logged.
+Extraction completion events contain a correlation `job_id`, status, accepted/rejected counts, and processing time. HTTP also emits `acquisition_completed` with the same job ID, request/retry counts, and acquisition duration. Records, source URLs, and source content are not logged.
 
 ## Boundaries
 
-HTML recovery follows Scrapling/libxml behavior; content discarded by its parser is not independently recovered or verified. Input budgets are not a hostile-code sandbox or a wall-clock deadline. Browser rendering, DOM heuristics, automatic fallback discovery, source fetching, recipe persistence, model inference, and durable execution history remain pending.
+HTML recovery follows Scrapling/libxml behavior; content discarded by its parser is not independently recovered or verified. Input budgets are not a hostile-code sandbox or a wall-clock deadline. Browser rendering, DOM heuristics, automatic fallback discovery, recipe persistence, model inference, and durable execution history remain pending.

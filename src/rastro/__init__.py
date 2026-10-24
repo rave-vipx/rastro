@@ -3,6 +3,7 @@
 from importlib.metadata import version
 
 from rastro.application.engine import Rastro
+from rastro.domain.acquisition import AcquisitionPolicy
 from rastro.domain.models import (
     ConfigurationError,
     Evidence,
@@ -22,6 +23,7 @@ from rastro.domain.models import (
 __version__ = version("rastro-engine")
 
 __all__ = [
+    "AcquisitionPolicy",
     "ConfigurationError",
     "Evidence",
     "ExtractionRecord",

@@ -6,6 +6,10 @@ All notable user-facing changes will be recorded here. No public release has bee
 
 ### Added
 
+- Optional policy-aware HTTP SDK with exact host allowlists, DNS pinning, robots rules, redirect checks, bounded retries and host pacing.
+- Asynchronous single-source and ordered batch extraction, cancellation, request/body budgets, and explicit network outcomes.
+- Acquisition metrics, regional Accept-Language, HTTP example, and offline transport/security regression tests.
+
 - Offline HTML extraction with explicit JSON-LD and CSS recipes through Scrapling.
 - Typed Pydantic results, field provenance, safe diagnostics, resource limits, and processing timings.
 - CLI demo, environment diagnostics, and declarative recipe validation.
@@ -14,6 +18,6 @@ All notable user-facing changes will be recorded here. No public release has bee
 
 ### Known limitations
 
-- Network acquisition, recipe persistence, Ollama, and the comparison benchmark remain pending.
-- The SDK is synchronous and operates on one supplied HTML document.
+- Recipe persistence, Ollama, and the comparison benchmark remain pending.
+- HTTP supports public standard-port HTML sources; no JavaScript, authentication, proxies, or discovery crawling.
 - Schema aliases, automatic recipe discovery, and cross-document synchronization are not supported.
