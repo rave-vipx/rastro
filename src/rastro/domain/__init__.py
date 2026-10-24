@@ -1,0 +1,1 @@
+"""Rastro domain layer."""

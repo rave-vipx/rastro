@@ -1,0 +1,10 @@
+{
+  "strategy": "jsonld",
+  "version": 1,
+  "item_type": "Product",
+  "fields": {
+    "name": "/name",
+    "price": "/offers/price",
+    "currency": "/offers/priceCurrency"
+  }
+}
