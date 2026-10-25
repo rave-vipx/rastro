@@ -151,7 +151,8 @@ class SQLiteRecipeRepository:
                 "SELECT payload FROM recipes WHERE key = ? AND version = ?",
                 (identity, recipe.version),
             ).fetchone()
-            if existing is not None and existing[0] != payload:
+            # Compare validated definitions so new optional defaults do not conflict with M3 JSON.
+            if existing is not None and Recipe.model_validate_json(existing[0]) != recipe:
                 raise RecipeConflictError("Recipe definition changed; increment its version")
             db.execute(
                 "INSERT INTO recipes VALUES (?, ?, ?, ?, ?, ?, 1) "

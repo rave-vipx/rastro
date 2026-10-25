@@ -20,7 +20,7 @@ Rastro is a Python library for turning web content into **validated records with
 
 The long-term goal is reliable, continuously updated web datasets. We are building that engine incrementally, starting with deterministic extraction and explicit quality signals.
 
-> **Development preview — v0.1 is in progress.** Rastro extracts supplied HTML or permitted HTTP sources using JSON-LD or CSS recipes. HTTP is an optional extra with destination controls, robots enforcement, and bounded asynchronous execution. SQLite recipe memory reuses validated strategies across restarts. Optional Ollama assistance remains planned. No PyPI release has been published by this project.
+> **Development preview — v0.1 is in progress.** Rastro extracts supplied HTML or permitted HTTP sources using JSON-LD or CSS recipes. HTTP is an optional extra with destination controls, robots enforcement, and bounded asynchronous execution. SQLite recipe memory reuses validated strategies across restarts. Optional local Ollama assistance proposes recipes within strict budgets; every candidate is validated before activation. No PyPI release has been published by this project.
 
 ## Why Rastro?
 
@@ -114,6 +114,18 @@ version. Source, schema, locale, timezone, template and region remain isolated.
 Run `uv run python examples/memory.py` twice to see reuse across process restarts,
 or read the [recipe memory guide](docs/memory.md) for versions, fallbacks and deletion.
 
+## Discover a recipe, with optional local assistance
+
+Use `Rastro(discover_recipes=True)` with `await extract_html_async(...)` to discover
+exact-name JSON-LD and microdata mappings without a model. Run
+`uv run python examples/intelligence.py` for a synthetic offline example.
+
+For pages that need assistance, install the `ollama` extra and supply
+`model=OllamaModel("your-installed-model")`. Deterministic extraction runs first;
+Ollama proposes declarative mappings and Rastro validates source evidence and the
+schema before remembering them. Calls, time, context, responses and concurrency are
+bounded. See the [optional intelligence guide](docs/intelligence.md).
+
 ## What works today
 
 | Capability | Status |
@@ -124,7 +136,7 @@ or read the [recipe memory guide](docs/memory.md) for versions, fallbacks and de
 | Offline CLI demo, diagnostics, recipe validation | Available |
 | Optional HTTP acquisition, source policies and bounded async batches | Available |
 | SQLite recipe storage and deterministic reuse | Available |
-| Optional local Ollama recipe generation | Planned for v0.1 |
+| Opt-in JSON-LD/microdata discovery and bounded local Ollama recipe generation | Available; live-model quality evidence pending |
 | Controlled repair and drift monitoring | Planned for v0.2 |
 | Continuous synchronization | Planned for v0.3 |
 | Studio / community recipe Hub | Planned for v0.4 / v0.5 |

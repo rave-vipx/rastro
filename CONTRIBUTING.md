@@ -34,10 +34,11 @@ uv run ruff format --check .
 uv run mypy
 uv run pytest
 uv run python examples/offline.py
+uv run python examples/intelligence.py
 uv run --group docs mkdocs build --strict
 uv build
 uv run twine check dist/*
-uv export --locked --extra http --no-dev --no-emit-project --format requirements-txt --output-file /tmp/rastro-runtime.txt
+uv export --locked --all-extras --no-dev --no-emit-project --format requirements-txt --output-file /tmp/rastro-runtime.txt
 uv run pip-audit --require-hashes -r /tmp/rastro-runtime.txt
 ```
 

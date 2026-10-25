@@ -36,7 +36,7 @@ _LOG = structlog.wrap_logger(
 
 @dataclass(frozen=True)
 class PreparedRecipe:
-    definition: Recipe
+    definition: Recipe | None
     key: RecipeKey | None
     selected_index: int | None
     storage_seconds: float
@@ -55,11 +55,15 @@ class RecipeMemory:
         recipe: Recipe | None,
         context: RecipeContext | None,
         recipe_version: int | None,
+        *,
+        allow_discovery: bool = False,
     ) -> PreparedRecipe:
         started, started_at = perf_counter(), datetime.now(UTC)
         if recipe is not None and recipe_version is not None:
             raise ConfigurationError("recipe_version selects stored recipes; omit recipe")
         if self._repository is None:
+            if allow_discovery and recipe is None and context is None and recipe_version is None:
+                return PreparedRecipe(None, None, None, 0, started, started_at)
             if recipe is None or context is not None or recipe_version is not None:
                 raise ConfigurationError("Recipe reuse and context require a repository")
             return PreparedRecipe(
@@ -74,6 +78,8 @@ class RecipeMemory:
         stored = self._repository.get(key, version=recipe_version)
         storage_seconds = perf_counter() - storage_start
         if stored is None:
+            if allow_discovery and recipe_version is None:
+                return PreparedRecipe(None, key, None, storage_seconds, started, started_at)
             raise RecipeNotFoundError("No validated recipe for this context and version")
         if stored.key != key or (
             recipe_version is not None and stored.recipe.version != recipe_version
@@ -99,6 +105,8 @@ class RecipeMemory:
         limits: Limits,
     ) -> ExtractionResult[T]:
         definition = prepared.definition
+        if definition is None:
+            raise ConfigurationError("Discovery must validate a recipe before memory extraction")
         candidates = (definition, *definition.fallbacks)
         indexes = (
             range(len(candidates))
@@ -117,7 +125,13 @@ class RecipeMemory:
                 limits=limits,
             )
             results.append(result)
-            attempts.append(RecipeAttempt(index=index, status=result.status))
+            attempts.append(
+                RecipeAttempt(
+                    index=index,
+                    status=result.status,
+                    origin="memory" if prepared.selected_index is not None else "explicit",
+                )
+            )
             # A partial dataset is explicit evidence; do not hide it with another strategy.
             if result.records:
                 break

@@ -5,6 +5,7 @@ from importlib.metadata import version
 from rastro.adapters.sqlite import SQLiteRecipeRepository
 from rastro.application.engine import Rastro
 from rastro.domain.acquisition import AcquisitionPolicy
+from rastro.domain.intelligence import InferencePolicy, ModelError, ModelRequest, RecipeProposal
 from rastro.domain.memory import (
     RecipeConflictError,
     RecipeContext,
@@ -29,6 +30,7 @@ from rastro.domain.models import (
     Source,
     schema_fingerprint,
 )
+from rastro.ports.model import ModelPort
 from rastro.ports.recipes import RecipeRepository
 
 __version__ = version("rastro-engine")
@@ -39,9 +41,13 @@ __all__ = [
     "Evidence",
     "ExtractionRecord",
     "ExtractionResult",
+    "InferencePolicy",
     "Issue",
     "Limits",
     "Metrics",
+    "ModelError",
+    "ModelPort",
+    "ModelRequest",
     "Outcome",
     "Rastro",
     "RastroError",
@@ -51,6 +57,7 @@ __all__ = [
     "RecipeContext",
     "RecipeKey",
     "RecipeNotFoundError",
+    "RecipeProposal",
     "RecipeRepository",
     "RecipeStorageError",
     "ResourceLimitError",

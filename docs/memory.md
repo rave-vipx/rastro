@@ -48,13 +48,17 @@ assert second.recipe_reused
 Only `success` with validated records is remembered. Missing, invalid, ambiguous,
 partial, restricted or failed results do not activate a recipe or update its last
 success. A failed new version leaves previously successful versions available.
-There is no inference or automatic discovery when memory is empty:
-`RecipeNotFoundError` reports an exact-context miss.
+By default there is no inference or automatic discovery when memory is empty:
+`RecipeNotFoundError` reports an exact-context miss. M4 adds explicit opt-in
+[asynchronous recipe learning](intelligence.md) through `discover_recipes=True` or
+`model=`. Learned recipes carry `require_evidence=True`; required-field observations
+are enforced on every reuse, including after restart.
 
 `Rastro.web(policy, repository=repository)` supports the same `context` and optional
 `recipe` arguments through `await extract(...)` and `await extract_many(...)`.
 Acquisition still fetches the source and enforces all M2 policies on every call.
-Lookup happens before fetching; a missing recipe fails without a network request.
+Lookup happens before fetching; without discovery enabled, a missing recipe fails
+without a network request. Missing pinned versions always fail before acquisition.
 
 ## Identity and validation
 

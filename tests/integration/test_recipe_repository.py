@@ -199,3 +199,28 @@ def test_migration_records_application_and_schema_version(tmp_path, source, sche
     with closing(sqlite3.connect(path)) as db:
         assert db.execute("PRAGMA user_version").fetchone()[0] == 1
         assert db.execute("PRAGMA application_id").fetchone()[0] == 0x52535452
+
+
+def test_m3_payload_without_new_evidence_default_remains_reusable(
+    tmp_path, source, schema, recipe, html
+):
+    import json
+
+    from rastro import Outcome, Rastro
+
+    path = tmp_path / "m3.db"
+    repo = SQLiteRecipeRepository(path)
+    key = RecipeKey.for_source(source, schema)
+    repo.save_success(key, recipe, selected_index=0, at=NOW)
+    old_payload = recipe.model_dump(mode="json")
+    old_payload.pop("require_evidence")
+    with closing(sqlite3.connect(path)) as db:
+        db.execute("UPDATE recipes SET payload = ?", (json.dumps(old_payload),))
+        db.commit()
+    result = Rastro(repository=repo).extract_html(html, source=source, schema=schema)
+    assert result.status == Outcome.SUCCESS and result.recipe_reused
+    assert repo.get(key).successful_runs == 2
+    with pytest.raises(RecipeConflictError):
+        repo.save_success(
+            key, recipe.model_copy(update={"require_evidence": True}), selected_index=0, at=NOW
+        )
