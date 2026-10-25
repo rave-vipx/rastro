@@ -35,6 +35,7 @@ uv run mypy
 uv run pytest
 uv run python examples/offline.py
 uv run python examples/intelligence.py
+uv run python -m benchmarks.run --repetitions 2 --warmup 1 --output /tmp/rastro-benchmark.json
 uv run --group docs mkdocs build --strict
 uv build
 uv run twine check dist/*
@@ -45,6 +46,8 @@ uv run pip-audit --require-hashes -r /tmp/rastro-runtime.txt
 The audit requires network access. Tests do not: pytest blocks Python sockets and native curl transfers by default. Event-loop construction briefly allows its internal wake-up socket before any task runs. Unit, integration, parser-contract, property, and boundary tests run together. Keep the branch-aware coverage floor at 90% or higher. Add a regression test for each behavior bug. Prefer observable behavior to implementation assertions.
 
 CI tests Python 3.12, 3.13, and 3.14 on Linux, plus Python 3.12 on macOS and Windows. It separately installs the built wheel in a clean environment and runs the public demo.
+
+For comparison changes, regenerate the full report using the [benchmark methodology](docs/comparison.md). Never gate CI on local latency. The public `examples/catalogue.py` demonstration requires network access and is opt-in; its default regression test uses synthetic HTML.
 
 ## Design expectations
 

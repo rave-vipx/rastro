@@ -1,0 +1,540 @@
+[
+  {
+    "name": "static",
+    "category": "static",
+    "document": {
+      "html": "<article class=\"product\" data-sku=\"A\" data-currency=\"USD\"><h2>Notebook</h2><b class=\"price\">12.50</b></article><article class=\"product\" data-sku=\"B\" data-currency=\"USD\"><h2>Pencil</h2><b class=\"price\">2</b></article>",
+      "mappings": [
+        {
+          "strategy": "css",
+          "record_selector": ".product",
+          "fields": {
+            "sku": "::attr(data-sku)",
+            "name": "h2::text",
+            "price": ".price::text",
+            "currency": "::attr(data-currency)"
+          }
+        },
+        {
+          "strategy": "css",
+          "record_selector": "[data-item]",
+          "fields": {
+            "sku": "::attr(data-sku)",
+            "name": "[itemprop=\"name\"]::text",
+            "price": "[itemprop=\"price\"]::text",
+            "currency": "::attr(data-currency)"
+          }
+        }
+      ],
+      "regional": false
+    },
+    "expected": [
+      {
+        "sku": "A",
+        "name": "Notebook",
+        "price": "12.50",
+        "currency": "USD"
+      },
+      {
+        "sku": "B",
+        "name": "Pencil",
+        "price": "2",
+        "currency": "USD"
+      }
+    ],
+    "requires_warning": false
+  },
+  {
+    "name": "metadata",
+    "category": "jsonld",
+    "document": {
+      "html": "<script type=\"application/ld+json\">{\"@graph\": [{\"@type\": \"Product\", \"sku\": \"A\", \"name\": \"Notebook\", \"offers\": {\"price\": \"12.50\", \"priceCurrency\": \"USD\"}}]}</script>",
+      "mappings": [
+        {
+          "strategy": "jsonld",
+          "item_type": "Product",
+          "fields": {
+            "sku": "/sku",
+            "name": "/name",
+            "price": "/offers/price",
+            "currency": "/offers/priceCurrency"
+          }
+        },
+        {
+          "strategy": "css",
+          "record_selector": ".product",
+          "fields": {
+            "sku": "::attr(data-sku)",
+            "name": "h2::text",
+            "price": ".price::text",
+            "currency": "::attr(data-currency)"
+          }
+        }
+      ],
+      "regional": false
+    },
+    "expected": [
+      {
+        "sku": "A",
+        "name": "Notebook",
+        "price": "12.50",
+        "currency": "USD"
+      }
+    ],
+    "requires_warning": false
+  },
+  {
+    "name": "reordered",
+    "category": "reordered_dom",
+    "document": {
+      "html": "<article class=\"product\" data-sku=\"B\" data-currency=\"USD\"><h2>Pencil</h2><b class=\"price\">2</b></article><article class=\"product\" data-sku=\"A\" data-currency=\"USD\"><b class=\"price\">12.50</b><h2>Notebook</h2></article>",
+      "mappings": [
+        {
+          "strategy": "css",
+          "record_selector": ".product",
+          "fields": {
+            "sku": "::attr(data-sku)",
+            "name": "h2::text",
+            "price": ".price::text",
+            "currency": "::attr(data-currency)"
+          }
+        },
+        {
+          "strategy": "css",
+          "record_selector": "[data-item]",
+          "fields": {
+            "sku": "::attr(data-sku)",
+            "name": "[itemprop=\"name\"]::text",
+            "price": "[itemprop=\"price\"]::text",
+            "currency": "::attr(data-currency)"
+          }
+        }
+      ],
+      "regional": false
+    },
+    "expected": [
+      {
+        "sku": "A",
+        "name": "Notebook",
+        "price": "12.50",
+        "currency": "USD"
+      },
+      {
+        "sku": "B",
+        "name": "Pencil",
+        "price": "2",
+        "currency": "USD"
+      }
+    ],
+    "requires_warning": false
+  },
+  {
+    "name": "renamed",
+    "category": "known_fallback",
+    "document": {
+      "html": "<article data-item data-sku=\"A\" data-currency=\"USD\"><h2 itemprop=\"name\">Notebook</h2><b itemprop=\"price\">12.50</b></article>",
+      "mappings": [
+        {
+          "strategy": "css",
+          "record_selector": ".product",
+          "fields": {
+            "sku": "::attr(data-sku)",
+            "name": "h2::text",
+            "price": ".price::text",
+            "currency": "::attr(data-currency)"
+          }
+        },
+        {
+          "strategy": "css",
+          "record_selector": "[data-item]",
+          "fields": {
+            "sku": "::attr(data-sku)",
+            "name": "[itemprop=\"name\"]::text",
+            "price": "[itemprop=\"price\"]::text",
+            "currency": "::attr(data-currency)"
+          }
+        }
+      ],
+      "regional": false
+    },
+    "expected": [
+      {
+        "sku": "A",
+        "name": "Notebook",
+        "price": "12.50",
+        "currency": "USD"
+      }
+    ],
+    "requires_warning": false
+  },
+  {
+    "name": "missing",
+    "category": "missing_field",
+    "document": {
+      "html": "<article class=\"product\" data-sku=\"A\" data-currency=\"USD\"><h2>Notebook</h2></article>",
+      "mappings": [
+        {
+          "strategy": "css",
+          "record_selector": ".product",
+          "fields": {
+            "sku": "::attr(data-sku)",
+            "name": "h2::text",
+            "price": ".price::text",
+            "currency": "::attr(data-currency)"
+          }
+        },
+        {
+          "strategy": "css",
+          "record_selector": "[data-item]",
+          "fields": {
+            "sku": "::attr(data-sku)",
+            "name": "[itemprop=\"name\"]::text",
+            "price": "[itemprop=\"price\"]::text",
+            "currency": "::attr(data-currency)"
+          }
+        }
+      ],
+      "regional": false
+    },
+    "expected": [],
+    "requires_warning": true
+  },
+  {
+    "name": "invalid",
+    "category": "invalid_value",
+    "document": {
+      "html": "<article class=\"product\" data-sku=\"A\" data-currency=\"USD\"><h2>Notebook</h2><b class=\"price\">-1</b></article>",
+      "mappings": [
+        {
+          "strategy": "css",
+          "record_selector": ".product",
+          "fields": {
+            "sku": "::attr(data-sku)",
+            "name": "h2::text",
+            "price": ".price::text",
+            "currency": "::attr(data-currency)"
+          }
+        },
+        {
+          "strategy": "css",
+          "record_selector": "[data-item]",
+          "fields": {
+            "sku": "::attr(data-sku)",
+            "name": "[itemprop=\"name\"]::text",
+            "price": "[itemprop=\"price\"]::text",
+            "currency": "::attr(data-currency)"
+          }
+        }
+      ],
+      "regional": false
+    },
+    "expected": [],
+    "requires_warning": true
+  },
+  {
+    "name": "partial",
+    "category": "partial_data",
+    "document": {
+      "html": "<article class=\"product\" data-sku=\"A\" data-currency=\"USD\"><h2>Notebook</h2><b class=\"price\">12.50</b></article><article class=\"product\" data-sku=\"B\" data-currency=\"USD\"><h2>Pencil</h2><b class=\"price\">invalid</b></article>",
+      "mappings": [
+        {
+          "strategy": "css",
+          "record_selector": ".product",
+          "fields": {
+            "sku": "::attr(data-sku)",
+            "name": "h2::text",
+            "price": ".price::text",
+            "currency": "::attr(data-currency)"
+          }
+        },
+        {
+          "strategy": "css",
+          "record_selector": "[data-item]",
+          "fields": {
+            "sku": "::attr(data-sku)",
+            "name": "[itemprop=\"name\"]::text",
+            "price": "[itemprop=\"price\"]::text",
+            "currency": "::attr(data-currency)"
+          }
+        }
+      ],
+      "regional": false
+    },
+    "expected": [
+      {
+        "sku": "A",
+        "name": "Notebook",
+        "price": "12.50",
+        "currency": "USD"
+      }
+    ],
+    "requires_warning": true
+  },
+  {
+    "name": "ambiguous",
+    "category": "ambiguous_value",
+    "document": {
+      "html": "<article class=\"product\" data-sku=\"A\" data-currency=\"USD\"><h2>Notebook</h2><b class=\"price\">12.50</b><b class=\"price\">18.00</b></article>",
+      "mappings": [
+        {
+          "strategy": "css",
+          "record_selector": ".product",
+          "fields": {
+            "sku": "::attr(data-sku)",
+            "name": "h2::text",
+            "price": ".price::text",
+            "currency": "::attr(data-currency)"
+          }
+        },
+        {
+          "strategy": "css",
+          "record_selector": "[data-item]",
+          "fields": {
+            "sku": "::attr(data-sku)",
+            "name": "[itemprop=\"name\"]::text",
+            "price": "[itemprop=\"price\"]::text",
+            "currency": "::attr(data-currency)"
+          }
+        }
+      ],
+      "regional": false
+    },
+    "expected": [],
+    "requires_warning": true
+  },
+  {
+    "name": "broken",
+    "category": "broken_selector",
+    "document": {
+      "html": "<article class=\"unknown\" data-sku=\"A\" data-currency=\"USD\"><h2>Notebook</h2><b class=\"price\">12.50</b></article>",
+      "mappings": [
+        {
+          "strategy": "css",
+          "record_selector": ".product",
+          "fields": {
+            "sku": "::attr(data-sku)",
+            "name": "h2::text",
+            "price": ".price::text",
+            "currency": "::attr(data-currency)"
+          }
+        },
+        {
+          "strategy": "css",
+          "record_selector": "[data-item]",
+          "fields": {
+            "sku": "::attr(data-sku)",
+            "name": "[itemprop=\"name\"]::text",
+            "price": "[itemprop=\"price\"]::text",
+            "currency": "::attr(data-currency)"
+          }
+        }
+      ],
+      "regional": false
+    },
+    "expected": [
+      {
+        "sku": "A",
+        "name": "Notebook",
+        "price": "12.50",
+        "currency": "USD"
+      }
+    ],
+    "requires_warning": true
+  },
+  {
+    "name": "regional",
+    "category": "regional_schema",
+    "document": {
+      "html": "<article class=\"product\" data-sku=\"A\" data-currency=\"UYU\"><h2>Notebook</h2><b class=\"price\">1.299,50</b></article>",
+      "mappings": [
+        {
+          "strategy": "css",
+          "record_selector": ".product",
+          "fields": {
+            "sku": "::attr(data-sku)",
+            "name": "h2::text",
+            "price": ".price::text",
+            "currency": "::attr(data-currency)"
+          }
+        },
+        {
+          "strategy": "css",
+          "record_selector": "[data-item]",
+          "fields": {
+            "sku": "::attr(data-sku)",
+            "name": "[itemprop=\"name\"]::text",
+            "price": "[itemprop=\"price\"]::text",
+            "currency": "::attr(data-currency)"
+          }
+        }
+      ],
+      "regional": true
+    },
+    "expected": [
+      {
+        "sku": "A",
+        "name": "Notebook",
+        "price": "1299.50",
+        "currency": "UYU"
+      }
+    ],
+    "requires_warning": false
+  },
+  {
+    "name": "rendered",
+    "category": "rendered_snapshot",
+    "document": {
+      "html": "<!-- Synthetic post-render snapshot; no browser used --><article class=\"product\" data-sku=\"A\" data-currency=\"USD\"><h2>Notebook</h2><b class=\"price\">12.50</b></article>",
+      "mappings": [
+        {
+          "strategy": "css",
+          "record_selector": ".product",
+          "fields": {
+            "sku": "::attr(data-sku)",
+            "name": "h2::text",
+            "price": ".price::text",
+            "currency": "::attr(data-currency)"
+          }
+        },
+        {
+          "strategy": "css",
+          "record_selector": "[data-item]",
+          "fields": {
+            "sku": "::attr(data-sku)",
+            "name": "[itemprop=\"name\"]::text",
+            "price": "[itemprop=\"price\"]::text",
+            "currency": "::attr(data-currency)"
+          }
+        }
+      ],
+      "regional": false
+    },
+    "expected": [
+      {
+        "sku": "A",
+        "name": "Notebook",
+        "price": "12.50",
+        "currency": "USD"
+      }
+    ],
+    "requires_warning": false
+  },
+  {
+    "name": "js_shell",
+    "category": "unrendered_shell",
+    "document": {
+      "html": "<main id=\"app\"></main><script>const product = {name:\"Notebook\"};</script>",
+      "mappings": [
+        {
+          "strategy": "css",
+          "record_selector": ".product",
+          "fields": {
+            "sku": "::attr(data-sku)",
+            "name": "h2::text",
+            "price": ".price::text",
+            "currency": "::attr(data-currency)"
+          }
+        },
+        {
+          "strategy": "css",
+          "record_selector": "[data-item]",
+          "fields": {
+            "sku": "::attr(data-sku)",
+            "name": "[itemprop=\"name\"]::text",
+            "price": "[itemprop=\"price\"]::text",
+            "currency": "::attr(data-currency)"
+          }
+        }
+      ],
+      "regional": false
+    },
+    "expected": [
+      {
+        "sku": "A",
+        "name": "Notebook",
+        "price": "12.50",
+        "currency": "USD"
+      }
+    ],
+    "requires_warning": true
+  },
+  {
+    "name": "semantic_trap",
+    "category": "semantic_wrong_field",
+    "document": {
+      "html": "<article class=\"product\" data-sku=\"A\" data-currency=\"USD\"><h2>Notebook</h2><b class=\"price\">9.00</b><b class=\"actual-price\">12.50</b></article>",
+      "mappings": [
+        {
+          "strategy": "css",
+          "record_selector": ".product",
+          "fields": {
+            "sku": "::attr(data-sku)",
+            "name": "h2::text",
+            "price": ".price::text",
+            "currency": "::attr(data-currency)"
+          }
+        },
+        {
+          "strategy": "css",
+          "record_selector": "[data-item]",
+          "fields": {
+            "sku": "::attr(data-sku)",
+            "name": "[itemprop=\"name\"]::text",
+            "price": "[itemprop=\"price\"]::text",
+            "currency": "::attr(data-currency)"
+          }
+        }
+      ],
+      "regional": false
+    },
+    "expected": [
+      {
+        "sku": "A",
+        "name": "Notebook",
+        "price": "12.50",
+        "currency": "USD"
+      }
+    ],
+    "requires_warning": true
+  },
+  {
+    "name": "large",
+    "category": "large_single_page",
+    "document": {
+      "html": "<article class=\"product\" data-sku=\"L{index}\" data-currency=\"USD\"><h2>Item {index}</h2><b class=\"price\">1</b></article>",
+      "mappings": [
+        {
+          "strategy": "css",
+          "record_selector": ".product",
+          "fields": {
+            "sku": "::attr(data-sku)",
+            "name": "h2::text",
+            "price": ".price::text",
+            "currency": "::attr(data-currency)"
+          }
+        },
+        {
+          "strategy": "css",
+          "record_selector": "[data-item]",
+          "fields": {
+            "sku": "::attr(data-sku)",
+            "name": "[itemprop=\"name\"]::text",
+            "price": "[itemprop=\"price\"]::text",
+            "currency": "::attr(data-currency)"
+          }
+        }
+      ],
+      "regional": false
+    },
+    "expected": [
+      {
+        "sku": "L{index}",
+        "name": "Item {index}",
+        "price": "1",
+        "currency": "USD"
+      }
+    ],
+    "requires_warning": false,
+    "repeat": 250
+  }
+]
