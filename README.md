@@ -30,7 +30,7 @@ The long-term goal is reliable, continuously updated web datasets. We are buildi
 - **Runs locally.** The current engine needs neither an account nor a model, browser, or external service.
 - **Builds on Scrapling.** Scrapling handles HTML parsing behind an adapter. Rastro handles validation, evidence, and result accounting.
 
-Rastro does not yet claim better accuracy, speed, or maintenance cost than a comparable Scrapling pipeline. A reproducible comparison is a v0.1 release gate.
+The first [reproducible comparison](docs/comparison.md) finds equal extraction results against a competent Scrapling + Pydantic baseline, including a shared silent semantic error. Rastro adds provenance and orchestration at a latency cost; improved accuracy or maintenance cost has not been demonstrated.
 
 ## Try it in a minute
 
@@ -103,6 +103,8 @@ evidence contracts. Hosts must be explicitly permitted; robots rules, redirects,
 DNS destinations, request budgets, and server restrictions are checked.
 
 See the [HTTP guide](docs/acquisition.md) for a complete example, defaults and limitations.
+Run [the public demo-site example](examples/catalogue.py) twice with the same database
+to exercise HTTP extraction and recipe reuse; see its [recorded results](docs/release-evidence.md).
 The transport uses curl_cffi, Scrapling’s HTTP engine; the [ADR](docs/decisions/0002-policy-aware-acquisition.md) explains why DNS pinning requires its public API.
 
 ## Remember successful recipes

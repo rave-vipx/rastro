@@ -28,11 +28,14 @@ nav:
   - HTTP acquisition: acquisition.md
   - Recipe memory: memory.md
   - Optional intelligence: intelligence.md
+  - Extraction comparison: comparison.md
+  - Release evidence: release-evidence.md
   - API and outcomes: api.md
   - Architecture: architecture.md
   - Roadmap: roadmap.md
   - Release checklist: releasing.md
   - Engineering decisions:
+      - Reproducible evidence: decisions/0005-reproducible-release-evidence.md
       - Bounded recipe learning: decisions/0004-bounded-recipe-learning.md
       - SQLite recipe memory: decisions/0003-sqlite-recipe-memory.md
       - HTTP transport boundary: decisions/0002-policy-aware-acquisition.md

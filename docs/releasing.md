@@ -2,6 +2,8 @@
 
 No package release has been published. `0.1.0.dev0` identifies the in-development foundation and does not indicate that all v0.1 requirements are met.
 
+The [release evidence register](release-evidence.md) records completed checks and open gates; the [comparison](comparison.md) publishes current results without claiming an advantage. M5 remains in progress.
+
 Before a release:
 
 1. Verify all release acceptance criteria in the master specification. Update the requirement coverage table and document remaining limitations.

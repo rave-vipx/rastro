@@ -1,0 +1,141 @@
+{
+  "scope": "two independent processes; public demo site; source HTML not retained",
+  "runs": [
+    {
+      "learned_recipe": null,
+      "recipe_version": 1,
+      "recipe_reused": false,
+      "recipe_attempts": [
+        {
+          "origin": "explicit",
+          "index": 0,
+          "status": "success"
+        }
+      ],
+      "requested_url": "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html",
+      "http_status": 200,
+      "retry_after_seconds": null,
+      "job_id": "0bf4d3ce-9515-4716-9d5c-79b66a388fe6",
+      "status": "success",
+      "source_url": "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html",
+      "locale": "en-GB",
+      "timezone": "Europe/London",
+      "schema_fingerprint": "111ee4b5ce793f01cd00be184f6ae258c9be46188ed3c985285953704dc44cd8",
+      "started_at": "2026-10-25T01:29:38.874019Z",
+      "completed_at": "2026-10-25T01:29:41.501092Z",
+      "records": [
+        {
+          "data": {
+            "name": "A Light in the Attic",
+            "price_gbp": "51.77"
+          },
+          "evidence": {
+            "name": {
+              "source_url": "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html",
+              "observed_at": "2026-10-25T01:29:41.488806Z",
+              "method": "css",
+              "locator": ".product_main [match 0] >> h1::text",
+              "recipe_version": 1
+            },
+            "price_gbp": {
+              "source_url": "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html",
+              "observed_at": "2026-10-25T01:29:41.488806Z",
+              "method": "css",
+              "locator": ".product_main [match 0] >> .price_color::text",
+              "recipe_version": 1
+            }
+          }
+        }
+      ],
+      "issues": [],
+      "metrics": {
+        "inference_calls": 0,
+        "inference_seconds": 0.0,
+        "storage_seconds": 0.002546124975197017,
+        "acquisition_method": "http",
+        "acquisition_seconds": 2.613538332981989,
+        "network_seconds": 0.9685312079964206,
+        "request_count": 2,
+        "retry_count": 0,
+        "redirect_count": 0,
+        "bytes_received": 2491,
+        "input_bytes": 9279,
+        "candidates": 1,
+        "accepted": 1,
+        "fields_validated": 2,
+        "rejected": 0,
+        "extraction_seconds": 0.0033048749901354313,
+        "validation_seconds": 0.00039829203160479665,
+        "total_seconds": 2.6270292089902796
+      }
+    },
+    {
+      "learned_recipe": null,
+      "recipe_version": 1,
+      "recipe_reused": true,
+      "recipe_attempts": [
+        {
+          "origin": "memory",
+          "index": 0,
+          "status": "success"
+        }
+      ],
+      "requested_url": "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html",
+      "http_status": 200,
+      "retry_after_seconds": null,
+      "job_id": "05575d70-abfe-4c45-90cc-837011f2620f",
+      "status": "success",
+      "source_url": "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html",
+      "locale": "en-GB",
+      "timezone": "Europe/London",
+      "schema_fingerprint": "111ee4b5ce793f01cd00be184f6ae258c9be46188ed3c985285953704dc44cd8",
+      "started_at": "2026-10-25T01:29:54.537908Z",
+      "completed_at": "2026-10-25T01:29:56.525764Z",
+      "records": [
+        {
+          "data": {
+            "name": "A Light in the Attic",
+            "price_gbp": "51.77"
+          },
+          "evidence": {
+            "name": {
+              "source_url": "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html",
+              "observed_at": "2026-10-25T01:29:56.512129Z",
+              "method": "css",
+              "locator": ".product_main [match 0] >> h1::text",
+              "recipe_version": 1
+            },
+            "price_gbp": {
+              "source_url": "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html",
+              "observed_at": "2026-10-25T01:29:56.512129Z",
+              "method": "css",
+              "locator": ".product_main [match 0] >> .price_color::text",
+              "recipe_version": 1
+            }
+          }
+        }
+      ],
+      "issues": [],
+      "metrics": {
+        "inference_calls": 0,
+        "inference_seconds": 0.0,
+        "storage_seconds": 0.004734083020593971,
+        "acquisition_method": "http",
+        "acquisition_seconds": 1.9725330420187674,
+        "network_seconds": 0.9534770420286804,
+        "request_count": 2,
+        "retry_count": 0,
+        "redirect_count": 0,
+        "bytes_received": 2496,
+        "input_bytes": 9279,
+        "candidates": 1,
+        "accepted": 1,
+        "fields_validated": 2,
+        "rejected": 0,
+        "extraction_seconds": 0.0016928330296650529,
+        "validation_seconds": 0.0005305410013534129,
+        "total_seconds": 1.987818832974881
+      }
+    }
+  ]
+}

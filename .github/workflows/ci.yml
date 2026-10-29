@@ -31,6 +31,8 @@ jobs:
       - run: uv run --no-sync ruff check .
       - run: uv run --no-sync ruff format --check .
       - run: uv run --no-sync mypy
+      - name: Exercise the offline comparison (no timing threshold)
+        run: uv run --no-sync python -m benchmarks.run --repetitions 2 --warmup 1 --output "$RUNNER_TEMP/rastro-benchmark.json"
       - run: uv run --no-sync mkdocs build --strict
       - run: uv build
       - run: uv run --no-sync twine check dist/*

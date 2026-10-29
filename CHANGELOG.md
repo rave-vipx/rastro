@@ -6,6 +6,9 @@ All notable user-facing changes will be recorded here. No public release has bee
 
 ### Added
 
+- Reproducible offline comparison against an independent Scrapling + Pydantic baseline: synthetic corpus, multiset quality scoring, raw timing samples and source hashes (DIFF-001, QUAL-003).
+- Public demo-site end-to-end example with persistent recipe reuse and offline regression coverage; recorded live results, runtime license inventory and explicit v0.1 release gates (OBS-001, REC-001–003, specification sections 17–18).
+
 - Opt-in deterministic recipe discovery, asynchronous supplied-HTML extraction and optional local Ollama assistance through `ModelPort`.
 - Structured model proposals, bounded calls/corrections/deadline/context/response/concurrency, and source/schema validation before activation (AI-001–004, REC-004, INT-002).
 - Learned recipes retain required-field evidence checks across restarts; M3 payloads remain reusable without false version conflicts.
@@ -28,6 +31,6 @@ All notable user-facing changes will be recorded here. No public release has bee
 
 ### Known limitations
 
-- Live Ollama quality evidence and the comparison benchmark remain pending. Recipe memory requires explicit template/region/validator revisions; it stores successful-run metadata, not a durable job history.
+- Live Ollama quality evidence remains pending. The first comparison shows equal extraction quality and a shared silent semantic error; no comparative advantage is claimed. Recipe memory requires explicit template/region/validator revisions; it stores successful-run metadata, not a durable job history.
 - HTTP supports public standard-port HTML sources; no JavaScript, authentication, proxies, or discovery crawling.
 - Schema aliases, alternate structured API discovery, automatic stored-recipe repair, and cross-document synchronization are not supported. Discovery is limited to exact JSON-LD names and simple microdata.

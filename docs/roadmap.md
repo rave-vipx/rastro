@@ -12,7 +12,7 @@
 | M4 — Optional intelligence | Ollama adapter, structured candidate recipes, prompt boundary, execution budgets, validation before activation | M2, M3 | No mandatory model; bounded model use; invalid model output cannot become an active recipe |
 | M5 — Release evidence | Competent Scrapling baseline, reproducible results, end-to-end URL example, license/name review, package release | M1–M4 | All v0.1 acceptance criteria demonstrably pass; no unsupported quality/performance claims |
 
-M1–M4 are implemented with offline regression tests and quality checks. M5 remains pending, including live-model and comparative release evidence. No release dates are promised.
+M1–M4 are implemented with offline regression tests and quality checks. M5 is in progress: the first comparison and live HTTP/reuse evidence are available. Live-model evidence, demonstrated differentiation, unfinished requirements and publication gates remain open. No release dates are promised.
 
 ## Current requirement mapping
 
@@ -32,7 +32,7 @@ M1–M4 are implemented with offline regression tests and quality checks. M5 rem
 | SEC-001/002/003 | Exact host policy, public destination checks, DNS pinning, per-hop validation, robots enforcement, throttling and restriction outcomes. See ADR 0002 and HTTP tests. |
 | SEC-004/005/007/008 | Recipe and diagnostic boundaries, no recipe code execution, input/candidate/request/body/deadline budgets. Process sandboxing remains the host’s responsibility. |
 | SEC-009/010 | Scoped deletion and last-success retention for recipe memory; no management server. External backups and OS access controls remain the host’s responsibility. |
-| DIFF-001 | Pending M5. No comparative performance claims published. |
+| DIFF-001 | Partial M5 evidence: independent baseline and reproducible corpus/results. Equal quality and shared semantic failure; meaningful differentiation is not yet demonstrated. See the [comparison](comparison.md). |
 
 ## M1 progress record
 
@@ -83,3 +83,14 @@ See the [master specification](https://github.com/rave-vipx/rastro/blob/main/RAS
 - **Evidence:** offline model/HTTP contract and attack tests, cancellation/budget/concurrency regressions, installed core/optional wheel checks, inference metrics and runnable synthetic example. [ADR 0004](decisions/0004-bounded-recipe-learning.md) records trust and dependency tradeoffs.
 - **Known limitations:** live Ollama quality not measured; separate structured API acquisition, stored-recipe repair and tokenizer-specific fit remain outside this slice. Client cancellation does not guarantee server compute termination.
 - **Next milestone:** M5, reproducible baseline, live end-to-end evidence, license/name review and package release gates.
+
+## M5 progress record
+
+- **Milestone:** first release-evidence slice, v0.1 development preview; M5 is not complete.
+- **Requirements:** partial DIFF-001; evidence for QUAL-003, OBS-001, REC-001–003 and specification sections 17–18.
+- **Files:** `benchmarks/`, offline scorer/corpus tests, `examples/catalogue.py`, its synthetic regression tests, [comparison](comparison.md), [release evidence](release-evidence.md) and CI smoke check.
+- **Evidence:** independent Scrapling + Pydantic baseline, 14 synthetic cases, 50 timed samples per executor/case, primitive quality counts and source hashes. Two actual public HTTP runs in separate processes verified field provenance and recipe reuse.
+- **Results:** equal extraction quality; 1 false success out of 8 announced successes for both. Rastro adds provenance and orchestration with higher measured latency. No accuracy, speed or human-effort advantage is claimed.
+- **Distribution:** runtime dependency license inventory and name/docs lifecycle review recorded; no package or protected publisher configured.
+- **Architecture:** [ADR 0005](decisions/0005-reproducible-release-evidence.md).
+- **Remaining work:** live Ollama end-to-end evidence, held-out comparison and measurable differentiation, incomplete INT-002/GEO-001 scope, native dependency notice review, namespace ownership and release approval. Rendered snapshots and large pages do not establish browser or pagination behavior.
