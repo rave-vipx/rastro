@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import json
 from collections.abc import Iterator
 
 from cssselect import SelectorError
 from scrapling.parser import Selector
 
+from rastro.domain.json import strict_json
 from rastro.domain.models import ConfigurationError, Issue, Limits, Recipe, ResourceLimitError
 from rastro.ports.parser import Candidate, ParsedDocument
 
@@ -90,9 +90,7 @@ class ScraplingParser:
         examined = 0
         for block_index, block in enumerate(blocks):
             try:
-                payload = json.loads(
-                    str(block), parse_constant=_reject_constant, object_pairs_hook=_unique_keys
-                )
+                payload = strict_json(str(block))
             except (ValueError, RecursionError):
                 issues.append(Issue(code="invalid_jsonld"))
                 continue
@@ -116,16 +114,3 @@ class ScraplingParser:
                         locators[field] = f"jsonld[{block_index}]#{path}{pointer}"
                 candidates.append(Candidate(values, locators))
         return ParsedDocument(tuple(candidates), tuple(issues))
-
-
-def _reject_constant(value: str) -> object:
-    raise ValueError("Non-finite JSON constants are not allowed")
-
-
-def _unique_keys(pairs: list[tuple[str, object]]) -> dict[str, object]:
-    result: dict[str, object] = {}
-    for key, value in pairs:
-        if key in result:
-            raise ValueError("Duplicate JSON keys are ambiguous")
-        result[key] = value
-    return result

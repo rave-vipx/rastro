@@ -45,6 +45,7 @@ class Recipe(Contract):
     strategy: Literal["jsonld", "css"]
     fields: dict[str, str] = Field(min_length=1, max_length=100)
     version: int = Field(default=1, ge=1, le=2_147_483_647)
+    require_evidence: bool = False
     fallbacks: tuple[Recipe, ...] = Field(default=(), max_length=3)
     item_type: str | None = Field(default=None, min_length=1, max_length=256)
     record_selector: str | None = Field(default=None, min_length=1, max_length=1024)
@@ -108,6 +109,8 @@ class ExtractionRecord[T: BaseModel](Contract):
 
 
 class Metrics(Contract):
+    inference_calls: int = 0
+    inference_seconds: float = 0
     storage_seconds: float = 0
     acquisition_method: Literal["provided_html", "http"] = "provided_html"
     acquisition_seconds: float = 0
@@ -127,11 +130,13 @@ class Metrics(Contract):
 
 
 class RecipeAttempt(Contract):
+    origin: Literal["explicit", "memory", "discovery", "model"] = "explicit"
     index: int
     status: Outcome
 
 
 class ExtractionResult[T: BaseModel](Contract):
+    learned_recipe: Recipe | None = None
     recipe_version: int | None = None
     recipe_reused: bool = False
     recipe_attempts: tuple[RecipeAttempt, ...] = ()

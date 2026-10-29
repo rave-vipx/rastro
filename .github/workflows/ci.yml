@@ -44,16 +44,22 @@ jobs:
           "$RUNNER_TEMP/rastro-wheel/bin/rastro" demo
           "$RUNNER_TEMP/rastro-wheel/bin/rastro" doctor
           "$RUNNER_TEMP/rastro-wheel/bin/python" -c 'import importlib.util; assert importlib.util.find_spec("curl_cffi") is None'
+          "$RUNNER_TEMP/rastro-wheel/bin/python" -c 'import importlib.util; assert importlib.util.find_spec("httpx") is None'
+          "$RUNNER_TEMP/rastro-wheel/bin/python" "$GITHUB_WORKSPACE/examples/intelligence.py"
       - name: Verify recipe memory across installed-package restarts
         working-directory: ${{ runner.temp }}
         run: |
           "$RUNNER_TEMP/rastro-wheel/bin/python" "$GITHUB_WORKSPACE/examples/memory.py" --database "$RUNNER_TEMP/rastro-memory.db"
           "$RUNNER_TEMP/rastro-wheel/bin/python" "$GITHUB_WORKSPACE/examples/memory.py" --database "$RUNNER_TEMP/rastro-memory.db"
-      - name: Install HTTP extra from the built wheel
+      - name: Install HTTP and Ollama extras from the built wheel
         run: |
           for wheel in dist/*.whl; do
-            uv pip install --python "$RUNNER_TEMP/rastro-wheel/bin/python" "${wheel}[http]"
+            uv pip install --python "$RUNNER_TEMP/rastro-wheel/bin/python" "${wheel}[http,ollama]"
           done
+      - name: Verify installed optional model adapter
+        working-directory: ${{ runner.temp }}
+        run: |
+          "$RUNNER_TEMP/rastro-wheel/bin/python" -c 'from rastro.adapters.ollama import OllamaModel; OllamaModel("local-test-model")'
       - name: Verify installed HTTP policy without network access
         working-directory: ${{ runner.temp }}
         run: |
@@ -115,7 +121,7 @@ jobs:
           python-version: '3.12'
           enable-cache: true
       - run: uv sync --locked
-      - run: uv export --locked --extra http --no-dev --no-emit-project --format requirements-txt --output-file "$RUNNER_TEMP/rastro-runtime.txt"
+      - run: uv export --locked --all-extras --no-dev --no-emit-project --format requirements-txt --output-file "$RUNNER_TEMP/rastro-runtime.txt"
       - run: uv run --no-sync pip-audit --require-hashes -r "$RUNNER_TEMP/rastro-runtime.txt"
 
   gate:

@@ -44,6 +44,20 @@ The optional HTTP adapter uses curl_cffi, Scrapling's HTTP engine, because Scrap
 public fetch API does not expose the required session-level pinning options.
 [ADR 0002](docs/decisions/0002-policy-aware-acquisition.md) records the evidence and tradeoff.
 
+## Optional inference
+
+Opt-in Ollama inference sends the supplied HTML to a configured local service.
+The adapter accepts only literal loopback origins, disables redirects and proxy
+environment, and exposes no tools. Page/model content cannot change request options
+or execute code. Strict declarative proposals must pass source/schema validation;
+learned recipes retain required-field evidence checks after restart. Calls, queued
+model-phase time, messages, responses, tokens and concurrency are bounded. Models
+can still select semantically wrong source fields; prompt boundaries are not a
+truth guarantee. Local service routing and server-side compute cancellation remain
+outside the client's control. Selector literals may contain source values: keep
+learned recipes/results under the same privacy policy as the source. See the
+[intelligence guide](docs/intelligence.md) and [ADR 0004](docs/decisions/0004-bounded-recipe-learning.md).
+
 ## Dependency maintenance
 
-CI audits the locked core and optional HTTP runtime dependency graph. Dependabot checks Python dependencies and pinned GitHub Actions. A clean vulnerability scan is evidence about known advisories, not a guarantee of safety. Dependency-license and naming reviews are required before the first public package release.
+CI audits the locked core and all optional runtime dependency graphs. Dependabot checks Python dependencies and pinned GitHub Actions. A clean vulnerability scan is evidence about known advisories, not a guarantee of safety. Dependency-license and naming reviews are required before the first public package release.

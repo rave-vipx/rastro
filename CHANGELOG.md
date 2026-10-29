@@ -6,6 +6,11 @@ All notable user-facing changes will be recorded here. No public release has bee
 
 ### Added
 
+- Opt-in deterministic recipe discovery, asynchronous supplied-HTML extraction and optional local Ollama assistance through `ModelPort`.
+- Structured model proposals, bounded calls/corrections/deadline/context/response/concurrency, and source/schema validation before activation (AI-001–004, REC-004, INT-002).
+- Learned recipes retain required-field evidence checks across restarts; M3 payloads remain reusable without false version conflicts.
+- Inference metrics, attempt origins, an inspectable learned recipe, offline example, adapter/attack/budget tests and a separate `ollama` dependency extra.
+
 - Optional SQLite recipe memory with exact source/template/schema/region identity, immutable versions, success metadata, retention and deletion.
 - Deterministic reuse across restarts in offline and asynchronous SDKs, with worker-thread storage and explicit persistence failures.
 - Bounded explicit fallback recipes; only the alternative validated successfully becomes reusable.
@@ -23,6 +28,6 @@ All notable user-facing changes will be recorded here. No public release has bee
 
 ### Known limitations
 
-- Ollama and the comparison benchmark remain pending. Recipe memory requires explicit template/region/validator revisions; it stores successful-run metadata, not a durable job history.
+- Live Ollama quality evidence and the comparison benchmark remain pending. Recipe memory requires explicit template/region/validator revisions; it stores successful-run metadata, not a durable job history.
 - HTTP supports public standard-port HTML sources; no JavaScript, authentication, proxies, or discovery crawling.
-- Schema aliases, automatic recipe discovery, and cross-document synchronization are not supported.
+- Schema aliases, alternate structured API discovery, automatic stored-recipe repair, and cross-document synchronization are not supported. Discovery is limited to exact JSON-LD names and simple microdata.

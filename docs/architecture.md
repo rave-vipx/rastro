@@ -14,6 +14,10 @@ application.Rastro
        │
        ├── ports.DocumentParser ◄── adapters.ScraplingParser
        │
+       ├── application.RecipeLearner
+       │        ├── ports.RecipeDiscovery ◄── adapters.ScraplingDiscovery
+       │        └── ports.ModelPort ◄── adapters.OllamaModel (optional)
+       │
        └── ports.AcquisitionPort ◄── application.WebAcquirer
                                           ├── URL/DNS/robots/host policy
                                           ├── ports.Resolver ◄── SystemResolver
@@ -39,7 +43,9 @@ The SDK and CLI call the same service. Public imports live in `rastro.__init__`;
 - `adapters/dns.py`, `adapters/http.py`: asynchronous system DNS and optional pinned curl_cffi transfers.
 - `cli.py`: offline demo, package diagnostics, and recipe validation.
 
-There are no empty modules for later releases. Add inference ports when M4 implements a real caller and adapter.
+- `application/intelligence.py`: deterministic-first cold-context learning, inference budgets and activation after validation.
+- `domain/intelligence.py`, `ports/model.py`, `ports/discovery.py`: optional inference policies, proposal/request contracts and discovery/model boundaries.
+- `adapters/discovery.py`, `adapters/ollama.py`: bounded Scrapling metadata discovery and optional local HTTPX/Ollama transport.
 
 ## Decisions and references
 
@@ -48,6 +54,8 @@ The [offline first-slice ADR](decisions/0001-offline-vertical-slice.md) explains
 The [HTTP transport ADR](decisions/0002-policy-aware-acquisition.md) records the Scrapling API limitation that requires using its underlying HTTP engine through the transport port.
 
 The [recipe memory ADR](decisions/0003-sqlite-recipe-memory.md) records identity, validation, versioning, privacy and asynchronous storage decisions.
+
+The [optional intelligence ADR](decisions/0004-bounded-recipe-learning.md) records the model boundary, budgets, required-field evidence persistence and optional transport choice.
 
 Implementation references:
 

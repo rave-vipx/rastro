@@ -13,8 +13,10 @@ import structlog
 from pydantic import BaseModel
 
 from rastro.application.extraction import validate_recipe
-from rastro.application.memory import RecipeMemory
+from rastro.application.intelligence import RecipeLearner
+from rastro.application.memory import PreparedRecipe, RecipeMemory
 from rastro.domain.acquisition import AcquisitionPolicy
+from rastro.domain.intelligence import InferencePolicy
 from rastro.domain.memory import RecipeContext
 from rastro.domain.models import (
     ConfigurationError,
@@ -29,6 +31,8 @@ from rastro.domain.models import (
     schema_fingerprint,
 )
 from rastro.ports.acquisition import AcquisitionPort
+from rastro.ports.discovery import RecipeDiscovery
+from rastro.ports.model import ModelPort
 from rastro.ports.parser import DocumentParser
 from rastro.ports.recipes import RecipeRepository
 
@@ -48,12 +52,30 @@ class Rastro:
         acquisition: AcquisitionPort | None = None,
         policy: AcquisitionPolicy | None = None,
         repository: RecipeRepository | None = None,
+        model: ModelPort | None = None,
+        inference_policy: InferencePolicy | None = None,
+        discover_recipes: bool = False,
+        discovery: RecipeDiscovery | None = None,
     ) -> None:
         if parser is None:
             from rastro.adapters.scrapling import ScraplingParser
 
             parser = ScraplingParser()
         self._memory = RecipeMemory(repository)
+        if discovery is None:
+            from rastro.adapters.discovery import ScraplingDiscovery
+
+            discovery = ScraplingDiscovery()
+        inference_policy = InferencePolicy.model_validate(
+            (inference_policy or InferencePolicy()).model_dump()
+        )
+        self._discover_recipes = discover_recipes or model is not None
+        self._learner = RecipeLearner(
+            model=model,
+            discovery=discovery,
+            policy=inference_policy,
+            repository=repository,
+        )
         self._parser = parser
         self._limits = limits or Limits()
         self._acquisition = acquisition
@@ -89,6 +111,9 @@ class Rastro:
         *,
         limits: Limits | None = None,
         repository: RecipeRepository | None = None,
+        model: ModelPort | None = None,
+        inference_policy: InferencePolicy | None = None,
+        discover_recipes: bool = False,
     ) -> Rastro:
         """Create an HTTP client. Install rastro-engine[http]; use one event loop per client."""
         try:
@@ -104,6 +129,57 @@ class Rastro:
             policy=policy,
             limits=limits,
             repository=repository,
+            model=model,
+            inference_policy=inference_policy,
+            discover_recipes=discover_recipes,
+        )
+
+    async def extract_html_async[T: BaseModel](
+        self,
+        html: str,
+        *,
+        source: Source,
+        schema: type[T],
+        recipe: Recipe | None = None,
+        context: RecipeContext | None = None,
+        recipe_version: int | None = None,
+    ) -> ExtractionResult[T]:
+        """Run offline extraction, with optional cold-context discovery and inference."""
+        prepared = await asyncio.to_thread(
+            self._memory.prepare,
+            source,
+            schema,
+            recipe,
+            context,
+            recipe_version,
+            allow_discovery=self._discover_recipes,
+        )
+        return await self._extract_prepared(html, source, schema, prepared)
+
+    async def _extract_prepared[T: BaseModel](
+        self,
+        html: str,
+        source: Source,
+        schema: type[T],
+        prepared: PreparedRecipe,
+    ) -> ExtractionResult[T]:
+        if prepared.definition is None:
+            return await self._learner.extract(
+                html,
+                source=source,
+                schema=schema,
+                prepared=prepared,
+                parser=self._parser,
+                limits=self._limits,
+            )
+        return await asyncio.to_thread(
+            self._memory.extract,
+            html,
+            source=source,
+            schema=schema,
+            prepared=prepared,
+            parser=self._parser,
+            limits=self._limits,
         )
 
     async def extract[T: BaseModel](
@@ -120,7 +196,13 @@ class Rastro:
             raise ConfigurationError("Use Rastro.web(policy) or supply an acquisition port")
         started, started_at = perf_counter(), datetime.now(UTC)
         prepared = await asyncio.to_thread(
-            self._memory.prepare, source, schema, recipe, context, recipe_version
+            self._memory.prepare,
+            source,
+            schema,
+            recipe,
+            context,
+            recipe_version,
+            allow_discovery=self._discover_recipes,
         )
         fetched = await self._acquisition.acquire(source, max_bytes=self._limits.max_html_bytes)
         final_source = Source(url=fetched.url, locale=source.locale, timezone=source.timezone)
@@ -128,15 +210,7 @@ class Rastro:
         result: ExtractionResult[T] | None = None
         if fetched.html is not None and fetched.status == Outcome.SUCCESS:
             try:
-                result = await asyncio.to_thread(
-                    self._memory.extract,
-                    fetched.html,
-                    source=final_source,
-                    schema=schema,
-                    prepared=prepared,
-                    parser=self._parser,
-                    limits=self._limits,
-                )
+                result = await self._extract_prepared(fetched.html, final_source, schema, prepared)
             except ResourceLimitError:
                 issue = "extraction_limit"
         if result is None:
