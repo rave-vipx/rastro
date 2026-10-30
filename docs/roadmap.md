@@ -27,6 +27,20 @@ Owner decisions after the 0.1.0 release candidate ([ADR 0012](decisions/0012-pro
 | Field aliases in deterministic discovery | INT-002, DIFF-001 (integration effort) | Pydantic aliases and explicit alias maps resolve differently named source fields |
 | Declarative jobs and machine-readable CLI | JOB-001/002, AGENT-001, INT-001 | A TOML/JSON job runs without Python; JSON output; published JSON Schemas |
 
+### Pre-v0.2 status and handoff (2026-10-30)
+
+| Item | State | Next step |
+| --- | --- | --- |
+| Recovery benchmark protocol (#23) | Merged | None until v0.2 evaluation |
+| Latency profile (#24) | Merged | Implement the measured wins: cache `schema_fingerprint` per schema class (41–45% of the small-page gap) and cheaper per-field provenance (54% of the large-page gap); re-run the profile |
+| Recipe model refactor (#25) | Open; independent review running | Address review findings; update README, getting-started and acquisition examples to the strategy variants; merge `origin/dev` and merge |
+| Model provider strategy (#22) | Open; independent review running | Support `max_completion_tokens` and omitted `temperature` for OpenAI reasoning models (required for OpenAI/Codex API keys); address review findings; merge |
+| Product direction, specification 1.1 (#21) | Open | Merge last; link ADRs 0009–0011 once they exist |
+| Clean-code guidelines | Open (separate PR) | Review and merge |
+| Field aliases in discovery | Not started | After #25 |
+| Declarative jobs and JSON CLI (JOB-001/002, AGENT-001) | Not started | After #25; schema is public API from day one |
+| Repository hygiene | Pending maintainer | Close issues #2–#4 (implemented), promote `dev` to `main`, publication gates in issue #5 |
+
 ## v0.2 order of work
 
 1. Mock Lab (MOCK-001–006): the measurement instrument for everything after it.
