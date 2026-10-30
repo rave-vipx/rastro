@@ -6,7 +6,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel, Field, ValidationError
 
-from rastro import AcquisitionPolicy, Outcome, Rastro, RastroError, Recipe, Source
+from rastro import AcquisitionPolicy, JsonLdRecipe, Outcome, Rastro, RastroError, Source
 
 
 class Product(BaseModel):
@@ -25,10 +25,8 @@ async def main() -> int:
         result = await engine.extract(
             source=Source(url=args.url, locale=args.locale),
             schema=Product,
-            recipe=Recipe(
-                strategy="jsonld",
-                item_type="Product",
-                fields={"name": "/name", "price": "/offers/price"},
+            recipe=JsonLdRecipe(
+                item_type="Product", fields={"name": "/name", "price": "/offers/price"}
             ),
         )
     except (ValidationError, RastroError):

@@ -90,7 +90,7 @@ class RecipeMemory:
         return PreparedRecipe(
             validate_recipe(schema, stored.recipe, representation),
             key,
-            stored.selected_index,
+            stored.metadata.selected_index,
             storage_seconds,
             started,
             started_at,
