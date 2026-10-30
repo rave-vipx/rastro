@@ -118,7 +118,7 @@ class WebAcquirer:
         started = perf_counter()
         accept = "application/json" if representation == "json" else "text/html"
         operation = _Operation(source.url, {"User-Agent": _USER_AGENT, "Accept": accept})
-        html: str | None = None
+        body: str | None = None
         issue: str | None = None
         status = Outcome.SUCCESS
         try:
@@ -142,7 +142,7 @@ class WebAcquirer:
                     response = await self._request(url, operation, max_bytes=max_bytes)
                     if response.status not in _REDIRECTS:
                         self._check_status(response.status)
-                        html = _decode(response, representation)
+                        body = _decode(response, representation)
                         break
                     if hop == self.policy.max_redirects:
                         raise AcquisitionError("redirect_limit", Outcome.PERMANENT_FAILURE)
@@ -154,7 +154,7 @@ class WebAcquirer:
             status, issue = error.outcome, error.code
         return AcquisitionResult(
             url=operation.url,
-            html=html,
+            body=body,
             status=status,
             issue_code=issue,
             http_status=operation.http_status,
@@ -265,18 +265,12 @@ class WebAcquirer:
                                 target = await pin_destination(url, self.policy, self._resolver)
                                 network_start = perf_counter()
                                 try:
-                                    # Older transports need not accept proxy for direct egress.
-                                    route = (
-                                        {}
-                                        if operation.proxy is None
-                                        else {"proxy": operation.proxy}
-                                    )
                                     response = await self._transport.get(
                                         target,
                                         headers=operation.headers,
                                         timeout=self.policy.request_timeout_seconds,
                                         max_bytes=max_bytes,
-                                        **route,
+                                        proxy=operation.proxy,
                                     )
                                 finally:
                                     operation.network_seconds += perf_counter() - network_start

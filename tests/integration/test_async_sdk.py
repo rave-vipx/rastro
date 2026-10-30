@@ -27,8 +27,10 @@ class Acquirer:
         self.active = 0
         self.peak = 0
         self.completed = 0
+        self.representations = []
 
-    async def acquire(self, source, *, max_bytes):
+    async def acquire(self, source, *, max_bytes, representation):
+        self.representations.append(representation)
         self.active += 1
         self.peak = max(self.peak, self.active)
         try:
@@ -52,10 +54,12 @@ class Acquirer:
 async def test_web_extraction_uses_the_same_validation_and_provenance(
     html, schema, source, recipe, caplog
 ):
-    engine = Rastro(acquisition=Acquirer(html), policy=POLICY)
+    acquirer = Acquirer(html)
+    engine = Rastro(acquisition=acquirer, policy=POLICY)
     with caplog.at_level(logging.INFO, logger="rastro"):
         result = await engine.extract(source=source, schema=schema, recipe=recipe)
     assert result.status == Outcome.SUCCESS
+    assert acquirer.representations == ["html"]  # Every port receives the representation.
     assert result.source_url == "https://example.com/final"
     assert result.requested_url == "https://example.com/products"
     assert result.http_status == 200
@@ -105,7 +109,7 @@ async def test_acquired_extraction_preserves_regional_validation_context_after_r
 
 async def test_failures_are_results_with_no_false_success(schema, source, recipe):
     class Restricted:
-        async def acquire(self, source, *, max_bytes):
+        async def acquire(self, source, *, max_bytes, representation):
             return AcquisitionResult(source.url, None, Outcome.ACCESS_RESTRICTION, "robots_denied")
 
     result = await Rastro(acquisition=Restricted(), policy=POLICY).extract(
@@ -140,7 +144,7 @@ async def test_batch_cancellation_cancels_every_worker(schema, source, recipe):
     entered = asyncio.Event()
 
     class Paused(Acquirer):
-        async def acquire(self, source, *, max_bytes):
+        async def acquire(self, source, *, max_bytes, representation):
             self.active += 1
             if self.active == 2:
                 entered.set()

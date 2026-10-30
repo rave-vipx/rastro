@@ -275,7 +275,7 @@ class Acquirer:
         self.html = html
         self.calls = 0
 
-    async def acquire(self, source, *, max_bytes):
+    async def acquire(self, source, *, max_bytes, representation):
         self.calls += 1
         await asyncio.sleep(0)
         return AcquisitionResult("https://example.com/final", self.html, Outcome.SUCCESS, None)

@@ -360,7 +360,7 @@ async def test_learning_after_redirect_acquires_once_and_uses_requested_memory_k
     class Acquisition:
         calls = 0
 
-        async def acquire(self, source, *, max_bytes):
+        async def acquire(self, source, *, max_bytes, representation):
             self.calls += 1
             return AcquisitionResult("https://example.com/final", PAGE, Outcome.SUCCESS, None)
 

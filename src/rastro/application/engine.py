@@ -267,20 +267,16 @@ class Rastro:
             representation=representation,
         )
         max_bytes = self._limits.max_input_bytes(representation)
-        if representation == "json":
-            fetched = await self._acquisition.acquire(
-                source, max_bytes=max_bytes, representation="json"
-            )
-        else:
-            # HTML ports predating structured responses need not accept `representation`.
-            fetched = await self._acquisition.acquire(source, max_bytes=max_bytes)
+        fetched = await self._acquisition.acquire(
+            source, max_bytes=max_bytes, representation=representation
+        )
         final_source = Source.model_validate({**source.model_dump(), "url": fetched.url})
         issue = fetched.issue_code
         result: ExtractionResult[T] | None = None
-        if fetched.html is not None and fetched.status == Outcome.SUCCESS:
+        if fetched.body is not None and fetched.status == Outcome.SUCCESS:
             try:
                 result = await self._extract_prepared(
-                    fetched.html, final_source, schema, prepared, representation
+                    fetched.body, final_source, schema, prepared, representation
                 )
             except ResourceLimitError:
                 issue = "extraction_limit"
