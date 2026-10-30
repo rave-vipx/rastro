@@ -1,0 +1,30 @@
+{
+ "manifest_version": 1,
+ "hash": "SHA-256 of the exact committed file bytes (LF, UTF-8, no BOM); per-scenario hash of canonical JSON",
+ "splits": {
+  "development": {
+   "path": "benchmarks/recovery/corpus.json",
+   "sha256": "808e97d23fb924cc256a13a961cc5e12436a24c1f242456d18d12cb30613f30d",
+   "scenarios": {
+    "dev-class-rename": "ddb2ca448830c78a6b64eb784c18b834b7fd32233b730dd36fe2fccba4011ad7",
+    "dev-wrapper-insertion": "8eb6cfe46700298e345c4a76b8d91c6b50e24cda238a439ee5b8710798dd3e5b",
+    "dev-field-move": "7ca7a3fb15b46d939b5937a727ec41c665a8ae1b53849d3a32da51619f1cf32e",
+    "dev-duplicated-candidates": "349f22effbbc3737f63bb80576f533fd52f0e9bf2ad013f7914c64598fca3bff",
+    "dev-removed-and-empty": "da4186dff2aed524f82c6f22b292dc6201eb0604196a49fbc68370939b60361c",
+    "dev-stale-price-trap": "d8ed4b1b09c307c93ed1c5770da21b05a3eadfaace562b7ac9e191f40aec3400"
+   }
+  },
+  "sealed": {
+   "path": "benchmarks/recovery/sealed/corpus.json",
+   "sha256": "e2167c3f3626cadb09463a1fadcae0e90739ab678755faa5c461815a0105bf82",
+   "scenarios": {
+    "sealed-bem-rename": "6b6a9d4e3d90ac34655ae7d5b9d3ccbc3561ba134cb6230207dd41fe5c510b3d",
+    "sealed-positional-table": "375b7a614fe896a6fd09603837cee7a22382d3688385d0519a211f82477cf978",
+    "sealed-cents-trap": "7e2dfa51ec40d1794ac04d75a62ce0a8924fa4bdd300c2b1a21e1e2b7b9e47f0",
+    "sealed-sponsored-duplicate": "241a9495503a4371ffd717060cf433a22337231e938a860562a12c2c73abb17c",
+    "sealed-outage-then-rename": "26c00462aabde9497e1c9bebab34f31a9deb9079f523506216744d7bc4bb0148",
+    "sealed-stale-attribute": "f8258a767358efde194a9f14b0037a9c38b0b389e0fcc6963f883764ee11356e"
+   }
+  }
+ }
+}
