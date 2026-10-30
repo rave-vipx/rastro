@@ -12,7 +12,7 @@ AI-001–004, GEO-001–003, OBS-001/002, and specification sections 17–18.
 | Explicit invalid/missing outcomes and provenance | Offline contracts and integration tests; comparison corpus; live example below | Semantic correctness is not guaranteed by type validation |
 | Durable recipes | Offline restart/concurrency tests and two independent live example processes | Advanced lifecycle and repair belong to v0.2 |
 | Useful timing and inference accounting | SDK metrics, live report, benchmark raw samples | Browser timing is not applicable to the current HTTP-only adapter |
-| Configured Ollama works end to end | Offline adapter/proposal/budget tests | No local Ollama service/model was available; live model quality and activation remain unverified |
+| Configured Ollama works end to end | Offline adapter/proposal/budget tests; [live Ollama evidence](live-ollama-evidence.md): `qwen3:4b` learned, activated and reused a recipe across processes, and live/controlled failures stayed explicit | One model, one machine and synthetic inputs; a harder page failed 0/5 (safely); broader model quality is unmeasured |
 | Competent comparison | Independent Scrapling + Pydantic baseline, 14 cases, 50 samples per executor/case | No measured accuracy/speed advantage; developer effort and maintenance benefit unmeasured; DIFF-001 remains open |
 | Full v0.1 requirements | [Coverage table](roadmap.md) | Separate permitted structured APIs (INT-002), broader currency interpretation and explicit egress configuration (GEO-001) remain incomplete |
 | Licenses, naming and distribution | Installed dependency inventory and public registry checks below | Ownership, naming/trademark review, bundled native notices and final distribution review remain open |

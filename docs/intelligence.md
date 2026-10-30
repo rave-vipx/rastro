@@ -63,8 +63,9 @@ uv run --extra ollama python examples/intelligence.py --model YOUR_INSTALLED_MOD
 ```
 
 Rastro never starts Ollama, downloads models, or registers tools. The adapter uses
-`POST /api/chat`, a JSON Schema response format, non-streaming generation, temperature
-zero, and explicit context/output token options. Transport reads are streamed to
+`POST /api/chat`, a per-strategy JSON Schema response format, non-streaming generation,
+temperature zero, disabled thinking (`think: false`), and explicit context/output token
+options. Transport reads are streamed to
 enforce the response-byte budget. Model quality and schema-format support vary;
 validation remains mandatory regardless of model choice.
 
@@ -176,7 +177,8 @@ values from source content; keep the database and results private when needed.
 Default tests use synthetic pages and fake model/HTTP transports with sockets
 disabled. They cover attacks, limits, cancellation, activation, restart and M3
 payload compatibility. Core wheel installation is checked without HTTPX or Ollama.
-A real-model quality benchmark and live Ollama smoke result are not claimed by
-these tests; record those separately when validating a release.
+These tests do not claim real-model quality. The separate
+[live Ollama evidence](live-ollama-evidence.md) records one local `qwen3:4b` run
+with its opt-in harness, model digest and limitations.
 
 See [ADR 0004](decisions/0004-bounded-recipe-learning.md) for adapter and trust decisions.
