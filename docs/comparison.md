@@ -374,3 +374,120 @@ is small next to network acquisition, which was not measured here.
   need historical or semantic checks (QUAL-005, v0.2). Neither engine has them.
 - Recovery after a mutation (repair) is out of v0.1 scope and was not measured. A
   stored recipe that fails is reported, never replaced automatically.
+
+## Latency profile
+
+This profile explains the slowdown above for **DIFF-001** and follows principle
+**P-010** (measure before optimizing). It is measurement only: `src/rastro` is
+unchanged, and every candidate optimization at the end is an untested hypothesis.
+
+### Reproduce
+
+```bash
+uv sync --locked --all-extras
+uv run python -m benchmarks.profile_latency --calls 30 --warmup 5 \
+  --output benchmarks/results/latency-profile.json
+```
+
+Three corpus cases stand in for the workload: `static` (small CSS page), `metadata`
+(JSON-LD) and `large` (the expanded 250-record page). Both executors are the ones
+compared above, reconstructed per call, with Rastro completion logging disabled.
+`cProfile` wraps 30 calls per executor after 5 warmups; the same 30 calls are also
+timed without the profiler, so every row carries a profiled per-call total and an
+unprofiled median. [Raw report](https://github.com/rave-vipx/rastro/blob/dev/benchmarks/results/latency-profile.json),
+[profiler](https://github.com/rave-vipx/rastro/blob/dev/benchmarks/profile_latency.py).
+
+### Cost per call
+
+Recorded on 2026-10-30 UTC from commit `e70a642`: Python 3.12.16, Darwin 25.6.0,
+arm64; Rastro 0.1.0.dev0, Scrapling 0.5, Pydantic 2.14.1, lxml 6.1.3. Host CPU and
+memory pressure were not controlled.
+
+| Case | Executor | Unprofiled median (ms) | Profiled total (ms) | Largest cumulative hotspot |
+| --- | --- | ---: | ---: | --- |
+| `static` | Scrapling + Pydantic | 0.075 | 0.130 | `scrapling.parser:css` 62% |
+| `static` | Rastro | 0.326 | 0.864 | `rastro.domain.models:schema_fingerprint` 52% |
+| `metadata` | Scrapling + Pydantic | 0.020 | 0.043 | `benchmarks.baseline:_json_rows` 66% |
+| `metadata` | Rastro | 0.251 | 0.732 | `rastro.domain.models:schema_fingerprint` 59% |
+| `large` | Scrapling + Pydantic | 8.503 | 13.442 | `scrapling.parser:css` 68% |
+| `large` | Rastro | 12.033 | 20.093 | `rastro.adapters.scrapling:parse` 66% |
+
+The unprofiled medians reproduce the `offline.json` figures (0.085/0.296, 0.028/0.218,
+8.306/12.322). cProfile inflates a call by roughly 1.6–2.9× because it instruments
+every Python call, and it inflates call-heavy Pydantic and Scrapling code most.
+Shares are therefore the useful output; absolute profiled milliseconds are not
+comparable to the tables above.
+
+### Where Rastro's time goes
+
+Cumulative milliseconds per call and share of the profiled call, top entries:
+
+| Case | Function | ms/call | Share | Calls/call |
+| --- | --- | ---: | ---: | ---: |
+| `static` | `rastro.domain.models:schema_fingerprint` | 0.446 | 52% | 1 |
+| `static` | `pydantic.main:model_json_schema` | 0.428 | 50% | 1 |
+| `static` | `rastro.adapters.scrapling:parse` | 0.167 | 19% | 1 |
+| `metadata` | `rastro.domain.models:schema_fingerprint` | 0.429 | 59% | 1 |
+| `metadata` | `pydantic.json_schema:generate` | 0.296 | 40% | 1 |
+| `large` | `rastro.adapters.scrapling:parse` | 13.278 | 66% | 1 |
+| `large` | `scrapling.parser:css` | 9.454 | 47% | 1001 |
+| `large` | `pydantic.main:__init__` | 2.071 | 10% | 1258 |
+| `large` | `rastro.domain.models:evidence_url` | 1.469 | 7% | 1001 |
+| `large` | `pydantic_core:validate_python` | 1.678 | 8% | 1510 |
+
+Three distinct costs appear, and they do not scale with page size the same way.
+
+1. **Schema fingerprinting is a fixed cost on every extraction.**
+   `extract_document` calls `schema_fingerprint(schema)` once per call, which runs
+   `schema.model_json_schema()` and SHA-256s the canonical JSON. Pydantic rebuilds
+   the JSON Schema on every call; it is not cached. Measured without the profiler,
+   one fingerprint of the corpus `Listing` model costs **0.103 ms**, i.e. **32%** of
+   the 0.326 ms `static` call and **41%** of the 0.251 ms `metadata` call. That single
+   call accounts for **41–45%** of Rastro's entire gap over the baseline on both
+   small pages (0.251 ms and 0.230 ms respectively).
+2. **Provenance is a per-field cost on large pages.** Each accepted field builds an
+   `Evidence` model, and each one re-reads `source.evidence_url`, which re-parses and
+   re-serializes the URL with `urlsplit`/`urlunsplit`. Unprofiled, `Evidence(...)`
+   costs 0.0011 ms and `Source.evidence_url` 0.00067 ms. On the 250-record page that
+   is 1000 `Evidence` constructions (**1.12 ms, 9%** of the 12.0 ms call) plus 1001
+   URL normalizations (**0.67 ms, 6%**). Together with the fingerprint, **1.9 ms of
+   the 3.5 ms gap (54%)** is accounted for by these per-call and per-field
+   constructions; the rest is the `extract_document` loop (1.2 ms self time profiled)
+   and result assembly, which was not priced separately.
+3. **DOM work is shared, not added.** `scrapling.parser:css`/`xpath` dominate the
+   `large` case for both executors (68% of the baseline call, 47% of Rastro's), and
+   Rastro reaches the same Scrapling selector calls through
+   `rastro.adapters.scrapling:parse`. Recipe validation (`Recipe.model_validate` over
+   `model_dump`) and engine construction are **0.0058 ms** and **0.0054 ms** per
+   call: real but below 2% of a small-page call.
+
+### Candidate optimizations (hypotheses, none implemented)
+
+Ranked by expected gain. Nothing here was applied, and none of these numbers is a
+result.
+
+1. **Memoize `schema_fingerprint` per schema class.** Expected saving **0.10 ms per
+   call**, about **30–40%** of Rastro's latency on small pages and **41–45%** of its
+   gap over the baseline. The risk is invalidation: `model_rebuild()` changes the
+   JSON Schema, so a cache keyed on the class needs an explicit reset or a documented
+   staleness rule. Highest gain of anything measured, and the only one that helps
+   every page size.
+2. **Build provenance without re-validating and without re-parsing the URL.**
+   Hoisting `evidence_url` out of the per-field loop and constructing `Evidence` with
+   `model_construct` should remove roughly **1.8 ms** of the 12.0 ms `large` call
+   (**15%**, **54%** of the gap), with no effect on small pages. The risk is that
+   `model_construct` skips validation of engine-generated values; it keeps the frozen
+   configuration but no longer proves the invariants.
+3. **Skip the recipe roundtrip in `validate_recipe`.** `Recipe.model_validate(recipe.model_dump())`
+   costs **0.0058 ms per call** (1.8% of `static`) and exists as a trust boundary for
+   mutable mappings. A cheaper deep copy, or trusting an already-validated frozen
+   `Recipe`, would recover most of it — a small gain for a real safety argument.
+4. **Reuse the engine and parser instead of reconstructing them per call.** The
+   benchmark rebuilds `Rastro()` and the recipe on every call for fairness; measured
+   constructor cost is **0.0054 ms** plus **0.0042 ms** for the recipe. Reuse would
+   move latency by a few percent at most, and changing it would change what the
+   benchmark measures, so it is listed last.
+5. **Reduce the `extract_document` per-candidate loop overhead.** It carries 1.2 ms of
+   profiled self time on the 250-record page (candidate dicts, issue tuples, evidence
+   dict comprehension). Not priced without the profiler, so the expected gain is
+   unknown and this is the least supported hypothesis of the five.
