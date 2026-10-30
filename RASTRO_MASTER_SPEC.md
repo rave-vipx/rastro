@@ -2,7 +2,7 @@
 
 **Document:** `RASTRO_MASTER_SPEC.md`  
 **Status:** Foundational Specification  
-**Version:** 1.0  
+**Version:** 1.1 (2026-10-30 amendments: see Amendment Log)  
 **Project:** Rastro  
 **Category:** Open Source Web Data Intelligence Platform  
 **Primary Language:** English  
@@ -51,6 +51,12 @@ Release priorities take precedence over speculative features.
 4. Architecture changes require documented justification.
 5. Automated tests must verify acceptance criteria.
 6. No implementation may silently weaken security, data quality, or transparency requirements.
+
+## Amendment Log
+
+| Date | Version | Change | Decision record |
+|---|---|---|---|
+| 2026-10-30 | 1.1 | Owner decisions after the 0.1.0 release candidate: AI-005 becomes a pre-v0.2 MUST with a documented provider strategy (AI-007); declarative jobs (JOB-*), agent interface (AGENT-*), term-based source discovery (DISC-*) and Scrapling capability parity (SCR-*) are added; v0.2 scope gains the agent interface | [ADR 0012](docs/decisions/0012-product-direction.md) |
 
 ---
 
@@ -262,6 +268,18 @@ Rastro owns the higher-level responsibilities:
 
 The project must not reimplement Scrapling capabilities without benchmark evidence and a documented need.
 
+### SCR-001 — MUST — pre-v0.2
+
+Rastro must preserve access to Scrapling's capabilities rather than hide them: adopters can supply or obtain Scrapling parser/selector objects through the adapter boundary, and Rastro's additions (contracts, validation, provenance, memory, monitoring) wrap rather than replace them.
+
+### SCR-002 — SHOULD — v0.2
+
+Use Scrapling's adaptive element relocation as a deterministic source of repair candidates (REPAIR-001/002), evaluated like any other candidate before activation.
+
+### SCR-003 — MUST
+
+Scrapling features whose purpose is to evade access restrictions or bot defenses must not be exposed or enabled by Rastro (SEC-003, GEO-005). Browser fetchers may be adopted as a future browser adapter under the same acquisition policies.
+
 ## Differentiation Requirement
 
 **DIFF-001 — MUST**
@@ -454,9 +472,15 @@ Provide strict execution budgets:
 
 Untrusted webpage text must never be treated as operational instructions.
 
-### AI-005 — SHOULD — v0.2
+### AI-005 — MUST — pre-v0.2 (0.1.x)
 
 Support additional local or OpenAI-compatible inference endpoints through provider adapters.
+
+Remote (non-loopback) providers require explicit opt-in because page excerpts leave the machine. Credentials are referenced from the environment or a secret provider (SEC-011) and never persisted.
+
+### AI-007 — MUST — pre-v0.2 (0.1.x)
+
+Model access follows a provider strategy: one small, documented interface that any adopter can implement for another runtime or API (for example a hosted API, a different local runtime, or an organization gateway) without changing core code. Every provider is subject to the same budgets (AI-003), structured-output validation (AI-002) and untrusted-content boundary (AI-004).
 
 ### AI-006 — FUTURE
 
@@ -853,6 +877,46 @@ Distinguish:
 - Data rejected by validation.
 
 These conditions must never be collapsed into a generic empty result.
+
+---
+
+## 7.13 Declarative Jobs
+
+### JOB-001 — MUST — pre-v0.2
+
+Users can define an extraction job as data — sources (URLs or supplied files), target fields (name, type, required, constraints), acquisition policy, regional context and optional recipes — in a declarative file (TOML or JSON) and run it without writing Python.
+
+### JOB-002 — MUST — pre-v0.2
+
+Job definitions are validated, versioned, schema-described data. They cannot execute code, embed credentials (only environment references), or bypass acquisition policies. The SDK, CLI, agent interface and Studio all load the same job format through the same application services (P-008).
+
+### JOB-003 — MUST — v0.4
+
+Studio lets non-technical users create and edit jobs — sites or research terms, and the data wanted from them — producing the same declarative job format.
+
+## 7.14 Source Discovery by Research Terms
+
+### DISC-001 — SHOULD — v0.3
+
+A search-provider strategy can turn research terms into candidate source URLs. Providers are optional adapters; no paid provider is required for core functionality.
+
+### DISC-002 — MUST — v0.3
+
+Discovered hosts are proposals only. They require explicit user approval before entering an acquisition allowlist, and acquisition of approved hosts follows every existing policy (robots, pacing, destination checks). Discovery never crawls beyond approved hosts.
+
+## 7.15 Agent Interface
+
+### AGENT-001 — MUST — pre-v0.2
+
+Machine-readable interfaces: JSON input and output for jobs and results, with published JSON Schemas, so AI agents and scripts can use Rastro without parsing human text.
+
+### AGENT-002 — SHOULD — v0.2
+
+Provide a Model Context Protocol (MCP) server adapter exposing job validation, job execution and result/recipe inspection over the same application services and policies.
+
+### AGENT-003 — MUST
+
+Content returned to calling agents is labelled as untrusted source data with provenance; it must never be presented as instructions. Agent tools cannot widen allowlists, read credentials or disable validation.
 
 ---
 
@@ -1738,6 +1802,8 @@ Make extraction maintenance measurable, testable, and safer.
 
 ### Scope
 
+- MCP agent interface (AGENT-002).
+- Scrapling adaptive relocation as a repair-candidate source (SCR-002).
 - Instant Mock Lab.
 - Structural mutation fixtures.
 - Recipe CI.
@@ -1768,6 +1834,7 @@ Maintain datasets over time with operational control.
 
 ### Scope
 
+- Term-based source discovery with approval (DISC-001/002).
 - Recurring source configuration.
 - Scheduling.
 - Dataset synchronization.
@@ -1800,6 +1867,7 @@ Make Rastro accessible through a visual operational interface.
 
 ### Scope
 
+- Job editor for sites, research terms and wanted data (JOB-003).
 - FastAPI management API.
 - React application.
 - Source dashboard.

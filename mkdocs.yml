@@ -40,6 +40,7 @@ nav:
   - Engineering decisions:
       - Structured JSON responses: decisions/0007-structured-responses.md
       - Explicit proxy egress: decisions/0008-explicit-egress.md
+      - Product direction after 0.1.0: decisions/0012-product-direction.md
       - Explicit regional context: decisions/0006-explicit-regional-context.md
       - Reproducible evidence: decisions/0005-reproducible-release-evidence.md
       - Bounded recipe learning: decisions/0004-bounded-recipe-learning.md
