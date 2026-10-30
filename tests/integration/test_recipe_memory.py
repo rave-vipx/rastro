@@ -52,7 +52,9 @@ def test_repeat_extraction_reuses_exact_version_and_retains_evidence(
         engine.extract_html(html, source=source, schema=schema, recipe_version=3)
 
 
-def test_pre_regional_sqlite_row_is_reused_after_restart(tmp_path, source, schema, recipe, html):
+def test_pre_regional_sqlite_row_is_reused_after_restart(
+    tmp_path, source, schema, html, legacy_payload
+):
     import json
     import sqlite3
     from contextlib import closing
@@ -62,15 +64,13 @@ def test_pre_regional_sqlite_row_is_reused_after_restart(tmp_path, source, schem
     legacy_key = key.model_dump(mode="json")
     for field in ("languages", "currency", "egress", "representation"):
         legacy_key.pop(field)
-    legacy_recipe = recipe.model_dump(mode="json")
-    legacy_recipe.pop("record_path", None)
     SQLiteRecipeRepository(path).get(key)
     with closing(sqlite3.connect(path)) as db:
         db.execute(
             "INSERT INTO recipes VALUES (?, 1, ?, 0, ?, ?, 1)",
             (
                 json.dumps(legacy_key, sort_keys=True, separators=(",", ":")),
-                json.dumps(legacy_recipe),
+                legacy_payload,
                 "2026-01-01T00:00:00.000000+00:00",
                 "2026-01-01T00:00:00.000000+00:00",
             ),
