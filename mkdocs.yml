@@ -29,6 +29,7 @@ nav:
   - Recipe memory: memory.md
   - Optional intelligence: intelligence.md
   - Extraction comparison: comparison.md
+  - Recovery benchmark protocol: recovery-benchmark.md
   - Release evidence: release-evidence.md
   - Live Ollama evidence: live-ollama-evidence.md
   - Validation evidence: development/validation-evidence.md
@@ -39,6 +40,7 @@ nav:
   - Development work log: development/work-log.md
   - Engineering decisions:
       - Recipe model: decisions/0009-recipe-model.md
+      - Recovery benchmark protocol: decisions/0011-recovery-benchmark.md
       - Structured JSON responses: decisions/0007-structured-responses.md
       - Explicit proxy egress: decisions/0008-explicit-egress.md
       - Explicit regional context: decisions/0006-explicit-regional-context.md
