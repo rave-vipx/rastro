@@ -163,8 +163,10 @@ source = Source(url="https://example.com/article", egress="eu-office")
 
 - **One endpoint per profile.** Profile names are 1–64 lowercase letters, digits, `_`
   or `-`, starting with a letter; `direct` is reserved. A proxy URL must be
-  `http://` or `https://` host with an optional port; credentials, paths, queries,
-  whitespace and SOCKS schemes are rejected. The proxy host is not checked against
+  `http://` or `https://` host with an optional port from 1 to 65535; empty or zero
+  ports, credentials, paths, queries, whitespace and SOCKS schemes are rejected.
+  Policy validation errors never include input values, so a rejected inline
+  credential is not echoed. The proxy host is not checked against
   `allowed_hosts` or public-address rules: declaring it is the administrator's
   explicit permission (SEC-002), so keep untrusted input out of policy construction.
 - **Credentials are environment references only.** `username_env`/`password_env`
@@ -189,8 +191,11 @@ source = Source(url="https://example.com/article", egress="eu-office")
   [ADR 0008](decisions/0008-explicit-egress.md).
 
 `ExtractionResult.metrics.egress` records the profile name used (`direct` for
-direct connections), never the proxy URL. Proxy failures surface as the transient
+direct connections), never the proxy URL. Supplied-HTML extraction opens no
+connection but records `Source.egress` the same way, matching the recipe-memory key. Proxy failures surface as the transient
 `proxy_failure` category when curl identifies them, otherwise as `network_failure`.
+A custom acquisition path that hands the transport a malformed route (non-HTTP(S)
+scheme, or a password without a username) gets `invalid_proxy_route`.
 Recipe memory isolates recipes by egress name; see [recipe memory](memory.md).
 
 ## Security and operational boundaries

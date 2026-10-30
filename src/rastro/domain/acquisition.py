@@ -8,7 +8,15 @@ from dataclasses import dataclass, field
 from typing import Any, Self
 from urllib.parse import urlsplit
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import (
+    ConfigDict,
+    Field,
+    ModelWrapValidatorHandler,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
+from pydantic_core import PydanticCustomError
 
 from rastro.domain.models import EGRESS_NAME, Contract, Outcome
 
@@ -28,7 +36,35 @@ def _exact_host(host: str) -> str:
         return host
 
 
-class EgressProfile(Contract):
+def _without_input(error: ValidationError, title: str) -> ValidationError:
+    """Rebuild errors without input values, which may hold inline proxy credentials."""
+    return ValidationError.from_exception_data(
+        title,
+        [
+            {
+                "type": PydanticCustomError(item["type"], item["msg"]),
+                "loc": item["loc"],
+                "input": None,
+            }
+            for item in error.errors(include_url=False, include_input=False, include_context=False)
+        ],
+        hide_input=True,
+    )
+
+
+class _RedactedErrors(Contract):
+    model_config = ConfigDict(extra="forbid", frozen=True, hide_input_in_errors=True)
+
+    @model_validator(mode="wrap")
+    @classmethod
+    def redact_errors(cls, data: Any, handler: ModelWrapValidatorHandler[Self]) -> Self:
+        try:
+            return handler(data)
+        except ValidationError as error:
+            raise _without_input(error, cls.__name__) from None
+
+
+class EgressProfile(_RedactedErrors):
     """One administrator-declared HTTP(S) proxy. Credentials are environment references."""
 
     proxy_url: str = Field(min_length=1, max_length=2048)
@@ -45,6 +81,8 @@ class EgressProfile(Contract):
             port = parsed.port
         except ValueError:
             raise ValueError("Proxy URLs require a valid port") from None
+        if parsed.netloc.endswith(":") or port == 0:
+            raise ValueError("Proxy URLs require a valid port")
         if (
             parsed.scheme.lower() not in {"http", "https"}
             or parsed.username is not None
@@ -68,7 +106,7 @@ class EgressProfile(Contract):
         return self
 
 
-class AcquisitionPolicy(Contract):
+class AcquisitionPolicy(_RedactedErrors):
     """An exact host allowlist asserts the caller's permission to acquire a source."""
 
     allowed_hosts: tuple[str, ...] = Field(min_length=1, max_length=64)

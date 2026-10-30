@@ -216,3 +216,21 @@ async def test_proxy_errors_are_safe_categories(monkeypatch, error, code):
     with pytest.raises(AcquisitionError, match="^" + code + "$") as failure:
         await CurlTransport().get(TARGET, headers={}, timeout=1, max_bytes=1, proxy=route)
     assert "synthetic-password" not in str(failure.value) and failure.value.__suppress_context__
+
+
+@pytest.mark.parametrize(
+    "route",
+    [
+        ProxyRoute("o", "socks5h://p.example:1080"),
+        ProxyRoute("o", "ftp://p.example"),
+        ProxyRoute("o", "http://p.example", None, "orphan-password"),
+    ],
+)
+async def test_invalid_proxy_routes_fail_before_any_session(monkeypatch, route):
+    async def get(session, url, **kwargs):
+        pytest.fail("An invalid proxy route must not reach curl")
+
+    monkeypatch.setattr(AsyncSession, "get", get)
+    with pytest.raises(AcquisitionError, match=r"^invalid_proxy_route$") as failure:
+        await CurlTransport().get(TARGET, headers={}, timeout=1, max_bytes=1, proxy=route)
+    assert "orphan-password" not in str(failure.value)

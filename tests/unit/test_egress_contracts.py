@@ -1,3 +1,5 @@
+import json
+
 import pytest
 from pydantic import ValidationError
 
@@ -40,6 +42,9 @@ def test_named_profiles_accept_shorthand_and_normalize_endpoints():
         "http://proxy.example:3128?x=1",
         "http://proxy.example:3128#x",
         "http://proxy.example:99999",
+        "http://proxy.example:0",
+        "http://proxy.example:",
+        "https://[2001:db8::1]:",
         "http://proxy.example:3128\r\nX: 1",
         "http:// proxy.example",
         "http://proxy_example",
@@ -95,3 +100,29 @@ def test_source_selects_egress_by_name_and_recipe_keys_isolate_it(schema):
     assert '"egress":"eu-office"' in proxied_key.canonical()
     assert direct_key.canonical() != proxied_key.canonical()
     assert "proxy.example" not in proxied_key.canonical()
+
+
+@pytest.mark.parametrize(
+    "build",
+    [
+        lambda url: policy({"office": url}),
+        lambda url: policy({"office": {"proxy_url": url}}),
+        lambda url: EgressProfile(proxy_url=url),
+        lambda url: AcquisitionPolicy.model_validate_json(
+            json.dumps({"allowed_hosts": ["example.com"], "egress_profiles": {"office": url}})
+        ),
+    ],
+)
+def test_rejected_inline_proxy_credentials_are_never_echoed(build):
+    with pytest.raises(ValidationError) as failure:
+        build("http://user:s3cret-value@proxy.example:3128")
+    error = failure.value
+    assert error.errors()[0]["loc"][-1] == "proxy_url"
+    for rendered in (str(error), repr(error), repr(error.errors()), error.json()):
+        assert "s3cret-value" not in rendered
+
+
+def test_egress_profile_is_part_of_the_public_api():
+    import rastro
+
+    assert rastro.EgressProfile is EgressProfile and "EgressProfile" in rastro.__all__

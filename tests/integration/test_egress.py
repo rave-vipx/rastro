@@ -131,21 +131,29 @@ async def test_configuration_failures_happen_before_dns_or_network(egress, envir
     assert result.requests == 0 and result.egress == egress
 
 
-@pytest.mark.parametrize(("status", "code"), [(403, "access_restricted"), (429, "rate_limited")])
-async def test_restriction_through_proxy_never_falls_back_to_another_egress(status, code):
+@pytest.mark.parametrize(
+    ("status", "code", "direct_code"),
+    [
+        (403, "access_restricted", "host_access_restricted"),
+        (429, "rate_limited", "retry_after_pending"),
+    ],
+)
+async def test_restriction_through_proxy_never_falls_back_to_another_egress(
+    status, code, direct_code
+):
     transport = Transport(response(status, b"", **{"retry-after": "60"}), response())
     client = acquirer(transport)
     result = await client.acquire(
         Source(url="https://example.com/", egress="eu-office"), max_bytes=500
     )
     assert result.status == Outcome.ACCESS_RESTRICTION
-    assert result.issue_code in {code, "rate_limited"}
+    assert result.issue_code == code
     assert result.retries == 0 and result.requests == 2
     assert all(options["proxy"].name == "eu-office" for _, options in transport.calls)
     # The host restriction is shared: switching to direct egress cannot bypass it.
     direct = await client.acquire(Source(url="https://example.com/"), max_bytes=500)
     assert direct.status == Outcome.ACCESS_RESTRICTION
-    assert direct.issue_code in {"host_access_restricted", "retry_after_pending"}
+    assert direct.issue_code == direct_code
     assert len(transport.calls) == 2
 
 
@@ -222,3 +230,20 @@ async def test_recipe_memory_is_isolated_by_egress_profile(tmp_path, schema, rec
             source=Source(url="https://example.com/p", egress="eu-office"), schema=schema
         )
     assert len(transport.calls) == calls
+
+
+async def test_supplied_html_metrics_record_the_same_egress_as_recipe_memory(
+    tmp_path, schema, recipe
+):
+    repository = SQLiteRecipeRepository(tmp_path / "recipes.db")
+    engine = Rastro(repository=repository)
+    source = Source(url="https://example.com/p", egress="eu-office")
+    html = PAGE.decode()
+    explicit = engine.extract_html(html, source=source, schema=schema, recipe=recipe)
+    reused = await engine.extract_html_async(html, source=source, schema=schema)
+    assert explicit.status == reused.status == Outcome.SUCCESS and reused.recipe_reused
+    assert explicit.metrics.egress == reused.metrics.egress == "eu-office"
+    direct = Rastro().extract_html(
+        html, source=Source(url="https://example.com/p"), schema=schema, recipe=recipe
+    )
+    assert direct.metrics.egress == "direct"

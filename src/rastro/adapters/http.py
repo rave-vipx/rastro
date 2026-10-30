@@ -57,12 +57,15 @@ class CurlTransport:
                     f"{target.host}:{target.port}:{address}".encode("ascii")
                 ]
         else:
+            proxy_type = _PROXY_TYPES.get(proxy.url.split(":", 1)[0])
+            if proxy_type is None or (proxy.password is not None and proxy.username is None):
+                raise AcquisitionError("invalid_proxy_route", Outcome.PERMANENT_FAILURE)
             # The proxy resolves the target name, so a local RESOLVE pin cannot apply. The
             # tunnel keeps the proxy a byte relay; TLS still verifies the target hostname.
             options.update(
                 {
                     CurlOpt.PROXY: proxy.url.encode("ascii"),
-                    CurlOpt.PROXYTYPE: _PROXY_TYPES[proxy.url.split(":", 1)[0]],
+                    CurlOpt.PROXYTYPE: proxy_type,
                     CurlOpt.NOPROXY: b"",
                     CurlOpt.HTTPPROXYTUNNEL: 1,
                     CurlOpt.PROXY_CREDENTIAL_NO_REUSE: 1,

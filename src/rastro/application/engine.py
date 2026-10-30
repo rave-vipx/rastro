@@ -230,6 +230,7 @@ class Rastro:
                 records=(),
                 issues=(Issue(code=issue or "invalid_acquisition_result"),),
                 metrics=Metrics(
+                    egress=source.egress,
                     storage_seconds=prepared.storage_seconds,
                     input_bytes=0,
                     candidates=0,
