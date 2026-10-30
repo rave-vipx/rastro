@@ -1,847 +1,3876 @@
 {
-  "scope": "synthetic input; real local Ollama unless evidence_kind says otherwise",
-  "environment": {
-    "recorded_at": "2026-10-30T04:39:32.258382+00:00",
-    "git_head": "41819c9f5be4001a899be38398773bc3cf6289b9",
-    "git_tracked_changes": false,
-    "python": "3.12.16",
-    "platform": "macOS-26.6.2-arm64-arm-64bit",
-    "machine": "arm64",
-    "rastro": "0.1.0.dev0",
-    "httpx": "0.28.1",
-    "uv_lock_sha256": "e21515d8c09eb918e9ca21e5cf8363dd1e986c3e302644a533ae7d32c9c9621b",
-    "harness_sha256": "c91663259268ad66857a293fc54b9c435fb00b03283e7d98b02c5ef41c78dd1f",
-    "ollama_version": "0.40.13",
-    "ollama_origin": "http://127.0.0.1:11434",
-    "model": {
-      "name": "qwen3:4b",
-      "digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
-      "size_bytes": 2497293931,
-      "details": {
-        "family": "qwen3",
-        "format": "gguf",
-        "parameter_size": "4.0B",
-        "quantization_level": "Q4_K_M"
-      }
-    },
-    "inputs": {
-      "product_card": {
-        "sha256": "1de651c5d390b58869335ebff101b2e2ce7360719a8ce2df9604c09b4a126a99",
-        "bytes": 183
+  "format_version": 2,
+  "runs": [
+    {
+      "recorded_at": "2026-10-30T17:48:32.020656+00:00",
+      "trials_per_model": 5,
+      "repetitions_per_input": 5,
+      "summary": {
+        "qwen3:4b": {
+          "trials": 5,
+          "learn_success": 5,
+          "activated": 5,
+          "learn_matches_expected": 5,
+          "reuse_success": 5,
+          "learn_failures": {},
+          "repetition_success": {
+            "product_card": "5/5",
+            "distractors": "0/5"
+          },
+          "inference_calls": 20,
+          "learn_inference_seconds": {
+            "min": 1.7694,
+            "median": 1.7759,
+            "max": 4.8226
+          },
+          "reuse_total_seconds": {
+            "min": 0.0043,
+            "median": 0.0046,
+            "max": 0.0049
+          },
+          "repetition_inference_seconds": {
+            "min": 1.713,
+            "median": 2.8139,
+            "max": 4.3073
+          },
+          "failure_scenarios_explicit": 8,
+          "failure_scenarios": 8
+        },
+        "llama3.2:3b": {
+          "trials": 5,
+          "learn_success": 5,
+          "activated": 5,
+          "learn_matches_expected": 5,
+          "reuse_success": 5,
+          "learn_failures": {},
+          "repetition_success": {
+            "product_card": "5/5",
+            "distractors": "0/5"
+          },
+          "inference_calls": 20,
+          "learn_inference_seconds": {
+            "min": 1.1404,
+            "median": 1.1517,
+            "max": 3.5374
+          },
+          "reuse_total_seconds": {
+            "min": 0.0044,
+            "median": 0.0045,
+            "max": 0.0047
+          },
+          "repetition_inference_seconds": {
+            "min": 1.0946,
+            "median": 1.7335,
+            "max": 2.622
+          },
+          "failure_scenarios_explicit": 8,
+          "failure_scenarios": 8
+        }
       },
-      "distractors": {
-        "sha256": "2189b0e6c5ee7f65807344ffcb5e2522cb8eed5647ddaf947d2120afd5897276",
-        "bytes": 412
+      "models": {
+        "qwen3:4b": {
+          "scope": "synthetic input; real local Ollama unless evidence_kind says otherwise",
+          "environment": {
+            "recorded_at": "2026-10-30T17:47:07.688101+00:00",
+            "git_head": "606324e99d44651ffa7568820c3ae93733f5755b",
+            "git_tracked_changes": false,
+            "python": "3.12.16",
+            "platform": "macOS-26.6.2-arm64-arm-64bit",
+            "machine": "arm64",
+            "rastro": "0.1.0.dev0",
+            "httpx": "0.28.1",
+            "uv_lock_sha256": "e21515d8c09eb918e9ca21e5cf8363dd1e986c3e302644a533ae7d32c9c9621b",
+            "harness_sha256": "6635479e5bbbcf31e9e578470711086c33c86a835bc47c8aaf427afd3aaaa173",
+            "ollama_version": "0.40.13",
+            "ollama_origin": "http://127.0.0.1:11434",
+            "model": {
+              "name": "qwen3:4b",
+              "digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+              "size_bytes": 2497293931,
+              "details": {
+                "family": "qwen3",
+                "format": "gguf",
+                "parameter_size": "4.0B",
+                "quantization_level": "Q4_K_M"
+              }
+            },
+            "inputs": {
+              "product_card": {
+                "sha256": "1de651c5d390b58869335ebff101b2e2ce7360719a8ce2df9604c09b4a126a99",
+                "bytes": 183
+              },
+              "distractors": {
+                "sha256": "2189b0e6c5ee7f65807344ffcb5e2522cb8eed5647ddaf947d2120afd5897276",
+                "bytes": 412
+              }
+            },
+            "inference_policy": {
+              "max_calls": 2,
+              "max_repair_attempts": 1,
+              "timeout_seconds": 30,
+              "max_context_bytes": 32768,
+              "max_response_bytes": 65536,
+              "max_output_tokens": 2048,
+              "context_tokens": 8192,
+              "max_concurrency": 1,
+              "max_discovery_candidates": 8
+            }
+          },
+          "no_model_precheck": {
+            "product_card": {
+              "status": "insufficient_evidence",
+              "issues": [
+                "no_valid_recipe"
+              ],
+              "recipe_reused": false,
+              "recipe_version": null,
+              "recipe_attempts": [],
+              "learned_recipe": null,
+              "records": [],
+              "inference_calls": 0,
+              "inference_seconds": 0.0,
+              "storage_seconds": 0.0012,
+              "total_seconds": 0.0039,
+              "wall_seconds": 0.0232,
+              "stored_recipe": null
+            },
+            "distractors": {
+              "status": "insufficient_evidence",
+              "issues": [
+                "no_valid_recipe"
+              ],
+              "recipe_reused": false,
+              "recipe_version": null,
+              "recipe_attempts": [],
+              "learned_recipe": null,
+              "records": [],
+              "inference_calls": 0,
+              "inference_seconds": 0.0,
+              "storage_seconds": 0.0006,
+              "total_seconds": 0.0011,
+              "wall_seconds": 0.0012,
+              "stored_recipe": null
+            }
+          },
+          "models_loaded_before_learn": [
+            "llama3.2:3b"
+          ],
+          "learn": {
+            "phase": "learn",
+            "model_port_calls": 1,
+            "status": "success",
+            "issues": [],
+            "recipe_reused": false,
+            "recipe_version": 1,
+            "recipe_attempts": [
+              {
+                "origin": "model",
+                "index": 0,
+                "status": "success"
+              }
+            ],
+            "learned_recipe": {
+              "strategy": "css",
+              "fields": {
+                "name": "h2.title::text",
+                "price": "span.amount::text"
+              },
+              "version": 1,
+              "require_evidence": true,
+              "fallbacks": [],
+              "item_type": null,
+              "record_selector": "main > article.product-card"
+            },
+            "records": [
+              {
+                "data": {
+                  "name": "Field Notebook",
+                  "price": "12.50"
+                },
+                "evidence": {
+                  "name": {
+                    "method": "css",
+                    "locator": "main > article.product-card [match 0] >> h2.title::text"
+                  },
+                  "price": {
+                    "method": "css",
+                    "locator": "main > article.product-card [match 0] >> span.amount::text"
+                  }
+                }
+              }
+            ],
+            "inference_calls": 1,
+            "inference_seconds": 4.8226,
+            "storage_seconds": 0.0049,
+            "total_seconds": 4.8289,
+            "wall_seconds": 4.8475,
+            "stored_recipe": {
+              "strategy": "css",
+              "fields": {
+                "name": "h2.title::text",
+                "price": "span.amount::text"
+              },
+              "version": 1,
+              "require_evidence": true,
+              "fallbacks": [],
+              "item_type": null,
+              "record_selector": "main > article.product-card"
+            },
+            "process_seconds": 5.0935
+          },
+          "reuse": {
+            "phase": "reuse",
+            "model_port_calls": 0,
+            "status": "success",
+            "issues": [],
+            "recipe_reused": true,
+            "recipe_version": 1,
+            "recipe_attempts": [
+              {
+                "origin": "memory",
+                "index": 0,
+                "status": "success"
+              }
+            ],
+            "learned_recipe": null,
+            "records": [
+              {
+                "data": {
+                  "name": "Field Notebook",
+                  "price": "12.50"
+                },
+                "evidence": {
+                  "name": {
+                    "method": "css",
+                    "locator": "main > article.product-card [match 0] >> h2.title::text"
+                  },
+                  "price": {
+                    "method": "css",
+                    "locator": "main > article.product-card [match 0] >> span.amount::text"
+                  }
+                }
+              }
+            ],
+            "inference_calls": 0,
+            "inference_seconds": 0,
+            "storage_seconds": 0.0013,
+            "total_seconds": 0.0045,
+            "wall_seconds": 0.0304,
+            "stored_recipe": {
+              "strategy": "css",
+              "fields": {
+                "name": "h2.title::text",
+                "price": "span.amount::text"
+              },
+              "version": 1,
+              "require_evidence": true,
+              "fallbacks": [],
+              "item_type": null,
+              "record_selector": "main > article.product-card"
+            },
+            "process_seconds": 0.3283
+          },
+          "trials": [
+            {
+              "trial": 0,
+              "model_loaded_cold": true,
+              "learn": {
+                "phase": "learn",
+                "model_port_calls": 1,
+                "status": "success",
+                "issues": [],
+                "recipe_reused": false,
+                "recipe_version": 1,
+                "recipe_attempts": [
+                  {
+                    "origin": "model",
+                    "index": 0,
+                    "status": "success"
+                  }
+                ],
+                "learned_recipe": {
+                  "strategy": "css",
+                  "fields": {
+                    "name": "h2.title::text",
+                    "price": "span.amount::text"
+                  },
+                  "version": 1,
+                  "require_evidence": true,
+                  "fallbacks": [],
+                  "item_type": null,
+                  "record_selector": "main > article.product-card"
+                },
+                "records": [
+                  {
+                    "data": {
+                      "name": "Field Notebook",
+                      "price": "12.50"
+                    },
+                    "evidence": {
+                      "name": {
+                        "method": "css",
+                        "locator": "main > article.product-card [match 0] >> h2.title::text"
+                      },
+                      "price": {
+                        "method": "css",
+                        "locator": "main > article.product-card [match 0] >> span.amount::text"
+                      }
+                    }
+                  }
+                ],
+                "inference_calls": 1,
+                "inference_seconds": 4.8226,
+                "storage_seconds": 0.0049,
+                "total_seconds": 4.8289,
+                "wall_seconds": 4.8475,
+                "stored_recipe": {
+                  "strategy": "css",
+                  "fields": {
+                    "name": "h2.title::text",
+                    "price": "span.amount::text"
+                  },
+                  "version": 1,
+                  "require_evidence": true,
+                  "fallbacks": [],
+                  "item_type": null,
+                  "record_selector": "main > article.product-card"
+                },
+                "process_seconds": 5.0935
+              },
+              "reuse": {
+                "phase": "reuse",
+                "model_port_calls": 0,
+                "status": "success",
+                "issues": [],
+                "recipe_reused": true,
+                "recipe_version": 1,
+                "recipe_attempts": [
+                  {
+                    "origin": "memory",
+                    "index": 0,
+                    "status": "success"
+                  }
+                ],
+                "learned_recipe": null,
+                "records": [
+                  {
+                    "data": {
+                      "name": "Field Notebook",
+                      "price": "12.50"
+                    },
+                    "evidence": {
+                      "name": {
+                        "method": "css",
+                        "locator": "main > article.product-card [match 0] >> h2.title::text"
+                      },
+                      "price": {
+                        "method": "css",
+                        "locator": "main > article.product-card [match 0] >> span.amount::text"
+                      }
+                    }
+                  }
+                ],
+                "inference_calls": 0,
+                "inference_seconds": 0,
+                "storage_seconds": 0.0013,
+                "total_seconds": 0.0045,
+                "wall_seconds": 0.0304,
+                "stored_recipe": {
+                  "strategy": "css",
+                  "fields": {
+                    "name": "h2.title::text",
+                    "price": "span.amount::text"
+                  },
+                  "version": 1,
+                  "require_evidence": true,
+                  "fallbacks": [],
+                  "item_type": null,
+                  "record_selector": "main > article.product-card"
+                },
+                "process_seconds": 0.3283
+              }
+            },
+            {
+              "trial": 1,
+              "model_loaded_cold": false,
+              "learn": {
+                "phase": "learn",
+                "model_port_calls": 1,
+                "status": "success",
+                "issues": [],
+                "recipe_reused": false,
+                "recipe_version": 1,
+                "recipe_attempts": [
+                  {
+                    "origin": "model",
+                    "index": 0,
+                    "status": "success"
+                  }
+                ],
+                "learned_recipe": {
+                  "strategy": "css",
+                  "fields": {
+                    "name": "h2.title::text",
+                    "price": "span.amount::text"
+                  },
+                  "version": 1,
+                  "require_evidence": true,
+                  "fallbacks": [],
+                  "item_type": null,
+                  "record_selector": "main > article.product-card"
+                },
+                "records": [
+                  {
+                    "data": {
+                      "name": "Field Notebook",
+                      "price": "12.50"
+                    },
+                    "evidence": {
+                      "name": {
+                        "method": "css",
+                        "locator": "main > article.product-card [match 0] >> h2.title::text"
+                      },
+                      "price": {
+                        "method": "css",
+                        "locator": "main > article.product-card [match 0] >> span.amount::text"
+                      }
+                    }
+                  }
+                ],
+                "inference_calls": 1,
+                "inference_seconds": 1.7694,
+                "storage_seconds": 0.0044,
+                "total_seconds": 1.7752,
+                "wall_seconds": 1.7936,
+                "stored_recipe": {
+                  "strategy": "css",
+                  "fields": {
+                    "name": "h2.title::text",
+                    "price": "span.amount::text"
+                  },
+                  "version": 1,
+                  "require_evidence": true,
+                  "fallbacks": [],
+                  "item_type": null,
+                  "record_selector": "main > article.product-card"
+                },
+                "process_seconds": 2.0352
+              },
+              "reuse": {
+                "phase": "reuse",
+                "model_port_calls": 0,
+                "status": "success",
+                "issues": [],
+                "recipe_reused": true,
+                "recipe_version": 1,
+                "recipe_attempts": [
+                  {
+                    "origin": "memory",
+                    "index": 0,
+                    "status": "success"
+                  }
+                ],
+                "learned_recipe": null,
+                "records": [
+                  {
+                    "data": {
+                      "name": "Field Notebook",
+                      "price": "12.50"
+                    },
+                    "evidence": {
+                      "name": {
+                        "method": "css",
+                        "locator": "main > article.product-card [match 0] >> h2.title::text"
+                      },
+                      "price": {
+                        "method": "css",
+                        "locator": "main > article.product-card [match 0] >> span.amount::text"
+                      }
+                    }
+                  }
+                ],
+                "inference_calls": 0,
+                "inference_seconds": 0,
+                "storage_seconds": 0.002,
+                "total_seconds": 0.0048,
+                "wall_seconds": 0.0237,
+                "stored_recipe": {
+                  "strategy": "css",
+                  "fields": {
+                    "name": "h2.title::text",
+                    "price": "span.amount::text"
+                  },
+                  "version": 1,
+                  "require_evidence": true,
+                  "fallbacks": [],
+                  "item_type": null,
+                  "record_selector": "main > article.product-card"
+                },
+                "process_seconds": 0.2367
+              }
+            },
+            {
+              "trial": 2,
+              "model_loaded_cold": false,
+              "learn": {
+                "phase": "learn",
+                "model_port_calls": 1,
+                "status": "success",
+                "issues": [],
+                "recipe_reused": false,
+                "recipe_version": 1,
+                "recipe_attempts": [
+                  {
+                    "origin": "model",
+                    "index": 0,
+                    "status": "success"
+                  }
+                ],
+                "learned_recipe": {
+                  "strategy": "css",
+                  "fields": {
+                    "name": "h2.title::text",
+                    "price": "span.amount::text"
+                  },
+                  "version": 1,
+                  "require_evidence": true,
+                  "fallbacks": [],
+                  "item_type": null,
+                  "record_selector": "main > article.product-card"
+                },
+                "records": [
+                  {
+                    "data": {
+                      "name": "Field Notebook",
+                      "price": "12.50"
+                    },
+                    "evidence": {
+                      "name": {
+                        "method": "css",
+                        "locator": "main > article.product-card [match 0] >> h2.title::text"
+                      },
+                      "price": {
+                        "method": "css",
+                        "locator": "main > article.product-card [match 0] >> span.amount::text"
+                      }
+                    }
+                  }
+                ],
+                "inference_calls": 1,
+                "inference_seconds": 1.7756,
+                "storage_seconds": 0.0023,
+                "total_seconds": 1.7794,
+                "wall_seconds": 1.801,
+                "stored_recipe": {
+                  "strategy": "css",
+                  "fields": {
+                    "name": "h2.title::text",
+                    "price": "span.amount::text"
+                  },
+                  "version": 1,
+                  "require_evidence": true,
+                  "fallbacks": [],
+                  "item_type": null,
+                  "record_selector": "main > article.product-card"
+                },
+                "process_seconds": 2.0385
+              },
+              "reuse": {
+                "phase": "reuse",
+                "model_port_calls": 0,
+                "status": "success",
+                "issues": [],
+                "recipe_reused": true,
+                "recipe_version": 1,
+                "recipe_attempts": [
+                  {
+                    "origin": "memory",
+                    "index": 0,
+                    "status": "success"
+                  }
+                ],
+                "learned_recipe": null,
+                "records": [
+                  {
+                    "data": {
+                      "name": "Field Notebook",
+                      "price": "12.50"
+                    },
+                    "evidence": {
+                      "name": {
+                        "method": "css",
+                        "locator": "main > article.product-card [match 0] >> h2.title::text"
+                      },
+                      "price": {
+                        "method": "css",
+                        "locator": "main > article.product-card [match 0] >> span.amount::text"
+                      }
+                    }
+                  }
+                ],
+                "inference_calls": 0,
+                "inference_seconds": 0,
+                "storage_seconds": 0.0019,
+                "total_seconds": 0.0046,
+                "wall_seconds": 0.0226,
+                "stored_recipe": {
+                  "strategy": "css",
+                  "fields": {
+                    "name": "h2.title::text",
+                    "price": "span.amount::text"
+                  },
+                  "version": 1,
+                  "require_evidence": true,
+                  "fallbacks": [],
+                  "item_type": null,
+                  "record_selector": "main > article.product-card"
+                },
+                "process_seconds": 0.2353
+              }
+            },
+            {
+              "trial": 3,
+              "model_loaded_cold": false,
+              "learn": {
+                "phase": "learn",
+                "model_port_calls": 1,
+                "status": "success",
+                "issues": [],
+                "recipe_reused": false,
+                "recipe_version": 1,
+                "recipe_attempts": [
+                  {
+                    "origin": "model",
+                    "index": 0,
+                    "status": "success"
+                  }
+                ],
+                "learned_recipe": {
+                  "strategy": "css",
+                  "fields": {
+                    "name": "h2.title::text",
+                    "price": "span.amount::text"
+                  },
+                  "version": 1,
+                  "require_evidence": true,
+                  "fallbacks": [],
+                  "item_type": null,
+                  "record_selector": "main > article.product-card"
+                },
+                "records": [
+                  {
+                    "data": {
+                      "name": "Field Notebook",
+                      "price": "12.50"
+                    },
+                    "evidence": {
+                      "name": {
+                        "method": "css",
+                        "locator": "main > article.product-card [match 0] >> h2.title::text"
+                      },
+                      "price": {
+                        "method": "css",
+                        "locator": "main > article.product-card [match 0] >> span.amount::text"
+                      }
+                    }
+                  }
+                ],
+                "inference_calls": 1,
+                "inference_seconds": 1.814,
+                "storage_seconds": 0.0025,
+                "total_seconds": 1.818,
+                "wall_seconds": 1.8369,
+                "stored_recipe": {
+                  "strategy": "css",
+                  "fields": {
+                    "name": "h2.title::text",
+                    "price": "span.amount::text"
+                  },
+                  "version": 1,
+                  "require_evidence": true,
+                  "fallbacks": [],
+                  "item_type": null,
+                  "record_selector": "main > article.product-card"
+                },
+                "process_seconds": 2.0554
+              },
+              "reuse": {
+                "phase": "reuse",
+                "model_port_calls": 0,
+                "status": "success",
+                "issues": [],
+                "recipe_reused": true,
+                "recipe_version": 1,
+                "recipe_attempts": [
+                  {
+                    "origin": "memory",
+                    "index": 0,
+                    "status": "success"
+                  }
+                ],
+                "learned_recipe": null,
+                "records": [
+                  {
+                    "data": {
+                      "name": "Field Notebook",
+                      "price": "12.50"
+                    },
+                    "evidence": {
+                      "name": {
+                        "method": "css",
+                        "locator": "main > article.product-card [match 0] >> h2.title::text"
+                      },
+                      "price": {
+                        "method": "css",
+                        "locator": "main > article.product-card [match 0] >> span.amount::text"
+                      }
+                    }
+                  }
+                ],
+                "inference_calls": 0,
+                "inference_seconds": 0,
+                "storage_seconds": 0.0014,
+                "total_seconds": 0.0043,
+                "wall_seconds": 0.0231,
+                "stored_recipe": {
+                  "strategy": "css",
+                  "fields": {
+                    "name": "h2.title::text",
+                    "price": "span.amount::text"
+                  },
+                  "version": 1,
+                  "require_evidence": true,
+                  "fallbacks": [],
+                  "item_type": null,
+                  "record_selector": "main > article.product-card"
+                },
+                "process_seconds": 0.2497
+              }
+            },
+            {
+              "trial": 4,
+              "model_loaded_cold": false,
+              "learn": {
+                "phase": "learn",
+                "model_port_calls": 1,
+                "status": "success",
+                "issues": [],
+                "recipe_reused": false,
+                "recipe_version": 1,
+                "recipe_attempts": [
+                  {
+                    "origin": "model",
+                    "index": 0,
+                    "status": "success"
+                  }
+                ],
+                "learned_recipe": {
+                  "strategy": "css",
+                  "fields": {
+                    "name": "h2.title::text",
+                    "price": "span.amount::text"
+                  },
+                  "version": 1,
+                  "require_evidence": true,
+                  "fallbacks": [],
+                  "item_type": null,
+                  "record_selector": "main > article.product-card"
+                },
+                "records": [
+                  {
+                    "data": {
+                      "name": "Field Notebook",
+                      "price": "12.50"
+                    },
+                    "evidence": {
+                      "name": {
+                        "method": "css",
+                        "locator": "main > article.product-card [match 0] >> h2.title::text"
+                      },
+                      "price": {
+                        "method": "css",
+                        "locator": "main > article.product-card [match 0] >> span.amount::text"
+                      }
+                    }
+                  }
+                ],
+                "inference_calls": 1,
+                "inference_seconds": 1.7759,
+                "storage_seconds": 0.0026,
+                "total_seconds": 1.7801,
+                "wall_seconds": 1.7998,
+                "stored_recipe": {
+                  "strategy": "css",
+                  "fields": {
+                    "name": "h2.title::text",
+                    "price": "span.amount::text"
+                  },
+                  "version": 1,
+                  "require_evidence": true,
+                  "fallbacks": [],
+                  "item_type": null,
+                  "record_selector": "main > article.product-card"
+                },
+                "process_seconds": 2.0382
+              },
+              "reuse": {
+                "phase": "reuse",
+                "model_port_calls": 0,
+                "status": "success",
+                "issues": [],
+                "recipe_reused": true,
+                "recipe_version": 1,
+                "recipe_attempts": [
+                  {
+                    "origin": "memory",
+                    "index": 0,
+                    "status": "success"
+                  }
+                ],
+                "learned_recipe": null,
+                "records": [
+                  {
+                    "data": {
+                      "name": "Field Notebook",
+                      "price": "12.50"
+                    },
+                    "evidence": {
+                      "name": {
+                        "method": "css",
+                        "locator": "main > article.product-card [match 0] >> h2.title::text"
+                      },
+                      "price": {
+                        "method": "css",
+                        "locator": "main > article.product-card [match 0] >> span.amount::text"
+                      }
+                    }
+                  }
+                ],
+                "inference_calls": 0,
+                "inference_seconds": 0,
+                "storage_seconds": 0.0019,
+                "total_seconds": 0.0049,
+                "wall_seconds": 0.0241,
+                "stored_recipe": {
+                  "strategy": "css",
+                  "fields": {
+                    "name": "h2.title::text",
+                    "price": "span.amount::text"
+                  },
+                  "version": 1,
+                  "require_evidence": true,
+                  "fallbacks": [],
+                  "item_type": null,
+                  "record_selector": "main > article.product-card"
+                },
+                "process_seconds": 0.2391
+              }
+            }
+          ],
+          "expected_record": {
+            "name": "Field Notebook",
+            "price": "12.50"
+          },
+          "repetitions": {
+            "product_card": {
+              "fresh_memory_each": true,
+              "runs": 5,
+              "success": 5,
+              "matches_expected": 5,
+              "results": [
+                {
+                  "status": "success",
+                  "issues": [],
+                  "recipe_reused": false,
+                  "recipe_version": 1,
+                  "recipe_attempts": [
+                    {
+                      "origin": "model",
+                      "index": 0,
+                      "status": "success"
+                    }
+                  ],
+                  "learned_recipe": {
+                    "strategy": "css",
+                    "fields": {
+                      "name": "h2.title::text",
+                      "price": "span.amount::text"
+                    },
+                    "version": 1,
+                    "require_evidence": true,
+                    "fallbacks": [],
+                    "item_type": null,
+                    "record_selector": "main > article.product-card"
+                  },
+                  "records": [
+                    {
+                      "data": {
+                        "name": "Field Notebook",
+                        "price": "12.50"
+                      },
+                      "evidence": {
+                        "name": {
+                          "method": "css",
+                          "locator": "main > article.product-card [match 0] >> h2.title::text"
+                        },
+                        "price": {
+                          "method": "css",
+                          "locator": "main > article.product-card [match 0] >> span.amount::text"
+                        }
+                      }
+                    }
+                  ],
+                  "inference_calls": 1,
+                  "inference_seconds": 1.7739,
+                  "storage_seconds": 0.0022,
+                  "total_seconds": 1.7779,
+                  "wall_seconds": 1.7789,
+                  "stored_recipe": {
+                    "strategy": "css",
+                    "fields": {
+                      "name": "h2.title::text",
+                      "price": "span.amount::text"
+                    },
+                    "version": 1,
+                    "require_evidence": true,
+                    "fallbacks": [],
+                    "item_type": null,
+                    "record_selector": "main > article.product-card"
+                  }
+                },
+                {
+                  "status": "success",
+                  "issues": [],
+                  "recipe_reused": false,
+                  "recipe_version": 1,
+                  "recipe_attempts": [
+                    {
+                      "origin": "model",
+                      "index": 0,
+                      "status": "success"
+                    }
+                  ],
+                  "learned_recipe": {
+                    "strategy": "css",
+                    "fields": {
+                      "name": "h2.title::text",
+                      "price": "span.amount::text"
+                    },
+                    "version": 1,
+                    "require_evidence": true,
+                    "fallbacks": [],
+                    "item_type": null,
+                    "record_selector": "main > article.product-card"
+                  },
+                  "records": [
+                    {
+                      "data": {
+                        "name": "Field Notebook",
+                        "price": "12.50"
+                      },
+                      "evidence": {
+                        "name": {
+                          "method": "css",
+                          "locator": "main > article.product-card [match 0] >> h2.title::text"
+                        },
+                        "price": {
+                          "method": "css",
+                          "locator": "main > article.product-card [match 0] >> span.amount::text"
+                        }
+                      }
+                    }
+                  ],
+                  "inference_calls": 1,
+                  "inference_seconds": 1.713,
+                  "storage_seconds": 0.0017,
+                  "total_seconds": 1.7151,
+                  "wall_seconds": 1.7152,
+                  "stored_recipe": {
+                    "strategy": "css",
+                    "fields": {
+                      "name": "h2.title::text",
+                      "price": "span.amount::text"
+                    },
+                    "version": 1,
+                    "require_evidence": true,
+                    "fallbacks": [],
+                    "item_type": null,
+                    "record_selector": "main > article.product-card"
+                  }
+                },
+                {
+                  "status": "success",
+                  "issues": [],
+                  "recipe_reused": false,
+                  "recipe_version": 1,
+                  "recipe_attempts": [
+                    {
+                      "origin": "model",
+                      "index": 0,
+                      "status": "success"
+                    }
+                  ],
+                  "learned_recipe": {
+                    "strategy": "css",
+                    "fields": {
+                      "name": "h2.title::text",
+                      "price": "span.amount::text"
+                    },
+                    "version": 1,
+                    "require_evidence": true,
+                    "fallbacks": [],
+                    "item_type": null,
+                    "record_selector": "main > article.product-card"
+                  },
+                  "records": [
+                    {
+                      "data": {
+                        "name": "Field Notebook",
+                        "price": "12.50"
+                      },
+                      "evidence": {
+                        "name": {
+                          "method": "css",
+                          "locator": "main > article.product-card [match 0] >> h2.title::text"
+                        },
+                        "price": {
+                          "method": "css",
+                          "locator": "main > article.product-card [match 0] >> span.amount::text"
+                        }
+                      }
+                    }
+                  ],
+                  "inference_calls": 1,
+                  "inference_seconds": 1.7185,
+                  "storage_seconds": 0.0042,
+                  "total_seconds": 1.723,
+                  "wall_seconds": 1.7232,
+                  "stored_recipe": {
+                    "strategy": "css",
+                    "fields": {
+                      "name": "h2.title::text",
+                      "price": "span.amount::text"
+                    },
+                    "version": 1,
+                    "require_evidence": true,
+                    "fallbacks": [],
+                    "item_type": null,
+                    "record_selector": "main > article.product-card"
+                  }
+                },
+                {
+                  "status": "success",
+                  "issues": [],
+                  "recipe_reused": false,
+                  "recipe_version": 1,
+                  "recipe_attempts": [
+                    {
+                      "origin": "model",
+                      "index": 0,
+                      "status": "success"
+                    }
+                  ],
+                  "learned_recipe": {
+                    "strategy": "css",
+                    "fields": {
+                      "name": "h2.title::text",
+                      "price": "span.amount::text"
+                    },
+                    "version": 1,
+                    "require_evidence": true,
+                    "fallbacks": [],
+                    "item_type": null,
+                    "record_selector": "main > article.product-card"
+                  },
+                  "records": [
+                    {
+                      "data": {
+                        "name": "Field Notebook",
+                        "price": "12.50"
+                      },
+                      "evidence": {
+                        "name": {
+                          "method": "css",
+                          "locator": "main > article.product-card [match 0] >> h2.title::text"
+                        },
+                        "price": {
+                          "method": "css",
+                          "locator": "main > article.product-card [match 0] >> span.amount::text"
+                        }
+                      }
+                    }
+                  ],
+                  "inference_calls": 1,
+                  "inference_seconds": 1.7574,
+                  "storage_seconds": 0.0035,
+                  "total_seconds": 1.762,
+                  "wall_seconds": 1.7622,
+                  "stored_recipe": {
+                    "strategy": "css",
+                    "fields": {
+                      "name": "h2.title::text",
+                      "price": "span.amount::text"
+                    },
+                    "version": 1,
+                    "require_evidence": true,
+                    "fallbacks": [],
+                    "item_type": null,
+                    "record_selector": "main > article.product-card"
+                  }
+                },
+                {
+                  "status": "success",
+                  "issues": [],
+                  "recipe_reused": false,
+                  "recipe_version": 1,
+                  "recipe_attempts": [
+                    {
+                      "origin": "model",
+                      "index": 0,
+                      "status": "success"
+                    }
+                  ],
+                  "learned_recipe": {
+                    "strategy": "css",
+                    "fields": {
+                      "name": "h2.title::text",
+                      "price": "span.amount::text"
+                    },
+                    "version": 1,
+                    "require_evidence": true,
+                    "fallbacks": [],
+                    "item_type": null,
+                    "record_selector": "main > article.product-card"
+                  },
+                  "records": [
+                    {
+                      "data": {
+                        "name": "Field Notebook",
+                        "price": "12.50"
+                      },
+                      "evidence": {
+                        "name": {
+                          "method": "css",
+                          "locator": "main > article.product-card [match 0] >> h2.title::text"
+                        },
+                        "price": {
+                          "method": "css",
+                          "locator": "main > article.product-card [match 0] >> span.amount::text"
+                        }
+                      }
+                    }
+                  ],
+                  "inference_calls": 1,
+                  "inference_seconds": 1.7933,
+                  "storage_seconds": 0.0025,
+                  "total_seconds": 1.7964,
+                  "wall_seconds": 1.7965,
+                  "stored_recipe": {
+                    "strategy": "css",
+                    "fields": {
+                      "name": "h2.title::text",
+                      "price": "span.amount::text"
+                    },
+                    "version": 1,
+                    "require_evidence": true,
+                    "fallbacks": [],
+                    "item_type": null,
+                    "record_selector": "main > article.product-card"
+                  }
+                }
+              ]
+            },
+            "distractors": {
+              "fresh_memory_each": true,
+              "runs": 5,
+              "success": 0,
+              "matches_expected": 0,
+              "results": [
+                {
+                  "status": "insufficient_evidence",
+                  "issues": [
+                    "invalid_model_candidate"
+                  ],
+                  "recipe_reused": false,
+                  "recipe_version": null,
+                  "recipe_attempts": [
+                    {
+                      "origin": "model",
+                      "index": 0,
+                      "status": "insufficient_evidence"
+                    },
+                    {
+                      "origin": "model",
+                      "index": 1,
+                      "status": "insufficient_evidence"
+                    }
+                  ],
+                  "learned_recipe": null,
+                  "records": [],
+                  "inference_calls": 2,
+                  "inference_seconds": 4.3073,
+                  "storage_seconds": 0.0007,
+                  "total_seconds": 4.31,
+                  "wall_seconds": 4.3101,
+                  "stored_recipe": null
+                },
+                {
+                  "status": "insufficient_evidence",
+                  "issues": [
+                    "invalid_model_candidate"
+                  ],
+                  "recipe_reused": false,
+                  "recipe_version": null,
+                  "recipe_attempts": [
+                    {
+                      "origin": "model",
+                      "index": 0,
+                      "status": "insufficient_evidence"
+                    },
+                    {
+                      "origin": "model",
+                      "index": 1,
+                      "status": "insufficient_evidence"
+                    }
+                  ],
+                  "learned_recipe": null,
+                  "records": [],
+                  "inference_calls": 2,
+                  "inference_seconds": 3.8345,
+                  "storage_seconds": 0.0008,
+                  "total_seconds": 3.8367,
+                  "wall_seconds": 3.8368,
+                  "stored_recipe": null
+                },
+                {
+                  "status": "insufficient_evidence",
+                  "issues": [
+                    "invalid_model_candidate"
+                  ],
+                  "recipe_reused": false,
+                  "recipe_version": null,
+                  "recipe_attempts": [
+                    {
+                      "origin": "model",
+                      "index": 0,
+                      "status": "insufficient_evidence"
+                    },
+                    {
+                      "origin": "model",
+                      "index": 1,
+                      "status": "insufficient_evidence"
+                    }
+                  ],
+                  "learned_recipe": null,
+                  "records": [],
+                  "inference_calls": 2,
+                  "inference_seconds": 3.8532,
+                  "storage_seconds": 0.0009,
+                  "total_seconds": 3.8555,
+                  "wall_seconds": 3.8557,
+                  "stored_recipe": null
+                },
+                {
+                  "status": "insufficient_evidence",
+                  "issues": [
+                    "invalid_model_candidate"
+                  ],
+                  "recipe_reused": false,
+                  "recipe_version": null,
+                  "recipe_attempts": [
+                    {
+                      "origin": "model",
+                      "index": 0,
+                      "status": "insufficient_evidence"
+                    },
+                    {
+                      "origin": "model",
+                      "index": 1,
+                      "status": "insufficient_evidence"
+                    }
+                  ],
+                  "learned_recipe": null,
+                  "records": [],
+                  "inference_calls": 2,
+                  "inference_seconds": 3.8545,
+                  "storage_seconds": 0.0013,
+                  "total_seconds": 3.8584,
+                  "wall_seconds": 3.8586,
+                  "stored_recipe": null
+                },
+                {
+                  "status": "insufficient_evidence",
+                  "issues": [
+                    "invalid_model_candidate"
+                  ],
+                  "recipe_reused": false,
+                  "recipe_version": null,
+                  "recipe_attempts": [
+                    {
+                      "origin": "model",
+                      "index": 0,
+                      "status": "insufficient_evidence"
+                    },
+                    {
+                      "origin": "model",
+                      "index": 1,
+                      "status": "insufficient_evidence"
+                    }
+                  ],
+                  "learned_recipe": null,
+                  "records": [],
+                  "inference_calls": 2,
+                  "inference_seconds": 3.8999,
+                  "storage_seconds": 0.0023,
+                  "total_seconds": 3.9126,
+                  "wall_seconds": 3.9131,
+                  "stored_recipe": null
+                }
+              ]
+            }
+          },
+          "failures": [
+            {
+              "scenario": "endpoint_unavailable",
+              "evidence_kind": "live_service_absent",
+              "description": "Real connection to a closed loopback port",
+              "status": "transient_failure",
+              "issues": [
+                "model_unavailable"
+              ],
+              "recipe_reused": false,
+              "recipe_version": null,
+              "recipe_attempts": [],
+              "learned_recipe": null,
+              "records": [],
+              "inference_calls": 1,
+              "inference_seconds": 0.0107,
+              "storage_seconds": 0.002,
+              "total_seconds": 0.0143,
+              "wall_seconds": 0.0146,
+              "stored_recipe": null
+            },
+            {
+              "scenario": "model_not_installed",
+              "evidence_kind": "live_service",
+              "description": "Real Ollama request naming a model that is not installed",
+              "status": "transient_failure",
+              "issues": [
+                "model_unavailable"
+              ],
+              "recipe_reused": false,
+              "recipe_version": null,
+              "recipe_attempts": [],
+              "learned_recipe": null,
+              "records": [],
+              "inference_calls": 1,
+              "inference_seconds": 0.0106,
+              "storage_seconds": 0.0011,
+              "total_seconds": 0.0126,
+              "wall_seconds": 0.0127,
+              "stored_recipe": null
+            },
+            {
+              "scenario": "output_token_budget",
+              "evidence_kind": "live_model",
+              "description": "Real generation stopped by max_output_tokens=1",
+              "status": "insufficient_evidence",
+              "issues": [
+                "invalid_model_response"
+              ],
+              "recipe_reused": false,
+              "recipe_version": null,
+              "recipe_attempts": [],
+              "learned_recipe": null,
+              "records": [],
+              "inference_calls": 1,
+              "inference_seconds": 0.3648,
+              "storage_seconds": 0.0014,
+              "total_seconds": 0.3671,
+              "wall_seconds": 0.3672,
+              "stored_recipe": null
+            },
+            {
+              "scenario": "response_byte_budget",
+              "evidence_kind": "live_model",
+              "description": "Real generation exceeding max_response_bytes=64",
+              "status": "insufficient_evidence",
+              "issues": [
+                "model_response_limit"
+              ],
+              "recipe_reused": false,
+              "recipe_version": null,
+              "recipe_attempts": [],
+              "learned_recipe": null,
+              "records": [],
+              "inference_calls": 1,
+              "inference_seconds": 1.7321,
+              "storage_seconds": 0.0019,
+              "total_seconds": 1.7363,
+              "wall_seconds": 1.7366,
+              "stored_recipe": null
+            },
+            {
+              "scenario": "phase_timeout",
+              "evidence_kind": "live_model",
+              "description": "Real request cancelled by timeout_seconds=0.01",
+              "status": "transient_failure",
+              "issues": [
+                "model_timeout"
+              ],
+              "recipe_reused": false,
+              "recipe_version": null,
+              "recipe_attempts": [],
+              "learned_recipe": null,
+              "records": [],
+              "inference_calls": 1,
+              "inference_seconds": 0.0135,
+              "storage_seconds": 0.0034,
+              "total_seconds": 0.0187,
+              "wall_seconds": 0.0191,
+              "stored_recipe": null
+            },
+            {
+              "scenario": "unsatisfiable_contract",
+              "evidence_kind": "live_model",
+              "description": "Real proposals for a required sku absent from the page",
+              "status": "insufficient_evidence",
+              "issues": [
+                "invalid_model_candidate"
+              ],
+              "recipe_reused": false,
+              "recipe_version": null,
+              "recipe_attempts": [
+                {
+                  "origin": "model",
+                  "index": 0,
+                  "status": "insufficient_evidence"
+                },
+                {
+                  "origin": "model",
+                  "index": 1,
+                  "status": "insufficient_evidence"
+                }
+              ],
+              "learned_recipe": null,
+              "records": [],
+              "inference_calls": 2,
+              "inference_seconds": 4.0468,
+              "storage_seconds": 0.0009,
+              "total_seconds": 4.0492,
+              "wall_seconds": 4.0497,
+              "stored_recipe": null
+            },
+            {
+              "scenario": "malformed_provider_body",
+              "evidence_kind": "controlled_fake_service",
+              "description": "Loopback fake service returns a non-JSON body",
+              "status": "insufficient_evidence",
+              "issues": [
+                "invalid_model_response"
+              ],
+              "recipe_reused": false,
+              "recipe_version": null,
+              "recipe_attempts": [],
+              "learned_recipe": null,
+              "records": [],
+              "inference_calls": 1,
+              "inference_seconds": 0.0207,
+              "storage_seconds": 0.0034,
+              "total_seconds": 0.0262,
+              "wall_seconds": 0.03,
+              "stored_recipe": null
+            },
+            {
+              "scenario": "unparseable_model_content",
+              "evidence_kind": "controlled_fake_service",
+              "description": "Loopback fake service returns a valid envelope with non-recipe content",
+              "status": "insufficient_evidence",
+              "issues": [
+                "invalid_model_candidate"
+              ],
+              "recipe_reused": false,
+              "recipe_version": null,
+              "recipe_attempts": [
+                {
+                  "origin": "model",
+                  "index": 0,
+                  "status": "insufficient_evidence"
+                },
+                {
+                  "origin": "model",
+                  "index": 1,
+                  "status": "insufficient_evidence"
+                }
+              ],
+              "learned_recipe": null,
+              "records": [],
+              "inference_calls": 2,
+              "inference_seconds": 0.0288,
+              "storage_seconds": 0.0062,
+              "total_seconds": 0.0405,
+              "wall_seconds": 0.0414,
+              "stored_recipe": null
+            }
+          ],
+          "summary": {
+            "trials": 5,
+            "learn_success": 5,
+            "activated": 5,
+            "learn_matches_expected": 5,
+            "reuse_success": 5,
+            "learn_failures": {},
+            "repetition_success": {
+              "product_card": "5/5",
+              "distractors": "0/5"
+            },
+            "inference_calls": 20,
+            "learn_inference_seconds": {
+              "min": 1.7694,
+              "median": 1.7759,
+              "max": 4.8226
+            },
+            "reuse_total_seconds": {
+              "min": 0.0043,
+              "median": 0.0046,
+              "max": 0.0049
+            },
+            "repetition_inference_seconds": {
+              "min": 1.713,
+              "median": 2.8139,
+              "max": 4.3073
+            },
+            "failure_scenarios_explicit": 8,
+            "failure_scenarios": 8
+          }
+        },
+        "llama3.2:3b": {
+          "scope": "synthetic input; real local Ollama unless evidence_kind says otherwise",
+          "environment": {
+            "recorded_at": "2026-10-30T17:47:58.222117+00:00",
+            "git_head": "606324e99d44651ffa7568820c3ae93733f5755b",
+            "git_tracked_changes": false,
+            "python": "3.12.16",
+            "platform": "macOS-26.6.2-arm64-arm-64bit",
+            "machine": "arm64",
+            "rastro": "0.1.0.dev0",
+            "httpx": "0.28.1",
+            "uv_lock_sha256": "e21515d8c09eb918e9ca21e5cf8363dd1e986c3e302644a533ae7d32c9c9621b",
+            "harness_sha256": "6635479e5bbbcf31e9e578470711086c33c86a835bc47c8aaf427afd3aaaa173",
+            "ollama_version": "0.40.13",
+            "ollama_origin": "http://127.0.0.1:11434",
+            "model": {
+              "name": "llama3.2:3b",
+              "digest": "a80c4f17acd55265feec403c7aef86be0c25983ab279d83f3bcd3abbcb5b8b72",
+              "size_bytes": 2019393189,
+              "details": {
+                "family": "llama",
+                "format": "gguf",
+                "parameter_size": "3.2B",
+                "quantization_level": "Q4_K_M"
+              }
+            },
+            "inputs": {
+              "product_card": {
+                "sha256": "1de651c5d390b58869335ebff101b2e2ce7360719a8ce2df9604c09b4a126a99",
+                "bytes": 183
+              },
+              "distractors": {
+                "sha256": "2189b0e6c5ee7f65807344ffcb5e2522cb8eed5647ddaf947d2120afd5897276",
+                "bytes": 412
+              }
+            },
+            "inference_policy": {
+              "max_calls": 2,
+              "max_repair_attempts": 1,
+              "timeout_seconds": 30,
+              "max_context_bytes": 32768,
+              "max_response_bytes": 65536,
+              "max_output_tokens": 2048,
+              "context_tokens": 8192,
+              "max_concurrency": 1,
+              "max_discovery_candidates": 8
+            }
+          },
+          "no_model_precheck": {
+            "product_card": {
+              "status": "insufficient_evidence",
+              "issues": [
+                "no_valid_recipe"
+              ],
+              "recipe_reused": false,
+              "recipe_version": null,
+              "recipe_attempts": [],
+              "learned_recipe": null,
+              "records": [],
+              "inference_calls": 0,
+              "inference_seconds": 0.0,
+              "storage_seconds": 0.0009,
+              "total_seconds": 0.0019,
+              "wall_seconds": 0.0022,
+              "stored_recipe": null
+            },
+            "distractors": {
+              "status": "insufficient_evidence",
+              "issues": [
+                "no_valid_recipe"
+              ],
+              "recipe_reused": false,
+              "recipe_version": null,
+              "recipe_attempts": [],
+              "learned_recipe": null,
+              "records": [],
+              "inference_calls": 0,
+              "inference_seconds": 0.0,
+              "storage_seconds": 0.0006,
+              "total_seconds": 0.0029,
+              "wall_seconds": 0.003,
+              "stored_recipe": null
+            }
+          },
+          "models_loaded_before_learn": [
+            "qwen3:4b"
+          ],
+          "learn": {
+            "phase": "learn",
+            "model_port_calls": 1,
+            "status": "success",
+            "issues": [],
+            "recipe_reused": false,
+            "recipe_version": 1,
+            "recipe_attempts": [
+              {
+                "origin": "model",
+                "index": 0,
+                "status": "success"
+              }
+            ],
+            "learned_recipe": {
+              "strategy": "css",
+              "fields": {
+                "name": "h2.title::text",
+                "price": "span.amount::text"
+              },
+              "version": 1,
+              "require_evidence": true,
+              "fallbacks": [],
+              "item_type": null,
+              "record_selector": "main article"
+            },
+            "records": [
+              {
+                "data": {
+                  "name": "Field Notebook",
+                  "price": "12.50"
+                },
+                "evidence": {
+                  "name": {
+                    "method": "css",
+                    "locator": "main article [match 0] >> h2.title::text"
+                  },
+                  "price": {
+                    "method": "css",
+                    "locator": "main article [match 0] >> span.amount::text"
+                  }
+                }
+              }
+            ],
+            "inference_calls": 1,
+            "inference_seconds": 3.5374,
+            "storage_seconds": 0.0056,
+            "total_seconds": 3.5446,
+            "wall_seconds": 3.5719,
+            "stored_recipe": {
+              "strategy": "css",
+              "fields": {
+                "name": "h2.title::text",
+                "price": "span.amount::text"
+              },
+              "version": 1,
+              "require_evidence": true,
+              "fallbacks": [],
+              "item_type": null,
+              "record_selector": "main article"
+            },
+            "process_seconds": 3.8806
+          },
+          "reuse": {
+            "phase": "reuse",
+            "model_port_calls": 0,
+            "status": "success",
+            "issues": [],
+            "recipe_reused": true,
+            "recipe_version": 1,
+            "recipe_attempts": [
+              {
+                "origin": "memory",
+                "index": 0,
+                "status": "success"
+              }
+            ],
+            "learned_recipe": null,
+            "records": [
+              {
+                "data": {
+                  "name": "Field Notebook",
+                  "price": "12.50"
+                },
+                "evidence": {
+                  "name": {
+                    "method": "css",
+                    "locator": "main article [match 0] >> h2.title::text"
+                  },
+                  "price": {
+                    "method": "css",
+                    "locator": "main article [match 0] >> span.amount::text"
+                  }
+                }
+              }
+            ],
+            "inference_calls": 0,
+            "inference_seconds": 0,
+            "storage_seconds": 0.0018,
+            "total_seconds": 0.0045,
+            "wall_seconds": 0.0228,
+            "stored_recipe": {
+              "strategy": "css",
+              "fields": {
+                "name": "h2.title::text",
+                "price": "span.amount::text"
+              },
+              "version": 1,
+              "require_evidence": true,
+              "fallbacks": [],
+              "item_type": null,
+              "record_selector": "main article"
+            },
+            "process_seconds": 0.2371
+          },
+          "trials": [
+            {
+              "trial": 0,
+              "model_loaded_cold": true,
+              "learn": {
+                "phase": "learn",
+                "model_port_calls": 1,
+                "status": "success",
+                "issues": [],
+                "recipe_reused": false,
+                "recipe_version": 1,
+                "recipe_attempts": [
+                  {
+                    "origin": "model",
+                    "index": 0,
+                    "status": "success"
+                  }
+                ],
+                "learned_recipe": {
+                  "strategy": "css",
+                  "fields": {
+                    "name": "h2.title::text",
+                    "price": "span.amount::text"
+                  },
+                  "version": 1,
+                  "require_evidence": true,
+                  "fallbacks": [],
+                  "item_type": null,
+                  "record_selector": "main article"
+                },
+                "records": [
+                  {
+                    "data": {
+                      "name": "Field Notebook",
+                      "price": "12.50"
+                    },
+                    "evidence": {
+                      "name": {
+                        "method": "css",
+                        "locator": "main article [match 0] >> h2.title::text"
+                      },
+                      "price": {
+                        "method": "css",
+                        "locator": "main article [match 0] >> span.amount::text"
+                      }
+                    }
+                  }
+                ],
+                "inference_calls": 1,
+                "inference_seconds": 3.5374,
+                "storage_seconds": 0.0056,
+                "total_seconds": 3.5446,
+                "wall_seconds": 3.5719,
+                "stored_recipe": {
+                  "strategy": "css",
+                  "fields": {
+                    "name": "h2.title::text",
+                    "price": "span.amount::text"
+                  },
+                  "version": 1,
+                  "require_evidence": true,
+                  "fallbacks": [],
+                  "item_type": null,
+                  "record_selector": "main article"
+                },
+                "process_seconds": 3.8806
+              },
+              "reuse": {
+                "phase": "reuse",
+                "model_port_calls": 0,
+                "status": "success",
+                "issues": [],
+                "recipe_reused": true,
+                "recipe_version": 1,
+                "recipe_attempts": [
+                  {
+                    "origin": "memory",
+                    "index": 0,
+                    "status": "success"
+                  }
+                ],
+                "learned_recipe": null,
+                "records": [
+                  {
+                    "data": {
+                      "name": "Field Notebook",
+                      "price": "12.50"
+                    },
+                    "evidence": {
+                      "name": {
+                        "method": "css",
+                        "locator": "main article [match 0] >> h2.title::text"
+                      },
+                      "price": {
+                        "method": "css",
+                        "locator": "main article [match 0] >> span.amount::text"
+                      }
+                    }
+                  }
+                ],
+                "inference_calls": 0,
+                "inference_seconds": 0,
+                "storage_seconds": 0.0018,
+                "total_seconds": 0.0045,
+                "wall_seconds": 0.0228,
+                "stored_recipe": {
+                  "strategy": "css",
+                  "fields": {
+                    "name": "h2.title::text",
+                    "price": "span.amount::text"
+                  },
+                  "version": 1,
+                  "require_evidence": true,
+                  "fallbacks": [],
+                  "item_type": null,
+                  "record_selector": "main article"
+                },
+                "process_seconds": 0.2371
+              }
+            },
+            {
+              "trial": 1,
+              "model_loaded_cold": false,
+              "learn": {
+                "phase": "learn",
+                "model_port_calls": 1,
+                "status": "success",
+                "issues": [],
+                "recipe_reused": false,
+                "recipe_version": 1,
+                "recipe_attempts": [
+                  {
+                    "origin": "model",
+                    "index": 0,
+                    "status": "success"
+                  }
+                ],
+                "learned_recipe": {
+                  "strategy": "css",
+                  "fields": {
+                    "name": "h2.title::text",
+                    "price": "span.amount::text"
+                  },
+                  "version": 1,
+                  "require_evidence": true,
+                  "fallbacks": [],
+                  "item_type": null,
+                  "record_selector": "main article"
+                },
+                "records": [
+                  {
+                    "data": {
+                      "name": "Field Notebook",
+                      "price": "12.50"
+                    },
+                    "evidence": {
+                      "name": {
+                        "method": "css",
+                        "locator": "main article [match 0] >> h2.title::text"
+                      },
+                      "price": {
+                        "method": "css",
+                        "locator": "main article [match 0] >> span.amount::text"
+                      }
+                    }
+                  }
+                ],
+                "inference_calls": 1,
+                "inference_seconds": 1.1542,
+                "storage_seconds": 0.0056,
+                "total_seconds": 1.1613,
+                "wall_seconds": 1.1792,
+                "stored_recipe": {
+                  "strategy": "css",
+                  "fields": {
+                    "name": "h2.title::text",
+                    "price": "span.amount::text"
+                  },
+                  "version": 1,
+                  "require_evidence": true,
+                  "fallbacks": [],
+                  "item_type": null,
+                  "record_selector": "main article"
+                },
+                "process_seconds": 1.4105
+              },
+              "reuse": {
+                "phase": "reuse",
+                "model_port_calls": 0,
+                "status": "success",
+                "issues": [],
+                "recipe_reused": true,
+                "recipe_version": 1,
+                "recipe_attempts": [
+                  {
+                    "origin": "memory",
+                    "index": 0,
+                    "status": "success"
+                  }
+                ],
+                "learned_recipe": null,
+                "records": [
+                  {
+                    "data": {
+                      "name": "Field Notebook",
+                      "price": "12.50"
+                    },
+                    "evidence": {
+                      "name": {
+                        "method": "css",
+                        "locator": "main article [match 0] >> h2.title::text"
+                      },
+                      "price": {
+                        "method": "css",
+                        "locator": "main article [match 0] >> span.amount::text"
+                      }
+                    }
+                  }
+                ],
+                "inference_calls": 0,
+                "inference_seconds": 0,
+                "storage_seconds": 0.0018,
+                "total_seconds": 0.0047,
+                "wall_seconds": 0.0238,
+                "stored_recipe": {
+                  "strategy": "css",
+                  "fields": {
+                    "name": "h2.title::text",
+                    "price": "span.amount::text"
+                  },
+                  "version": 1,
+                  "require_evidence": true,
+                  "fallbacks": [],
+                  "item_type": null,
+                  "record_selector": "main article"
+                },
+                "process_seconds": 0.2413
+              }
+            },
+            {
+              "trial": 2,
+              "model_loaded_cold": false,
+              "learn": {
+                "phase": "learn",
+                "model_port_calls": 1,
+                "status": "success",
+                "issues": [],
+                "recipe_reused": false,
+                "recipe_version": 1,
+                "recipe_attempts": [
+                  {
+                    "origin": "model",
+                    "index": 0,
+                    "status": "success"
+                  }
+                ],
+                "learned_recipe": {
+                  "strategy": "css",
+                  "fields": {
+                    "name": "h2.title::text",
+                    "price": "span.amount::text"
+                  },
+                  "version": 1,
+                  "require_evidence": true,
+                  "fallbacks": [],
+                  "item_type": null,
+                  "record_selector": "main article"
+                },
+                "records": [
+                  {
+                    "data": {
+                      "name": "Field Notebook",
+                      "price": "12.50"
+                    },
+                    "evidence": {
+                      "name": {
+                        "method": "css",
+                        "locator": "main article [match 0] >> h2.title::text"
+                      },
+                      "price": {
+                        "method": "css",
+                        "locator": "main article [match 0] >> span.amount::text"
+                      }
+                    }
+                  }
+                ],
+                "inference_calls": 1,
+                "inference_seconds": 1.1484,
+                "storage_seconds": 0.0053,
+                "total_seconds": 1.155,
+                "wall_seconds": 1.1729,
+                "stored_recipe": {
+                  "strategy": "css",
+                  "fields": {
+                    "name": "h2.title::text",
+                    "price": "span.amount::text"
+                  },
+                  "version": 1,
+                  "require_evidence": true,
+                  "fallbacks": [],
+                  "item_type": null,
+                  "record_selector": "main article"
+                },
+                "process_seconds": 1.4151
+              },
+              "reuse": {
+                "phase": "reuse",
+                "model_port_calls": 0,
+                "status": "success",
+                "issues": [],
+                "recipe_reused": true,
+                "recipe_version": 1,
+                "recipe_attempts": [
+                  {
+                    "origin": "memory",
+                    "index": 0,
+                    "status": "success"
+                  }
+                ],
+                "learned_recipe": null,
+                "records": [
+                  {
+                    "data": {
+                      "name": "Field Notebook",
+                      "price": "12.50"
+                    },
+                    "evidence": {
+                      "name": {
+                        "method": "css",
+                        "locator": "main article [match 0] >> h2.title::text"
+                      },
+                      "price": {
+                        "method": "css",
+                        "locator": "main article [match 0] >> span.amount::text"
+                      }
+                    }
+                  }
+                ],
+                "inference_calls": 0,
+                "inference_seconds": 0,
+                "storage_seconds": 0.0018,
+                "total_seconds": 0.0046,
+                "wall_seconds": 0.0242,
+                "stored_recipe": {
+                  "strategy": "css",
+                  "fields": {
+                    "name": "h2.title::text",
+                    "price": "span.amount::text"
+                  },
+                  "version": 1,
+                  "require_evidence": true,
+                  "fallbacks": [],
+                  "item_type": null,
+                  "record_selector": "main article"
+                },
+                "process_seconds": 0.2384
+              }
+            },
+            {
+              "trial": 3,
+              "model_loaded_cold": false,
+              "learn": {
+                "phase": "learn",
+                "model_port_calls": 1,
+                "status": "success",
+                "issues": [],
+                "recipe_reused": false,
+                "recipe_version": 1,
+                "recipe_attempts": [
+                  {
+                    "origin": "model",
+                    "index": 0,
+                    "status": "success"
+                  }
+                ],
+                "learned_recipe": {
+                  "strategy": "css",
+                  "fields": {
+                    "name": "h2.title::text",
+                    "price": "span.amount::text"
+                  },
+                  "version": 1,
+                  "require_evidence": true,
+                  "fallbacks": [],
+                  "item_type": null,
+                  "record_selector": "main article"
+                },
+                "records": [
+                  {
+                    "data": {
+                      "name": "Field Notebook",
+                      "price": "12.50"
+                    },
+                    "evidence": {
+                      "name": {
+                        "method": "css",
+                        "locator": "main article [match 0] >> h2.title::text"
+                      },
+                      "price": {
+                        "method": "css",
+                        "locator": "main article [match 0] >> span.amount::text"
+                      }
+                    }
+                  }
+                ],
+                "inference_calls": 1,
+                "inference_seconds": 1.1517,
+                "storage_seconds": 0.0041,
+                "total_seconds": 1.1572,
+                "wall_seconds": 1.1753,
+                "stored_recipe": {
+                  "strategy": "css",
+                  "fields": {
+                    "name": "h2.title::text",
+                    "price": "span.amount::text"
+                  },
+                  "version": 1,
+                  "require_evidence": true,
+                  "fallbacks": [],
+                  "item_type": null,
+                  "record_selector": "main article"
+                },
+                "process_seconds": 1.4075
+              },
+              "reuse": {
+                "phase": "reuse",
+                "model_port_calls": 0,
+                "status": "success",
+                "issues": [],
+                "recipe_reused": true,
+                "recipe_version": 1,
+                "recipe_attempts": [
+                  {
+                    "origin": "memory",
+                    "index": 0,
+                    "status": "success"
+                  }
+                ],
+                "learned_recipe": null,
+                "records": [
+                  {
+                    "data": {
+                      "name": "Field Notebook",
+                      "price": "12.50"
+                    },
+                    "evidence": {
+                      "name": {
+                        "method": "css",
+                        "locator": "main article [match 0] >> h2.title::text"
+                      },
+                      "price": {
+                        "method": "css",
+                        "locator": "main article [match 0] >> span.amount::text"
+                      }
+                    }
+                  }
+                ],
+                "inference_calls": 0,
+                "inference_seconds": 0,
+                "storage_seconds": 0.0018,
+                "total_seconds": 0.0044,
+                "wall_seconds": 0.0223,
+                "stored_recipe": {
+                  "strategy": "css",
+                  "fields": {
+                    "name": "h2.title::text",
+                    "price": "span.amount::text"
+                  },
+                  "version": 1,
+                  "require_evidence": true,
+                  "fallbacks": [],
+                  "item_type": null,
+                  "record_selector": "main article"
+                },
+                "process_seconds": 0.2348
+              }
+            },
+            {
+              "trial": 4,
+              "model_loaded_cold": false,
+              "learn": {
+                "phase": "learn",
+                "model_port_calls": 1,
+                "status": "success",
+                "issues": [],
+                "recipe_reused": false,
+                "recipe_version": 1,
+                "recipe_attempts": [
+                  {
+                    "origin": "model",
+                    "index": 0,
+                    "status": "success"
+                  }
+                ],
+                "learned_recipe": {
+                  "strategy": "css",
+                  "fields": {
+                    "name": "h2.title::text",
+                    "price": "span.amount::text"
+                  },
+                  "version": 1,
+                  "require_evidence": true,
+                  "fallbacks": [],
+                  "item_type": null,
+                  "record_selector": "main article"
+                },
+                "records": [
+                  {
+                    "data": {
+                      "name": "Field Notebook",
+                      "price": "12.50"
+                    },
+                    "evidence": {
+                      "name": {
+                        "method": "css",
+                        "locator": "main article [match 0] >> h2.title::text"
+                      },
+                      "price": {
+                        "method": "css",
+                        "locator": "main article [match 0] >> span.amount::text"
+                      }
+                    }
+                  }
+                ],
+                "inference_calls": 1,
+                "inference_seconds": 1.1404,
+                "storage_seconds": 0.0049,
+                "total_seconds": 1.1467,
+                "wall_seconds": 1.1667,
+                "stored_recipe": {
+                  "strategy": "css",
+                  "fields": {
+                    "name": "h2.title::text",
+                    "price": "span.amount::text"
+                  },
+                  "version": 1,
+                  "require_evidence": true,
+                  "fallbacks": [],
+                  "item_type": null,
+                  "record_selector": "main article"
+                },
+                "process_seconds": 1.4176
+              },
+              "reuse": {
+                "phase": "reuse",
+                "model_port_calls": 0,
+                "status": "success",
+                "issues": [],
+                "recipe_reused": true,
+                "recipe_version": 1,
+                "recipe_attempts": [
+                  {
+                    "origin": "memory",
+                    "index": 0,
+                    "status": "success"
+                  }
+                ],
+                "learned_recipe": null,
+                "records": [
+                  {
+                    "data": {
+                      "name": "Field Notebook",
+                      "price": "12.50"
+                    },
+                    "evidence": {
+                      "name": {
+                        "method": "css",
+                        "locator": "main article [match 0] >> h2.title::text"
+                      },
+                      "price": {
+                        "method": "css",
+                        "locator": "main article [match 0] >> span.amount::text"
+                      }
+                    }
+                  }
+                ],
+                "inference_calls": 0,
+                "inference_seconds": 0,
+                "storage_seconds": 0.0019,
+                "total_seconds": 0.0045,
+                "wall_seconds": 0.0222,
+                "stored_recipe": {
+                  "strategy": "css",
+                  "fields": {
+                    "name": "h2.title::text",
+                    "price": "span.amount::text"
+                  },
+                  "version": 1,
+                  "require_evidence": true,
+                  "fallbacks": [],
+                  "item_type": null,
+                  "record_selector": "main article"
+                },
+                "process_seconds": 0.2449
+              }
+            }
+          ],
+          "expected_record": {
+            "name": "Field Notebook",
+            "price": "12.50"
+          },
+          "repetitions": {
+            "product_card": {
+              "fresh_memory_each": true,
+              "runs": 5,
+              "success": 5,
+              "matches_expected": 5,
+              "results": [
+                {
+                  "status": "success",
+                  "issues": [],
+                  "recipe_reused": false,
+                  "recipe_version": 1,
+                  "recipe_attempts": [
+                    {
+                      "origin": "model",
+                      "index": 0,
+                      "status": "success"
+                    }
+                  ],
+                  "learned_recipe": {
+                    "strategy": "css",
+                    "fields": {
+                      "name": "h2.title::text",
+                      "price": "span.amount::text"
+                    },
+                    "version": 1,
+                    "require_evidence": true,
+                    "fallbacks": [],
+                    "item_type": null,
+                    "record_selector": "main article"
+                  },
+                  "records": [
+                    {
+                      "data": {
+                        "name": "Field Notebook",
+                        "price": "12.50"
+                      },
+                      "evidence": {
+                        "name": {
+                          "method": "css",
+                          "locator": "main article [match 0] >> h2.title::text"
+                        },
+                        "price": {
+                          "method": "css",
+                          "locator": "main article [match 0] >> span.amount::text"
+                        }
+                      }
+                    }
+                  ],
+                  "inference_calls": 1,
+                  "inference_seconds": 1.1248,
+                  "storage_seconds": 0.0044,
+                  "total_seconds": 1.1302,
+                  "wall_seconds": 1.1308,
+                  "stored_recipe": {
+                    "strategy": "css",
+                    "fields": {
+                      "name": "h2.title::text",
+                      "price": "span.amount::text"
+                    },
+                    "version": 1,
+                    "require_evidence": true,
+                    "fallbacks": [],
+                    "item_type": null,
+                    "record_selector": "main article"
+                  }
+                },
+                {
+                  "status": "success",
+                  "issues": [],
+                  "recipe_reused": false,
+                  "recipe_version": 1,
+                  "recipe_attempts": [
+                    {
+                      "origin": "model",
+                      "index": 0,
+                      "status": "success"
+                    }
+                  ],
+                  "learned_recipe": {
+                    "strategy": "css",
+                    "fields": {
+                      "name": "h2.title::text",
+                      "price": "span.amount::text"
+                    },
+                    "version": 1,
+                    "require_evidence": true,
+                    "fallbacks": [],
+                    "item_type": null,
+                    "record_selector": "main article"
+                  },
+                  "records": [
+                    {
+                      "data": {
+                        "name": "Field Notebook",
+                        "price": "12.50"
+                      },
+                      "evidence": {
+                        "name": {
+                          "method": "css",
+                          "locator": "main article [match 0] >> h2.title::text"
+                        },
+                        "price": {
+                          "method": "css",
+                          "locator": "main article [match 0] >> span.amount::text"
+                        }
+                      }
+                    }
+                  ],
+                  "inference_calls": 1,
+                  "inference_seconds": 1.1027,
+                  "storage_seconds": 0.0056,
+                  "total_seconds": 1.1095,
+                  "wall_seconds": 1.1099,
+                  "stored_recipe": {
+                    "strategy": "css",
+                    "fields": {
+                      "name": "h2.title::text",
+                      "price": "span.amount::text"
+                    },
+                    "version": 1,
+                    "require_evidence": true,
+                    "fallbacks": [],
+                    "item_type": null,
+                    "record_selector": "main article"
+                  }
+                },
+                {
+                  "status": "success",
+                  "issues": [],
+                  "recipe_reused": false,
+                  "recipe_version": 1,
+                  "recipe_attempts": [
+                    {
+                      "origin": "model",
+                      "index": 0,
+                      "status": "success"
+                    }
+                  ],
+                  "learned_recipe": {
+                    "strategy": "css",
+                    "fields": {
+                      "name": "h2.title::text",
+                      "price": "span.amount::text"
+                    },
+                    "version": 1,
+                    "require_evidence": true,
+                    "fallbacks": [],
+                    "item_type": null,
+                    "record_selector": "main article"
+                  },
+                  "records": [
+                    {
+                      "data": {
+                        "name": "Field Notebook",
+                        "price": "12.50"
+                      },
+                      "evidence": {
+                        "name": {
+                          "method": "css",
+                          "locator": "main article [match 0] >> h2.title::text"
+                        },
+                        "price": {
+                          "method": "css",
+                          "locator": "main article [match 0] >> span.amount::text"
+                        }
+                      }
+                    }
+                  ],
+                  "inference_calls": 1,
+                  "inference_seconds": 1.0946,
+                  "storage_seconds": 0.004,
+                  "total_seconds": 1.0994,
+                  "wall_seconds": 1.0998,
+                  "stored_recipe": {
+                    "strategy": "css",
+                    "fields": {
+                      "name": "h2.title::text",
+                      "price": "span.amount::text"
+                    },
+                    "version": 1,
+                    "require_evidence": true,
+                    "fallbacks": [],
+                    "item_type": null,
+                    "record_selector": "main article"
+                  }
+                },
+                {
+                  "status": "success",
+                  "issues": [],
+                  "recipe_reused": false,
+                  "recipe_version": 1,
+                  "recipe_attempts": [
+                    {
+                      "origin": "model",
+                      "index": 0,
+                      "status": "success"
+                    }
+                  ],
+                  "learned_recipe": {
+                    "strategy": "css",
+                    "fields": {
+                      "name": "h2.title::text",
+                      "price": "span.amount::text"
+                    },
+                    "version": 1,
+                    "require_evidence": true,
+                    "fallbacks": [],
+                    "item_type": null,
+                    "record_selector": "main article"
+                  },
+                  "records": [
+                    {
+                      "data": {
+                        "name": "Field Notebook",
+                        "price": "12.50"
+                      },
+                      "evidence": {
+                        "name": {
+                          "method": "css",
+                          "locator": "main article [match 0] >> h2.title::text"
+                        },
+                        "price": {
+                          "method": "css",
+                          "locator": "main article [match 0] >> span.amount::text"
+                        }
+                      }
+                    }
+                  ],
+                  "inference_calls": 1,
+                  "inference_seconds": 1.0954,
+                  "storage_seconds": 0.0057,
+                  "total_seconds": 1.1024,
+                  "wall_seconds": 1.1028,
+                  "stored_recipe": {
+                    "strategy": "css",
+                    "fields": {
+                      "name": "h2.title::text",
+                      "price": "span.amount::text"
+                    },
+                    "version": 1,
+                    "require_evidence": true,
+                    "fallbacks": [],
+                    "item_type": null,
+                    "record_selector": "main article"
+                  }
+                },
+                {
+                  "status": "success",
+                  "issues": [],
+                  "recipe_reused": false,
+                  "recipe_version": 1,
+                  "recipe_attempts": [
+                    {
+                      "origin": "model",
+                      "index": 0,
+                      "status": "success"
+                    }
+                  ],
+                  "learned_recipe": {
+                    "strategy": "css",
+                    "fields": {
+                      "name": "h2.title::text",
+                      "price": "span.amount::text"
+                    },
+                    "version": 1,
+                    "require_evidence": true,
+                    "fallbacks": [],
+                    "item_type": null,
+                    "record_selector": "main article"
+                  },
+                  "records": [
+                    {
+                      "data": {
+                        "name": "Field Notebook",
+                        "price": "12.50"
+                      },
+                      "evidence": {
+                        "name": {
+                          "method": "css",
+                          "locator": "main article [match 0] >> h2.title::text"
+                        },
+                        "price": {
+                          "method": "css",
+                          "locator": "main article [match 0] >> span.amount::text"
+                        }
+                      }
+                    }
+                  ],
+                  "inference_calls": 1,
+                  "inference_seconds": 1.0972,
+                  "storage_seconds": 0.0059,
+                  "total_seconds": 1.1041,
+                  "wall_seconds": 1.1045,
+                  "stored_recipe": {
+                    "strategy": "css",
+                    "fields": {
+                      "name": "h2.title::text",
+                      "price": "span.amount::text"
+                    },
+                    "version": 1,
+                    "require_evidence": true,
+                    "fallbacks": [],
+                    "item_type": null,
+                    "record_selector": "main article"
+                  }
+                }
+              ]
+            },
+            "distractors": {
+              "fresh_memory_each": true,
+              "runs": 5,
+              "success": 0,
+              "matches_expected": 0,
+              "results": [
+                {
+                  "status": "insufficient_evidence",
+                  "issues": [
+                    "invalid_model_candidate"
+                  ],
+                  "recipe_reused": false,
+                  "recipe_version": null,
+                  "recipe_attempts": [
+                    {
+                      "origin": "model",
+                      "index": 0,
+                      "status": "insufficient_evidence"
+                    },
+                    {
+                      "origin": "model",
+                      "index": 1,
+                      "status": "insufficient_evidence"
+                    }
+                  ],
+                  "learned_recipe": null,
+                  "records": [],
+                  "inference_calls": 2,
+                  "inference_seconds": 2.622,
+                  "storage_seconds": 0.0023,
+                  "total_seconds": 2.6351,
+                  "wall_seconds": 2.6354,
+                  "stored_recipe": null
+                },
+                {
+                  "status": "insufficient_evidence",
+                  "issues": [
+                    "invalid_model_candidate"
+                  ],
+                  "recipe_reused": false,
+                  "recipe_version": null,
+                  "recipe_attempts": [
+                    {
+                      "origin": "model",
+                      "index": 0,
+                      "status": "insufficient_evidence"
+                    },
+                    {
+                      "origin": "model",
+                      "index": 1,
+                      "status": "insufficient_evidence"
+                    }
+                  ],
+                  "learned_recipe": null,
+                  "records": [],
+                  "inference_calls": 2,
+                  "inference_seconds": 2.3422,
+                  "storage_seconds": 0.0039,
+                  "total_seconds": 2.3643,
+                  "wall_seconds": 2.3647,
+                  "stored_recipe": null
+                },
+                {
+                  "status": "insufficient_evidence",
+                  "issues": [
+                    "invalid_model_candidate"
+                  ],
+                  "recipe_reused": false,
+                  "recipe_version": null,
+                  "recipe_attempts": [
+                    {
+                      "origin": "model",
+                      "index": 0,
+                      "status": "insufficient_evidence"
+                    },
+                    {
+                      "origin": "model",
+                      "index": 1,
+                      "status": "insufficient_evidence"
+                    }
+                  ],
+                  "learned_recipe": null,
+                  "records": [],
+                  "inference_calls": 2,
+                  "inference_seconds": 2.3629,
+                  "storage_seconds": 0.0035,
+                  "total_seconds": 2.3694,
+                  "wall_seconds": 2.37,
+                  "stored_recipe": null
+                },
+                {
+                  "status": "insufficient_evidence",
+                  "issues": [
+                    "invalid_model_candidate"
+                  ],
+                  "recipe_reused": false,
+                  "recipe_version": null,
+                  "recipe_attempts": [
+                    {
+                      "origin": "model",
+                      "index": 0,
+                      "status": "insufficient_evidence"
+                    },
+                    {
+                      "origin": "model",
+                      "index": 1,
+                      "status": "insufficient_evidence"
+                    }
+                  ],
+                  "learned_recipe": null,
+                  "records": [],
+                  "inference_calls": 2,
+                  "inference_seconds": 2.3566,
+                  "storage_seconds": 0.0034,
+                  "total_seconds": 2.3654,
+                  "wall_seconds": 2.3659,
+                  "stored_recipe": null
+                },
+                {
+                  "status": "insufficient_evidence",
+                  "issues": [
+                    "invalid_model_candidate"
+                  ],
+                  "recipe_reused": false,
+                  "recipe_version": null,
+                  "recipe_attempts": [
+                    {
+                      "origin": "model",
+                      "index": 0,
+                      "status": "insufficient_evidence"
+                    },
+                    {
+                      "origin": "model",
+                      "index": 1,
+                      "status": "insufficient_evidence"
+                    }
+                  ],
+                  "learned_recipe": null,
+                  "records": [],
+                  "inference_calls": 2,
+                  "inference_seconds": 2.3703,
+                  "storage_seconds": 0.0036,
+                  "total_seconds": 2.3781,
+                  "wall_seconds": 2.3784,
+                  "stored_recipe": null
+                }
+              ]
+            }
+          },
+          "failures": [
+            {
+              "scenario": "endpoint_unavailable",
+              "evidence_kind": "live_service_absent",
+              "description": "Real connection to a closed loopback port",
+              "status": "transient_failure",
+              "issues": [
+                "model_unavailable"
+              ],
+              "recipe_reused": false,
+              "recipe_version": null,
+              "recipe_attempts": [],
+              "learned_recipe": null,
+              "records": [],
+              "inference_calls": 1,
+              "inference_seconds": 0.0091,
+              "storage_seconds": 0.0012,
+              "total_seconds": 0.011,
+              "wall_seconds": 0.0112,
+              "stored_recipe": null
+            },
+            {
+              "scenario": "model_not_installed",
+              "evidence_kind": "live_service",
+              "description": "Real Ollama request naming a model that is not installed",
+              "status": "transient_failure",
+              "issues": [
+                "model_unavailable"
+              ],
+              "recipe_reused": false,
+              "recipe_version": null,
+              "recipe_attempts": [],
+              "learned_recipe": null,
+              "records": [],
+              "inference_calls": 1,
+              "inference_seconds": 0.0082,
+              "storage_seconds": 0.0013,
+              "total_seconds": 0.0104,
+              "wall_seconds": 0.0105,
+              "stored_recipe": null
+            },
+            {
+              "scenario": "output_token_budget",
+              "evidence_kind": "live_model",
+              "description": "Real generation stopped by max_output_tokens=1",
+              "status": "insufficient_evidence",
+              "issues": [
+                "invalid_model_response"
+              ],
+              "recipe_reused": false,
+              "recipe_version": null,
+              "recipe_attempts": [],
+              "learned_recipe": null,
+              "records": [],
+              "inference_calls": 1,
+              "inference_seconds": 0.2225,
+              "storage_seconds": 0.0008,
+              "total_seconds": 0.2268,
+              "wall_seconds": 0.2271,
+              "stored_recipe": null
+            },
+            {
+              "scenario": "response_byte_budget",
+              "evidence_kind": "live_model",
+              "description": "Real generation exceeding max_response_bytes=64",
+              "status": "insufficient_evidence",
+              "issues": [
+                "model_response_limit"
+              ],
+              "recipe_reused": false,
+              "recipe_version": null,
+              "recipe_attempts": [],
+              "learned_recipe": null,
+              "records": [],
+              "inference_calls": 1,
+              "inference_seconds": 1.1059,
+              "storage_seconds": 0.0026,
+              "total_seconds": 1.1103,
+              "wall_seconds": 1.111,
+              "stored_recipe": null
+            },
+            {
+              "scenario": "phase_timeout",
+              "evidence_kind": "live_model",
+              "description": "Real request cancelled by timeout_seconds=0.01",
+              "status": "transient_failure",
+              "issues": [
+                "model_timeout"
+              ],
+              "recipe_reused": false,
+              "recipe_version": null,
+              "recipe_attempts": [],
+              "learned_recipe": null,
+              "records": [],
+              "inference_calls": 1,
+              "inference_seconds": 0.0106,
+              "storage_seconds": 0.002,
+              "total_seconds": 0.0137,
+              "wall_seconds": 0.0139,
+              "stored_recipe": null
+            },
+            {
+              "scenario": "unsatisfiable_contract",
+              "evidence_kind": "live_model",
+              "description": "Real proposals for a required sku absent from the page",
+              "status": "insufficient_evidence",
+              "issues": [
+                "candidate_validation_failed"
+              ],
+              "recipe_reused": false,
+              "recipe_version": null,
+              "recipe_attempts": [
+                {
+                  "origin": "model",
+                  "index": 0,
+                  "status": "insufficient_evidence"
+                },
+                {
+                  "origin": "model",
+                  "index": 1,
+                  "status": "insufficient_evidence"
+                }
+              ],
+              "learned_recipe": null,
+              "records": [],
+              "inference_calls": 2,
+              "inference_seconds": 2.9249,
+              "storage_seconds": 0.0015,
+              "total_seconds": 2.9273,
+              "wall_seconds": 2.9278,
+              "stored_recipe": null
+            },
+            {
+              "scenario": "malformed_provider_body",
+              "evidence_kind": "controlled_fake_service",
+              "description": "Loopback fake service returns a non-JSON body",
+              "status": "insufficient_evidence",
+              "issues": [
+                "invalid_model_response"
+              ],
+              "recipe_reused": false,
+              "recipe_version": null,
+              "recipe_attempts": [],
+              "learned_recipe": null,
+              "records": [],
+              "inference_calls": 1,
+              "inference_seconds": 0.0068,
+              "storage_seconds": 0.001,
+              "total_seconds": 0.0084,
+              "wall_seconds": 0.0086,
+              "stored_recipe": null
+            },
+            {
+              "scenario": "unparseable_model_content",
+              "evidence_kind": "controlled_fake_service",
+              "description": "Loopback fake service returns a valid envelope with non-recipe content",
+              "status": "insufficient_evidence",
+              "issues": [
+                "invalid_model_candidate"
+              ],
+              "recipe_reused": false,
+              "recipe_version": null,
+              "recipe_attempts": [
+                {
+                  "origin": "model",
+                  "index": 0,
+                  "status": "insufficient_evidence"
+                },
+                {
+                  "origin": "model",
+                  "index": 1,
+                  "status": "insufficient_evidence"
+                }
+              ],
+              "learned_recipe": null,
+              "records": [],
+              "inference_calls": 2,
+              "inference_seconds": 0.0251,
+              "storage_seconds": 0.0033,
+              "total_seconds": 0.031,
+              "wall_seconds": 0.0321,
+              "stored_recipe": null
+            }
+          ],
+          "summary": {
+            "trials": 5,
+            "learn_success": 5,
+            "activated": 5,
+            "learn_matches_expected": 5,
+            "reuse_success": 5,
+            "learn_failures": {},
+            "repetition_success": {
+              "product_card": "5/5",
+              "distractors": "0/5"
+            },
+            "inference_calls": 20,
+            "learn_inference_seconds": {
+              "min": 1.1404,
+              "median": 1.1517,
+              "max": 3.5374
+            },
+            "reuse_total_seconds": {
+              "min": 0.0044,
+              "median": 0.0045,
+              "max": 0.0047
+            },
+            "repetition_inference_seconds": {
+              "min": 1.0946,
+              "median": 1.7335,
+              "max": 2.622
+            },
+            "failure_scenarios_explicit": 8,
+            "failure_scenarios": 8
+          }
+        }
       }
-    },
-    "inference_policy": {
-      "max_calls": 2,
-      "max_repair_attempts": 1,
-      "timeout_seconds": 30,
-      "max_context_bytes": 32768,
-      "max_response_bytes": 65536,
-      "max_output_tokens": 2048,
-      "context_tokens": 8192,
-      "max_concurrency": 1,
-      "max_discovery_candidates": 8
     }
-  },
-  "no_model_precheck": {
-    "product_card": {
-      "status": "insufficient_evidence",
-      "issues": [
-        "no_valid_recipe"
-      ],
-      "recipe_reused": false,
-      "recipe_version": null,
-      "recipe_attempts": [],
-      "learned_recipe": null,
-      "records": [],
-      "inference_calls": 0,
-      "inference_seconds": 0.0,
-      "storage_seconds": 0.0032,
-      "total_seconds": 0.0082,
-      "wall_seconds": 0.0422,
-      "stored_recipe": null
-    },
-    "distractors": {
-      "status": "insufficient_evidence",
-      "issues": [
-        "no_valid_recipe"
-      ],
-      "recipe_reused": false,
-      "recipe_version": null,
-      "recipe_attempts": [],
-      "learned_recipe": null,
-      "records": [],
-      "inference_calls": 0,
-      "inference_seconds": 0.0,
-      "storage_seconds": 0.0006,
-      "total_seconds": 0.001,
-      "wall_seconds": 0.0011,
-      "stored_recipe": null
-    }
-  },
-  "models_loaded_before_learn": [],
-  "learn": {
-    "phase": "learn",
-    "model_port_calls": 1,
-    "status": "success",
-    "issues": [],
-    "recipe_reused": false,
-    "recipe_version": 1,
-    "recipe_attempts": [
-      {
-        "origin": "model",
-        "index": 0,
-        "status": "success"
-      }
-    ],
-    "learned_recipe": {
-      "strategy": "css",
-      "fields": {
-        "name": "h2.title::text",
-        "price": "span.amount::text"
-      },
-      "version": 1,
-      "require_evidence": true,
-      "fallbacks": [],
-      "item_type": null,
-      "record_selector": "main > article.product-card"
-    },
-    "records": [
-      {
-        "data": {
-          "name": "Field Notebook",
-          "price": "12.50"
-        },
-        "evidence": {
-          "name": {
-            "method": "css",
-            "locator": "main > article.product-card [match 0] >> h2.title::text"
-          },
-          "price": {
-            "method": "css",
-            "locator": "main > article.product-card [match 0] >> span.amount::text"
+  ],
+  "previous_runs": [
+    {
+      "format_version": 1,
+      "scope": "synthetic input; real local Ollama unless evidence_kind says otherwise",
+      "environment": {
+        "recorded_at": "2026-10-30T04:39:32.258382+00:00",
+        "git_head": "41819c9f5be4001a899be38398773bc3cf6289b9",
+        "git_tracked_changes": false,
+        "python": "3.12.16",
+        "platform": "macOS-26.6.2-arm64-arm-64bit",
+        "machine": "arm64",
+        "rastro": "0.1.0.dev0",
+        "httpx": "0.28.1",
+        "uv_lock_sha256": "e21515d8c09eb918e9ca21e5cf8363dd1e986c3e302644a533ae7d32c9c9621b",
+        "harness_sha256": "c91663259268ad66857a293fc54b9c435fb00b03283e7d98b02c5ef41c78dd1f",
+        "ollama_version": "0.40.13",
+        "ollama_origin": "http://127.0.0.1:11434",
+        "model": {
+          "name": "qwen3:4b",
+          "digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+          "size_bytes": 2497293931,
+          "details": {
+            "family": "qwen3",
+            "format": "gguf",
+            "parameter_size": "4.0B",
+            "quantization_level": "Q4_K_M"
           }
+        },
+        "inputs": {
+          "product_card": {
+            "sha256": "1de651c5d390b58869335ebff101b2e2ce7360719a8ce2df9604c09b4a126a99",
+            "bytes": 183
+          },
+          "distractors": {
+            "sha256": "2189b0e6c5ee7f65807344ffcb5e2522cb8eed5647ddaf947d2120afd5897276",
+            "bytes": 412
+          }
+        },
+        "inference_policy": {
+          "max_calls": 2,
+          "max_repair_attempts": 1,
+          "timeout_seconds": 30,
+          "max_context_bytes": 32768,
+          "max_response_bytes": 65536,
+          "max_output_tokens": 2048,
+          "context_tokens": 8192,
+          "max_concurrency": 1,
+          "max_discovery_candidates": 8
         }
-      }
-    ],
-    "inference_calls": 1,
-    "inference_seconds": 3.0108,
-    "storage_seconds": 0.0024,
-    "total_seconds": 3.0148,
-    "wall_seconds": 3.0321,
-    "stored_recipe": {
-      "strategy": "css",
-      "fields": {
-        "name": "h2.title::text",
-        "price": "span.amount::text"
       },
-      "version": 1,
-      "require_evidence": true,
-      "fallbacks": [],
-      "item_type": null,
-      "record_selector": "main > article.product-card"
-    },
-    "process_seconds": 3.2431
-  },
-  "reuse": {
-    "phase": "reuse",
-    "model_port_calls": 0,
-    "status": "success",
-    "issues": [],
-    "recipe_reused": true,
-    "recipe_version": 1,
-    "recipe_attempts": [
-      {
-        "origin": "memory",
-        "index": 0,
-        "status": "success"
-      }
-    ],
-    "learned_recipe": null,
-    "records": [
-      {
-        "data": {
-          "name": "Field Notebook",
-          "price": "12.50"
-        },
-        "evidence": {
-          "name": {
-            "method": "css",
-            "locator": "main > article.product-card [match 0] >> h2.title::text"
-          },
-          "price": {
-            "method": "css",
-            "locator": "main > article.product-card [match 0] >> span.amount::text"
-          }
-        }
-      }
-    ],
-    "inference_calls": 0,
-    "inference_seconds": 0,
-    "storage_seconds": 0.002,
-    "total_seconds": 0.0052,
-    "wall_seconds": 0.0236,
-    "stored_recipe": {
-      "strategy": "css",
-      "fields": {
-        "name": "h2.title::text",
-        "price": "span.amount::text"
-      },
-      "version": 1,
-      "require_evidence": true,
-      "fallbacks": [],
-      "item_type": null,
-      "record_selector": "main > article.product-card"
-    },
-    "process_seconds": 0.2317
-  },
-  "expected_record": {
-    "name": "Field Notebook",
-    "price": "12.50"
-  },
-  "repetitions": {
-    "product_card": {
-      "fresh_memory_each": true,
-      "runs": 5,
-      "success": 5,
-      "matches_expected": 5,
-      "results": [
-        {
-          "status": "success",
-          "issues": [],
-          "recipe_reused": false,
-          "recipe_version": 1,
-          "recipe_attempts": [
-            {
-              "origin": "model",
-              "index": 0,
-              "status": "success"
-            }
-          ],
-          "learned_recipe": {
-            "strategy": "css",
-            "fields": {
-              "name": "h2.title::text",
-              "price": "span.amount::text"
-            },
-            "version": 1,
-            "require_evidence": true,
-            "fallbacks": [],
-            "item_type": null,
-            "record_selector": "main > article.product-card"
-          },
-          "records": [
-            {
-              "data": {
-                "name": "Field Notebook",
-                "price": "12.50"
-              },
-              "evidence": {
-                "name": {
-                  "method": "css",
-                  "locator": "main > article.product-card [match 0] >> h2.title::text"
-                },
-                "price": {
-                  "method": "css",
-                  "locator": "main > article.product-card [match 0] >> span.amount::text"
-                }
-              }
-            }
-          ],
-          "inference_calls": 1,
-          "inference_seconds": 1.5951,
-          "storage_seconds": 0.002,
-          "total_seconds": 1.598,
-          "wall_seconds": 1.5984,
-          "stored_recipe": {
-            "strategy": "css",
-            "fields": {
-              "name": "h2.title::text",
-              "price": "span.amount::text"
-            },
-            "version": 1,
-            "require_evidence": true,
-            "fallbacks": [],
-            "item_type": null,
-            "record_selector": "main > article.product-card"
-          }
-        },
-        {
-          "status": "success",
-          "issues": [],
-          "recipe_reused": false,
-          "recipe_version": 1,
-          "recipe_attempts": [
-            {
-              "origin": "model",
-              "index": 0,
-              "status": "success"
-            }
-          ],
-          "learned_recipe": {
-            "strategy": "css",
-            "fields": {
-              "name": "h2.title::text",
-              "price": "span.amount::text"
-            },
-            "version": 1,
-            "require_evidence": true,
-            "fallbacks": [],
-            "item_type": null,
-            "record_selector": "main > article.product-card"
-          },
-          "records": [
-            {
-              "data": {
-                "name": "Field Notebook",
-                "price": "12.50"
-              },
-              "evidence": {
-                "name": {
-                  "method": "css",
-                  "locator": "main > article.product-card [match 0] >> h2.title::text"
-                },
-                "price": {
-                  "method": "css",
-                  "locator": "main > article.product-card [match 0] >> span.amount::text"
-                }
-              }
-            }
-          ],
-          "inference_calls": 1,
-          "inference_seconds": 1.5694,
-          "storage_seconds": 0.0017,
-          "total_seconds": 1.5715,
-          "wall_seconds": 1.5716,
-          "stored_recipe": {
-            "strategy": "css",
-            "fields": {
-              "name": "h2.title::text",
-              "price": "span.amount::text"
-            },
-            "version": 1,
-            "require_evidence": true,
-            "fallbacks": [],
-            "item_type": null,
-            "record_selector": "main > article.product-card"
-          }
-        },
-        {
-          "status": "success",
-          "issues": [],
-          "recipe_reused": false,
-          "recipe_version": 1,
-          "recipe_attempts": [
-            {
-              "origin": "model",
-              "index": 0,
-              "status": "success"
-            }
-          ],
-          "learned_recipe": {
-            "strategy": "css",
-            "fields": {
-              "name": "h2.title::text",
-              "price": "span.amount::text"
-            },
-            "version": 1,
-            "require_evidence": true,
-            "fallbacks": [],
-            "item_type": null,
-            "record_selector": "main > article.product-card"
-          },
-          "records": [
-            {
-              "data": {
-                "name": "Field Notebook",
-                "price": "12.50"
-              },
-              "evidence": {
-                "name": {
-                  "method": "css",
-                  "locator": "main > article.product-card [match 0] >> h2.title::text"
-                },
-                "price": {
-                  "method": "css",
-                  "locator": "main > article.product-card [match 0] >> span.amount::text"
-                }
-              }
-            }
-          ],
-          "inference_calls": 1,
-          "inference_seconds": 1.5663,
-          "storage_seconds": 0.0016,
-          "total_seconds": 1.5682,
-          "wall_seconds": 1.5684,
-          "stored_recipe": {
-            "strategy": "css",
-            "fields": {
-              "name": "h2.title::text",
-              "price": "span.amount::text"
-            },
-            "version": 1,
-            "require_evidence": true,
-            "fallbacks": [],
-            "item_type": null,
-            "record_selector": "main > article.product-card"
-          }
-        },
-        {
-          "status": "success",
-          "issues": [],
-          "recipe_reused": false,
-          "recipe_version": 1,
-          "recipe_attempts": [
-            {
-              "origin": "model",
-              "index": 0,
-              "status": "success"
-            }
-          ],
-          "learned_recipe": {
-            "strategy": "css",
-            "fields": {
-              "name": "h2.title::text",
-              "price": "span.amount::text"
-            },
-            "version": 1,
-            "require_evidence": true,
-            "fallbacks": [],
-            "item_type": null,
-            "record_selector": "main > article.product-card"
-          },
-          "records": [
-            {
-              "data": {
-                "name": "Field Notebook",
-                "price": "12.50"
-              },
-              "evidence": {
-                "name": {
-                  "method": "css",
-                  "locator": "main > article.product-card [match 0] >> h2.title::text"
-                },
-                "price": {
-                  "method": "css",
-                  "locator": "main > article.product-card [match 0] >> span.amount::text"
-                }
-              }
-            }
-          ],
-          "inference_calls": 1,
-          "inference_seconds": 1.5633,
-          "storage_seconds": 0.002,
-          "total_seconds": 1.5656,
-          "wall_seconds": 1.5657,
-          "stored_recipe": {
-            "strategy": "css",
-            "fields": {
-              "name": "h2.title::text",
-              "price": "span.amount::text"
-            },
-            "version": 1,
-            "require_evidence": true,
-            "fallbacks": [],
-            "item_type": null,
-            "record_selector": "main > article.product-card"
-          }
-        },
-        {
-          "status": "success",
-          "issues": [],
-          "recipe_reused": false,
-          "recipe_version": 1,
-          "recipe_attempts": [
-            {
-              "origin": "model",
-              "index": 0,
-              "status": "success"
-            }
-          ],
-          "learned_recipe": {
-            "strategy": "css",
-            "fields": {
-              "name": "h2.title::text",
-              "price": "span.amount::text"
-            },
-            "version": 1,
-            "require_evidence": true,
-            "fallbacks": [],
-            "item_type": null,
-            "record_selector": "main > article.product-card"
-          },
-          "records": [
-            {
-              "data": {
-                "name": "Field Notebook",
-                "price": "12.50"
-              },
-              "evidence": {
-                "name": {
-                  "method": "css",
-                  "locator": "main > article.product-card [match 0] >> h2.title::text"
-                },
-                "price": {
-                  "method": "css",
-                  "locator": "main > article.product-card [match 0] >> span.amount::text"
-                }
-              }
-            }
-          ],
-          "inference_calls": 1,
-          "inference_seconds": 1.5658,
-          "storage_seconds": 0.0018,
-          "total_seconds": 1.5679,
-          "wall_seconds": 1.568,
-          "stored_recipe": {
-            "strategy": "css",
-            "fields": {
-              "name": "h2.title::text",
-              "price": "span.amount::text"
-            },
-            "version": 1,
-            "require_evidence": true,
-            "fallbacks": [],
-            "item_type": null,
-            "record_selector": "main > article.product-card"
-          }
-        }
-      ]
-    },
-    "distractors": {
-      "fresh_memory_each": true,
-      "runs": 5,
-      "success": 0,
-      "matches_expected": 0,
-      "results": [
-        {
+      "no_model_precheck": {
+        "product_card": {
           "status": "insufficient_evidence",
           "issues": [
-            "invalid_model_candidate"
+            "no_valid_recipe"
           ],
           "recipe_reused": false,
           "recipe_version": null,
-          "recipe_attempts": [
-            {
-              "origin": "model",
-              "index": 0,
-              "status": "insufficient_evidence"
-            },
-            {
-              "origin": "model",
-              "index": 1,
-              "status": "insufficient_evidence"
-            }
-          ],
+          "recipe_attempts": [],
           "learned_recipe": null,
           "records": [],
-          "inference_calls": 2,
-          "inference_seconds": 3.8795,
+          "inference_calls": 0,
+          "inference_seconds": 0.0,
+          "storage_seconds": 0.0032,
+          "total_seconds": 0.0082,
+          "wall_seconds": 0.0422,
+          "stored_recipe": null
+        },
+        "distractors": {
+          "status": "insufficient_evidence",
+          "issues": [
+            "no_valid_recipe"
+          ],
+          "recipe_reused": false,
+          "recipe_version": null,
+          "recipe_attempts": [],
+          "learned_recipe": null,
+          "records": [],
+          "inference_calls": 0,
+          "inference_seconds": 0.0,
           "storage_seconds": 0.0006,
-          "total_seconds": 3.8818,
-          "wall_seconds": 3.8819,
+          "total_seconds": 0.001,
+          "wall_seconds": 0.0011,
           "stored_recipe": null
+        }
+      },
+      "models_loaded_before_learn": [],
+      "learn": {
+        "phase": "learn",
+        "model_port_calls": 1,
+        "status": "success",
+        "issues": [],
+        "recipe_reused": false,
+        "recipe_version": 1,
+        "recipe_attempts": [
+          {
+            "origin": "model",
+            "index": 0,
+            "status": "success"
+          }
+        ],
+        "learned_recipe": {
+          "strategy": "css",
+          "fields": {
+            "name": "h2.title::text",
+            "price": "span.amount::text"
+          },
+          "version": 1,
+          "require_evidence": true,
+          "fallbacks": [],
+          "item_type": null,
+          "record_selector": "main > article.product-card"
         },
+        "records": [
+          {
+            "data": {
+              "name": "Field Notebook",
+              "price": "12.50"
+            },
+            "evidence": {
+              "name": {
+                "method": "css",
+                "locator": "main > article.product-card [match 0] >> h2.title::text"
+              },
+              "price": {
+                "method": "css",
+                "locator": "main > article.product-card [match 0] >> span.amount::text"
+              }
+            }
+          }
+        ],
+        "inference_calls": 1,
+        "inference_seconds": 3.0108,
+        "storage_seconds": 0.0024,
+        "total_seconds": 3.0148,
+        "wall_seconds": 3.0321,
+        "stored_recipe": {
+          "strategy": "css",
+          "fields": {
+            "name": "h2.title::text",
+            "price": "span.amount::text"
+          },
+          "version": 1,
+          "require_evidence": true,
+          "fallbacks": [],
+          "item_type": null,
+          "record_selector": "main > article.product-card"
+        },
+        "process_seconds": 3.2431
+      },
+      "reuse": {
+        "phase": "reuse",
+        "model_port_calls": 0,
+        "status": "success",
+        "issues": [],
+        "recipe_reused": true,
+        "recipe_version": 1,
+        "recipe_attempts": [
+          {
+            "origin": "memory",
+            "index": 0,
+            "status": "success"
+          }
+        ],
+        "learned_recipe": null,
+        "records": [
+          {
+            "data": {
+              "name": "Field Notebook",
+              "price": "12.50"
+            },
+            "evidence": {
+              "name": {
+                "method": "css",
+                "locator": "main > article.product-card [match 0] >> h2.title::text"
+              },
+              "price": {
+                "method": "css",
+                "locator": "main > article.product-card [match 0] >> span.amount::text"
+              }
+            }
+          }
+        ],
+        "inference_calls": 0,
+        "inference_seconds": 0,
+        "storage_seconds": 0.002,
+        "total_seconds": 0.0052,
+        "wall_seconds": 0.0236,
+        "stored_recipe": {
+          "strategy": "css",
+          "fields": {
+            "name": "h2.title::text",
+            "price": "span.amount::text"
+          },
+          "version": 1,
+          "require_evidence": true,
+          "fallbacks": [],
+          "item_type": null,
+          "record_selector": "main > article.product-card"
+        },
+        "process_seconds": 0.2317
+      },
+      "expected_record": {
+        "name": "Field Notebook",
+        "price": "12.50"
+      },
+      "repetitions": {
+        "product_card": {
+          "fresh_memory_each": true,
+          "runs": 5,
+          "success": 5,
+          "matches_expected": 5,
+          "results": [
+            {
+              "status": "success",
+              "issues": [],
+              "recipe_reused": false,
+              "recipe_version": 1,
+              "recipe_attempts": [
+                {
+                  "origin": "model",
+                  "index": 0,
+                  "status": "success"
+                }
+              ],
+              "learned_recipe": {
+                "strategy": "css",
+                "fields": {
+                  "name": "h2.title::text",
+                  "price": "span.amount::text"
+                },
+                "version": 1,
+                "require_evidence": true,
+                "fallbacks": [],
+                "item_type": null,
+                "record_selector": "main > article.product-card"
+              },
+              "records": [
+                {
+                  "data": {
+                    "name": "Field Notebook",
+                    "price": "12.50"
+                  },
+                  "evidence": {
+                    "name": {
+                      "method": "css",
+                      "locator": "main > article.product-card [match 0] >> h2.title::text"
+                    },
+                    "price": {
+                      "method": "css",
+                      "locator": "main > article.product-card [match 0] >> span.amount::text"
+                    }
+                  }
+                }
+              ],
+              "inference_calls": 1,
+              "inference_seconds": 1.5951,
+              "storage_seconds": 0.002,
+              "total_seconds": 1.598,
+              "wall_seconds": 1.5984,
+              "stored_recipe": {
+                "strategy": "css",
+                "fields": {
+                  "name": "h2.title::text",
+                  "price": "span.amount::text"
+                },
+                "version": 1,
+                "require_evidence": true,
+                "fallbacks": [],
+                "item_type": null,
+                "record_selector": "main > article.product-card"
+              }
+            },
+            {
+              "status": "success",
+              "issues": [],
+              "recipe_reused": false,
+              "recipe_version": 1,
+              "recipe_attempts": [
+                {
+                  "origin": "model",
+                  "index": 0,
+                  "status": "success"
+                }
+              ],
+              "learned_recipe": {
+                "strategy": "css",
+                "fields": {
+                  "name": "h2.title::text",
+                  "price": "span.amount::text"
+                },
+                "version": 1,
+                "require_evidence": true,
+                "fallbacks": [],
+                "item_type": null,
+                "record_selector": "main > article.product-card"
+              },
+              "records": [
+                {
+                  "data": {
+                    "name": "Field Notebook",
+                    "price": "12.50"
+                  },
+                  "evidence": {
+                    "name": {
+                      "method": "css",
+                      "locator": "main > article.product-card [match 0] >> h2.title::text"
+                    },
+                    "price": {
+                      "method": "css",
+                      "locator": "main > article.product-card [match 0] >> span.amount::text"
+                    }
+                  }
+                }
+              ],
+              "inference_calls": 1,
+              "inference_seconds": 1.5694,
+              "storage_seconds": 0.0017,
+              "total_seconds": 1.5715,
+              "wall_seconds": 1.5716,
+              "stored_recipe": {
+                "strategy": "css",
+                "fields": {
+                  "name": "h2.title::text",
+                  "price": "span.amount::text"
+                },
+                "version": 1,
+                "require_evidence": true,
+                "fallbacks": [],
+                "item_type": null,
+                "record_selector": "main > article.product-card"
+              }
+            },
+            {
+              "status": "success",
+              "issues": [],
+              "recipe_reused": false,
+              "recipe_version": 1,
+              "recipe_attempts": [
+                {
+                  "origin": "model",
+                  "index": 0,
+                  "status": "success"
+                }
+              ],
+              "learned_recipe": {
+                "strategy": "css",
+                "fields": {
+                  "name": "h2.title::text",
+                  "price": "span.amount::text"
+                },
+                "version": 1,
+                "require_evidence": true,
+                "fallbacks": [],
+                "item_type": null,
+                "record_selector": "main > article.product-card"
+              },
+              "records": [
+                {
+                  "data": {
+                    "name": "Field Notebook",
+                    "price": "12.50"
+                  },
+                  "evidence": {
+                    "name": {
+                      "method": "css",
+                      "locator": "main > article.product-card [match 0] >> h2.title::text"
+                    },
+                    "price": {
+                      "method": "css",
+                      "locator": "main > article.product-card [match 0] >> span.amount::text"
+                    }
+                  }
+                }
+              ],
+              "inference_calls": 1,
+              "inference_seconds": 1.5663,
+              "storage_seconds": 0.0016,
+              "total_seconds": 1.5682,
+              "wall_seconds": 1.5684,
+              "stored_recipe": {
+                "strategy": "css",
+                "fields": {
+                  "name": "h2.title::text",
+                  "price": "span.amount::text"
+                },
+                "version": 1,
+                "require_evidence": true,
+                "fallbacks": [],
+                "item_type": null,
+                "record_selector": "main > article.product-card"
+              }
+            },
+            {
+              "status": "success",
+              "issues": [],
+              "recipe_reused": false,
+              "recipe_version": 1,
+              "recipe_attempts": [
+                {
+                  "origin": "model",
+                  "index": 0,
+                  "status": "success"
+                }
+              ],
+              "learned_recipe": {
+                "strategy": "css",
+                "fields": {
+                  "name": "h2.title::text",
+                  "price": "span.amount::text"
+                },
+                "version": 1,
+                "require_evidence": true,
+                "fallbacks": [],
+                "item_type": null,
+                "record_selector": "main > article.product-card"
+              },
+              "records": [
+                {
+                  "data": {
+                    "name": "Field Notebook",
+                    "price": "12.50"
+                  },
+                  "evidence": {
+                    "name": {
+                      "method": "css",
+                      "locator": "main > article.product-card [match 0] >> h2.title::text"
+                    },
+                    "price": {
+                      "method": "css",
+                      "locator": "main > article.product-card [match 0] >> span.amount::text"
+                    }
+                  }
+                }
+              ],
+              "inference_calls": 1,
+              "inference_seconds": 1.5633,
+              "storage_seconds": 0.002,
+              "total_seconds": 1.5656,
+              "wall_seconds": 1.5657,
+              "stored_recipe": {
+                "strategy": "css",
+                "fields": {
+                  "name": "h2.title::text",
+                  "price": "span.amount::text"
+                },
+                "version": 1,
+                "require_evidence": true,
+                "fallbacks": [],
+                "item_type": null,
+                "record_selector": "main > article.product-card"
+              }
+            },
+            {
+              "status": "success",
+              "issues": [],
+              "recipe_reused": false,
+              "recipe_version": 1,
+              "recipe_attempts": [
+                {
+                  "origin": "model",
+                  "index": 0,
+                  "status": "success"
+                }
+              ],
+              "learned_recipe": {
+                "strategy": "css",
+                "fields": {
+                  "name": "h2.title::text",
+                  "price": "span.amount::text"
+                },
+                "version": 1,
+                "require_evidence": true,
+                "fallbacks": [],
+                "item_type": null,
+                "record_selector": "main > article.product-card"
+              },
+              "records": [
+                {
+                  "data": {
+                    "name": "Field Notebook",
+                    "price": "12.50"
+                  },
+                  "evidence": {
+                    "name": {
+                      "method": "css",
+                      "locator": "main > article.product-card [match 0] >> h2.title::text"
+                    },
+                    "price": {
+                      "method": "css",
+                      "locator": "main > article.product-card [match 0] >> span.amount::text"
+                    }
+                  }
+                }
+              ],
+              "inference_calls": 1,
+              "inference_seconds": 1.5658,
+              "storage_seconds": 0.0018,
+              "total_seconds": 1.5679,
+              "wall_seconds": 1.568,
+              "stored_recipe": {
+                "strategy": "css",
+                "fields": {
+                  "name": "h2.title::text",
+                  "price": "span.amount::text"
+                },
+                "version": 1,
+                "require_evidence": true,
+                "fallbacks": [],
+                "item_type": null,
+                "record_selector": "main > article.product-card"
+              }
+            }
+          ]
+        },
+        "distractors": {
+          "fresh_memory_each": true,
+          "runs": 5,
+          "success": 0,
+          "matches_expected": 0,
+          "results": [
+            {
+              "status": "insufficient_evidence",
+              "issues": [
+                "invalid_model_candidate"
+              ],
+              "recipe_reused": false,
+              "recipe_version": null,
+              "recipe_attempts": [
+                {
+                  "origin": "model",
+                  "index": 0,
+                  "status": "insufficient_evidence"
+                },
+                {
+                  "origin": "model",
+                  "index": 1,
+                  "status": "insufficient_evidence"
+                }
+              ],
+              "learned_recipe": null,
+              "records": [],
+              "inference_calls": 2,
+              "inference_seconds": 3.8795,
+              "storage_seconds": 0.0006,
+              "total_seconds": 3.8818,
+              "wall_seconds": 3.8819,
+              "stored_recipe": null
+            },
+            {
+              "status": "insufficient_evidence",
+              "issues": [
+                "invalid_model_candidate"
+              ],
+              "recipe_reused": false,
+              "recipe_version": null,
+              "recipe_attempts": [
+                {
+                  "origin": "model",
+                  "index": 0,
+                  "status": "insufficient_evidence"
+                },
+                {
+                  "origin": "model",
+                  "index": 1,
+                  "status": "insufficient_evidence"
+                }
+              ],
+              "learned_recipe": null,
+              "records": [],
+              "inference_calls": 2,
+              "inference_seconds": 3.4896,
+              "storage_seconds": 0.0008,
+              "total_seconds": 3.4924,
+              "wall_seconds": 3.4925,
+              "stored_recipe": null
+            },
+            {
+              "status": "insufficient_evidence",
+              "issues": [
+                "invalid_model_candidate"
+              ],
+              "recipe_reused": false,
+              "recipe_version": null,
+              "recipe_attempts": [
+                {
+                  "origin": "model",
+                  "index": 0,
+                  "status": "insufficient_evidence"
+                },
+                {
+                  "origin": "model",
+                  "index": 1,
+                  "status": "insufficient_evidence"
+                }
+              ],
+              "learned_recipe": null,
+              "records": [],
+              "inference_calls": 2,
+              "inference_seconds": 3.4967,
+              "storage_seconds": 0.0008,
+              "total_seconds": 3.4989,
+              "wall_seconds": 3.499,
+              "stored_recipe": null
+            },
+            {
+              "status": "insufficient_evidence",
+              "issues": [
+                "invalid_model_candidate"
+              ],
+              "recipe_reused": false,
+              "recipe_version": null,
+              "recipe_attempts": [
+                {
+                  "origin": "model",
+                  "index": 0,
+                  "status": "insufficient_evidence"
+                },
+                {
+                  "origin": "model",
+                  "index": 1,
+                  "status": "insufficient_evidence"
+                }
+              ],
+              "learned_recipe": null,
+              "records": [],
+              "inference_calls": 2,
+              "inference_seconds": 3.4985,
+              "storage_seconds": 0.0009,
+              "total_seconds": 3.501,
+              "wall_seconds": 3.5012,
+              "stored_recipe": null
+            },
+            {
+              "status": "insufficient_evidence",
+              "issues": [
+                "invalid_model_candidate"
+              ],
+              "recipe_reused": false,
+              "recipe_version": null,
+              "recipe_attempts": [
+                {
+                  "origin": "model",
+                  "index": 0,
+                  "status": "insufficient_evidence"
+                },
+                {
+                  "origin": "model",
+                  "index": 1,
+                  "status": "insufficient_evidence"
+                }
+              ],
+              "learned_recipe": null,
+              "records": [],
+              "inference_calls": 2,
+              "inference_seconds": 3.4902,
+              "storage_seconds": 0.0012,
+              "total_seconds": 3.4931,
+              "wall_seconds": 3.4932,
+              "stored_recipe": null
+            }
+          ]
+        }
+      },
+      "failures": [
         {
-          "status": "insufficient_evidence",
+          "scenario": "endpoint_unavailable",
+          "evidence_kind": "live_service_absent",
+          "description": "Real connection to a closed loopback port",
+          "status": "transient_failure",
           "issues": [
-            "invalid_model_candidate"
+            "model_unavailable"
           ],
           "recipe_reused": false,
           "recipe_version": null,
-          "recipe_attempts": [
-            {
-              "origin": "model",
-              "index": 0,
-              "status": "insufficient_evidence"
-            },
-            {
-              "origin": "model",
-              "index": 1,
-              "status": "insufficient_evidence"
-            }
-          ],
+          "recipe_attempts": [],
           "learned_recipe": null,
           "records": [],
-          "inference_calls": 2,
-          "inference_seconds": 3.4896,
-          "storage_seconds": 0.0008,
-          "total_seconds": 3.4924,
-          "wall_seconds": 3.4925,
-          "stored_recipe": null
-        },
-        {
-          "status": "insufficient_evidence",
-          "issues": [
-            "invalid_model_candidate"
-          ],
-          "recipe_reused": false,
-          "recipe_version": null,
-          "recipe_attempts": [
-            {
-              "origin": "model",
-              "index": 0,
-              "status": "insufficient_evidence"
-            },
-            {
-              "origin": "model",
-              "index": 1,
-              "status": "insufficient_evidence"
-            }
-          ],
-          "learned_recipe": null,
-          "records": [],
-          "inference_calls": 2,
-          "inference_seconds": 3.4967,
-          "storage_seconds": 0.0008,
-          "total_seconds": 3.4989,
-          "wall_seconds": 3.499,
-          "stored_recipe": null
-        },
-        {
-          "status": "insufficient_evidence",
-          "issues": [
-            "invalid_model_candidate"
-          ],
-          "recipe_reused": false,
-          "recipe_version": null,
-          "recipe_attempts": [
-            {
-              "origin": "model",
-              "index": 0,
-              "status": "insufficient_evidence"
-            },
-            {
-              "origin": "model",
-              "index": 1,
-              "status": "insufficient_evidence"
-            }
-          ],
-          "learned_recipe": null,
-          "records": [],
-          "inference_calls": 2,
-          "inference_seconds": 3.4985,
-          "storage_seconds": 0.0009,
-          "total_seconds": 3.501,
-          "wall_seconds": 3.5012,
-          "stored_recipe": null
-        },
-        {
-          "status": "insufficient_evidence",
-          "issues": [
-            "invalid_model_candidate"
-          ],
-          "recipe_reused": false,
-          "recipe_version": null,
-          "recipe_attempts": [
-            {
-              "origin": "model",
-              "index": 0,
-              "status": "insufficient_evidence"
-            },
-            {
-              "origin": "model",
-              "index": 1,
-              "status": "insufficient_evidence"
-            }
-          ],
-          "learned_recipe": null,
-          "records": [],
-          "inference_calls": 2,
-          "inference_seconds": 3.4902,
+          "inference_calls": 1,
+          "inference_seconds": 0.0054,
           "storage_seconds": 0.0012,
-          "total_seconds": 3.4931,
-          "wall_seconds": 3.4932,
+          "total_seconds": 0.0071,
+          "wall_seconds": 0.0073,
+          "stored_recipe": null
+        },
+        {
+          "scenario": "model_not_installed",
+          "evidence_kind": "live_service",
+          "description": "Real Ollama request naming a model that is not installed",
+          "status": "transient_failure",
+          "issues": [
+            "model_unavailable"
+          ],
+          "recipe_reused": false,
+          "recipe_version": null,
+          "recipe_attempts": [],
+          "learned_recipe": null,
+          "records": [],
+          "inference_calls": 1,
+          "inference_seconds": 0.0067,
+          "storage_seconds": 0.0008,
+          "total_seconds": 0.0081,
+          "wall_seconds": 0.0082,
+          "stored_recipe": null
+        },
+        {
+          "scenario": "output_token_budget",
+          "evidence_kind": "live_model",
+          "description": "Real generation stopped by max_output_tokens=1",
+          "status": "insufficient_evidence",
+          "issues": [
+            "invalid_model_response"
+          ],
+          "recipe_reused": false,
+          "recipe_version": null,
+          "recipe_attempts": [],
+          "learned_recipe": null,
+          "records": [],
+          "inference_calls": 1,
+          "inference_seconds": 0.2905,
+          "storage_seconds": 0.0007,
+          "total_seconds": 0.2918,
+          "wall_seconds": 0.2919,
+          "stored_recipe": null
+        },
+        {
+          "scenario": "response_byte_budget",
+          "evidence_kind": "live_model",
+          "description": "Real generation exceeding max_response_bytes=64",
+          "status": "insufficient_evidence",
+          "issues": [
+            "model_response_limit"
+          ],
+          "recipe_reused": false,
+          "recipe_version": null,
+          "recipe_attempts": [],
+          "learned_recipe": null,
+          "records": [],
+          "inference_calls": 1,
+          "inference_seconds": 1.5788,
+          "storage_seconds": 0.0009,
+          "total_seconds": 1.5803,
+          "wall_seconds": 1.5804,
+          "stored_recipe": null
+        },
+        {
+          "scenario": "phase_timeout",
+          "evidence_kind": "live_model",
+          "description": "Real request cancelled by timeout_seconds=0.01",
+          "status": "transient_failure",
+          "issues": [
+            "model_timeout"
+          ],
+          "recipe_reused": false,
+          "recipe_version": null,
+          "recipe_attempts": [],
+          "learned_recipe": null,
+          "records": [],
+          "inference_calls": 1,
+          "inference_seconds": 0.0121,
+          "storage_seconds": 0.0008,
+          "total_seconds": 0.0136,
+          "wall_seconds": 0.0138,
+          "stored_recipe": null
+        },
+        {
+          "scenario": "unsatisfiable_contract",
+          "evidence_kind": "live_model",
+          "description": "Real proposals for a required sku absent from the page",
+          "status": "insufficient_evidence",
+          "issues": [
+            "invalid_model_candidate"
+          ],
+          "recipe_reused": false,
+          "recipe_version": null,
+          "recipe_attempts": [
+            {
+              "origin": "model",
+              "index": 0,
+              "status": "insufficient_evidence"
+            },
+            {
+              "origin": "model",
+              "index": 1,
+              "status": "insufficient_evidence"
+            }
+          ],
+          "learned_recipe": null,
+          "records": [],
+          "inference_calls": 2,
+          "inference_seconds": 3.8922,
+          "storage_seconds": 0.0008,
+          "total_seconds": 3.8937,
+          "wall_seconds": 3.8939,
+          "stored_recipe": null
+        },
+        {
+          "scenario": "malformed_provider_body",
+          "evidence_kind": "controlled_fake_service",
+          "description": "Loopback fake service returns a non-JSON body",
+          "status": "insufficient_evidence",
+          "issues": [
+            "invalid_model_response"
+          ],
+          "recipe_reused": false,
+          "recipe_version": null,
+          "recipe_attempts": [],
+          "learned_recipe": null,
+          "records": [],
+          "inference_calls": 1,
+          "inference_seconds": 0.0217,
+          "storage_seconds": 0.0046,
+          "total_seconds": 0.0319,
+          "wall_seconds": 0.0327,
+          "stored_recipe": null
+        },
+        {
+          "scenario": "unparseable_model_content",
+          "evidence_kind": "controlled_fake_service",
+          "description": "Loopback fake service returns a valid envelope with non-recipe content",
+          "status": "insufficient_evidence",
+          "issues": [
+            "invalid_model_candidate"
+          ],
+          "recipe_reused": false,
+          "recipe_version": null,
+          "recipe_attempts": [
+            {
+              "origin": "model",
+              "index": 0,
+              "status": "insufficient_evidence"
+            },
+            {
+              "origin": "model",
+              "index": 1,
+              "status": "insufficient_evidence"
+            }
+          ],
+          "learned_recipe": null,
+          "records": [],
+          "inference_calls": 2,
+          "inference_seconds": 0.0135,
+          "storage_seconds": 0.0009,
+          "total_seconds": 0.0152,
+          "wall_seconds": 0.0153,
           "stored_recipe": null
         }
       ]
-    }
-  },
-  "failures": [
-    {
-      "scenario": "endpoint_unavailable",
-      "evidence_kind": "live_service_absent",
-      "description": "Real connection to a closed loopback port",
-      "status": "transient_failure",
-      "issues": [
-        "model_unavailable"
-      ],
-      "recipe_reused": false,
-      "recipe_version": null,
-      "recipe_attempts": [],
-      "learned_recipe": null,
-      "records": [],
-      "inference_calls": 1,
-      "inference_seconds": 0.0054,
-      "storage_seconds": 0.0012,
-      "total_seconds": 0.0071,
-      "wall_seconds": 0.0073,
-      "stored_recipe": null
-    },
-    {
-      "scenario": "model_not_installed",
-      "evidence_kind": "live_service",
-      "description": "Real Ollama request naming a model that is not installed",
-      "status": "transient_failure",
-      "issues": [
-        "model_unavailable"
-      ],
-      "recipe_reused": false,
-      "recipe_version": null,
-      "recipe_attempts": [],
-      "learned_recipe": null,
-      "records": [],
-      "inference_calls": 1,
-      "inference_seconds": 0.0067,
-      "storage_seconds": 0.0008,
-      "total_seconds": 0.0081,
-      "wall_seconds": 0.0082,
-      "stored_recipe": null
-    },
-    {
-      "scenario": "output_token_budget",
-      "evidence_kind": "live_model",
-      "description": "Real generation stopped by max_output_tokens=1",
-      "status": "insufficient_evidence",
-      "issues": [
-        "invalid_model_response"
-      ],
-      "recipe_reused": false,
-      "recipe_version": null,
-      "recipe_attempts": [],
-      "learned_recipe": null,
-      "records": [],
-      "inference_calls": 1,
-      "inference_seconds": 0.2905,
-      "storage_seconds": 0.0007,
-      "total_seconds": 0.2918,
-      "wall_seconds": 0.2919,
-      "stored_recipe": null
-    },
-    {
-      "scenario": "response_byte_budget",
-      "evidence_kind": "live_model",
-      "description": "Real generation exceeding max_response_bytes=64",
-      "status": "insufficient_evidence",
-      "issues": [
-        "model_response_limit"
-      ],
-      "recipe_reused": false,
-      "recipe_version": null,
-      "recipe_attempts": [],
-      "learned_recipe": null,
-      "records": [],
-      "inference_calls": 1,
-      "inference_seconds": 1.5788,
-      "storage_seconds": 0.0009,
-      "total_seconds": 1.5803,
-      "wall_seconds": 1.5804,
-      "stored_recipe": null
-    },
-    {
-      "scenario": "phase_timeout",
-      "evidence_kind": "live_model",
-      "description": "Real request cancelled by timeout_seconds=0.01",
-      "status": "transient_failure",
-      "issues": [
-        "model_timeout"
-      ],
-      "recipe_reused": false,
-      "recipe_version": null,
-      "recipe_attempts": [],
-      "learned_recipe": null,
-      "records": [],
-      "inference_calls": 1,
-      "inference_seconds": 0.0121,
-      "storage_seconds": 0.0008,
-      "total_seconds": 0.0136,
-      "wall_seconds": 0.0138,
-      "stored_recipe": null
-    },
-    {
-      "scenario": "unsatisfiable_contract",
-      "evidence_kind": "live_model",
-      "description": "Real proposals for a required sku absent from the page",
-      "status": "insufficient_evidence",
-      "issues": [
-        "invalid_model_candidate"
-      ],
-      "recipe_reused": false,
-      "recipe_version": null,
-      "recipe_attempts": [
-        {
-          "origin": "model",
-          "index": 0,
-          "status": "insufficient_evidence"
-        },
-        {
-          "origin": "model",
-          "index": 1,
-          "status": "insufficient_evidence"
-        }
-      ],
-      "learned_recipe": null,
-      "records": [],
-      "inference_calls": 2,
-      "inference_seconds": 3.8922,
-      "storage_seconds": 0.0008,
-      "total_seconds": 3.8937,
-      "wall_seconds": 3.8939,
-      "stored_recipe": null
-    },
-    {
-      "scenario": "malformed_provider_body",
-      "evidence_kind": "controlled_fake_service",
-      "description": "Loopback fake service returns a non-JSON body",
-      "status": "insufficient_evidence",
-      "issues": [
-        "invalid_model_response"
-      ],
-      "recipe_reused": false,
-      "recipe_version": null,
-      "recipe_attempts": [],
-      "learned_recipe": null,
-      "records": [],
-      "inference_calls": 1,
-      "inference_seconds": 0.0217,
-      "storage_seconds": 0.0046,
-      "total_seconds": 0.0319,
-      "wall_seconds": 0.0327,
-      "stored_recipe": null
-    },
-    {
-      "scenario": "unparseable_model_content",
-      "evidence_kind": "controlled_fake_service",
-      "description": "Loopback fake service returns a valid envelope with non-recipe content",
-      "status": "insufficient_evidence",
-      "issues": [
-        "invalid_model_candidate"
-      ],
-      "recipe_reused": false,
-      "recipe_version": null,
-      "recipe_attempts": [
-        {
-          "origin": "model",
-          "index": 0,
-          "status": "insufficient_evidence"
-        },
-        {
-          "origin": "model",
-          "index": 1,
-          "status": "insufficient_evidence"
-        }
-      ],
-      "learned_recipe": null,
-      "records": [],
-      "inference_calls": 2,
-      "inference_seconds": 0.0135,
-      "storage_seconds": 0.0009,
-      "total_seconds": 0.0152,
-      "wall_seconds": 0.0153,
-      "stored_recipe": null
     }
   ]
 }
