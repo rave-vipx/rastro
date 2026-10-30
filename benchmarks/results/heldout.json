@@ -1,0 +1,2564 @@
+{
+  "format_version": 1,
+  "scope": "held-out synthetic offline corpus; supplied HTML; no network or live model",
+  "created_at": "2026-10-30T17:54:44.371159+00:00",
+  "repetitions": 30,
+  "warmup": 3,
+  "model_runs": 10,
+  "environment": {
+    "python": "3.12.16",
+    "os": "Darwin",
+    "os_release": "25.6.0",
+    "machine": "arm64",
+    "packages": {
+      "rastro-engine": "0.1.0.dev0",
+      "scrapling": "0.5",
+      "pydantic": "2.14.1",
+      "lxml": "6.1.3"
+    }
+  },
+  "git_revision": "6e29830d06a234f6844f215783ecbb5821007793",
+  "git_dirty": true,
+  "source_hashes": {
+    "benchmarks/__init__.py": "16b5776e888f01d935d3c8213c58aad22d51ca8c2d32c05a81e4f5dde7d83f5c",
+    "benchmarks/baseline.py": "10625c48ffc2eff8324f2d37f7c8252899e93e89b758a4f24fcdc6ba2d568608",
+    "benchmarks/contracts.py": "1ba47f535dd808b618ee510bf575810ce43d9e877e6ed1a0c82c52dd802cd1e2",
+    "benchmarks/heldout.json": "31b428054af4d0aa468f901a0e2f389d63471ec50c9530a59c8bd98cd3814aec",
+    "benchmarks/heldout.py": "f04e1e237569ec078a0b588302de922a9f5dae6e986f1e1253c769cd29fdfaa0",
+    "benchmarks/licenses.py": "3657686f3809d354c4b9f060319444579d44e49528ac0345522ad73afb13f0c0",
+    "benchmarks/live_ollama.py": "6635479e5bbbcf31e9e578470711086c33c86a835bc47c8aaf427afd3aaaa173",
+    "benchmarks/rastro_runner.py": "8a9125013f55198984aecd716c4e6df10bf25f2cf3004430b969da279bd6b9fa",
+    "benchmarks/run.py": "c4097e60b7fbe0fc5cd40b33fdfd82d97887d90ab8a2d8677d7177cbb77bf612",
+    "benchmarks/scoring.py": "4324603d6c3baa985b943bdd77dd94e76a165d48c3f353e8a3b03c68c74015a0",
+    "src/rastro/__init__.py": "4afc9989a046bcbf2e06bd214f012d57d75b58fcd531365dc5e1250cd881ee30",
+    "src/rastro/adapters/__init__.py": "560ae791a43cac5884449ce03b7d1648b5ccc46ecf1d3365dffbcef79a4ab269",
+    "src/rastro/adapters/discovery.py": "d70bdf509f1eefbdbcdadb6fba07db7105705cd6f6ffa09a8a28ede7e5a3e470",
+    "src/rastro/adapters/dns.py": "1b4e27c4ca1ea4979cfaab7af0eaa5424ce6e371e846ee4ea9e94fc279303a8a",
+    "src/rastro/adapters/http.py": "cb63d504a35b275cb10eb8c7a3ecf91141f292428ed982ff69515be87227331a",
+    "src/rastro/adapters/ollama.py": "e1dd851f41b4fabdcc75391f8b254a360b46e8447e47a832a48a0609ab1e0a65",
+    "src/rastro/adapters/scrapling.py": "6e17f8faab26d33819f33eba71952b2452f0a543be295b3b8f3f954300c1fa2a",
+    "src/rastro/adapters/sqlite.py": "722d170d054878f5256c37fe836f79748c01c1a3aa7ac171471032d821ba3f8e",
+    "src/rastro/application/__init__.py": "ccccfc0bb62e6978ce5515ad31c5d2f8e93b7c730fe86b1d0ba098853a690e80",
+    "src/rastro/application/acquisition.py": "458e00103988db64c313125a0ee29aa0cd475c90b6b8b52ba94acaa90c72b2c9",
+    "src/rastro/application/destinations.py": "631431ef1fb70d77300f66533a25ae7b558aca5d3791b08aeaddfdbd92551cb5",
+    "src/rastro/application/engine.py": "8379c1cf96c8ed597b3478f8b4822157e0e74dc4683153328414a127b0ac8179",
+    "src/rastro/application/extraction.py": "6f75f91fad68456b6b71b764e10f73ead4b494325b4fc4a67e0cf0122a787faa",
+    "src/rastro/application/intelligence.py": "312f3d381e955181005a27680face5ef23903a18a629d0705c78160752de32b5",
+    "src/rastro/application/memory.py": "79433994c5bf0083510b28b9b159cfa8fe492331014edc84c4f1e13eb0071293",
+    "src/rastro/application/robots.py": "850df7a753ed48d2b7692a290bbb627be237c64545018ed35442b191163313bb",
+    "src/rastro/cli.py": "fb22d4779d3b53262b82b9510b9b7b2b9e311c20c2919b013b1649a991067af0",
+    "src/rastro/domain/__init__.py": "f9cfa5d0a7090e1d3a64c3162ee486c994d9bea8d8dbbdfc3acc8a8481564f3d",
+    "src/rastro/domain/acquisition.py": "f2e9de6959c790f0dade223e09dc6f759b75d4aea150e7029a5f8e7f1fccc9bf",
+    "src/rastro/domain/intelligence.py": "471bcaba37096c0fee7fb4b60db09a6e047d14a99c5ff46986821eea7f214f59",
+    "src/rastro/domain/json.py": "fc3c190c11b8ead00ca7ddcddffb44b9daad759d6dd2a0a33196fd956de2923e",
+    "src/rastro/domain/memory.py": "e8e1f8e7f8f1d71353d8fb2d40c242e8053faad33292e514d6d52cf879cfadde",
+    "src/rastro/domain/models.py": "9e97b42dde8d3e255f516fe0c534e0ab4d906143d93e0e79dd3fadb24d4fd52c",
+    "src/rastro/ports/__init__.py": "5e930431e88fdab4c47d30c7d13fe22cbe723d135a3009cfca90c27aabade968",
+    "src/rastro/ports/acquisition.py": "915d855370da507a49772d295fbb983ca9322610dfdade8e1448457c7bfd5d1c",
+    "src/rastro/ports/discovery.py": "abf00623de7793c4638d76ca3e4176e2b1dee6f592c512707f03b6848464da39",
+    "src/rastro/ports/model.py": "b998dac56c5d81b0b3036f9b372d4e98a3510624835704aa13b49f7fb5e97128",
+    "src/rastro/ports/parser.py": "1c83f2def4a572d1a25226f19b7dd8a81bf2041ed7e0c7f61ce7eef56407d520",
+    "src/rastro/ports/recipes.py": "cab312d3b0fe99187d1a6e5d6a45caac36eb2027afd633f1c96d79c0544a931e",
+    "uv.lock": "e21515d8c09eb918e9ca21e5cf8363dd1e986c3e302644a533ae7d32c9c9621b"
+  },
+  "corpus": {
+    "sources": 5,
+    "mutations": 24,
+    "kinds": {
+      "jsonld": 2,
+      "microdata": 1,
+      "css": 2
+    }
+  },
+  "integration_effort": {
+    "per_source": [
+      {
+        "source": "outdoor_jsonld",
+        "kind": "jsonld",
+        "baseline": {
+          "entries": 5,
+          "tokens": 13,
+          "characters": 50
+        },
+        "baseline_adapted": {
+          "entries": 0,
+          "tokens": 0,
+          "characters": 0
+        },
+        "baseline_adapted_auto_mapped": true,
+        "rastro": {
+          "entries": 0,
+          "tokens": 0,
+          "characters": 0
+        },
+        "rastro_discovered": true,
+        "rastro_learned_recipe": {
+          "strategy": "jsonld",
+          "fields": {
+            "sku": "/sku",
+            "name": "/name",
+            "price": "/offers/price",
+            "priceCurrency": "/offers/priceCurrency"
+          },
+          "version": 1,
+          "require_evidence": true,
+          "fallbacks": [],
+          "item_type": "Product",
+          "record_selector": null
+        },
+        "rastro_discovery_with_currency_field_name": "insufficient_evidence"
+      },
+      {
+        "source": "pantry_microdata",
+        "kind": "microdata",
+        "baseline": {
+          "entries": 5,
+          "tokens": 64,
+          "characters": 167
+        },
+        "baseline_adapted": {
+          "entries": 0,
+          "tokens": 0,
+          "characters": 0
+        },
+        "baseline_adapted_auto_mapped": true,
+        "rastro": {
+          "entries": 0,
+          "tokens": 0,
+          "characters": 0
+        },
+        "rastro_discovered": true,
+        "rastro_learned_recipe": {
+          "strategy": "css",
+          "fields": {
+            "sku": "[itemprop~=\"sku\"]::attr(content)",
+            "name": "[itemprop~=\"name\"]::text",
+            "price": "[itemprop~=\"price\"]::attr(content)",
+            "priceCurrency": "[itemprop~=\"priceCurrency\"]::attr(content)"
+          },
+          "version": 1,
+          "require_evidence": true,
+          "fallbacks": [],
+          "item_type": null,
+          "record_selector": "[itemscope]:not([itemprop])"
+        },
+        "rastro_discovery_with_currency_field_name": "insufficient_evidence"
+      },
+      {
+        "source": "hardware_cards",
+        "kind": "css",
+        "baseline": {
+          "entries": 5,
+          "tokens": 35,
+          "characters": 103
+        },
+        "baseline_adapted": {
+          "entries": 5,
+          "tokens": 35,
+          "characters": 103
+        },
+        "baseline_adapted_auto_mapped": false,
+        "rastro": {
+          "entries": 5,
+          "tokens": 35,
+          "characters": 103
+        },
+        "rastro_discovered": false,
+        "rastro_learned_recipe": null,
+        "rastro_discovery_with_currency_field_name": "insufficient_evidence"
+      },
+      {
+        "source": "deli_table",
+        "kind": "css",
+        "baseline": {
+          "entries": 5,
+          "tokens": 35,
+          "characters": 68
+        },
+        "baseline_adapted": {
+          "entries": 5,
+          "tokens": 35,
+          "characters": 68
+        },
+        "baseline_adapted_auto_mapped": false,
+        "rastro": {
+          "entries": 5,
+          "tokens": 35,
+          "characters": 68
+        },
+        "rastro_discovered": false,
+        "rastro_learned_recipe": null,
+        "rastro_discovery_with_currency_field_name": "insufficient_evidence"
+      },
+      {
+        "source": "books_jsonld_blocks",
+        "kind": "jsonld",
+        "baseline": {
+          "entries": 5,
+          "tokens": 13,
+          "characters": 50
+        },
+        "baseline_adapted": {
+          "entries": 0,
+          "tokens": 0,
+          "characters": 0
+        },
+        "baseline_adapted_auto_mapped": true,
+        "rastro": {
+          "entries": 0,
+          "tokens": 0,
+          "characters": 0
+        },
+        "rastro_discovered": true,
+        "rastro_learned_recipe": {
+          "strategy": "jsonld",
+          "fields": {
+            "sku": "/sku",
+            "name": "/name",
+            "price": "/offers/price",
+            "priceCurrency": "/offers/priceCurrency"
+          },
+          "version": 1,
+          "require_evidence": true,
+          "fallbacks": [],
+          "item_type": "Product",
+          "record_selector": null
+        },
+        "rastro_discovery_with_currency_field_name": "insufficient_evidence"
+      }
+    ],
+    "totals": {
+      "baseline": {
+        "entries": 25,
+        "tokens": 160,
+        "characters": 438
+      },
+      "baseline_adapted": {
+        "entries": 10,
+        "tokens": 70,
+        "characters": 171
+      },
+      "rastro": {
+        "entries": 10,
+        "tokens": 70,
+        "characters": 171
+      }
+    },
+    "one_time_code_logical_lines": {
+      "baseline_reference_executor": 94,
+      "baseline_structured_adapter": 33,
+      "rastro_integration": 14
+    }
+  },
+  "mutations": {
+    "summary": {
+      "baseline": {
+        "mutations": 24,
+        "correct_success": 8,
+        "explicit_non_success": 13,
+        "silent_error": 3,
+        "silent_error_rate": 0.125,
+        "detection_rate_when_not_correct": 0.8125,
+        "correct_records": 37,
+        "expected_records": 51,
+        "complete_record_recall": 0.7254901960784313,
+        "extra_records": 3
+      },
+      "baseline_adapted": {
+        "mutations": 24,
+        "correct_success": 9,
+        "explicit_non_success": 12,
+        "silent_error": 3,
+        "silent_error_rate": 0.125,
+        "detection_rate_when_not_correct": 0.8,
+        "correct_records": 38,
+        "expected_records": 51,
+        "complete_record_recall": 0.7450980392156863,
+        "extra_records": 3
+      },
+      "rastro_memory": {
+        "mutations": 24,
+        "correct_success": 8,
+        "explicit_non_success": 13,
+        "silent_error": 3,
+        "silent_error_rate": 0.125,
+        "detection_rate_when_not_correct": 0.8125,
+        "correct_records": 37,
+        "expected_records": 51,
+        "complete_record_recall": 0.7254901960784313,
+        "extra_records": 3
+      },
+      "rastro_rediscover": {
+        "mutations": 24,
+        "correct_success": 7,
+        "explicit_non_success": 14,
+        "silent_error": 3,
+        "silent_error_rate": 0.125,
+        "detection_rate_when_not_correct": 0.8235294117647058,
+        "correct_records": 36,
+        "expected_records": 51,
+        "complete_record_recall": 0.7058823529411765,
+        "extra_records": 3
+      }
+    },
+    "mutations": [
+      {
+        "source": "outdoor_jsonld",
+        "mutation": "graph_reordered",
+        "kind": "reordered_structure",
+        "requires_warning": false,
+        "rastro_memory_reused": true,
+        "rastro_memory_issues": [],
+        "baseline": {
+          "status": "success",
+          "exact_records": true,
+          "correct_records": 1,
+          "expected_records": 1,
+          "extra_records": 0,
+          "outcome": "correct_success"
+        },
+        "baseline_adapted": {
+          "status": "success",
+          "exact_records": true,
+          "correct_records": 1,
+          "expected_records": 1,
+          "extra_records": 0,
+          "outcome": "correct_success"
+        },
+        "rastro_memory": {
+          "status": "success",
+          "exact_records": true,
+          "correct_records": 1,
+          "expected_records": 1,
+          "extra_records": 0,
+          "outcome": "correct_success"
+        },
+        "rastro_rediscover": {
+          "status": "success",
+          "exact_records": true,
+          "correct_records": 1,
+          "expected_records": 1,
+          "extra_records": 0,
+          "outcome": "correct_success"
+        }
+      },
+      {
+        "source": "outdoor_jsonld",
+        "mutation": "offers_as_list",
+        "kind": "reordered_structure",
+        "requires_warning": false,
+        "rastro_memory_reused": true,
+        "rastro_memory_issues": [
+          "missing_evidence"
+        ],
+        "baseline": {
+          "status": "insufficient_evidence",
+          "exact_records": false,
+          "correct_records": 0,
+          "expected_records": 1,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        },
+        "baseline_adapted": {
+          "status": "success",
+          "exact_records": true,
+          "correct_records": 1,
+          "expected_records": 1,
+          "extra_records": 0,
+          "outcome": "correct_success"
+        },
+        "rastro_memory": {
+          "status": "insufficient_evidence",
+          "exact_records": false,
+          "correct_records": 0,
+          "expected_records": 1,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        },
+        "rastro_rediscover": {
+          "status": "insufficient_evidence",
+          "exact_records": false,
+          "correct_records": 0,
+          "expected_records": 1,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        }
+      },
+      {
+        "source": "outdoor_jsonld",
+        "mutation": "brand_name_added",
+        "kind": "duplicated_candidate",
+        "requires_warning": false,
+        "rastro_memory_reused": true,
+        "rastro_memory_issues": [],
+        "baseline": {
+          "status": "success",
+          "exact_records": true,
+          "correct_records": 1,
+          "expected_records": 1,
+          "extra_records": 0,
+          "outcome": "correct_success"
+        },
+        "baseline_adapted": {
+          "status": "success",
+          "exact_records": true,
+          "correct_records": 1,
+          "expected_records": 1,
+          "extra_records": 0,
+          "outcome": "correct_success"
+        },
+        "rastro_memory": {
+          "status": "success",
+          "exact_records": true,
+          "correct_records": 1,
+          "expected_records": 1,
+          "extra_records": 0,
+          "outcome": "correct_success"
+        },
+        "rastro_rediscover": {
+          "status": "insufficient_evidence",
+          "exact_records": false,
+          "correct_records": 0,
+          "expected_records": 1,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        }
+      },
+      {
+        "source": "outdoor_jsonld",
+        "mutation": "price_removed",
+        "kind": "removed_field",
+        "requires_warning": true,
+        "rastro_memory_reused": true,
+        "rastro_memory_issues": [
+          "missing_evidence"
+        ],
+        "baseline": {
+          "status": "insufficient_evidence",
+          "exact_records": true,
+          "correct_records": 0,
+          "expected_records": 0,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        },
+        "baseline_adapted": {
+          "status": "insufficient_evidence",
+          "exact_records": true,
+          "correct_records": 0,
+          "expected_records": 0,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        },
+        "rastro_memory": {
+          "status": "insufficient_evidence",
+          "exact_records": true,
+          "correct_records": 0,
+          "expected_records": 0,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        },
+        "rastro_rediscover": {
+          "status": "insufficient_evidence",
+          "exact_records": true,
+          "correct_records": 0,
+          "expected_records": 0,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        }
+      },
+      {
+        "source": "outdoor_jsonld",
+        "mutation": "related_product_added",
+        "kind": "duplicated_candidate",
+        "requires_warning": false,
+        "rastro_memory_reused": true,
+        "rastro_memory_issues": [],
+        "baseline": {
+          "status": "success",
+          "exact_records": false,
+          "correct_records": 1,
+          "expected_records": 1,
+          "extra_records": 1,
+          "outcome": "silent_error"
+        },
+        "baseline_adapted": {
+          "status": "success",
+          "exact_records": false,
+          "correct_records": 1,
+          "expected_records": 1,
+          "extra_records": 1,
+          "outcome": "silent_error"
+        },
+        "rastro_memory": {
+          "status": "success",
+          "exact_records": false,
+          "correct_records": 1,
+          "expected_records": 1,
+          "extra_records": 1,
+          "outcome": "silent_error"
+        },
+        "rastro_rediscover": {
+          "status": "success",
+          "exact_records": false,
+          "correct_records": 1,
+          "expected_records": 1,
+          "extra_records": 1,
+          "outcome": "silent_error"
+        }
+      },
+      {
+        "source": "outdoor_jsonld",
+        "mutation": "sku_renamed_mpn",
+        "kind": "renamed_field",
+        "requires_warning": false,
+        "rastro_memory_reused": true,
+        "rastro_memory_issues": [
+          "missing_evidence"
+        ],
+        "baseline": {
+          "status": "insufficient_evidence",
+          "exact_records": false,
+          "correct_records": 0,
+          "expected_records": 1,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        },
+        "baseline_adapted": {
+          "status": "insufficient_evidence",
+          "exact_records": false,
+          "correct_records": 0,
+          "expected_records": 1,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        },
+        "rastro_memory": {
+          "status": "insufficient_evidence",
+          "exact_records": false,
+          "correct_records": 0,
+          "expected_records": 1,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        },
+        "rastro_rediscover": {
+          "status": "insufficient_evidence",
+          "exact_records": false,
+          "correct_records": 0,
+          "expected_records": 1,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        }
+      },
+      {
+        "source": "pantry_microdata",
+        "mutation": "class_renamed",
+        "kind": "renamed_class",
+        "requires_warning": false,
+        "rastro_memory_reused": true,
+        "rastro_memory_issues": [],
+        "baseline": {
+          "status": "success",
+          "exact_records": true,
+          "correct_records": 3,
+          "expected_records": 3,
+          "extra_records": 0,
+          "outcome": "correct_success"
+        },
+        "baseline_adapted": {
+          "status": "success",
+          "exact_records": true,
+          "correct_records": 3,
+          "expected_records": 3,
+          "extra_records": 0,
+          "outcome": "correct_success"
+        },
+        "rastro_memory": {
+          "status": "success",
+          "exact_records": true,
+          "correct_records": 3,
+          "expected_records": 3,
+          "extra_records": 0,
+          "outcome": "correct_success"
+        },
+        "rastro_rediscover": {
+          "status": "success",
+          "exact_records": true,
+          "correct_records": 3,
+          "expected_records": 3,
+          "extra_records": 0,
+          "outcome": "correct_success"
+        }
+      },
+      {
+        "source": "pantry_microdata",
+        "mutation": "offer_before_name",
+        "kind": "reordered_dom",
+        "requires_warning": false,
+        "rastro_memory_reused": true,
+        "rastro_memory_issues": [],
+        "baseline": {
+          "status": "success",
+          "exact_records": true,
+          "correct_records": 3,
+          "expected_records": 3,
+          "extra_records": 0,
+          "outcome": "correct_success"
+        },
+        "baseline_adapted": {
+          "status": "success",
+          "exact_records": true,
+          "correct_records": 3,
+          "expected_records": 3,
+          "extra_records": 0,
+          "outcome": "correct_success"
+        },
+        "rastro_memory": {
+          "status": "success",
+          "exact_records": true,
+          "correct_records": 3,
+          "expected_records": 3,
+          "extra_records": 0,
+          "outcome": "correct_success"
+        },
+        "rastro_rediscover": {
+          "status": "success",
+          "exact_records": true,
+          "correct_records": 3,
+          "expected_records": 3,
+          "extra_records": 0,
+          "outcome": "correct_success"
+        }
+      },
+      {
+        "source": "pantry_microdata",
+        "mutation": "currency_removed_one",
+        "kind": "removed_field",
+        "requires_warning": true,
+        "rastro_memory_reused": true,
+        "rastro_memory_issues": [
+          "missing_evidence"
+        ],
+        "baseline": {
+          "status": "partial_success",
+          "exact_records": true,
+          "correct_records": 2,
+          "expected_records": 2,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        },
+        "baseline_adapted": {
+          "status": "partial_success",
+          "exact_records": true,
+          "correct_records": 2,
+          "expected_records": 2,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        },
+        "rastro_memory": {
+          "status": "partial_success",
+          "exact_records": true,
+          "correct_records": 2,
+          "expected_records": 2,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        },
+        "rastro_rediscover": {
+          "status": "partial_success",
+          "exact_records": true,
+          "correct_records": 2,
+          "expected_records": 2,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        }
+      },
+      {
+        "source": "pantry_microdata",
+        "mutation": "was_price_added",
+        "kind": "duplicated_candidate",
+        "requires_warning": true,
+        "rastro_memory_reused": true,
+        "rastro_memory_issues": [
+          "ambiguous_match"
+        ],
+        "baseline": {
+          "status": "partial_success",
+          "exact_records": true,
+          "correct_records": 2,
+          "expected_records": 2,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        },
+        "baseline_adapted": {
+          "status": "partial_success",
+          "exact_records": true,
+          "correct_records": 2,
+          "expected_records": 2,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        },
+        "rastro_memory": {
+          "status": "partial_success",
+          "exact_records": true,
+          "correct_records": 2,
+          "expected_records": 2,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        },
+        "rastro_rediscover": {
+          "status": "partial_success",
+          "exact_records": true,
+          "correct_records": 2,
+          "expected_records": 2,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        }
+      },
+      {
+        "source": "pantry_microdata",
+        "mutation": "review_author_added",
+        "kind": "duplicated_candidate",
+        "requires_warning": false,
+        "rastro_memory_reused": true,
+        "rastro_memory_issues": [
+          "ambiguous_match"
+        ],
+        "baseline": {
+          "status": "insufficient_evidence",
+          "exact_records": false,
+          "correct_records": 0,
+          "expected_records": 3,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        },
+        "baseline_adapted": {
+          "status": "insufficient_evidence",
+          "exact_records": false,
+          "correct_records": 0,
+          "expected_records": 3,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        },
+        "rastro_memory": {
+          "status": "insufficient_evidence",
+          "exact_records": false,
+          "correct_records": 0,
+          "expected_records": 3,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        },
+        "rastro_rediscover": {
+          "status": "insufficient_evidence",
+          "exact_records": false,
+          "correct_records": 0,
+          "expected_records": 3,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        }
+      },
+      {
+        "source": "hardware_cards",
+        "mutation": "bem_block_renamed",
+        "kind": "renamed_class",
+        "requires_warning": false,
+        "rastro_memory_reused": true,
+        "rastro_memory_issues": [],
+        "baseline": {
+          "status": "missing_data",
+          "exact_records": false,
+          "correct_records": 0,
+          "expected_records": 3,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        },
+        "baseline_adapted": {
+          "status": "missing_data",
+          "exact_records": false,
+          "correct_records": 0,
+          "expected_records": 3,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        },
+        "rastro_memory": {
+          "status": "missing_data",
+          "exact_records": false,
+          "correct_records": 0,
+          "expected_records": 3,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        },
+        "rastro_rediscover": {
+          "status": "missing_data",
+          "exact_records": false,
+          "correct_records": 0,
+          "expected_records": 3,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        }
+      },
+      {
+        "source": "hardware_cards",
+        "mutation": "currency_before_price",
+        "kind": "reordered_dom",
+        "requires_warning": false,
+        "rastro_memory_reused": true,
+        "rastro_memory_issues": [],
+        "baseline": {
+          "status": "success",
+          "exact_records": true,
+          "correct_records": 3,
+          "expected_records": 3,
+          "extra_records": 0,
+          "outcome": "correct_success"
+        },
+        "baseline_adapted": {
+          "status": "success",
+          "exact_records": true,
+          "correct_records": 3,
+          "expected_records": 3,
+          "extra_records": 0,
+          "outcome": "correct_success"
+        },
+        "rastro_memory": {
+          "status": "success",
+          "exact_records": true,
+          "correct_records": 3,
+          "expected_records": 3,
+          "extra_records": 0,
+          "outcome": "correct_success"
+        },
+        "rastro_rediscover": {
+          "status": "success",
+          "exact_records": true,
+          "correct_records": 3,
+          "expected_records": 3,
+          "extra_records": 0,
+          "outcome": "correct_success"
+        }
+      },
+      {
+        "source": "hardware_cards",
+        "mutation": "price_removed_one",
+        "kind": "removed_field",
+        "requires_warning": true,
+        "rastro_memory_reused": true,
+        "rastro_memory_issues": [
+          "missing_evidence"
+        ],
+        "baseline": {
+          "status": "partial_success",
+          "exact_records": true,
+          "correct_records": 2,
+          "expected_records": 2,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        },
+        "baseline_adapted": {
+          "status": "partial_success",
+          "exact_records": true,
+          "correct_records": 2,
+          "expected_records": 2,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        },
+        "rastro_memory": {
+          "status": "partial_success",
+          "exact_records": true,
+          "correct_records": 2,
+          "expected_records": 2,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        },
+        "rastro_rediscover": {
+          "status": "partial_success",
+          "exact_records": true,
+          "correct_records": 2,
+          "expected_records": 2,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        }
+      },
+      {
+        "source": "hardware_cards",
+        "mutation": "old_price_added",
+        "kind": "duplicated_candidate",
+        "requires_warning": true,
+        "rastro_memory_reused": true,
+        "rastro_memory_issues": [
+          "ambiguous_match"
+        ],
+        "baseline": {
+          "status": "partial_success",
+          "exact_records": true,
+          "correct_records": 2,
+          "expected_records": 2,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        },
+        "baseline_adapted": {
+          "status": "partial_success",
+          "exact_records": true,
+          "correct_records": 2,
+          "expected_records": 2,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        },
+        "rastro_memory": {
+          "status": "partial_success",
+          "exact_records": true,
+          "correct_records": 2,
+          "expected_records": 2,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        },
+        "rastro_rediscover": {
+          "status": "partial_success",
+          "exact_records": true,
+          "correct_records": 2,
+          "expected_records": 2,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        }
+      },
+      {
+        "source": "hardware_cards",
+        "mutation": "sponsored_duplicate",
+        "kind": "duplicated_candidate",
+        "requires_warning": false,
+        "rastro_memory_reused": true,
+        "rastro_memory_issues": [],
+        "baseline": {
+          "status": "success",
+          "exact_records": false,
+          "correct_records": 3,
+          "expected_records": 3,
+          "extra_records": 1,
+          "outcome": "silent_error"
+        },
+        "baseline_adapted": {
+          "status": "success",
+          "exact_records": false,
+          "correct_records": 3,
+          "expected_records": 3,
+          "extra_records": 1,
+          "outcome": "silent_error"
+        },
+        "rastro_memory": {
+          "status": "success",
+          "exact_records": false,
+          "correct_records": 3,
+          "expected_records": 3,
+          "extra_records": 1,
+          "outcome": "silent_error"
+        },
+        "rastro_rediscover": {
+          "status": "success",
+          "exact_records": false,
+          "correct_records": 3,
+          "expected_records": 3,
+          "extra_records": 1,
+          "outcome": "silent_error"
+        }
+      },
+      {
+        "source": "hardware_cards",
+        "mutation": "price_class_reassigned",
+        "kind": "renamed_class",
+        "requires_warning": false,
+        "rastro_memory_reused": true,
+        "rastro_memory_issues": [],
+        "baseline": {
+          "status": "success",
+          "exact_records": false,
+          "correct_records": 2,
+          "expected_records": 3,
+          "extra_records": 1,
+          "outcome": "silent_error"
+        },
+        "baseline_adapted": {
+          "status": "success",
+          "exact_records": false,
+          "correct_records": 2,
+          "expected_records": 3,
+          "extra_records": 1,
+          "outcome": "silent_error"
+        },
+        "rastro_memory": {
+          "status": "success",
+          "exact_records": false,
+          "correct_records": 2,
+          "expected_records": 3,
+          "extra_records": 1,
+          "outcome": "silent_error"
+        },
+        "rastro_rediscover": {
+          "status": "success",
+          "exact_records": false,
+          "correct_records": 2,
+          "expected_records": 3,
+          "extra_records": 1,
+          "outcome": "silent_error"
+        }
+      },
+      {
+        "source": "deli_table",
+        "mutation": "columns_reordered",
+        "kind": "reordered_dom",
+        "requires_warning": false,
+        "rastro_memory_reused": true,
+        "rastro_memory_issues": [],
+        "baseline": {
+          "status": "success",
+          "exact_records": true,
+          "correct_records": 2,
+          "expected_records": 2,
+          "extra_records": 0,
+          "outcome": "correct_success"
+        },
+        "baseline_adapted": {
+          "status": "success",
+          "exact_records": true,
+          "correct_records": 2,
+          "expected_records": 2,
+          "extra_records": 0,
+          "outcome": "correct_success"
+        },
+        "rastro_memory": {
+          "status": "success",
+          "exact_records": true,
+          "correct_records": 2,
+          "expected_records": 2,
+          "extra_records": 0,
+          "outcome": "correct_success"
+        },
+        "rastro_rediscover": {
+          "status": "success",
+          "exact_records": true,
+          "correct_records": 2,
+          "expected_records": 2,
+          "extra_records": 0,
+          "outcome": "correct_success"
+        }
+      },
+      {
+        "source": "deli_table",
+        "mutation": "cell_classes_dropped",
+        "kind": "renamed_class",
+        "requires_warning": false,
+        "rastro_memory_reused": true,
+        "rastro_memory_issues": [
+          "missing_evidence"
+        ],
+        "baseline": {
+          "status": "insufficient_evidence",
+          "exact_records": false,
+          "correct_records": 0,
+          "expected_records": 2,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        },
+        "baseline_adapted": {
+          "status": "insufficient_evidence",
+          "exact_records": false,
+          "correct_records": 0,
+          "expected_records": 2,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        },
+        "rastro_memory": {
+          "status": "insufficient_evidence",
+          "exact_records": false,
+          "correct_records": 0,
+          "expected_records": 2,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        },
+        "rastro_rediscover": {
+          "status": "insufficient_evidence",
+          "exact_records": false,
+          "correct_records": 0,
+          "expected_records": 2,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        }
+      },
+      {
+        "source": "deli_table",
+        "mutation": "subtotal_row_added",
+        "kind": "duplicated_candidate",
+        "requires_warning": true,
+        "rastro_memory_reused": true,
+        "rastro_memory_issues": [
+          "missing_evidence"
+        ],
+        "baseline": {
+          "status": "partial_success",
+          "exact_records": true,
+          "correct_records": 2,
+          "expected_records": 2,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        },
+        "baseline_adapted": {
+          "status": "partial_success",
+          "exact_records": true,
+          "correct_records": 2,
+          "expected_records": 2,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        },
+        "rastro_memory": {
+          "status": "partial_success",
+          "exact_records": true,
+          "correct_records": 2,
+          "expected_records": 2,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        },
+        "rastro_rediscover": {
+          "status": "partial_success",
+          "exact_records": true,
+          "correct_records": 2,
+          "expected_records": 2,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        }
+      },
+      {
+        "source": "books_jsonld_blocks",
+        "mutation": "type_array",
+        "kind": "reordered_structure",
+        "requires_warning": false,
+        "rastro_memory_reused": true,
+        "rastro_memory_issues": [],
+        "baseline": {
+          "status": "success",
+          "exact_records": true,
+          "correct_records": 3,
+          "expected_records": 3,
+          "extra_records": 0,
+          "outcome": "correct_success"
+        },
+        "baseline_adapted": {
+          "status": "success",
+          "exact_records": true,
+          "correct_records": 3,
+          "expected_records": 3,
+          "extra_records": 0,
+          "outcome": "correct_success"
+        },
+        "rastro_memory": {
+          "status": "success",
+          "exact_records": true,
+          "correct_records": 3,
+          "expected_records": 3,
+          "extra_records": 0,
+          "outcome": "correct_success"
+        },
+        "rastro_rediscover": {
+          "status": "success",
+          "exact_records": true,
+          "correct_records": 3,
+          "expected_records": 3,
+          "extra_records": 0,
+          "outcome": "correct_success"
+        }
+      },
+      {
+        "source": "books_jsonld_blocks",
+        "mutation": "one_block_malformed",
+        "kind": "broken_markup",
+        "requires_warning": true,
+        "rastro_memory_reused": true,
+        "rastro_memory_issues": [
+          "invalid_jsonld"
+        ],
+        "baseline": {
+          "status": "partial_success",
+          "exact_records": true,
+          "correct_records": 2,
+          "expected_records": 2,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        },
+        "baseline_adapted": {
+          "status": "partial_success",
+          "exact_records": true,
+          "correct_records": 2,
+          "expected_records": 2,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        },
+        "rastro_memory": {
+          "status": "partial_success",
+          "exact_records": true,
+          "correct_records": 2,
+          "expected_records": 2,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        },
+        "rastro_rediscover": {
+          "status": "partial_success",
+          "exact_records": true,
+          "correct_records": 2,
+          "expected_records": 2,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        }
+      },
+      {
+        "source": "books_jsonld_blocks",
+        "mutation": "price_number_type",
+        "kind": "reordered_structure",
+        "requires_warning": false,
+        "rastro_memory_reused": true,
+        "rastro_memory_issues": [],
+        "baseline": {
+          "status": "success",
+          "exact_records": true,
+          "correct_records": 3,
+          "expected_records": 3,
+          "extra_records": 0,
+          "outcome": "correct_success"
+        },
+        "baseline_adapted": {
+          "status": "success",
+          "exact_records": true,
+          "correct_records": 3,
+          "expected_records": 3,
+          "extra_records": 0,
+          "outcome": "correct_success"
+        },
+        "rastro_memory": {
+          "status": "success",
+          "exact_records": true,
+          "correct_records": 3,
+          "expected_records": 3,
+          "extra_records": 0,
+          "outcome": "correct_success"
+        },
+        "rastro_rediscover": {
+          "status": "success",
+          "exact_records": true,
+          "correct_records": 3,
+          "expected_records": 3,
+          "extra_records": 0,
+          "outcome": "correct_success"
+        }
+      },
+      {
+        "source": "books_jsonld_blocks",
+        "mutation": "sku_renamed_gtin",
+        "kind": "renamed_field",
+        "requires_warning": false,
+        "rastro_memory_reused": true,
+        "rastro_memory_issues": [
+          "missing_evidence"
+        ],
+        "baseline": {
+          "status": "insufficient_evidence",
+          "exact_records": false,
+          "correct_records": 0,
+          "expected_records": 3,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        },
+        "baseline_adapted": {
+          "status": "insufficient_evidence",
+          "exact_records": false,
+          "correct_records": 0,
+          "expected_records": 3,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        },
+        "rastro_memory": {
+          "status": "insufficient_evidence",
+          "exact_records": false,
+          "correct_records": 0,
+          "expected_records": 3,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        },
+        "rastro_rediscover": {
+          "status": "insufficient_evidence",
+          "exact_records": false,
+          "correct_records": 0,
+          "expected_records": 3,
+          "extra_records": 0,
+          "outcome": "explicit_non_success"
+        }
+      }
+    ]
+  },
+  "model_reuse": {
+    "evidence_kind": "deterministic_scripted_fake_model",
+    "note": "Replays the user's own selectors; it is not model quality evidence.",
+    "baseline_inference_calls": 0,
+    "summary": {
+      "scripted_valid_first/memory": {
+        "inference_calls": 2,
+        "successful_records": 120,
+        "calls_per_successful_record": 0.016666666666666666
+      },
+      "scripted_valid_first/no_memory": {
+        "inference_calls": 20,
+        "successful_records": 120,
+        "calls_per_successful_record": 0.16666666666666666
+      },
+      "scripted_one_rejection/memory": {
+        "inference_calls": 4,
+        "successful_records": 120,
+        "calls_per_successful_record": 0.03333333333333333
+      },
+      "scripted_one_rejection/no_memory": {
+        "inference_calls": 40,
+        "successful_records": 120,
+        "calls_per_successful_record": 0.3333333333333333
+      }
+    },
+    "per_source": [
+      {
+        "source": "outdoor_jsonld",
+        "kind": "jsonld",
+        "model": "scripted_valid_first",
+        "sqlite_memory": true,
+        "runs": 10,
+        "correct_runs": 10,
+        "inference_calls": 0,
+        "successful_records": 10,
+        "calls_per_successful_record": 0.0
+      },
+      {
+        "source": "outdoor_jsonld",
+        "kind": "jsonld",
+        "model": "scripted_valid_first",
+        "sqlite_memory": false,
+        "runs": 10,
+        "correct_runs": 10,
+        "inference_calls": 0,
+        "successful_records": 10,
+        "calls_per_successful_record": 0.0
+      },
+      {
+        "source": "outdoor_jsonld",
+        "kind": "jsonld",
+        "model": "scripted_one_rejection",
+        "sqlite_memory": true,
+        "runs": 10,
+        "correct_runs": 10,
+        "inference_calls": 0,
+        "successful_records": 10,
+        "calls_per_successful_record": 0.0
+      },
+      {
+        "source": "outdoor_jsonld",
+        "kind": "jsonld",
+        "model": "scripted_one_rejection",
+        "sqlite_memory": false,
+        "runs": 10,
+        "correct_runs": 10,
+        "inference_calls": 0,
+        "successful_records": 10,
+        "calls_per_successful_record": 0.0
+      },
+      {
+        "source": "pantry_microdata",
+        "kind": "microdata",
+        "model": "scripted_valid_first",
+        "sqlite_memory": true,
+        "runs": 10,
+        "correct_runs": 10,
+        "inference_calls": 0,
+        "successful_records": 30,
+        "calls_per_successful_record": 0.0
+      },
+      {
+        "source": "pantry_microdata",
+        "kind": "microdata",
+        "model": "scripted_valid_first",
+        "sqlite_memory": false,
+        "runs": 10,
+        "correct_runs": 10,
+        "inference_calls": 0,
+        "successful_records": 30,
+        "calls_per_successful_record": 0.0
+      },
+      {
+        "source": "pantry_microdata",
+        "kind": "microdata",
+        "model": "scripted_one_rejection",
+        "sqlite_memory": true,
+        "runs": 10,
+        "correct_runs": 10,
+        "inference_calls": 0,
+        "successful_records": 30,
+        "calls_per_successful_record": 0.0
+      },
+      {
+        "source": "pantry_microdata",
+        "kind": "microdata",
+        "model": "scripted_one_rejection",
+        "sqlite_memory": false,
+        "runs": 10,
+        "correct_runs": 10,
+        "inference_calls": 0,
+        "successful_records": 30,
+        "calls_per_successful_record": 0.0
+      },
+      {
+        "source": "hardware_cards",
+        "kind": "css",
+        "model": "scripted_valid_first",
+        "sqlite_memory": true,
+        "runs": 10,
+        "correct_runs": 10,
+        "inference_calls": 1,
+        "successful_records": 30,
+        "calls_per_successful_record": 0.03333333333333333
+      },
+      {
+        "source": "hardware_cards",
+        "kind": "css",
+        "model": "scripted_valid_first",
+        "sqlite_memory": false,
+        "runs": 10,
+        "correct_runs": 10,
+        "inference_calls": 10,
+        "successful_records": 30,
+        "calls_per_successful_record": 0.3333333333333333
+      },
+      {
+        "source": "hardware_cards",
+        "kind": "css",
+        "model": "scripted_one_rejection",
+        "sqlite_memory": true,
+        "runs": 10,
+        "correct_runs": 10,
+        "inference_calls": 2,
+        "successful_records": 30,
+        "calls_per_successful_record": 0.06666666666666667
+      },
+      {
+        "source": "hardware_cards",
+        "kind": "css",
+        "model": "scripted_one_rejection",
+        "sqlite_memory": false,
+        "runs": 10,
+        "correct_runs": 10,
+        "inference_calls": 20,
+        "successful_records": 30,
+        "calls_per_successful_record": 0.6666666666666666
+      },
+      {
+        "source": "deli_table",
+        "kind": "css",
+        "model": "scripted_valid_first",
+        "sqlite_memory": true,
+        "runs": 10,
+        "correct_runs": 10,
+        "inference_calls": 1,
+        "successful_records": 20,
+        "calls_per_successful_record": 0.05
+      },
+      {
+        "source": "deli_table",
+        "kind": "css",
+        "model": "scripted_valid_first",
+        "sqlite_memory": false,
+        "runs": 10,
+        "correct_runs": 10,
+        "inference_calls": 10,
+        "successful_records": 20,
+        "calls_per_successful_record": 0.5
+      },
+      {
+        "source": "deli_table",
+        "kind": "css",
+        "model": "scripted_one_rejection",
+        "sqlite_memory": true,
+        "runs": 10,
+        "correct_runs": 10,
+        "inference_calls": 2,
+        "successful_records": 20,
+        "calls_per_successful_record": 0.1
+      },
+      {
+        "source": "deli_table",
+        "kind": "css",
+        "model": "scripted_one_rejection",
+        "sqlite_memory": false,
+        "runs": 10,
+        "correct_runs": 10,
+        "inference_calls": 20,
+        "successful_records": 20,
+        "calls_per_successful_record": 1.0
+      },
+      {
+        "source": "books_jsonld_blocks",
+        "kind": "jsonld",
+        "model": "scripted_valid_first",
+        "sqlite_memory": true,
+        "runs": 10,
+        "correct_runs": 10,
+        "inference_calls": 0,
+        "successful_records": 30,
+        "calls_per_successful_record": 0.0
+      },
+      {
+        "source": "books_jsonld_blocks",
+        "kind": "jsonld",
+        "model": "scripted_valid_first",
+        "sqlite_memory": false,
+        "runs": 10,
+        "correct_runs": 10,
+        "inference_calls": 0,
+        "successful_records": 30,
+        "calls_per_successful_record": 0.0
+      },
+      {
+        "source": "books_jsonld_blocks",
+        "kind": "jsonld",
+        "model": "scripted_one_rejection",
+        "sqlite_memory": true,
+        "runs": 10,
+        "correct_runs": 10,
+        "inference_calls": 0,
+        "successful_records": 30,
+        "calls_per_successful_record": 0.0
+      },
+      {
+        "source": "books_jsonld_blocks",
+        "kind": "jsonld",
+        "model": "scripted_one_rejection",
+        "sqlite_memory": false,
+        "runs": 10,
+        "correct_runs": 10,
+        "inference_calls": 0,
+        "successful_records": 30,
+        "calls_per_successful_record": 0.0
+      }
+    ]
+  },
+  "visibility": {
+    "source": "outdoor_jsonld",
+    "issue_source": "hardware_cards/old_price_added and price_removed_one",
+    "missing_value_issues": [
+      {
+        "code": "missing_evidence",
+        "record_index": 2,
+        "field": null
+      }
+    ],
+    "rastro_log_events": [
+      "recipe_learning_completed"
+    ],
+    "checklist": [
+      {
+        "item": "explicit_outcome_status",
+        "baseline": true,
+        "rastro": true
+      },
+      {
+        "item": "issue_category_and_record_index",
+        "baseline": false,
+        "rastro": true
+      },
+      {
+        "item": "issue_names_field_for_ambiguous_value",
+        "baseline": false,
+        "rastro": true
+      },
+      {
+        "item": "issue_names_field_for_missing_required_value",
+        "baseline": false,
+        "rastro": false
+      },
+      {
+        "item": "per_field_locator",
+        "baseline": false,
+        "rastro": true
+      },
+      {
+        "item": "per_field_extraction_method",
+        "baseline": false,
+        "rastro": true
+      },
+      {
+        "item": "per_field_source_url_and_observed_at",
+        "baseline": false,
+        "rastro": true
+      },
+      {
+        "item": "recipe_version",
+        "baseline": false,
+        "rastro": true
+      },
+      {
+        "item": "recipe_reuse_flag_and_attempt_origins",
+        "baseline": false,
+        "rastro": true
+      },
+      {
+        "item": "learned_recipe_inspectable",
+        "baseline": false,
+        "rastro": true
+      },
+      {
+        "item": "job_id_and_timestamps",
+        "baseline": false,
+        "rastro": true
+      },
+      {
+        "item": "schema_fingerprint",
+        "baseline": false,
+        "rastro": true
+      },
+      {
+        "item": "candidate_accepted_rejected_counts",
+        "baseline": false,
+        "rastro": true
+      },
+      {
+        "item": "stage_timings",
+        "baseline": false,
+        "rastro": true
+      },
+      {
+        "item": "inference_calls_and_seconds",
+        "baseline": false,
+        "rastro": true
+      },
+      {
+        "item": "structured_completion_log_event",
+        "baseline": false,
+        "rastro": true
+      }
+    ],
+    "note": "Baseline items are what the reference returns (status, records); adding the rest is unmeasured engineering effort, not impossible."
+  },
+  "latency": [
+    {
+      "source": "outdoor_jsonld",
+      "latency_ms": {
+        "baseline": {
+          "median": 0.0301245,
+          "p95": 0.035041,
+          "samples": [
+            0.030667,
+            0.028417,
+            0.033458,
+            0.029833,
+            0.031084,
+            0.028959,
+            0.031542,
+            0.02775,
+            0.041084,
+            0.028375,
+            0.031792,
+            0.028917,
+            0.03225,
+            0.02975,
+            0.033334,
+            0.029459,
+            0.031041,
+            0.029292,
+            0.030458,
+            0.028042,
+            0.030083,
+            0.027959,
+            0.029833,
+            0.028375,
+            0.032209,
+            0.028792,
+            0.033792,
+            0.030166,
+            0.035041,
+            0.030458
+          ]
+        },
+        "baseline_adapted": {
+          "median": 0.0722705,
+          "p95": 0.089583,
+          "samples": [
+            0.0815,
+            0.060208,
+            0.089583,
+            0.063542,
+            0.084292,
+            0.063,
+            0.088125,
+            0.060375,
+            0.079708,
+            0.060917,
+            0.081459,
+            0.062208,
+            0.086583,
+            0.065208,
+            0.088792,
+            0.066041,
+            0.082709,
+            0.061584,
+            0.081584,
+            0.061084,
+            0.080833,
+            0.060625,
+            0.0785,
+            0.058917,
+            0.086041,
+            0.06225,
+            0.087958,
+            0.065125,
+            0.105708,
+            0.063083
+          ]
+        },
+        "rastro_explicit": {
+          "median": 0.2578335,
+          "p95": 0.308875,
+          "samples": [
+            0.261666,
+            0.247542,
+            0.308875,
+            0.282916,
+            0.265,
+            0.2455,
+            0.26875,
+            0.245959,
+            0.269417,
+            0.261084,
+            0.262041,
+            0.24625,
+            0.260041,
+            0.245209,
+            0.254,
+            0.257375,
+            0.266125,
+            0.244542,
+            0.24975,
+            0.249917,
+            0.258417,
+            0.258,
+            0.25225,
+            0.239958,
+            0.253875,
+            0.238541,
+            0.259584,
+            0.257667,
+            0.33525,
+            0.288583
+          ]
+        },
+        "rastro_rediscover": {
+          "median": 0.603583,
+          "p95": 0.726833,
+          "samples": [
+            0.620833,
+            0.605458,
+            0.663125,
+            0.726833,
+            0.652459,
+            0.695416,
+            0.57725,
+            0.604708,
+            0.594916,
+            0.623208,
+            0.580792,
+            0.602458,
+            0.559791,
+            0.61525,
+            0.561166,
+            0.643292,
+            0.585833,
+            0.587833,
+            0.547042,
+            0.734417,
+            0.563042,
+            0.580291,
+            0.524792,
+            0.654292,
+            0.551084,
+            0.5625,
+            0.569875,
+            0.660417,
+            0.684583,
+            0.657
+          ]
+        },
+        "rastro_memory_reuse": {
+          "median": 1.1382919999999999,
+          "p95": 1.429666,
+          "samples": [
+            1.248333,
+            1.095792,
+            1.121708,
+            1.370042,
+            1.188875,
+            1.219209,
+            1.114583,
+            1.190667,
+            1.115667,
+            1.205916,
+            1.110833,
+            1.129417,
+            1.088,
+            1.130917,
+            1.074125,
+            1.310667,
+            1.0975,
+            1.145667,
+            1.105,
+            1.194667,
+            1.104291,
+            1.107167,
+            1.149209,
+            1.230916,
+            1.077291,
+            1.182833,
+            1.065542,
+            1.621125,
+            1.429666,
+            1.188792
+          ]
+        }
+      }
+    },
+    {
+      "source": "pantry_microdata",
+      "latency_ms": {
+        "baseline": {
+          "median": 0.1359375,
+          "p95": 0.145041,
+          "samples": [
+            0.134833,
+            0.131375,
+            0.135042,
+            0.13225,
+            0.138375,
+            0.139458,
+            0.136,
+            0.132166,
+            0.137542,
+            0.136666,
+            0.138416,
+            0.132791,
+            0.135875,
+            0.133125,
+            0.145041,
+            0.142042,
+            0.136834,
+            0.137083,
+            0.180375,
+            0.14075,
+            0.140792,
+            0.136333,
+            0.134375,
+            0.131125,
+            0.135084,
+            0.135709,
+            0.138708,
+            0.134292,
+            0.133375,
+            0.130791
+          ]
+        },
+        "baseline_adapted": {
+          "median": 0.2304795,
+          "p95": 0.254208,
+          "samples": [
+            0.23525,
+            0.213417,
+            0.232083,
+            0.231666,
+            0.238916,
+            0.219541,
+            0.238208,
+            0.217042,
+            0.240459,
+            0.213833,
+            0.2375,
+            0.209292,
+            0.232416,
+            0.210125,
+            0.2455,
+            0.221625,
+            0.241584,
+            0.211541,
+            0.361291,
+            0.229125,
+            0.254208,
+            0.215166,
+            0.231875,
+            0.21825,
+            0.235833,
+            0.221875,
+            0.231375,
+            0.209875,
+            0.229584,
+            0.212833
+          ]
+        },
+        "rastro_explicit": {
+          "median": 0.38910449999999996,
+          "p95": 0.4655,
+          "samples": [
+            0.394417,
+            0.387041,
+            0.431625,
+            0.389042,
+            0.449833,
+            0.404708,
+            0.421459,
+            0.381125,
+            0.386625,
+            0.385708,
+            0.4655,
+            0.388292,
+            0.386542,
+            0.371541,
+            0.411292,
+            0.389167,
+            0.396,
+            0.3725,
+            0.438125,
+            0.515458,
+            0.406416,
+            0.369833,
+            0.384541,
+            0.4165,
+            0.399167,
+            0.410333,
+            0.384917,
+            0.36525,
+            0.375667,
+            0.359541
+          ]
+        },
+        "rastro_rediscover": {
+          "median": 0.9298955,
+          "p95": 1.162917,
+          "samples": [
+            0.957,
+            0.903209,
+            1.017375,
+            0.874583,
+            1.171625,
+            0.938375,
+            1.036583,
+            0.898792,
+            1.162917,
+            0.925292,
+            1.052541,
+            0.912791,
+            0.925833,
+            1.116959,
+            1.080291,
+            0.904375,
+            0.939833,
+            0.890291,
+            1.016833,
+            1.125125,
+            1.070708,
+            0.88375,
+            0.891417,
+            0.933958,
+            0.946375,
+            0.915,
+            0.909042,
+            0.905834,
+            0.9135,
+            0.890792
+          ]
+        },
+        "rastro_memory_reuse": {
+          "median": 1.5013125,
+          "p95": 1.832291,
+          "samples": [
+            1.336208,
+            1.813208,
+            1.62,
+            1.832291,
+            1.736917,
+            1.738583,
+            1.42175,
+            1.534542,
+            1.310875,
+            1.537167,
+            1.498583,
+            1.504042,
+            1.389125,
+            2.033417,
+            1.622125,
+            1.576917,
+            1.389458,
+            1.428917,
+            1.343875,
+            1.651834,
+            1.587292,
+            1.511,
+            1.234834,
+            1.458584,
+            1.289917,
+            1.585042,
+            1.312875,
+            1.372083,
+            1.287958,
+            1.458917
+          ]
+        }
+      }
+    },
+    {
+      "source": "hardware_cards",
+      "latency_ms": {
+        "baseline": {
+          "median": 0.14991700000000002,
+          "p95": 0.161458,
+          "samples": [
+            0.152834,
+            0.153125,
+            0.151125,
+            0.145417,
+            0.149042,
+            0.147792,
+            0.150417,
+            0.147333,
+            0.164541,
+            0.153041,
+            0.161458,
+            0.147375,
+            0.159625,
+            0.1515,
+            0.156375,
+            0.144875,
+            0.148791,
+            0.147583,
+            0.149709,
+            0.145167,
+            0.157708,
+            0.146083,
+            0.147417,
+            0.144834,
+            0.149625,
+            0.145916,
+            0.157583,
+            0.154833,
+            0.151541,
+            0.150125
+          ]
+        },
+        "baseline_adapted": {
+          "median": 0.1571255,
+          "p95": 0.171709,
+          "samples": [
+            0.162541,
+            0.154625,
+            0.164125,
+            0.143541,
+            0.159209,
+            0.14425,
+            0.15925,
+            0.146416,
+            0.170375,
+            0.151584,
+            0.170334,
+            0.144625,
+            0.171709,
+            0.146292,
+            0.160708,
+            0.152375,
+            0.164584,
+            0.156334,
+            0.165166,
+            0.148,
+            0.165375,
+            0.149125,
+            0.157917,
+            0.143667,
+            0.15925,
+            0.14575,
+            0.175542,
+            0.155584,
+            0.163709,
+            0.150083
+          ]
+        },
+        "rastro_explicit": {
+          "median": 0.400667,
+          "p95": 0.459958,
+          "samples": [
+            0.461833,
+            0.420875,
+            0.399625,
+            0.392667,
+            0.394917,
+            0.370209,
+            0.403084,
+            0.389958,
+            0.403375,
+            0.424583,
+            0.400459,
+            0.381917,
+            0.436875,
+            0.392666,
+            0.389708,
+            0.391291,
+            0.430209,
+            0.459958,
+            0.419125,
+            0.374292,
+            0.422583,
+            0.376416,
+            0.403083,
+            0.370458,
+            0.400875,
+            0.389,
+            0.428708,
+            0.418666,
+            0.425917,
+            0.37975
+          ]
+        },
+        "rastro_rediscover": {
+          "median": 0.6048335,
+          "p95": 0.776459,
+          "samples": [
+            0.918083,
+            0.640083,
+            0.613167,
+            0.595834,
+            0.603584,
+            0.556,
+            0.611333,
+            0.730833,
+            0.664333,
+            0.658458,
+            0.603667,
+            0.573167,
+            0.776459,
+            0.615833,
+            0.599875,
+            0.555042,
+            0.642375,
+            0.719833,
+            0.599042,
+            0.55525,
+            0.590416,
+            0.569625,
+            0.586125,
+            0.548625,
+            0.606,
+            0.552291,
+            0.656791,
+            0.613459,
+            0.689583,
+            0.552292
+          ]
+        },
+        "rastro_memory_reuse": {
+          "median": 1.3649995,
+          "p95": 1.609333,
+          "samples": [
+            1.609333,
+            1.444,
+            1.354666,
+            1.327125,
+            1.294584,
+            1.635416,
+            1.341375,
+            1.443834,
+            1.4965,
+            1.552334,
+            1.308292,
+            1.522542,
+            1.601833,
+            1.589042,
+            1.411875,
+            1.2855,
+            1.348083,
+            1.377916,
+            1.28375,
+            1.3075,
+            1.302208,
+            1.3205,
+            1.297458,
+            1.324041,
+            1.471083,
+            1.256458,
+            1.410584,
+            1.577,
+            1.375333,
+            1.290041
+          ]
+        }
+      }
+    },
+    {
+      "source": "deli_table",
+      "latency_ms": {
+        "baseline": {
+          "median": 0.1030625,
+          "p95": 0.1175,
+          "samples": [
+            0.104125,
+            0.100458,
+            0.105291,
+            0.099625,
+            0.112958,
+            0.100917,
+            0.102417,
+            0.098833,
+            0.100833,
+            0.098917,
+            0.101083,
+            0.099,
+            0.1175,
+            0.117541,
+            0.105834,
+            0.10225,
+            0.109458,
+            0.105833,
+            0.103125,
+            0.099959,
+            0.103292,
+            0.102625,
+            0.1045,
+            0.100542,
+            0.107541,
+            0.107083,
+            0.103791,
+            0.100917,
+            0.105791,
+            0.103
+          ]
+        },
+        "baseline_adapted": {
+          "median": 0.1106875,
+          "p95": 0.128125,
+          "samples": [
+            0.114666,
+            0.099334,
+            0.113292,
+            0.098834,
+            0.126917,
+            0.098417,
+            0.111584,
+            0.098166,
+            0.10925,
+            0.097709,
+            0.110125,
+            0.098375,
+            0.12225,
+            0.128125,
+            0.126958,
+            0.104292,
+            0.119083,
+            0.102292,
+            0.113542,
+            0.098417,
+            0.111917,
+            0.09875,
+            0.112708,
+            0.099875,
+            0.13475,
+            0.11125,
+            0.113334,
+            0.102042,
+            0.121541,
+            0.101584
+          ]
+        },
+        "rastro_explicit": {
+          "median": 0.379792,
+          "p95": 0.47475,
+          "samples": [
+            0.397834,
+            0.3155,
+            0.3905,
+            0.313458,
+            0.454209,
+            0.337208,
+            0.38925,
+            0.310708,
+            0.385125,
+            0.369667,
+            0.377125,
+            0.312917,
+            0.47475,
+            0.395792,
+            0.582,
+            0.365,
+            0.385334,
+            0.331209,
+            0.424125,
+            0.329875,
+            0.382459,
+            0.312125,
+            0.407958,
+            0.322875,
+            0.405042,
+            0.320792,
+            0.38975,
+            0.318792,
+            0.462875,
+            0.362
+          ]
+        },
+        "rastro_rediscover": {
+          "median": 0.524167,
+          "p95": 0.689291,
+          "samples": [
+            0.512292,
+            0.502417,
+            0.557167,
+            0.482333,
+            0.669125,
+            0.517875,
+            0.514042,
+            0.499834,
+            0.595667,
+            0.562709,
+            0.531958,
+            0.525667,
+            0.614583,
+            0.818084,
+            0.689291,
+            0.499959,
+            0.519292,
+            0.503125,
+            0.54975,
+            0.502083,
+            0.522667,
+            0.490833,
+            0.551584,
+            0.491208,
+            0.536542,
+            0.502042,
+            0.54025,
+            0.507,
+            0.553833,
+            0.574042
+          ]
+        },
+        "rastro_memory_reuse": {
+          "median": 1.217354,
+          "p95": 1.666125,
+          "samples": [
+            1.175667,
+            1.203458,
+            1.375417,
+            1.275583,
+            1.370792,
+            1.469084,
+            1.196291,
+            1.14775,
+            1.103167,
+            1.447875,
+            1.212625,
+            1.198417,
+            1.209833,
+            1.686041,
+            1.323209,
+            1.315792,
+            1.203625,
+            1.29925,
+            1.208292,
+            1.283125,
+            1.222083,
+            1.32975,
+            1.208041,
+            1.234125,
+            1.167125,
+            1.174125,
+            1.286916,
+            1.170292,
+            1.143125,
+            1.666125
+          ]
+        }
+      }
+    },
+    {
+      "source": "books_jsonld_blocks",
+      "latency_ms": {
+        "baseline": {
+          "median": 0.0451665,
+          "p95": 0.05475,
+          "samples": [
+            0.046875,
+            0.042791,
+            0.046417,
+            0.045125,
+            0.045708,
+            0.043,
+            0.049708,
+            0.04625,
+            0.049583,
+            0.046375,
+            0.05475,
+            0.044459,
+            0.051084,
+            0.044166,
+            0.050125,
+            0.046542,
+            0.044792,
+            0.055792,
+            0.046333,
+            0.043666,
+            0.043875,
+            0.042458,
+            0.045208,
+            0.041875,
+            0.044167,
+            0.041958,
+            0.04475,
+            0.042042,
+            0.046292,
+            0.042833
+          ]
+        },
+        "baseline_adapted": {
+          "median": 0.10906199999999999,
+          "p95": 0.145542,
+          "samples": [
+            0.117792,
+            0.088166,
+            0.124917,
+            0.088292,
+            0.117959,
+            0.135958,
+            0.133167,
+            0.089209,
+            0.122292,
+            0.091917,
+            0.121667,
+            0.138084,
+            0.202125,
+            0.089125,
+            0.145542,
+            0.093083,
+            0.120834,
+            0.085792,
+            0.115458,
+            0.088875,
+            0.104959,
+            0.095792,
+            0.113084,
+            0.0895,
+            0.108708,
+            0.084459,
+            0.109416,
+            0.094083,
+            0.118916,
+            0.088666
+          ]
+        },
+        "rastro_explicit": {
+          "median": 0.31454150000000003,
+          "p95": 0.415417,
+          "samples": [
+            0.30875,
+            0.30775,
+            0.453792,
+            0.324958,
+            0.340083,
+            0.364083,
+            0.331459,
+            0.30475,
+            0.318875,
+            0.302333,
+            0.335917,
+            0.346375,
+            0.415417,
+            0.363375,
+            0.343375,
+            0.412667,
+            0.320667,
+            0.310208,
+            0.300458,
+            0.324959,
+            0.288625,
+            0.310042,
+            0.290584,
+            0.295,
+            0.282833,
+            0.272959,
+            0.297959,
+            0.285291,
+            0.325959,
+            0.29775
+          ]
+        },
+        "rastro_rediscover": {
+          "median": 0.7463124999999999,
+          "p95": 0.991791,
+          "samples": [
+            0.6375,
+            0.76475,
+            0.911333,
+            0.764583,
+            0.686958,
+            0.991791,
+            0.728042,
+            0.703292,
+            0.614417,
+            0.700333,
+            0.662417,
+            0.919958,
+            0.951167,
+            0.981459,
+            0.821875,
+            0.771667,
+            0.77925,
+            0.80375,
+            0.688791,
+            0.6475,
+            0.602792,
+            1.166541,
+            0.69525,
+            0.704833,
+            0.630125,
+            0.704667,
+            0.62275,
+            0.829833,
+            0.816333,
+            0.836917
+          ]
+        },
+        "rastro_memory_reuse": {
+          "median": 1.4077294999999999,
+          "p95": 1.702709,
+          "samples": [
+            1.145792,
+            1.576041,
+            1.580833,
+            1.515417,
+            1.228625,
+            1.525958,
+            1.216958,
+            1.220583,
+            1.120667,
+            1.352209,
+            1.159667,
+            1.702709,
+            1.50175,
+            1.80025,
+            1.507958,
+            1.492667,
+            1.429042,
+            1.55175,
+            1.185,
+            1.2925,
+            1.183,
+            1.452083,
+            1.207458,
+            1.386417,
+            1.160709,
+            1.164708,
+            1.134791,
+            1.599375,
+            1.57,
+            1.471542
+          ]
+        }
+      }
+    }
+  ]
+}

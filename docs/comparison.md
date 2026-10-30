@@ -1,9 +1,19 @@
 # Reproducible extraction comparison
 
-This first M5 experiment supports **DIFF-001**, **QUAL-003** and specification
-sections 17–18. It does **not** establish a Rastro accuracy, speed, or maintenance
-advantage. Both executors produce the same records on this corpus, including the
-same silent semantic error. DIFF-001 remains open.
+These experiments support **DIFF-001**, **QUAL-003**, **REC-001**, **OBS-001** and
+specification sections 05 and 17–18. They compare Rastro with an independent
+Scrapling + Pydantic baseline written for this repository.
+
+**DIFF-001 status: partially demonstrated.** On the [held-out evaluation](#held-out-evaluation)
+below, Rastro needed less source-specific configuration than per-source baseline
+mappings (10 versus 25 entries), and the same amount as a baseline with a 33-line
+structured-data adapter. It exposed 15 of 16 operational-visibility items; the
+reference baseline exposed 1. SQLite memory reduced scripted-model calls per
+successful record from 0.167 to 0.017. Rastro showed **no** advantage in silent
+error detection or extraction accuracy. Every executor had 3 silent errors in 24
+mutations. Rastro was slower on every page. The
+[first regression result](#first-recorded-result) shows no advantage either. DIFF-001
+remains open for accuracy, silent error detection, maintenance and recovery.
 
 ## Reproduce
 
@@ -117,7 +127,220 @@ load, and developer effort are **unmeasured**, not zero. Offline acquisition tim
 cannot represent website latency. This fixed corpus is a small regression set,
 not a representative independent test set or an adversarial-input evaluation.
 
-Next evidence must expand held-out sources and mutations and measure a meaningful
-advantage (such as provenance integration effort or maintenance), without weakening
-the baseline. See the [release evidence register](release-evidence.md) and
+The [held-out evaluation](#held-out-evaluation) below adds held-out sources and
+mutations. See the [release evidence register](release-evidence.md) and
 [ADR 0005](decisions/0005-reproducible-release-evidence.md).
+
+### Re-run after the baseline refactor
+
+The held-out work made the baseline executor generic over the Pydantic schema. It
+now reports malformed JSON-LD as `partial_success`/`invalid_data` instead of raising.
+`benchmarks/results/offline.json` was regenerated on 2026-10-30 UTC with the same
+command, Python 3.12.16, and otherwise identical packages. All quality counts in the
+table above were reproduced exactly for both executors. p50 latencies stayed within
+the same range: baseline 0.028–0.088 ms on small cases and 7.881 ms on `large`;
+Rastro 0.242–0.411 ms and 11.870 ms.
+
+## Held-out evaluation
+
+This second experiment targets the DIFF-001 dimensions where Rastro's integration
+could plausibly matter. The 14-case regression corpus does not cover them. It was
+added after that corpus and **no engine code changed for it**. The engine is under
+`src/rastro`, which this change does not touch.
+
+### Reproduce
+
+```bash
+uv sync --locked
+uv run python -m benchmarks.heldout --repetitions 30 --warmup 3 --model-runs 10 \
+  --output heldout.json
+```
+
+The run is offline and deterministic except for latency, and needs no model or browser.
+Inputs: [corpus](https://github.com/rave-vipx/rastro/blob/dev/benchmarks/heldout.json),
+[runner and scorer](https://github.com/rave-vipx/rastro/blob/dev/benchmarks/heldout.py),
+[baseline](https://github.com/rave-vipx/rastro/blob/dev/benchmarks/baseline.py),
+[raw report](https://github.com/rave-vipx/rastro/blob/dev/benchmarks/results/heldout.json).
+
+### Dataset
+
+Five synthetic sources (Apache 2.0, authored for this project) share no HTML with
+the regression corpus. A unit test enforces that.
+
+| Source | Kind | Records | Mutations |
+| --- | --- | ---: | ---: |
+| `outdoor_jsonld` | JSON-LD `@graph` with Organization/Breadcrumb noise | 1 | 6 |
+| `pantry_microdata` | Microdata grid with nested `Offer` items | 3 | 5 |
+| `hardware_cards` | Plain CSS cards with BEM classes, no structured data | 3 | 6 |
+| `deli_table` | Plain CSS price table | 2 | 3 |
+| `books_jsonld_blocks` | One JSON-LD `Product` block per book | 3 | 4 |
+
+The 24 mutations are declared string replacements of the original page. Each one
+must apply. Kinds: renamed classes (4), reordered DOM or structure (7), removed
+fields (3), duplicated candidates (7), renamed source keys (2) and malformed markup
+(1). Each mutation has an oracle record set. If the data is still on the page, the
+oracle keeps the original records, so an explicit failure counts as a recall loss.
+Otherwise the oracle requires a warning. The schema is `sku`, `name`,
+`price: Decimal ≥ 0` and `priceCurrency ∈ {USD, EUR, UYU}`.
+
+**Schema naming choice:** Rastro discovery matches schema field names exactly.
+That is why this schema uses the schema.org name `priceCurrency`. With the regression
+corpus name `currency`, discovery failed on **all three** structured sources
+(`insufficient_evidence`). The report records that run separately.
+
+### Executors
+
+All executors receive the same pages and Pydantic model; only the scorer sees oracles.
+
+| Executor | Source-specific input | Behavior on a mutated page |
+| --- | --- | --- |
+| `baseline` | Hand-written Scrapling mappings for each source (JSON pointers or CSS) | Re-runs those mappings |
+| `baseline_adapted` | Structured sources: none. A one-time `structured_mappings` adapter maps schema.org JSON-LD (top level, `offers` object, or a one-element `offers` list) and microdata. CSS sources: the same mappings as `baseline` | Re-runs the adapter on every page |
+| `rastro_memory` | Structured sources: none (`discover_recipes=True`). CSS sources: one explicit recipe identical to the baseline mapping | Reuses the recipe stored in SQLite on the original page. In v0.1, a failing stored recipe does not trigger rediscovery |
+| `rastro_rediscover` | As above, without a repository | Discovers again on every page |
+
+The baseline rejects ambiguous and missing fields, validates every record, and
+returns `success`, `partial_success`, `insufficient_evidence`, `invalid_data` or
+`missing_data`. That is the same competence as in the first experiment, now also
+with malformed-block handling and an adapter. Both executors had to work correctly
+on every original page before the mutation run, and the runner checks this.
+
+### Metrics
+
+- **Configuration:** the selectors, pointers, record selectors and item types a
+  developer writes for each source. Entries count them; tokens split identifiers and
+  punctuation (`[A-Za-z0-9_]+` or one symbol). A source counts as zero only when
+  automatic mapping produced exactly the oracle records on the original page.
+  One-time code is counted separately, in logical lines (no blanks, comments or
+  docstrings).
+- **Mutation outcome:** `correct_success` (success with the exact oracle and no
+  required warning), `explicit_non_success` (any other status, including
+  `partial_success`) or `silent_error` (success with a wrong record set or a
+  missing required warning).
+- **Model calls:** a deterministic `ScriptedModel` replays the developer's own CSS
+  selectors. A second script returns one invalid proposal first. Each run creates
+  a new engine instance (a simulated restart) over the same SQLite file. These numbers
+  measure call accounting, **not model quality**. Live models are covered in the
+  [live Ollama evidence](live-ollama-evidence.md).
+- **Visibility:** a checklist observed from real results and captured log events.
+  It is not a score.
+- **Latency:** as in the first experiment: alternating order, 3 warmups and 30 samples
+  per executor and source, median and nearest-rank p95.
+
+### Results
+
+Recorded on 2026-10-30 UTC from commit `6e29830`: Python 3.12.16, Darwin 25.6.0,
+arm64 (Apple M1 Pro); Rastro 0.1.0.dev0, Scrapling 0.5, Pydantic 2.14.1, lxml
+6.1.3. `git_dirty` is true only because of untracked, unrelated `node_modules/` and
+`package.json` files in the worktree. The source hashes in the report identify the
+measured code.
+
+**1. Integration effort (source-specific configuration, all five sources)**
+
+| Executor | Entries | Tokens | Characters | One-time code (logical lines) |
+| --- | ---: | ---: | ---: | --- |
+| `baseline` | 25 | 160 | 438 | 94 (reference executor) |
+| `baseline_adapted` | 10 | 70 | 171 | 94 + 33 (structured adapter) |
+| Rastro | 10 | 70 | 171 | 14 (integration function) |
+
+Rastro and the adapted baseline both needed zero entries on the three structured
+sources and the same 5 entries on each CSS source. Rastro needs **60% fewer entries
+than per-source baseline mappings**, and the same number as a baseline with
+a 33-line adapter. The one-time difference is code the developer writes and
+maintains: 127 lines for this baseline versus 14 lines of Rastro integration. That
+count compares against this reference implementation. A packaged baseline library
+could reduce it, and developer time was not measured.
+
+**2. Re-running a previously working integration on 24 mutated pages**
+
+| Executor | Correct success | Explicit non-success | Silent error | Correct records / expected | Extra records |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `baseline` | 8 | 13 | 3 | 37 / 51 | 3 |
+| `baseline_adapted` | 9 | 12 | 3 | 38 / 51 | 3 |
+| `rastro_memory` | 8 | 13 | 3 | 37 / 51 | 3 |
+| `rastro_rediscover` | 7 | 14 | 3 | 36 / 51 | 3 |
+
+**There was no silent-error advantage.** All four executors failed silently on the
+same three mutations: a related `Product` added to the JSON-LD graph, a sponsored
+duplicate card, and a price class moved to a unit-price element. Every removed
+field, ambiguous duplicate and malformed block was reported explicitly by all four.
+The differences were:
+
+- `offers_as_list`: only `baseline_adapted` recovered. Its adapter handles one-element
+  offer arrays. Rastro memory and rediscovery failed explicitly, because discovery
+  does not traverse arrays.
+- `brand_name_added`: `rastro_rediscover` failed explicitly, because a nested
+  `brand.name` makes `name` non-unique for exact-name discovery. The stored recipe
+  (`rastro_memory`) and both baselines kept working.
+
+Rastro's memory matched the conventional baseline mutation for mutation. Re-discovery
+was the least robust of the four configurations on this corpus.
+
+**3. Model calls per successful record (scripted fake model, 10 runs per source)**
+
+| Script / memory | Inference calls | Successful records | Calls per successful record |
+| --- | ---: | ---: | ---: |
+| Valid first proposal, SQLite memory | 2 | 120 | 0.017 |
+| Valid first proposal, no memory | 20 | 120 | 0.167 |
+| One rejected proposal first, SQLite memory | 4 | 120 | 0.033 |
+| One rejected proposal first, no memory | 40 | 120 | 0.333 |
+
+Structured sources used zero calls because discovery succeeded first. On CSS
+sources, memory turned one learning call into nine reuse runs with no calls. The
+baseline makes no model calls, but it needs the hand-written mappings counted in
+dimension 1. This compares Rastro with and without memory, using a fake model; it
+says nothing about how often a real model proposes a valid recipe.
+
+**4. Operational visibility (observed checklist)**
+
+| Item | Baseline | Rastro |
+| --- | :---: | :---: |
+| Explicit outcome status | yes | yes |
+| Issue category and record index | no | yes |
+| Issue names the field for an ambiguous value | no | yes |
+| Issue names the field for a missing required value | no | **no** |
+| Per-field locator, extraction method, source URL and observation time | no | yes |
+| Recipe version, reuse flag, attempt origins, inspectable learned recipe | no | yes |
+| Job ID, timestamps, schema fingerprint | no | yes |
+| Candidate/accepted/rejected counts, stage timings, inference calls/seconds | no | yes |
+| Structured completion log event | no | yes |
+
+The full report has 16 items, with groups split out: the baseline has 1 and Rastro
+has 15. The baseline returns only status and records. Adding the rest is unmeasured
+engineering work, not impossible. **Observed Rastro defect:** `missing_evidence`
+issues carry `record_index` but `field=None`, even though the missing required field
+is known. Failing case: `hardware_cards` mutation `price_removed_one`, explicit
+recipe. Rastro returned `Issue(code="missing_evidence", record_index=2, field=None)`;
+the expected value is `field="price"`, per the API's "field names where applicable".
+The checklist records it as "no", and it is reported for an engine fix. It was not
+changed here.
+
+**5. Latency on original pages (ms, p50 / p95)**
+
+| Source | Baseline | Baseline adapted | Rastro explicit | Rastro rediscover | Rastro memory reuse |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `outdoor_jsonld` | 0.030 / 0.035 | 0.072 / 0.090 | 0.258 / 0.309 | 0.604 / 0.727 | 1.138 / 1.430 |
+| `pantry_microdata` | 0.136 / 0.145 | 0.230 / 0.254 | 0.389 / 0.466 | 0.930 / 1.163 | 1.501 / 1.832 |
+| `hardware_cards` | 0.150 / 0.161 | 0.157 / 0.172 | 0.401 / 0.460 | 0.605 / 0.776 | 1.365 / 1.609 |
+| `deli_table` | 0.103 / 0.117 | 0.111 / 0.128 | 0.380 / 0.475 | 0.524 / 0.689 | 1.217 / 1.666 |
+| `books_jsonld_blocks` | 0.045 / 0.055 | 0.109 / 0.146 | 0.315 / 0.415 | 0.746 / 0.992 | 1.408 / 1.703 |
+
+Rastro is slower in every configuration: 2.7–8.6× the baseline p50 with an explicit
+recipe. Memory reuse adds a SQLite read on each call, and rediscovery adds an event
+loop hop plus discovery. The absolute cost is about 1–1.5 ms per page offline. That
+is small next to network acquisition, which was not measured here.
+
+### Limits
+
+- The same author wrote the corpus, the oracle and both integrations, knowing both
+  engines. "Held-out" means that no engine code was tuned on it. It does not mean
+  independently authored. Five sources and 24 mutations are a small sample.
+- Synthetic pages only. There was no network, JavaScript rendering, pagination,
+  rate limiting, real model, repair, or developer-time study.
+- Configuration counts favor schemas named after schema.org vocabulary. A different
+  naming convention makes Rastro's discovery count equal to `baseline` (25 entries)
+  unless aliases are added. Aliases are unsupported in v0.1.
+- Silent errors that a schema cannot distinguish (duplicates, reassigned classes)
+  need historical or semantic checks (QUAL-005, v0.2). Neither engine has them.
+- Recovery after a mutation (repair) is out of v0.1 scope and was not measured. A
+  stored recipe that fails is reported, never replaced automatically.
