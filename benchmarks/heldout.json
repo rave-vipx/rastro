@@ -1,0 +1,845 @@
+[
+  {
+    "name": "outdoor_jsonld",
+    "kind": "jsonld",
+    "url": "https://trail-supply.example/tents/ridge",
+    "html": "<html><head><script type=\"application/ld+json\">{\"@context\": \"https://schema.org\", \"@graph\": [{\"@type\": \"Organization\", \"name\": \"Trail Supply\"}, {\"@type\": \"BreadcrumbList\", \"itemListElement\": [{\"@type\": \"ListItem\", \"position\": 1, \"name\": \"Tents\"}]}, {\"@type\": \"Product\", \"sku\": \"TS-100\", \"name\": \"Ridge Tent\", \"offers\": {\"@type\": \"Offer\", \"price\": \"189.00\", \"priceCurrency\": \"USD\"}}]}</script></head><body><div class=\"pdp\"><h1 class=\"pdp-title\">Ridge Tent</h1><span class=\"pdp-price\">$189.00</span></div></body></html>",
+    "baseline_mappings": [
+      {
+        "strategy": "jsonld",
+        "item_type": "Product",
+        "fields": {
+          "sku": "/sku",
+          "name": "/name",
+          "price": "/offers/price",
+          "priceCurrency": "/offers/priceCurrency"
+        }
+      }
+    ],
+    "expected": [
+      {
+        "sku": "TS-100",
+        "name": "Ridge Tent",
+        "price": "189.00",
+        "priceCurrency": "USD"
+      }
+    ],
+    "mutations": [
+      {
+        "name": "graph_reordered",
+        "kind": "reordered_structure",
+        "replace": [
+          [
+            "{\"@type\": \"Organization\", \"name\": \"Trail Supply\"}, ",
+            ""
+          ],
+          [
+            "{\"@type\": \"Product\", \"sku\": \"TS-100\", \"name\": \"Ridge Tent\", \"offers\": {\"@type\": \"Offer\", \"price\": \"189.00\", \"priceCurrency\": \"USD\"}}",
+            "{\"@type\": \"Product\", \"sku\": \"TS-100\", \"name\": \"Ridge Tent\", \"offers\": {\"@type\": \"Offer\", \"price\": \"189.00\", \"priceCurrency\": \"USD\"}}, {\"@type\": \"Organization\", \"name\": \"Trail Supply\"}"
+          ]
+        ],
+        "expected": [
+          {
+            "sku": "TS-100",
+            "name": "Ridge Tent",
+            "price": "189.00",
+            "priceCurrency": "USD"
+          }
+        ],
+        "requires_warning": false
+      },
+      {
+        "name": "offers_as_list",
+        "kind": "reordered_structure",
+        "replace": [
+          [
+            "{\"@type\": \"Offer\", \"price\": \"189.00\", \"priceCurrency\": \"USD\"}",
+            "[{\"@type\": \"Offer\", \"price\": \"189.00\", \"priceCurrency\": \"USD\"}]"
+          ]
+        ],
+        "expected": [
+          {
+            "sku": "TS-100",
+            "name": "Ridge Tent",
+            "price": "189.00",
+            "priceCurrency": "USD"
+          }
+        ],
+        "requires_warning": false
+      },
+      {
+        "name": "brand_name_added",
+        "kind": "duplicated_candidate",
+        "replace": [
+          [
+            "\"name\": \"Ridge Tent\", ",
+            "\"name\": \"Ridge Tent\", \"brand\": {\"@type\": \"Brand\", \"name\": \"Trail Supply\"}, "
+          ]
+        ],
+        "expected": [
+          {
+            "sku": "TS-100",
+            "name": "Ridge Tent",
+            "price": "189.00",
+            "priceCurrency": "USD"
+          }
+        ],
+        "requires_warning": false
+      },
+      {
+        "name": "price_removed",
+        "kind": "removed_field",
+        "replace": [
+          [
+            "\"price\": \"189.00\", ",
+            ""
+          ]
+        ],
+        "expected": [],
+        "requires_warning": true
+      },
+      {
+        "name": "related_product_added",
+        "kind": "duplicated_candidate",
+        "replace": [
+          [
+            "{\"@type\": \"Product\", \"sku\": \"TS-100\", \"name\": \"Ridge Tent\", \"offers\": {\"@type\": \"Offer\", \"price\": \"189.00\", \"priceCurrency\": \"USD\"}}",
+            "{\"@type\": \"Product\", \"sku\": \"TS-100\", \"name\": \"Ridge Tent\", \"offers\": {\"@type\": \"Offer\", \"price\": \"189.00\", \"priceCurrency\": \"USD\"}}, {\"@type\": \"Product\", \"sku\": \"TS-200\", \"name\": \"Ridge Footprint\", \"offers\": {\"@type\": \"Offer\", \"price\": \"29.00\", \"priceCurrency\": \"USD\"}}"
+          ]
+        ],
+        "expected": [
+          {
+            "sku": "TS-100",
+            "name": "Ridge Tent",
+            "price": "189.00",
+            "priceCurrency": "USD"
+          }
+        ],
+        "requires_warning": false
+      },
+      {
+        "name": "sku_renamed_mpn",
+        "kind": "renamed_field",
+        "replace": [
+          [
+            "\"sku\": \"TS-100\"",
+            "\"mpn\": \"TS-100\""
+          ]
+        ],
+        "expected": [
+          {
+            "sku": "TS-100",
+            "name": "Ridge Tent",
+            "price": "189.00",
+            "priceCurrency": "USD"
+          }
+        ],
+        "requires_warning": false
+      }
+    ]
+  },
+  {
+    "name": "pantry_microdata",
+    "kind": "microdata",
+    "url": "https://pantry.example/c/spices",
+    "html": "<html><body><section class=\"grid\"><div class=\"tile\" itemscope itemtype=\"https://schema.org/Product\"><meta itemprop=\"sku\" content=\"PN-1\"><h3 itemprop=\"name\">Olive Oil</h3><div itemprop=\"offers\" itemscope itemtype=\"https://schema.org/Offer\"><meta itemprop=\"priceCurrency\" content=\"EUR\"><span itemprop=\"price\" content=\"8.40\">€8,40</span></div></div><div class=\"tile\" itemscope itemtype=\"https://schema.org/Product\"><meta itemprop=\"sku\" content=\"PN-2\"><h3 itemprop=\"name\">Sea Salt</h3><div itemprop=\"offers\" itemscope itemtype=\"https://schema.org/Offer\"><meta itemprop=\"priceCurrency\" content=\"EUR\"><span itemprop=\"price\" content=\"2.10\">€2,10</span></div></div><div class=\"tile\" itemscope itemtype=\"https://schema.org/Product\"><meta itemprop=\"sku\" content=\"PN-3\"><h3 itemprop=\"name\">Black Pepper</h3><div itemprop=\"offers\" itemscope itemtype=\"https://schema.org/Offer\"><meta itemprop=\"priceCurrency\" content=\"EUR\"><span itemprop=\"price\" content=\"4.95\">€4,95</span></div></div></section></body></html>",
+    "baseline_mappings": [
+      {
+        "strategy": "css",
+        "record_selector": "[itemtype=\"https://schema.org/Product\"]",
+        "fields": {
+          "sku": "[itemprop=\"sku\"]::attr(content)",
+          "name": "[itemprop=\"name\"]::text",
+          "price": "[itemprop=\"price\"]::attr(content)",
+          "priceCurrency": "[itemprop=\"priceCurrency\"]::attr(content)"
+        }
+      }
+    ],
+    "expected": [
+      {
+        "sku": "PN-1",
+        "name": "Olive Oil",
+        "price": "8.40",
+        "priceCurrency": "EUR"
+      },
+      {
+        "sku": "PN-2",
+        "name": "Sea Salt",
+        "price": "2.10",
+        "priceCurrency": "EUR"
+      },
+      {
+        "sku": "PN-3",
+        "name": "Black Pepper",
+        "price": "4.95",
+        "priceCurrency": "EUR"
+      }
+    ],
+    "mutations": [
+      {
+        "name": "class_renamed",
+        "kind": "renamed_class",
+        "replace": [
+          [
+            "class=\"tile\"",
+            "class=\"card card--grid\""
+          ],
+          [
+            "class=\"grid\"",
+            "class=\"products\""
+          ]
+        ],
+        "expected": [
+          {
+            "sku": "PN-1",
+            "name": "Olive Oil",
+            "price": "8.40",
+            "priceCurrency": "EUR"
+          },
+          {
+            "sku": "PN-2",
+            "name": "Sea Salt",
+            "price": "2.10",
+            "priceCurrency": "EUR"
+          },
+          {
+            "sku": "PN-3",
+            "name": "Black Pepper",
+            "price": "4.95",
+            "priceCurrency": "EUR"
+          }
+        ],
+        "requires_warning": false
+      },
+      {
+        "name": "offer_before_name",
+        "kind": "reordered_dom",
+        "replace": [
+          [
+            "<h3 itemprop=\"name\">Olive Oil</h3><div itemprop=\"offers\" itemscope itemtype=\"https://schema.org/Offer\"><meta itemprop=\"priceCurrency\" content=\"EUR\"><span itemprop=\"price\" content=\"8.40\">€8,40</span></div>",
+            "<div itemprop=\"offers\" itemscope itemtype=\"https://schema.org/Offer\"><span itemprop=\"price\" content=\"8.40\">€8,40</span><meta itemprop=\"priceCurrency\" content=\"EUR\"></div><h3 itemprop=\"name\">Olive Oil</h3>"
+          ]
+        ],
+        "expected": [
+          {
+            "sku": "PN-1",
+            "name": "Olive Oil",
+            "price": "8.40",
+            "priceCurrency": "EUR"
+          },
+          {
+            "sku": "PN-2",
+            "name": "Sea Salt",
+            "price": "2.10",
+            "priceCurrency": "EUR"
+          },
+          {
+            "sku": "PN-3",
+            "name": "Black Pepper",
+            "price": "4.95",
+            "priceCurrency": "EUR"
+          }
+        ],
+        "requires_warning": false
+      },
+      {
+        "name": "currency_removed_one",
+        "kind": "removed_field",
+        "replace": [
+          [
+            "<meta itemprop=\"priceCurrency\" content=\"EUR\"><span itemprop=\"price\" content=\"2.10\">",
+            "<span itemprop=\"price\" content=\"2.10\">"
+          ]
+        ],
+        "expected": [
+          {
+            "sku": "PN-1",
+            "name": "Olive Oil",
+            "price": "8.40",
+            "priceCurrency": "EUR"
+          },
+          {
+            "sku": "PN-3",
+            "name": "Black Pepper",
+            "price": "4.95",
+            "priceCurrency": "EUR"
+          }
+        ],
+        "requires_warning": true
+      },
+      {
+        "name": "was_price_added",
+        "kind": "duplicated_candidate",
+        "replace": [
+          [
+            "<span itemprop=\"price\" content=\"4.95\">€4,95</span>",
+            "<s itemprop=\"price\" content=\"5.50\">€5,50</s><span itemprop=\"price\" content=\"4.95\">€4,95</span>"
+          ]
+        ],
+        "expected": [
+          {
+            "sku": "PN-1",
+            "name": "Olive Oil",
+            "price": "8.40",
+            "priceCurrency": "EUR"
+          },
+          {
+            "sku": "PN-2",
+            "name": "Sea Salt",
+            "price": "2.10",
+            "priceCurrency": "EUR"
+          }
+        ],
+        "requires_warning": true
+      },
+      {
+        "name": "review_author_added",
+        "kind": "duplicated_candidate",
+        "replace": [
+          [
+            "<h3 itemprop=\"name\">Olive Oil</h3>",
+            "<h3 itemprop=\"name\">Olive Oil</h3><div itemprop=\"review\" itemscope itemtype=\"https://schema.org/Review\"><span itemprop=\"author\" itemscope itemtype=\"https://schema.org/Person\"><span itemprop=\"name\">A. Cook</span></span></div>"
+          ],
+          [
+            "<h3 itemprop=\"name\">Sea Salt</h3>",
+            "<h3 itemprop=\"name\">Sea Salt</h3><div itemprop=\"review\" itemscope itemtype=\"https://schema.org/Review\"><span itemprop=\"author\" itemscope itemtype=\"https://schema.org/Person\"><span itemprop=\"name\">A. Cook</span></span></div>"
+          ],
+          [
+            "<h3 itemprop=\"name\">Black Pepper</h3>",
+            "<h3 itemprop=\"name\">Black Pepper</h3><div itemprop=\"review\" itemscope itemtype=\"https://schema.org/Review\"><span itemprop=\"author\" itemscope itemtype=\"https://schema.org/Person\"><span itemprop=\"name\">A. Cook</span></span></div>"
+          ]
+        ],
+        "expected": [
+          {
+            "sku": "PN-1",
+            "name": "Olive Oil",
+            "price": "8.40",
+            "priceCurrency": "EUR"
+          },
+          {
+            "sku": "PN-2",
+            "name": "Sea Salt",
+            "price": "2.10",
+            "priceCurrency": "EUR"
+          },
+          {
+            "sku": "PN-3",
+            "name": "Black Pepper",
+            "price": "4.95",
+            "priceCurrency": "EUR"
+          }
+        ],
+        "requires_warning": false
+      }
+    ]
+  },
+  {
+    "name": "hardware_cards",
+    "kind": "css",
+    "url": "https://hardware.example/search?q=tools",
+    "html": "<html><body><ul class=\"results\"><li class=\"result-card\" data-id=\"HW-11\"><a class=\"result-card__title\" href=\"/p/HW-11\">Claw Hammer</a><div class=\"result-card__meta\"><span class=\"result-card__price\">24.90</span><span class=\"result-card__cur\">USD</span></div></li><li class=\"result-card\" data-id=\"HW-12\"><a class=\"result-card__title\" href=\"/p/HW-12\">Tape Measure</a><div class=\"result-card__meta\"><span class=\"result-card__price\">9.75</span><span class=\"result-card__cur\">USD</span></div></li><li class=\"result-card\" data-id=\"HW-13\"><a class=\"result-card__title\" href=\"/p/HW-13\">Utility Knife</a><div class=\"result-card__meta\"><span class=\"result-card__price\">6.20</span><span class=\"result-card__cur\">USD</span></div></li></ul></body></html>",
+    "baseline_mappings": [
+      {
+        "strategy": "css",
+        "record_selector": "li.result-card",
+        "fields": {
+          "sku": "::attr(data-id)",
+          "name": "a.result-card__title::text",
+          "price": ".result-card__price::text",
+          "priceCurrency": ".result-card__cur::text"
+        }
+      }
+    ],
+    "rastro_recipe": {
+      "strategy": "css",
+      "record_selector": "li.result-card",
+      "fields": {
+        "sku": "::attr(data-id)",
+        "name": "a.result-card__title::text",
+        "price": ".result-card__price::text",
+        "priceCurrency": ".result-card__cur::text"
+      }
+    },
+    "expected": [
+      {
+        "sku": "HW-11",
+        "name": "Claw Hammer",
+        "price": "24.90",
+        "priceCurrency": "USD"
+      },
+      {
+        "sku": "HW-12",
+        "name": "Tape Measure",
+        "price": "9.75",
+        "priceCurrency": "USD"
+      },
+      {
+        "sku": "HW-13",
+        "name": "Utility Knife",
+        "price": "6.20",
+        "priceCurrency": "USD"
+      }
+    ],
+    "mutations": [
+      {
+        "name": "bem_block_renamed",
+        "kind": "renamed_class",
+        "replace": [
+          [
+            "result-card",
+            "product-tile"
+          ]
+        ],
+        "expected": [
+          {
+            "sku": "HW-11",
+            "name": "Claw Hammer",
+            "price": "24.90",
+            "priceCurrency": "USD"
+          },
+          {
+            "sku": "HW-12",
+            "name": "Tape Measure",
+            "price": "9.75",
+            "priceCurrency": "USD"
+          },
+          {
+            "sku": "HW-13",
+            "name": "Utility Knife",
+            "price": "6.20",
+            "priceCurrency": "USD"
+          }
+        ],
+        "requires_warning": false
+      },
+      {
+        "name": "currency_before_price",
+        "kind": "reordered_dom",
+        "replace": [
+          [
+            "<span class=\"result-card__price\">9.75</span><span class=\"result-card__cur\">USD</span>",
+            "<span class=\"result-card__cur\">USD</span><span class=\"result-card__price\">9.75</span>"
+          ]
+        ],
+        "expected": [
+          {
+            "sku": "HW-11",
+            "name": "Claw Hammer",
+            "price": "24.90",
+            "priceCurrency": "USD"
+          },
+          {
+            "sku": "HW-12",
+            "name": "Tape Measure",
+            "price": "9.75",
+            "priceCurrency": "USD"
+          },
+          {
+            "sku": "HW-13",
+            "name": "Utility Knife",
+            "price": "6.20",
+            "priceCurrency": "USD"
+          }
+        ],
+        "requires_warning": false
+      },
+      {
+        "name": "price_removed_one",
+        "kind": "removed_field",
+        "replace": [
+          [
+            "<span class=\"result-card__price\">6.20</span>",
+            ""
+          ]
+        ],
+        "expected": [
+          {
+            "sku": "HW-11",
+            "name": "Claw Hammer",
+            "price": "24.90",
+            "priceCurrency": "USD"
+          },
+          {
+            "sku": "HW-12",
+            "name": "Tape Measure",
+            "price": "9.75",
+            "priceCurrency": "USD"
+          }
+        ],
+        "requires_warning": true
+      },
+      {
+        "name": "old_price_added",
+        "kind": "duplicated_candidate",
+        "replace": [
+          [
+            "<span class=\"result-card__price\">24.90</span>",
+            "<span class=\"result-card__price result-card__price--old\">29.90</span><span class=\"result-card__price\">24.90</span>"
+          ]
+        ],
+        "expected": [
+          {
+            "sku": "HW-12",
+            "name": "Tape Measure",
+            "price": "9.75",
+            "priceCurrency": "USD"
+          },
+          {
+            "sku": "HW-13",
+            "name": "Utility Knife",
+            "price": "6.20",
+            "priceCurrency": "USD"
+          }
+        ],
+        "requires_warning": true
+      },
+      {
+        "name": "sponsored_duplicate",
+        "kind": "duplicated_candidate",
+        "replace": [
+          [
+            "<ul class=\"results\">",
+            "<ul class=\"results\"><li class=\"result-card result-card--sponsored\" data-id=\"HW-11\"><a class=\"result-card__title\" href=\"/p/HW-11\">Claw Hammer</a><div class=\"result-card__meta\"><span class=\"result-card__price\">24.90</span><span class=\"result-card__cur\">USD</span></div></li>"
+          ]
+        ],
+        "expected": [
+          {
+            "sku": "HW-11",
+            "name": "Claw Hammer",
+            "price": "24.90",
+            "priceCurrency": "USD"
+          },
+          {
+            "sku": "HW-12",
+            "name": "Tape Measure",
+            "price": "9.75",
+            "priceCurrency": "USD"
+          },
+          {
+            "sku": "HW-13",
+            "name": "Utility Knife",
+            "price": "6.20",
+            "priceCurrency": "USD"
+          }
+        ],
+        "requires_warning": false
+      },
+      {
+        "name": "price_class_reassigned",
+        "kind": "renamed_class",
+        "replace": [
+          [
+            "<span class=\"result-card__price\">24.90</span>",
+            "<span class=\"result-card__amount\">24.90</span><span class=\"result-card__price\">2.49</span>"
+          ]
+        ],
+        "expected": [
+          {
+            "sku": "HW-11",
+            "name": "Claw Hammer",
+            "price": "24.90",
+            "priceCurrency": "USD"
+          },
+          {
+            "sku": "HW-12",
+            "name": "Tape Measure",
+            "price": "9.75",
+            "priceCurrency": "USD"
+          },
+          {
+            "sku": "HW-13",
+            "name": "Utility Knife",
+            "price": "6.20",
+            "priceCurrency": "USD"
+          }
+        ],
+        "requires_warning": false
+      }
+    ]
+  },
+  {
+    "name": "deli_table",
+    "kind": "css",
+    "url": "https://deli.example/prices",
+    "html": "<html><body><table class=\"price-list\"><tr class=\"hdr\"><th>Item</th><th>Price</th><th>Currency</th></tr><tr class=\"row\" data-code=\"DL-1\"><td class=\"c-name\">Smoked Ham</td><td class=\"c-price\">312.00</td><td class=\"c-cur\">UYU</td></tr><tr class=\"row\" data-code=\"DL-2\"><td class=\"c-name\">Aged Cheese</td><td class=\"c-price\">245.50</td><td class=\"c-cur\">UYU</td></tr></table></body></html>",
+    "baseline_mappings": [
+      {
+        "strategy": "css",
+        "record_selector": "tr.row",
+        "fields": {
+          "sku": "::attr(data-code)",
+          "name": "td.c-name::text",
+          "price": "td.c-price::text",
+          "priceCurrency": "td.c-cur::text"
+        }
+      }
+    ],
+    "rastro_recipe": {
+      "strategy": "css",
+      "record_selector": "tr.row",
+      "fields": {
+        "sku": "::attr(data-code)",
+        "name": "td.c-name::text",
+        "price": "td.c-price::text",
+        "priceCurrency": "td.c-cur::text"
+      }
+    },
+    "expected": [
+      {
+        "sku": "DL-1",
+        "name": "Smoked Ham",
+        "price": "312.00",
+        "priceCurrency": "UYU"
+      },
+      {
+        "sku": "DL-2",
+        "name": "Aged Cheese",
+        "price": "245.50",
+        "priceCurrency": "UYU"
+      }
+    ],
+    "mutations": [
+      {
+        "name": "columns_reordered",
+        "kind": "reordered_dom",
+        "replace": [
+          [
+            "<td class=\"c-price\">312.00</td><td class=\"c-cur\">UYU</td>",
+            "<td class=\"c-cur\">UYU</td><td class=\"c-price\">312.00</td>"
+          ]
+        ],
+        "expected": [
+          {
+            "sku": "DL-1",
+            "name": "Smoked Ham",
+            "price": "312.00",
+            "priceCurrency": "UYU"
+          },
+          {
+            "sku": "DL-2",
+            "name": "Aged Cheese",
+            "price": "245.50",
+            "priceCurrency": "UYU"
+          }
+        ],
+        "requires_warning": false
+      },
+      {
+        "name": "cell_classes_dropped",
+        "kind": "renamed_class",
+        "replace": [
+          [
+            " class=\"c-name\"",
+            ""
+          ],
+          [
+            " class=\"c-price\"",
+            ""
+          ],
+          [
+            " class=\"c-cur\"",
+            ""
+          ]
+        ],
+        "expected": [
+          {
+            "sku": "DL-1",
+            "name": "Smoked Ham",
+            "price": "312.00",
+            "priceCurrency": "UYU"
+          },
+          {
+            "sku": "DL-2",
+            "name": "Aged Cheese",
+            "price": "245.50",
+            "priceCurrency": "UYU"
+          }
+        ],
+        "requires_warning": false
+      },
+      {
+        "name": "subtotal_row_added",
+        "kind": "duplicated_candidate",
+        "replace": [
+          [
+            "</table>",
+            "<tr class=\"row\"><td class=\"c-name\">Subtotal</td><td class=\"c-price\">557.50</td><td class=\"c-cur\">UYU</td></tr></table>"
+          ]
+        ],
+        "expected": [
+          {
+            "sku": "DL-1",
+            "name": "Smoked Ham",
+            "price": "312.00",
+            "priceCurrency": "UYU"
+          },
+          {
+            "sku": "DL-2",
+            "name": "Aged Cheese",
+            "price": "245.50",
+            "priceCurrency": "UYU"
+          }
+        ],
+        "requires_warning": true
+      }
+    ]
+  },
+  {
+    "name": "books_jsonld_blocks",
+    "kind": "jsonld",
+    "url": "https://harbor-books.example/new",
+    "html": "<html><head><script type=\"application/ld+json\">{\"@context\": \"https://schema.org\", \"@type\": \"Product\", \"sku\": \"BK-7\", \"name\": \"Tide Tables\", \"offers\": {\"@type\": \"Offer\", \"price\": \"14.00\", \"priceCurrency\": \"USD\"}}</script><script type=\"application/ld+json\">{\"@context\": \"https://schema.org\", \"@type\": \"Product\", \"sku\": \"BK-8\", \"name\": \"Harbor Lights\", \"offers\": {\"@type\": \"Offer\", \"price\": \"11.50\", \"priceCurrency\": \"USD\"}}</script><script type=\"application/ld+json\">{\"@context\": \"https://schema.org\", \"@type\": \"Product\", \"sku\": \"BK-9\", \"name\": \"Salt Roads\", \"offers\": {\"@type\": \"Offer\", \"price\": \"18.25\", \"priceCurrency\": \"USD\"}}</script></head><body><ol class=\"shelf\"><li>Tide Tables</li><li>Harbor Lights</li><li>Salt Roads</li></ol></body></html>",
+    "baseline_mappings": [
+      {
+        "strategy": "jsonld",
+        "item_type": "Product",
+        "fields": {
+          "sku": "/sku",
+          "name": "/name",
+          "price": "/offers/price",
+          "priceCurrency": "/offers/priceCurrency"
+        }
+      }
+    ],
+    "expected": [
+      {
+        "sku": "BK-7",
+        "name": "Tide Tables",
+        "price": "14.00",
+        "priceCurrency": "USD"
+      },
+      {
+        "sku": "BK-8",
+        "name": "Harbor Lights",
+        "price": "11.50",
+        "priceCurrency": "USD"
+      },
+      {
+        "sku": "BK-9",
+        "name": "Salt Roads",
+        "price": "18.25",
+        "priceCurrency": "USD"
+      }
+    ],
+    "mutations": [
+      {
+        "name": "type_array",
+        "kind": "reordered_structure",
+        "replace": [
+          [
+            "\"@type\": \"Product\"",
+            "\"@type\": [\"Product\", \"Book\"]"
+          ]
+        ],
+        "expected": [
+          {
+            "sku": "BK-7",
+            "name": "Tide Tables",
+            "price": "14.00",
+            "priceCurrency": "USD"
+          },
+          {
+            "sku": "BK-8",
+            "name": "Harbor Lights",
+            "price": "11.50",
+            "priceCurrency": "USD"
+          },
+          {
+            "sku": "BK-9",
+            "name": "Salt Roads",
+            "price": "18.25",
+            "priceCurrency": "USD"
+          }
+        ],
+        "requires_warning": false
+      },
+      {
+        "name": "one_block_malformed",
+        "kind": "broken_markup",
+        "replace": [
+          [
+            "{\"@context\": \"https://schema.org\", \"@type\": \"Product\", \"sku\": \"BK-8\", \"name\": \"Harbor Lights\", \"offers\": {\"@type\": \"Offer\", \"price\": \"11.50\", \"priceCurrency\": \"USD\"}}",
+            "{\"@context\": \"https://schema.org\", \"@type\": \"Product\", \"sku\": \"BK-8\", \"name\": \"Harbor Lights\", \"offers\": {\"@type\": \"Offer\", \"price\": \"11.50\", \"priceCurrency\": \"USD\"},"
+          ]
+        ],
+        "expected": [
+          {
+            "sku": "BK-7",
+            "name": "Tide Tables",
+            "price": "14.00",
+            "priceCurrency": "USD"
+          },
+          {
+            "sku": "BK-9",
+            "name": "Salt Roads",
+            "price": "18.25",
+            "priceCurrency": "USD"
+          }
+        ],
+        "requires_warning": true
+      },
+      {
+        "name": "price_number_type",
+        "kind": "reordered_structure",
+        "replace": [
+          [
+            "\"price\": \"14.00\"",
+            "\"price\": 14.0"
+          ]
+        ],
+        "expected": [
+          {
+            "sku": "BK-7",
+            "name": "Tide Tables",
+            "price": "14.00",
+            "priceCurrency": "USD"
+          },
+          {
+            "sku": "BK-8",
+            "name": "Harbor Lights",
+            "price": "11.50",
+            "priceCurrency": "USD"
+          },
+          {
+            "sku": "BK-9",
+            "name": "Salt Roads",
+            "price": "18.25",
+            "priceCurrency": "USD"
+          }
+        ],
+        "requires_warning": false
+      },
+      {
+        "name": "sku_renamed_gtin",
+        "kind": "renamed_field",
+        "replace": [
+          [
+            "\"sku\": ",
+            "\"gtin13\": "
+          ]
+        ],
+        "expected": [
+          {
+            "sku": "BK-7",
+            "name": "Tide Tables",
+            "price": "14.00",
+            "priceCurrency": "USD"
+          },
+          {
+            "sku": "BK-8",
+            "name": "Harbor Lights",
+            "price": "11.50",
+            "priceCurrency": "USD"
+          },
+          {
+            "sku": "BK-9",
+            "name": "Salt Roads",
+            "price": "18.25",
+            "priceCurrency": "USD"
+          }
+        ],
+        "requires_warning": false
+      }
+    ]
+  }
+]
