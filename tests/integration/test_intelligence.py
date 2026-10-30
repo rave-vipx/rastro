@@ -1,6 +1,7 @@
 import json
 
 import pytest
+from pydantic import BaseModel, ValidationInfo, field_validator
 
 from rastro import InferencePolicy, Outcome, Rastro, RecipeKey, SQLiteRecipeRepository
 
@@ -50,6 +51,70 @@ async def test_deterministic_jsonld_precedes_model(html, source, schema):
     assert result.learned_recipe.strategy == "jsonld"
     assert result.metrics.inference_calls == 0
     assert not model.requests
+
+
+@pytest.mark.asyncio
+async def test_learned_recipe_supplies_regional_validation_context(source):
+    class Regional(BaseModel):
+        name: str
+
+        @field_validator("name")
+        @classmethod
+        def validate_region(cls, value: str, info: ValidationInfo) -> str:
+            assert info.context == {
+                "locale": "es-UY",
+                "languages": ("es-UY", "en"),
+                "timezone": "America/Montevideo",
+                "currency": "UYU",
+                "egress": "direct",
+            }
+            return value
+
+    regional = source.model_copy(
+        update={
+            "languages": ("es-UY", "en"),
+            "timezone": "America/Montevideo",
+            "currency": "UYU",
+        }
+    )
+    result = await Rastro(discover_recipes=True).extract_html_async(
+        '<script type="application/ld+json">{"name":"Cuaderno"}</script>',
+        source=regional,
+        schema=Regional,
+    )
+    assert result.status == Outcome.SUCCESS
+
+
+@pytest.mark.asyncio
+async def test_model_recipe_uses_currency_context_and_is_reused_after_restart(tmp_path, source):
+    seen = []
+
+    class Regional(BaseModel):
+        name: str
+
+        @field_validator("name")
+        @classmethod
+        def validate_currency(cls, value: str, info: ValidationInfo) -> str:
+            seen.append(info.context["currency"])
+            return value
+
+    path = tmp_path / "recipes.db"
+    model = Model(
+        json.dumps(
+            {"strategy": "css", "record_selector": ".product", "fields": {"name": "h2::text"}}
+        )
+    )
+    regional = source.model_copy(update={"currency": "JPY"})
+    learned = await Rastro(model=model, repository=SQLiteRecipeRepository(path)).extract_html_async(
+        PAGE, source=regional, schema=Regional
+    )
+    reused = Rastro(repository=SQLiteRecipeRepository(path)).extract_html(
+        PAGE, source=regional, schema=Regional
+    )
+
+    assert learned.status == reused.status == Outcome.SUCCESS
+    assert reused.recipe_reused and len(model.requests) == 1
+    assert seen == ["JPY", "JPY"]
 
 
 @pytest.mark.asyncio

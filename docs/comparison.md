@@ -16,9 +16,9 @@ uv run python -m benchmarks.run --repetitions 50 --warmup 5 --output report.json
 
 The comparison is offline, needs no browser/model, and adds no runtime dependency.
 The source distribution includes it; the runtime wheel does not.
-[Raw report](https://github.com/rave-vipx/rastro/blob/staging/benchmarks/results/offline.json),
-[corpus](https://github.com/rave-vipx/rastro/blob/staging/benchmarks/corpus.json),
-and [baseline](https://github.com/rave-vipx/rastro/blob/staging/benchmarks/baseline.py)
+[Raw report](https://github.com/rave-vipx/rastro/blob/dev/benchmarks/results/offline.json),
+[corpus](https://github.com/rave-vipx/rastro/blob/dev/benchmarks/corpus.json),
+and [baseline](https://github.com/rave-vipx/rastro/blob/dev/benchmarks/baseline.py)
 are versioned with the implementation. Use the files in the same checkout when
 reviewing an unmerged branch. The raw report records the parent Git revision,
 dirty status, and SHA-256 hashes of the exact benchmark/runtime sources and lock.

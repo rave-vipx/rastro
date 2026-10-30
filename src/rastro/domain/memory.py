@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import UTC, datetime
-from typing import Self
+from typing import Literal, Self
 from urllib.parse import urlsplit, urlunsplit
 
 from pydantic import AwareDatetime, BaseModel, Field, model_validator
@@ -25,7 +25,10 @@ class RecipeKey(Contract):
     source_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
     schema_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
     locale: str = Field(min_length=2, max_length=64)
+    languages: tuple[str, ...] = Field(default=(), max_length=20)
     timezone: str = Field(min_length=1, max_length=128)
+    currency: str | None = Field(default=None, pattern=r"^[A-Z]{3}$")
+    egress: Literal["direct"] = "direct"
     context: RecipeContext = RecipeContext()
 
     @classmethod
@@ -40,13 +43,20 @@ class RecipeKey(Contract):
             source_fingerprint=hashlib.sha256(identity.encode()).hexdigest(),
             schema_fingerprint=schema_fingerprint(schema),
             locale=source.locale,
+            languages=source.languages,
             timezone=source.timezone,
+            currency=source.currency,
+            egress=source.egress,
             context=context or RecipeContext(),
         )
 
     def canonical(self) -> str:
         key = RecipeKey.model_validate(self.model_dump())
-        return json.dumps(key.model_dump(), sort_keys=True, separators=(",", ":"))
+        payload = key.model_dump()
+        if not key.languages and key.currency is None and key.egress == "direct":
+            for field in ("languages", "currency", "egress"):
+                payload.pop(field)
+        return json.dumps(payload, sort_keys=True, separators=(",", ":"))
 
 
 class StoredRecipe(Contract):

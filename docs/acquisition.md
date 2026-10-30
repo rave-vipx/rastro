@@ -21,7 +21,14 @@ class Article(BaseModel):
 async def extract_article():
     engine = Rastro.web(AcquisitionPolicy(allowed_hosts=("example.com",)))
     result = await engine.extract(
-        source=Source(url="https://example.com/article", locale="es-UY"),
+        source=Source(
+            url="https://example.com/article",
+            locale="es-UY",
+            languages=("es-UY", "es", "en"),
+            timezone="America/Montevideo",
+            currency="UYU",
+            egress="direct",
+        ),
         schema=Article,
         recipe=Recipe(strategy="css", record_selector="article", fields={"title": "h1::text"}),
     )
@@ -116,10 +123,19 @@ Received bytes count completed HTTP responses, including robots and redirects;
 interrupted transfers may be undercounted. Input bytes measure UTF-8 HTML passed
 to the parser. Extraction and validation durations remain separate.
 
-A valid `Source.locale` sets Accept-Language. `und` omits it; invalid header values
-fail before DNS. Timezone is metadata. Currency/date interpretation and geographic
-egress control are not implemented. The remote server decides whether to honor
-Accept-Language. No regional recipe cache exists until M3.
+Ordered `Source.languages` set Accept-Language with descending quality weights: the
+first preference has the implicit weight `1`, then weights decrease by `0.05` down
+to `0.05` for the twentieth preference. When languages are empty, a valid `locale`
+remains the backward-compatible unweighted header; `und` omits it. Invalid tags fail
+before DNS. Locale, languages, timezone, currency, and egress are passed through
+Pydantic's `model_validate` context; Rastro does not infer regional rules or currency.
+The remote server decides whether to honor Accept-Language.
+
+`egress="direct"` explicitly means the configured transport connects from the
+current machine. It is distinct from browser geolocation, which is unavailable
+because this release has no browser adapter. Any other egress value is rejected
+before DNS; Rastro adds no proxy, identity rotation, or fallback after a restriction.
+Regional recipe isolation is documented in [recipe memory](memory.md).
 
 ## Security and operational boundaries
 
@@ -136,8 +152,8 @@ call may finish after cancellation. Parsing/validation runs in a worker thread a
 can also finish after cancellation. Acquisition deadlines do not forcibly stop
 trusted validators or native parsers. Use process isolation for hostile workloads.
 
-JavaScript rendering, authenticated sessions, proxies and discovered-link crawling
-are not implemented. Optional [recipe memory](memory.md) and
+JavaScript rendering, browser geolocation, authenticated sessions, proxies and
+discovered-link crawling are not implemented. Optional [recipe memory](memory.md) and
 [recipe learning](intelligence.md) integrate with the async SDK. See the
 [transport ADR](decisions/0002-policy-aware-acquisition.md) for the documented use of
 curl_cffi, Scrapling's HTTP engine, to expose public DNS-pinning controls.

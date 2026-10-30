@@ -52,11 +52,56 @@ def test_repeat_extraction_reuses_exact_version_and_retains_evidence(
         engine.extract_html(html, source=source, schema=schema, recipe_version=3)
 
 
+def test_pre_regional_sqlite_row_is_reused_after_restart(tmp_path, source, schema, recipe, html):
+    import json
+    import sqlite3
+    from contextlib import closing
+
+    path = tmp_path / "legacy.db"
+    key = RecipeKey.for_source(source, schema)
+    legacy_key = key.model_dump(mode="json")
+    for field in ("languages", "currency", "egress"):
+        legacy_key.pop(field)
+    SQLiteRecipeRepository(path).get(key)
+    with closing(sqlite3.connect(path)) as db:
+        db.execute(
+            "INSERT INTO recipes VALUES (?, 1, ?, 0, ?, ?, 1)",
+            (
+                json.dumps(legacy_key, sort_keys=True, separators=(",", ":")),
+                recipe.model_dump_json(),
+                "2026-01-01T00:00:00.000000+00:00",
+                "2026-01-01T00:00:00.000000+00:00",
+            ),
+        )
+        db.commit()
+
+    result = Rastro(repository=SQLiteRecipeRepository(path)).extract_html(
+        html, source=source, schema=schema
+    )
+
+    assert result.status == Outcome.SUCCESS and result.recipe_reused
+
+
 @pytest.mark.parametrize(
     "dimension",
-    ["host", "path", "query", "locale", "timezone", "schema", "template", "region", "revision"],
+    [
+        "host",
+        "path",
+        "query",
+        "locale",
+        "languages",
+        "language_order",
+        "timezone",
+        "currency",
+        "schema",
+        "template",
+        "region",
+        "revision",
+    ],
 )
 def test_incompatible_context_never_reuses(tmp_path, source, schema, recipe, html, dimension):
+    if dimension == "language_order":
+        source = source.model_copy(update={"languages": ("es-UY", "en")})
     repo = SQLiteRecipeRepository(tmp_path / "recipes.db")
     engine = Rastro(repository=repo)
     engine.extract_html(html, source=source, schema=schema, recipe=recipe)
@@ -66,7 +111,10 @@ def test_incompatible_context_never_reuses(tmp_path, source, schema, recipe, htm
         "path": {"url": "https://example.com/other"},
         "query": {"url": "https://example.com/products?token=different"},
         "locale": {"locale": "pt-BR"},
+        "languages": {"languages": ("pt-BR",)},
+        "language_order": {"languages": ("en", "es-UY")},
         "timezone": {"timezone": "America/Montevideo"},
+        "currency": {"currency": "UYU"},
     }
     if dimension in updates:
         source = source.model_copy(update=updates[dimension])

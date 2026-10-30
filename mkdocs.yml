@@ -31,11 +31,14 @@ nav:
   - Extraction comparison: comparison.md
   - Release evidence: release-evidence.md
   - Live Ollama evidence: live-ollama-evidence.md
+  - Validation evidence: development/validation-evidence.md
   - API and outcomes: api.md
   - Architecture: architecture.md
   - Roadmap: roadmap.md
   - Release checklist: releasing.md
+  - Development work log: development/work-log.md
   - Engineering decisions:
+      - Explicit regional context: decisions/0006-explicit-regional-context.md
       - Reproducible evidence: decisions/0005-reproducible-release-evidence.md
       - Bounded recipe learning: decisions/0004-bounded-recipe-learning.md
       - SQLite recipe memory: decisions/0003-sqlite-recipe-memory.md
