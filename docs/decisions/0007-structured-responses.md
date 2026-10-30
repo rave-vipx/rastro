@@ -26,8 +26,9 @@ to each record. Pointers are the only addressing mechanism. There are no wildcar
 filters, recursive descent or evaluation. JSON-LD already uses RFC 6901, so the
 pointer resolver moves to the domain layer and both strategies share it.
 
-Parse JSON with the existing strict decoder. Duplicate keys and non-finite constants
-reject the entire document as `invalid_json`. Rastro does not choose between
+Parse JSON with the existing strict decoder. Duplicate keys, non-finite constants, and numbers
+that overflow or underflow a finite float or have more than 4,300 integer digits
+reject the entire document as `invalid_json`. JSON-LD shares the decoder. Rastro does not choose between
 duplicate values. New `Limits` fields bound bytes, nesting depth and total nodes, and
 `max_records` still bounds selected records. Python's own recursion guard is mapped to
 the depth limit. Each breach raises `ResourceLimitError`, as with HTML budgets. Every

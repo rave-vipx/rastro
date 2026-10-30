@@ -247,3 +247,48 @@ async def test_supplied_html_metrics_record_the_same_egress_as_recipe_memory(
         html, source=Source(url="https://example.com/p"), schema=schema, recipe=recipe
     )
     assert direct.metrics.egress == "direct"
+
+
+async def test_json_acquisition_through_profile_isolates_egress_and_representation(
+    tmp_path, schema
+):
+    from rastro import Recipe, RecipeKey
+
+    body = b'{"items": [{"name": "Synthetic lamp", "price": "12.50"}]}'
+    api = response(body=body, **{"content-type": "application/json"})
+    transport = Transport(api, api)
+    repository = SQLiteRecipeRepository(tmp_path / "recipes.db")
+    client = acquirer(transport)
+    engine = Rastro(acquisition=client, policy=client.policy, repository=repository)
+    source = Source(url="https://example.com/api", egress="eu-office")
+    recipe = Recipe(
+        strategy="json", record_path="/items", fields={"name": "/name", "price": "/price"}
+    )
+    first = await engine.extract(source=source, schema=schema, recipe=recipe, representation="json")
+    reused = await engine.extract(source=source, schema=schema, representation="json")
+    assert first.status == reused.status == Outcome.SUCCESS and reused.recipe_reused
+    assert reused.metrics.egress == "eu-office"
+    assert reused.records[0].evidence["price"].method == "json"
+    for target, options in transport.calls:
+        assert options["proxy"].name == "eu-office"
+        if urlsplit(target.url).path != "/robots.txt":
+            assert options["headers"]["Accept"] == "application/json"
+    keys = {
+        (egress, representation): RecipeKey.for_source(
+            source.model_copy(update={"egress": egress}), schema, representation=representation
+        )
+        for egress in ("direct", "eu-office")
+        for representation in ("html", "json")
+    }
+    assert len({key.canonical() for key in keys.values()}) == 4
+    assert repository.get(keys["eu-office", "json"]) is not None
+    assert all(repository.get(keys[k]) is None for k in keys if k != ("eu-office", "json"))
+    calls = len(transport.calls)
+    # Neither the direct JSON nor the proxied HTML context reuses this recipe or fetches.
+    for other, representation in (
+        (Source(url="https://example.com/api"), "json"),
+        (source, "html"),
+    ):
+        with pytest.raises(RecipeNotFoundError):
+            await engine.extract(source=other, schema=schema, representation=representation)
+    assert len(transport.calls) == calls

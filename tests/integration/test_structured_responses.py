@@ -92,7 +92,43 @@ def test_required_evidence_reports_insufficient_evidence(source, schema):
     recipe = RECIPE.model_copy(update={"fields": {"name": "/name"}, "require_evidence": True})
     result = Rastro().extract_json(API, source=source, schema=schema, recipe=recipe)
     assert result.status == Outcome.INSUFFICIENT_EVIDENCE
-    assert {issue.code for issue in result.issues} == {"missing_evidence"}
+    assert [(i.code, i.record_index, i.field) for i in result.issues] == [
+        ("missing_evidence", 0, "price"),
+        ("missing_evidence", 1, "price"),
+    ]
+
+
+@pytest.mark.parametrize("number", ["1e999", "-1e999", "1E+400", "-2.5e308", "1e-999"])
+def test_out_of_range_json_numbers_are_invalid_not_success(source, number):
+    from pydantic import BaseModel
+
+    class Reading(BaseModel):
+        name: str
+        price: float
+
+    body = '{"data": {"items": [{"name": "A", "pricing": {"price": N}}]}}'.replace("N", number)
+    result = Rastro().extract_json(body, source=source, schema=Reading, recipe=RECIPE)
+    assert result.status == Outcome.INVALID_DATA
+    assert [issue.code for issue in result.issues] == ["invalid_json"]
+    assert result.records == ()
+
+
+@pytest.mark.parametrize("number", ["1e999", "-1e999", "1E+400"])
+def test_out_of_range_jsonld_numbers_are_invalid_not_success(source, number):
+    from pydantic import BaseModel
+
+    class Reading(BaseModel):
+        name: str
+        price: float
+
+    html = (
+        '<script type="application/ld+json">'
+        f'{{"@type": "Product", "name": "A", "offers": {{"price": {number}}}}}</script>'
+    )
+    recipe = Recipe(strategy="jsonld", fields={"name": "/name", "price": "/offers/price"})
+    result = Rastro().extract_html(html, source=source, schema=Reading, recipe=recipe)
+    assert result.status == Outcome.INVALID_DATA
+    assert [issue.code for issue in result.issues] == ["invalid_jsonld"]
 
 
 def test_representation_mismatch_and_limits_raise(source, schema, recipe, html):

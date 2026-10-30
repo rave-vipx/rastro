@@ -8,7 +8,7 @@ from pydantic import ValidationError
 
 from rastro import Limits, Recipe, RecipeKey, ResourceLimitError, Source
 from rastro.adapters.structured import load_json
-from rastro.domain.json import MISSING, escape_token, resolve_pointer
+from rastro.domain.json import MISSING, escape_token, resolve_pointer, strict_json
 
 KEYS = st.text(max_size=12)
 JSON_SCALARS = st.none() | st.booleans() | st.integers() | st.text(max_size=20)
@@ -134,3 +134,25 @@ def test_invalid_pointer_validation_is_linear():
     with pytest.raises(ValidationError):
         Recipe(strategy="jsonld", fields={"name": "/" * 1000 + "~"})
     assert time.perf_counter() - started < 1
+
+
+@pytest.mark.parametrize(
+    "text", ["1e999", "-1e999", "1E+400", "1e-999", "-0.1e-400", "9" * 4301, "-" + "9" * 4301]
+)
+def test_numbers_outside_the_exact_range_are_rejected(text):
+    with pytest.raises(ValueError):
+        strict_json(text)
+
+
+@pytest.mark.parametrize(
+    ("text", "value"),
+    [
+        ("0.0", 0.0),
+        ("-0.0", -0.0),
+        ("0e10", 0.0),
+        ("1.5e308", 1.5e308),
+        ("9" * 4300, int("9" * 4300)),
+    ],
+)
+def test_finite_numbers_are_preserved(text, value):
+    assert strict_json(text) == value

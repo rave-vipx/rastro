@@ -40,6 +40,8 @@ All notable user-facing changes will be recorded here. No public release has bee
 
 ### Fixed
 
+- JSON-LD and JSON decoding now reject numbers that overflow or underflow a finite float (for example `1e999`, `-1e999`, `1e-999`) and integers over 4,300 digits. These are explicit invalid outcomes instead of `inf` or `0.0` records that report success (QUAL-004, SEC-005).
+- `missing_evidence` issues now name each field that lacks evidence, for all strategies (QUAL-003, INT-004).
 - The Ollama adapter disables thinking. Capable models no longer spend the output budget and deadline on hidden reasoning (AI-003).
 - The decoding schema now requires `record_selector` for CSS proposals and forbids it for JSON-LD, matching recipe validation (AI-002, REC-004).
 

@@ -64,7 +64,7 @@ def extract_document[T: BaseModel](
     records: list[ExtractionRecord[T]] = []
     issues = list(parsed.issues)
     rejected = 0
-    required = {name for name, field in schema.model_fields.items() if field.is_required()}
+    required = [name for name, field in schema.model_fields.items() if field.is_required()]
     for index, candidate in enumerate(parsed.candidates):
         if candidate.issues:
             issues.extend(candidate.issues)
@@ -74,10 +74,13 @@ def extract_document[T: BaseModel](
             issues.append(Issue(code="missing_fields", record_index=index))
             rejected += 1
             continue
-        if any(name not in candidate.locators for name in candidate.values) or (
-            recipe.require_evidence and not required.issubset(candidate.values)
-        ):
-            issues.append(Issue(code="missing_evidence", record_index=index))
+        unproven = [name for name in candidate.values if name not in candidate.locators]
+        if recipe.require_evidence:
+            unproven += [name for name in required if name not in candidate.values]
+        if unproven:
+            issues.extend(
+                Issue(code="missing_evidence", record_index=index, field=name) for name in unproven
+            )
             rejected += 1
             continue
         try:

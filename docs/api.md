@@ -36,7 +36,7 @@ For HTTP acquisition, construct `Rastro.web(AcquisitionPolicy(...))` and use the
 
 CSS fields must end in `::text` or `::attr(name)` and match at most one value in each record. Multiple matches reject the record as ambiguous, even if the values happen to be equal. Missing matches omit the field; Pydantic decides whether the omission is allowed. CSS `::text` follows Scrapling's direct-text semantics; it does not join descendant text automatically.
 
-JSON-LD type matching is exact and accepts an `@type` string or array. Nested field values are traversed only by explicit JSON pointers. The object count budget includes filtered-out objects to bound scanning. Malformed blocks, duplicate JSON keys, and nonstandard `NaN`/`Infinity` values are reported as invalid JSON-LD.
+JSON-LD type matching is exact and accepts an `@type` string or array. Nested field values are traversed only by explicit JSON pointers. The object count budget includes filtered-out objects to bound scanning. Malformed blocks, duplicate JSON keys, nonstandard `NaN`/`Infinity` values, and numbers that overflow or underflow a finite float (such as `1e999` or `1e-999`) or have more than 4,300 integer digits are reported as invalid JSON-LD. Rastro never turns them into infinity, zero, or a successful empty record.
 
 ## Structured JSON responses
 
@@ -54,7 +54,7 @@ result = Rastro().extract_json(text, source=source, schema=Product, recipe=recip
 - `record_path` must resolve to an object (one record) or an array. Each array element must be an object; other elements are rejected individually as `invalid_record`.
 - Field pointers are absolute RFC 6901 pointers evaluated from each record. Array indexes are decimal without leading zeros; `-` never matches. A pointer selects exactly one value, so JSON extraction has no ambiguous matches. A missing pointer omits the field and Pydantic decides whether that is allowed.
 - There is no JSONPath, wildcard, filter, or expression language, and nothing is evaluated.
-- Input is decoded strictly. Duplicate object keys, `NaN`/`Infinity`, malformed text, an empty body and a byte-order mark reject the whole document as `invalid_json`. Rastro never picks one of several duplicate values.
+- Input is decoded strictly. Duplicate object keys, `NaN`/`Infinity`, numbers outside the finite float range (`1e999`, `-1e999`, or a nonzero value that underflows to zero, such as `1e-999`), integers longer than 4,300 digits, malformed text, an empty body and a byte-order mark reject the whole document as `invalid_json` (`invalid_data`). Rastro never picks one of several duplicate values.
 - `max_json_bytes`, `max_json_depth` (container nesting below the root) and `max_json_nodes` (every value, including containers) are checked before records are selected. `max_records` bounds the selected records. A breach raises `ResourceLimitError` for supplied text and becomes `extraction_limit` for HTTP.
 
 Evidence uses method `json` with locator `json#<absolute pointer>`, for example `json#/data/products/1/offer/price`. JSON recipes require JSON input and HTML recipes require HTML input: a mismatched explicit recipe raises `ConfigurationError` before any request. Recipe memory keys include the representation. HTML keys keep their existing canonical form, so a stored JSON recipe never answers an HTML request for the same source (or the reverse).
@@ -82,7 +82,7 @@ convert values. Validator transformations do not create source evidence.
 - Source URL with query/fragment removed, locale, and timezone metadata.
 - A SHA-256 fingerprint of the schema's canonical JSON Schema.
 - `records`: validated Pydantic models with a dictionary of evidence keyed by observed field name.
-- `issues`: safe categories, candidate indices, and field names where applicable.
+- `issues`: safe categories, candidate indices, and field names where applicable. `missing_evidence` is reported once for each field that lacks evidence: an observed value without a locator, or a missing required field when `require_evidence` is set.
 - `metrics`: `acquisition_method` (`provided_html`, `provided_json`, or `http`), input bytes, candidate/accepted/rejected and validated-field counts, extraction/validation/total seconds, plus HTTP acquisition/transfer metrics, `inference_calls` and `inference_seconds`.
 - `recipe_version`, `recipe_reused`, and ordered `recipe_attempts` (index/origin/outcome), plus `learned_recipe` for newly validated successful recipes.
 - For HTTP: sanitized `requested_url`, last `http_status`, optional `retry_after_seconds`, and `metrics.egress` (the egress profile name; never the proxy URL or credentials).
