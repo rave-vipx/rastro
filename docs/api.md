@@ -23,9 +23,10 @@ For HTTP acquisition, construct `Rastro.web(AcquisitionPolicy(...))` and use the
 
 | Object | Fields and behavior |
 | --- | --- |
-| `Source` | HTTP(S) `url`; `locale` (`und`); ordered `languages` (`()`); `timezone` (`UTC`); optional three-letter uppercase `currency`; and `egress` (`direct`, the only supported value). Credentials, invalid language tags/currency codes and unsupported egress are rejected. Explicit languages form Accept-Language with descending quality weights; otherwise a defined locale remains the compatible fallback. |
+| `Source` | HTTP(S) `url`; `locale` (`und`); ordered `languages` (`()`); `timezone` (`UTC`); optional three-letter uppercase `currency`; and `egress` (`direct`, or the name of a policy egress profile). Credentials, invalid language tags/currency codes/egress names and a `geolocation` value (no browser adapter in v0.1) are rejected; an egress name missing from the policy fails before DNS. Explicit languages form Accept-Language with descending quality weights; otherwise a defined locale remains the compatible fallback. |
 | `Recipe` | `strategy` (`jsonld` or `css`), required `fields`, positive `version` (default `1`), optional `item_type` for JSON-LD, required `record_selector` for CSS, up to three flat `fallbacks` sharing its version. `require_evidence` (default `False`) requires observations for required fields before validation; learned recipes set it to `True`. Version maximum: 2,147,483,647. |
 | `Limits` | `max_html_bytes` (2,000,000), `max_records` (1,000), `max_jsonld_blocks` (100). |
+| `AcquisitionPolicy` | Exact `allowed_hosts`, request budgets and timeouts (see [policy defaults](acquisition.md#policy-defaults)), plus `egress_profiles`: up to 16 names mapped to an `EgressProfile` (`proxy_url`, optional `username_env`/`password_env` environment-variable references) or a bare `http(s)://host[:port]` string. See [network egress](acquisition.md#network-egress). |
 
 CSS fields must end in `::text` or `::attr(name)` and match at most one value in each record. Multiple matches reject the record as ambiguous, even if the values happen to be equal. Missing matches omit the field; Pydantic decides whether the omission is allowed. CSS `::text` follows Scrapling's direct-text semantics; it does not join descendant text automatically.
 
@@ -53,7 +54,7 @@ convert values. Validator transformations do not create source evidence.
 - `issues`: safe categories, candidate indices, and field names where applicable.
 - `metrics`: input bytes, candidate/accepted/rejected and validated-field counts, extraction/validation/total seconds, plus HTTP acquisition/transfer metrics, `inference_calls` and `inference_seconds`.
 - `recipe_version`, `recipe_reused`, and ordered `recipe_attempts` (index/origin/outcome), plus `learned_recipe` for newly validated successful recipes.
-- For HTTP: sanitized `requested_url`, last `http_status`, and optional `retry_after_seconds`.
+- For HTTP: sanitized `requested_url`, last `http_status`, optional `retry_after_seconds`, and `metrics.egress` (the egress profile name; never the proxy URL or credentials).
 
 The schema fingerprint does not hash Python validators; custom validator changes require a new `RecipeContext.schema_revision` for memory isolation. Metrics count accepted and rejected **candidates**; malformed metadata blocks are reported separately and do not count as candidates. With explicit fallbacks, counts and parsing/validation timings sum all attempts; records/issues describe the final attempt. `storage_seconds` isolates repository I/O. Offline timings measure local processing. HTTP adds separate network and acquisition durations. Inference metrics include queue wait and model-candidate validation; see the [budget semantics](intelligence.md#budgets-and-outcomes).
 
@@ -89,4 +90,4 @@ Extraction completion events contain a correlation `job_id`, status, accepted/re
 
 ## Boundaries
 
-HTML recovery follows Scrapling/libxml behavior; content discarded by its parser is not independently recovered or verified. Input budgets are not a hostile-code sandbox or a wall-clock deadline. Optional discovery and model use have separate bounded policies. Browser rendering/geolocation, external API discovery, non-direct egress, automatic repair of stored recipes and durable execution history remain pending.
+HTML recovery follows Scrapling/libxml behavior; content discarded by its parser is not independently recovered or verified. Input budgets are not a hostile-code sandbox or a wall-clock deadline. Optional discovery and model use have separate bounded policies. Browser rendering/geolocation, external API discovery, SOCKS or rotating egress, automatic repair of stored recipes and durable execution history remain pending.

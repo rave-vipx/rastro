@@ -78,6 +78,7 @@ emit a warning; use the selector configuration above when warnings are errors.
 | `max_retries` | `2` | Additional attempts per hop for network/DNS/timeouts and selected transient HTTP statuses. |
 | `backoff_seconds` | `1` | Initial exponential retry delay. |
 | `max_retry_delay_seconds` | `30` | Cap on local backoff; fallback cooldown for 429 with missing/invalid Retry-After. Never shortens a valid server delay. |
+| `egress_profiles` | `{}` | Up to 16 named, administrator-declared HTTP(S) proxies. See [network egress](#network-egress). |
 
 `Limits.max_html_bytes` bounds decoded response bytes during transfer and UTF-8
 input bytes before extraction. Redirect bodies obey the same limit. Robots bodies
@@ -131,11 +132,66 @@ before DNS. Locale, languages, timezone, currency, and egress are passed through
 Pydantic's `model_validate` context; Rastro does not infer regional rules or currency.
 The remote server decides whether to honor Accept-Language.
 
-`egress="direct"` explicitly means the configured transport connects from the
-current machine. It is distinct from browser geolocation, which is unavailable
-because this release has no browser adapter. Any other egress value is rejected
-before DNS; Rastro adds no proxy, identity rotation, or fallback after a restriction.
+`Source.egress` selects the network origin; see [network egress](#network-egress).
 Regional recipe isolation is documented in [recipe memory](memory.md).
+
+## Network egress
+
+Egress is the **network origin** of the HTTP connection. It is not browser
+geolocation: Rastro v0.1 has no browser adapter, so a `geolocation` value on `Source`
+is rejected rather than silently ignored, and a proxy never implies a browser-reported
+location. Validators receive the egress profile name, never the proxy endpoint.
+
+`egress="direct"` (the default) connects from the current machine through the
+pinned transport. A trusted administrator may also declare named outbound proxies
+in the policy; each source then selects one by name:
+
+```python
+policy = AcquisitionPolicy(
+    allowed_hosts=("example.com",),
+    egress_profiles={
+        "eu-office": {
+            "proxy_url": "http://proxy.internal.example:3128",
+            "username_env": "RASTRO_EU_PROXY_USER",
+            "password_env": "RASTRO_EU_PROXY_PASSWORD",
+        },
+        "relay": "https://relay.example:8443",  # shorthand: no credentials
+    },
+)
+source = Source(url="https://example.com/article", egress="eu-office")
+```
+
+- **One endpoint per profile.** Profile names are 1–64 lowercase letters, digits, `_`
+  or `-`, starting with a letter; `direct` is reserved. A proxy URL must be
+  `http://` or `https://` host with an optional port; credentials, paths, queries,
+  whitespace and SOCKS schemes are rejected. The proxy host is not checked against
+  `allowed_hosts` or public-address rules: declaring it is the administrator's
+  explicit permission (SEC-002), so keep untrusted input out of policy construction.
+- **Credentials are environment references only.** `username_env`/`password_env`
+  name variables read from the process environment when each source is acquired.
+  A password reference requires a username reference. Values never appear in
+  recipes, recipe keys, results, metrics, logs or policy serialization.
+- **Fail before network.** An unknown profile name returns `permanent_failure` with
+  `unsupported_egress`, and a missing, empty or control-character credential
+  returns `egress_credentials_unavailable`, both before DNS or any request.
+- **No rotation or fallback.** There are no proxy pools, rotation or automatic
+  fallback to another egress. A 401/403/429/451 through a proxy remains an
+  `access_restriction`; the client's per-host denial and cooldown also apply to
+  later sources using a different egress, so changing origin cannot bypass it.
+- **Same target checks.** Every hop, including robots and redirects, is allowlisted,
+  resolved locally and rejected if any address is non-public **before** it is sent to
+  the proxy. The proxy is used as a CONNECT tunnel (also for `http://` targets), TLS
+  still verifies the target hostname, and proxy TLS (for `https://` proxies) is
+  verified. Robots, pacing, retries, body and time limits are unchanged.
+- **DNS tradeoff.** The proxy resolves the target name itself, so the local DNS
+  pin cannot bind the final connection and the peer-address check is skipped. A
+  proxy (or its resolver) could connect elsewhere; trust the proxy accordingly. See
+  [ADR 0008](decisions/0008-explicit-egress.md).
+
+`ExtractionResult.metrics.egress` records the profile name used (`direct` for
+direct connections), never the proxy URL. Proxy failures surface as the transient
+`proxy_failure` category when curl identifies them, otherwise as `network_failure`.
+Recipe memory isolates recipes by egress name; see [recipe memory](memory.md).
 
 ## Security and operational boundaries
 
@@ -143,8 +199,9 @@ Every hop is allowlisted and re-resolved. Mixed public/private DNS answers are
 rejected; the connection is pinned to one validated IP while preserving the
 hostname for TLS verification. IPv4/IPv6 private, loopback, metadata, reserved,
 multicast, mapped, and known transition addresses are rejected. Standard ports
-only. Ambient proxies, cookies, netrc, impersonation, and automatic redirects or
-transport retries are disabled. There is no identity rotation or restriction bypass.
+only. Ambient (environment) proxies, cookies, netrc, impersonation, and automatic
+redirects or transport retries are disabled; only an explicitly selected egress
+profile uses a proxy. There is no identity rotation or restriction bypass.
 
 Caller-provided adapters and schemas are trusted code. Policies apply within one
 client, not across processes. System DNS runs in the platform executor; an OS DNS
@@ -152,8 +209,8 @@ call may finish after cancellation. Parsing/validation runs in a worker thread a
 can also finish after cancellation. Acquisition deadlines do not forcibly stop
 trusted validators or native parsers. Use process isolation for hostile workloads.
 
-JavaScript rendering, browser geolocation, authenticated sessions, proxies and
-discovered-link crawling are not implemented. Optional [recipe memory](memory.md) and
+JavaScript rendering, browser geolocation, authenticated sessions, SOCKS or rotating
+proxies and discovered-link crawling are not implemented. Optional [recipe memory](memory.md) and
 [recipe learning](intelligence.md) integrate with the async SDK. See the
 [transport ADR](decisions/0002-policy-aware-acquisition.md) for the documented use of
 curl_cffi, Scrapling's HTTP engine, to expose public DNS-pinning controls.

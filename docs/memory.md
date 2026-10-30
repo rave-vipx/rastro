@@ -69,7 +69,7 @@ Reuse requires every component of `RecipeKey` to match:
 | Source fingerprint | SHA-256 of the normalized, requested URL, including query and excluding fragment. Distinct paths and queries remain isolated. The raw URL is not stored. |
 | Schema fingerprint | SHA-256 of canonical Pydantic JSON Schema. The JSON Schema document itself is not stored. |
 | Locale, languages, timezone and currency | Exact values from `Source`; language order is significant. No implicit regional or currency equivalence. |
-| Network egress | Exact `Source.egress`; v0.1 supports only `direct`. Browser geolocation is a separate, currently unavailable dimension. |
+| Network egress | Exact `Source.egress` profile name (`direct` or an administrator-declared proxy profile). Only the name is stored, never the proxy URL or credentials. Browser geolocation is a separate, currently unavailable dimension. |
 | Template | Caller-managed template revision; default `page`. Changing a site's template should change this identifier. No DOM fingerprinting is claimed. |
 | Region | Caller-managed deployment/data-context tag; default `default`. It does not select network egress or bypass access restrictions. |
 | Schema revision | Caller-managed validator revision; default `1`. Change it when custom Python validation behavior changes. |
