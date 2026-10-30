@@ -110,6 +110,8 @@ def test_representation_isolates_memory_without_changing_html_keys(schema):
         ("[1, 2, 3, 4]", Limits(max_json_nodes=4)),
         ("[" * 100_000 + "]" * 100_000, Limits(max_json_bytes=1_000_000)),
     ],
+    # Short ids: Windows caps PYTEST_CURRENT_TEST, which embeds the test id, at 32,767 chars.
+    ids=["bytes", "depth", "nodes", "recursion"],
 )
 def test_json_budgets_raise_explicit_errors(text, limits):
     with pytest.raises(ResourceLimitError):
@@ -137,7 +139,17 @@ def test_invalid_pointer_validation_is_linear():
 
 
 @pytest.mark.parametrize(
-    "text", ["1e999", "-1e999", "1E+400", "1e-999", "-0.1e-400", "9" * 4301, "-" + "9" * 4301]
+    "text",
+    ["1e999", "-1e999", "1E+400", "1e-999", "-0.1e-400", "9" * 4301, "-" + "9" * 4301],
+    ids=[
+        "overflow",
+        "negative-overflow",
+        "exponent",
+        "underflow",
+        "negative-underflow",
+        "long-int",
+        "long-negative-int",
+    ],
 )
 def test_numbers_outside_the_exact_range_are_rejected(text):
     with pytest.raises(ValueError):
@@ -153,6 +165,7 @@ def test_numbers_outside_the_exact_range_are_rejected(text):
         ("1.5e308", 1.5e308),
         ("9" * 4300, int("9" * 4300)),
     ],
+    ids=["zero", "negative-zero", "zero-exponent", "large-float", "max-digit-int"],
 )
 def test_finite_numbers_are_preserved(text, value):
     assert strict_json(text) == value

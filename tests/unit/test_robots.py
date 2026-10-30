@@ -31,6 +31,17 @@ def test_bounded_valid_robots(body):
         (b"User-agent: *\nRequest-rate: 1/10 1200-1400", "invalid_robots"),
         (b"User-agent: *\nVisit time: secret-token", "unsupported_robots_rule"),
     ],
+    ids=[
+        "missing-colon",
+        "invalid-disallow-url",
+        "invalid-allow-url",
+        "long-line",
+        "too-many-lines",
+        "invalid-crawl-delay",
+        "invalid-request-rate",
+        "timed-request-rate",
+        "visit-time",
+    ],
 )
 def test_untrusted_directives_fail_without_dependency_log_disclosure(body, code, caplog):
     with caplog.at_level(logging.DEBUG), pytest.raises(AcquisitionError, match=code):
