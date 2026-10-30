@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import Field
 
@@ -36,6 +36,23 @@ class RecipeProposal(Contract):
         return Recipe.model_validate(self.model_dump())
 
 
+class _CssProposal(Contract):
+    strategy: Literal["css"]
+    fields: dict[str, str] = Field(min_length=1, max_length=100)
+    record_selector: str = Field(min_length=1, max_length=1024)
+
+
+class _JsonLdProposal(Contract):
+    strategy: Literal["jsonld"]
+    fields: dict[str, str] = Field(min_length=1, max_length=100)
+    item_type: str | None = Field(default=None, min_length=1, max_length=256)
+
+
+def proposal_schema() -> dict[str, Any]:
+    """Constrained-decoding schema with Recipe's per-strategy selector rules."""
+    return {"anyOf": [_CssProposal.model_json_schema(), _JsonLdProposal.model_json_schema()]}
+
+
 class ModelRequest(Contract):
     """Separate trusted instructions from a JSON envelope containing untrusted data."""
 
@@ -49,7 +66,7 @@ class ModelRequest(Contract):
                 {"role": "system", "content": self.system},
                 {"role": "user", "content": self.content},
             ],
-            "format": RecipeProposal.model_json_schema(),
+            "format": proposal_schema(),
         }
         return len(json.dumps(envelope).encode("utf-8"))
 

@@ -6,6 +6,7 @@ All notable user-facing changes will be recorded here. No public release has bee
 
 ### Added
 
+- Opt-in live Ollama harness and recorded `qwen3:4b` evidence: cross-process learning and zero-inference reuse, plus labelled live/controlled failure scenarios (AI-001–004, REC-004).
 - Explicit ordered language preferences with descending Accept-Language weights, currency, timezone and direct-egress context through Pydantic's supported `model_validate` path; early rejection of invalid headers and unsupported egress (GEO-001/002).
 - Regional recipe isolation by language order, currency and egress with unchanged default canonical keys for existing SQLite memory (GEO-003, REC-001).
 
@@ -32,9 +33,14 @@ All notable user-facing changes will be recorded here. No public release has bee
 - Offline regression and property tests, strict typing, package checks, and documentation.
 - Public contribution and security policies and an incremental v0.1 roadmap.
 
+### Fixed
+
+- The Ollama adapter disables thinking. Capable models no longer spend the output budget and deadline on hidden reasoning (AI-003).
+- The decoding schema now requires `record_selector` for CSS proposals and forbids it for JSON-LD, matching recipe validation (AI-002, REC-004).
+
 ### Known limitations
 
-- Live Ollama quality evidence remains pending. The first comparison shows equal extraction quality and a shared silent semantic error; no comparative advantage is claimed. Recipe memory requires explicit template/region/validator revisions; it stores successful-run metadata, not a durable job history.
+- Live Ollama evidence covers one local model and synthetic inputs; broader model quality remains unmeasured. The first comparison shows equal extraction quality and a shared silent semantic error; no comparative advantage is claimed. Recipe memory requires explicit template/region/validator revisions; it stores successful-run metadata, not a durable job history.
 - HTTP supports public standard-port HTML sources with direct egress; no JavaScript/browser geolocation, authentication, proxies, or discovery crawling.
 - Pydantic models with a custom `__init__` retain Pydantic's constructor semantics and must handle validation context themselves; Rastro does not bypass user constructors.
 - Schema aliases, alternate structured API discovery, automatic stored-recipe repair, and cross-document synchronization are not supported. Discovery is limited to exact JSON-LD names and simple microdata.

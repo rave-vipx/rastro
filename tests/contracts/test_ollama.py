@@ -6,6 +6,7 @@ import pytest
 
 from rastro import ConfigurationError, InferencePolicy, ModelError, ModelRequest
 from rastro.adapters.ollama import OllamaModel
+from rastro.domain.intelligence import proposal_schema
 
 REQUEST = ModelRequest(system="Trusted instructions", content='{"untrusted_html":"<h1>hi</h1>"}')
 POLICY = InferencePolicy()
@@ -47,14 +48,11 @@ async def test_structured_chat_contract_and_no_ambient_network_options(monkeypat
         {"role": "system", "content": REQUEST.system},
         {"role": "user", "content": REQUEST.content},
     ]
-    assert payload["format"]["additionalProperties"] is False
-    assert set(payload["format"]["properties"]) == {
-        "strategy",
-        "fields",
-        "item_type",
-        "record_selector",
-    }
+    assert payload["format"] == proposal_schema()
     assert payload["options"] == {"temperature": 0, "num_predict": 2048, "num_ctx": 8192}
+    # Ollama enables thinking by default for capable models; hidden reasoning would
+    # consume the output budget and timeout before any structured recipe is emitted.
+    assert payload["think"] is False
     assert "tools" not in payload
     assert configurations == [{"trust_env": False, "follow_redirects": False, "timeout": 30.0}]
 

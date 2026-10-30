@@ -12,7 +12,7 @@
 | M4 — Optional intelligence | Ollama adapter, structured candidate recipes, prompt boundary, execution budgets, validation before activation | M2, M3 | No mandatory model; bounded model use; invalid model output cannot become an active recipe |
 | M5 — Release evidence | Competent Scrapling baseline, reproducible results, end-to-end URL example, license/name review, package release | M1–M4 | All v0.1 acceptance criteria demonstrably pass; no unsupported quality/performance claims |
 
-M1–M4 are implemented with offline regression tests and quality checks. M5 is in progress: the first comparison and live HTTP/reuse evidence are available. Live-model evidence, demonstrated differentiation, unfinished requirements and publication gates remain open. No release dates are promised.
+M1–M4 are implemented with offline regression tests and quality checks. M5 is in progress: the first comparison and live HTTP/reuse evidence are available. One local live-model run is recorded. Broader live-model evidence, demonstrated differentiation, unfinished requirements and publication gates remain open. No release dates are promised.
 
 ## Current requirement mapping
 
@@ -25,7 +25,7 @@ M1–M4 are implemented with offline regression tests and quality checks. M5 is 
 | REC-002 | Declarative serialization with unknown/executable fields rejected. |
 | REC-001/003 | SQLite versions keyed by source/template/schema/region; mappings/fallback definitions, validation-contract references, creation/last-success timestamps and successful-run counts. Advanced lifecycle/health remains v0.2. |
 | REC-004 | Model candidates require strict declarative structure, source observations, required-field evidence and full schema success before activation. Evidence policy survives restart; partial/failed candidates never activate. |
-| AI-001–004 | Optional local Ollama adapter, structured proposals, capability boundary and bounded calls/corrections/deadline/context/response/concurrency. Offline contract tests cover these guarantees; live-model quality remains release evidence. |
+| AI-001–004 | Optional local Ollama adapter, structured proposals, capability boundary and bounded calls/corrections/deadline/context/response/concurrency. Offline contract tests cover these guarantees. One local `qwen3:4b` run verified learning, activation, cross-process reuse and explicit failures ([live evidence](live-ollama-evidence.md)); broader model quality is unmeasured. |
 | GEO-001–003 | Partial: explicit ordered languages with descending Accept-Language weights and locale fallback; locale/languages/timezone/currency/direct-egress reach validators through Pydantic's supported `model_validate` context path; unsupported egress fails before DNS; recipe memory isolates the ordered regional context while retaining default legacy keys. Custom model constructors follow Pydantic semantics and must handle context themselves. Browser geolocation remains inapplicable until a browser adapter exists, and non-direct egress is unsupported. See [ADR 0006](decisions/0006-explicit-regional-context.md). |
 | OBS-001 | Partial: job ID, source metadata, acquisition/network/parsing/validation/total durations, request/record/field counts. Inference call counts and model-phase duration are available; durable history remains pending. |
 | OBS-002 | JSON completion logs with correlation IDs; no source content in events. |
@@ -93,7 +93,8 @@ See the [master specification](https://github.com/rave-vipx/rastro/blob/main/RAS
 - **Results:** equal extraction quality; 1 false success out of 8 announced successes for both. Rastro adds provenance and orchestration with higher measured latency. No accuracy, speed or human-effort advantage is claimed.
 - **Distribution:** runtime dependency license inventory and name/docs lifecycle review recorded; no package or protected publisher configured.
 - **Architecture:** [ADR 0005](decisions/0005-reproducible-release-evidence.md).
-- **Remaining work:** live Ollama end-to-end evidence, held-out comparison and measurable differentiation, incomplete INT-002/GEO-001 scope, native dependency notice review, namespace ownership and release approval. Rendered snapshots and large pages do not establish browser or pagination behavior.
+- **Live model:** [one local Ollama run](live-ollama-evidence.md) (`qwen3:4b`, synthetic inputs) found and fixed two adapter defects. Learning, activation and zero-inference reuse passed; a harder page failed safely.
+- **Remaining work:** broader live-model quality evidence, held-out comparison and measurable differentiation, incomplete INT-002/GEO-001 scope, native dependency notice review, namespace ownership and release approval. Rendered snapshots and large pages do not establish browser or pagination behavior.
 
 ## Regional-context vertical slice
 

@@ -30,6 +30,7 @@ nav:
   - Optional intelligence: intelligence.md
   - Extraction comparison: comparison.md
   - Release evidence: release-evidence.md
+  - Live Ollama evidence: live-ollama-evidence.md
   - Validation evidence: development/validation-evidence.md
   - API and outcomes: api.md
   - Architecture: architecture.md
