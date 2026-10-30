@@ -1,6 +1,7 @@
 import json
 
 import pytest
+from pydantic import BaseModel, ValidationInfo, field_validator
 
 from rastro import InferencePolicy, Outcome, Rastro, RecipeKey, SQLiteRecipeRepository
 
@@ -50,6 +51,38 @@ async def test_deterministic_jsonld_precedes_model(html, source, schema):
     assert result.learned_recipe.strategy == "jsonld"
     assert result.metrics.inference_calls == 0
     assert not model.requests
+
+
+@pytest.mark.asyncio
+async def test_learned_recipe_supplies_regional_validation_context(source):
+    class Regional(BaseModel):
+        name: str
+
+        @field_validator("name")
+        @classmethod
+        def validate_region(cls, value: str, info: ValidationInfo) -> str:
+            assert info.context == {
+                "locale": "es-UY",
+                "languages": ("es-UY", "en"),
+                "timezone": "America/Montevideo",
+                "currency": "UYU",
+                "egress": "direct",
+            }
+            return value
+
+    regional = source.model_copy(
+        update={
+            "languages": ("es-UY", "en"),
+            "timezone": "America/Montevideo",
+            "currency": "UYU",
+        }
+    )
+    result = await Rastro(discover_recipes=True).extract_html_async(
+        '<script type="application/ld+json">{"name":"Cuaderno"}</script>',
+        source=regional,
+        schema=Regional,
+    )
+    assert result.status == Outcome.SUCCESS
 
 
 @pytest.mark.asyncio

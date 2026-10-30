@@ -13,7 +13,7 @@ await Rastro.extract(*, source, schema, recipe=None, context=None, recipe_versio
 await Rastro.extract_many(sources, *, schema, recipe=None, context=None, recipe_version=None)
 ```
 
-`html` is a UTF-8-compatible Python string. `schema` is a Pydantic `BaseModel` subclass with declared fields. `recipe.fields` maps model field names to extraction expressions. Aliases and root models are outside this milestone's supported schema contract. Custom validators run as trusted caller code.
+`html` is a UTF-8-compatible Python string. `schema` is a Pydantic `BaseModel` subclass with declared fields. `recipe.fields` maps model field names to extraction expressions. Aliases and root models are outside this milestone's supported schema contract. Custom validators run as trusted caller code and receive the source's regional context through Pydantic `ValidationInfo.context`.
 
 The `extract_html` call is synchronous, does no fetching, and returns `ExtractionResult[YourModel]`. Persistence is opt-in through `repository`; omitting `recipe` then reuses an exact-context validated version. See [recipe memory](memory.md). Asynchronous methods optionally learn cold-context recipes when `discover_recipes=True` or `model=` is configured; see [optional intelligence](intelligence.md). Parser injection is an infrastructure seam for trusted adapters implementing `DocumentParser`.
 
@@ -23,7 +23,7 @@ For HTTP acquisition, construct `Rastro.web(AcquisitionPolicy(...))` and use the
 
 | Object | Fields and behavior |
 | --- | --- |
-| `Source` | HTTP(S) `url`, `locale` (default `und`), `timezone` (default `UTC`). Credentials are rejected. HTTP uses a valid locale as Accept-Language; timezone remains metadata. Neither controls egress. |
+| `Source` | HTTP(S) `url`; `locale` (`und`); ordered `languages` (`()`); `timezone` (`UTC`); optional three-letter uppercase `currency`; and `egress` (`direct`, the only supported value). Credentials, invalid language tags/currency codes and unsupported egress are rejected. Explicit languages form Accept-Language; otherwise a defined locale remains the compatible fallback. |
 | `Recipe` | `strategy` (`jsonld` or `css`), required `fields`, positive `version` (default `1`), optional `item_type` for JSON-LD, required `record_selector` for CSS, up to three flat `fallbacks` sharing its version. `require_evidence` (default `False`) requires observations for required fields before validation; learned recipes set it to `True`. Version maximum: 2,147,483,647. |
 | `Limits` | `max_html_bytes` (2,000,000), `max_records` (1,000), `max_jsonld_blocks` (100). |
 
@@ -32,6 +32,11 @@ CSS fields must end in `::text` or `::attr(name)` and match at most one value in
 JSON-LD type matching is exact and accepts an `@type` string or array. Nested field values are traversed only by explicit JSON pointers. The object count budget includes filtered-out objects to bound scanning. Malformed blocks, duplicate JSON keys, and nonstandard `NaN`/`Infinity` values are reported as invalid JSON-LD.
 
 Recipes serialize using `recipe.model_dump_json()` and load with `Recipe.model_validate_json(text)`. Loading a recipe never evaluates Python. Schema compatibility is checked before parsing.
+
+Pydantic validators receive `locale`, `languages`, `timezone`, `currency`, and
+`egress` in `ValidationInfo.context` for explicit recipes, persisted recipes, cold
+discovery/model learning, and acquired pages. Rastro does not infer a currency or
+convert values. Validator transformations do not create source evidence.
 
 ## Results
 
@@ -80,4 +85,4 @@ Extraction completion events contain a correlation `job_id`, status, accepted/re
 
 ## Boundaries
 
-HTML recovery follows Scrapling/libxml behavior; content discarded by its parser is not independently recovered or verified. Input budgets are not a hostile-code sandbox or a wall-clock deadline. Optional discovery and model use have separate bounded policies. Browser rendering, external API discovery, automatic repair of stored recipes and durable execution history remain pending.
+HTML recovery follows Scrapling/libxml behavior; content discarded by its parser is not independently recovered or verified. Input budgets are not a hostile-code sandbox or a wall-clock deadline. Optional discovery and model use have separate bounded policies. Browser rendering/geolocation, external API discovery, non-direct egress, automatic repair of stored recipes and durable execution history remain pending.

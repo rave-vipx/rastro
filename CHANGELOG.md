@@ -6,6 +6,9 @@ All notable user-facing changes will be recorded here. No public release has bee
 
 ### Added
 
+- Explicit ordered language preferences, currency, timezone and direct-egress context for every Pydantic validation path; canonical Accept-Language headers and early rejection of unsupported egress (GEO-001/002).
+- Regional recipe isolation by language order, currency and egress with unchanged default canonical keys for existing SQLite memory (GEO-003, REC-001).
+
 - Reproducible offline comparison against an independent Scrapling + Pydantic baseline: synthetic corpus, multiset quality scoring, raw timing samples and source hashes (DIFF-001, QUAL-003).
 - Public demo-site end-to-end example with persistent recipe reuse and offline regression coverage; recorded live results, runtime license inventory and explicit v0.1 release gates (OBS-001, REC-001–003, specification sections 17–18).
 
@@ -32,5 +35,5 @@ All notable user-facing changes will be recorded here. No public release has bee
 ### Known limitations
 
 - Live Ollama quality evidence remains pending. The first comparison shows equal extraction quality and a shared silent semantic error; no comparative advantage is claimed. Recipe memory requires explicit template/region/validator revisions; it stores successful-run metadata, not a durable job history.
-- HTTP supports public standard-port HTML sources; no JavaScript, authentication, proxies, or discovery crawling.
+- HTTP supports public standard-port HTML sources with direct egress; no JavaScript/browser geolocation, authentication, proxies, or discovery crawling.
 - Schema aliases, alternate structured API discovery, automatic stored-recipe repair, and cross-document synchronization are not supported. Discovery is limited to exact JSON-LD names and simple microdata.

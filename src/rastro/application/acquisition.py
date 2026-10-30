@@ -22,7 +22,7 @@ from rastro.domain.acquisition import (
     AcquisitionResult,
     HttpResponse,
 )
-from rastro.domain.models import Outcome, Source
+from rastro.domain.models import LANGUAGE_TAG, Outcome, Source
 from rastro.ports.acquisition import HttpTransport, Resolver
 
 _USER_AGENT = "Rastro/0.1 (+https://github.com/rave-vipx/rastro)"
@@ -98,10 +98,13 @@ class WebAcquirer:
         issue: str | None = None
         status = Outcome.SUCCESS
         try:
-            if source.locale != "und":
-                if not re.fullmatch(r"[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*", source.locale):
-                    raise AcquisitionError("invalid_locale", Outcome.PERMANENT_FAILURE)
-                operation.headers["Accept-Language"] = source.locale
+            if source.egress != "direct":
+                raise AcquisitionError("unsupported_egress", Outcome.PERMANENT_FAILURE)
+            languages = source.languages or (() if source.locale == "und" else (source.locale,))
+            if any(re.fullmatch(LANGUAGE_TAG, language) is None for language in languages):
+                raise AcquisitionError("invalid_locale", Outcome.PERMANENT_FAILURE)
+            if languages:
+                operation.headers["Accept-Language"] = ", ".join(languages)
             async with asyncio.timeout(self.policy.operation_timeout_seconds):
                 url = source.url
                 for hop in range(self.policy.max_redirects + 1):

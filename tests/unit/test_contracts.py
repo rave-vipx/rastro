@@ -23,6 +23,37 @@ def test_source_rejects_unsafe_schemes_and_credentials(url):
         Source(url=url)
 
 
+def test_source_accepts_explicit_regional_context_and_legacy_defaults():
+    source = Source(
+        url="https://example.com/",
+        locale="es-UY",
+        languages=("es-UY", "en"),
+        currency="UYU",
+        egress="direct",
+    )
+    assert source.languages == ("es-UY", "en")
+    assert source.currency == "UYU"
+    legacy = Source.model_validate(
+        {"url": "https://example.com/", "locale": "es-UY", "timezone": "UTC"}
+    )
+    assert legacy.languages == () and legacy.currency is None and legacy.egress == "direct"
+
+
+@pytest.mark.parametrize(
+    "regional",
+    [
+        {"languages": ("en\r\nX-Injected: yes",)},
+        {"languages": ("not_a_language",)},
+        {"currency": "usd"},
+        {"currency": "US"},
+        {"egress": "proxy"},
+    ],
+)
+def test_source_rejects_invalid_or_unsupported_regional_context(regional):
+    with pytest.raises(ValidationError):
+        Source(url="https://example.com/", **regional)
+
+
 @pytest.mark.parametrize(
     "data",
     [

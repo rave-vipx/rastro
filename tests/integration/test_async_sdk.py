@@ -3,6 +3,7 @@ import builtins
 import logging
 
 import pytest
+from pydantic import BaseModel, ValidationInfo, field_validator
 
 from rastro import (
     AcquisitionPolicy,
@@ -10,7 +11,9 @@ from rastro import (
     Limits,
     Outcome,
     Rastro,
+    Recipe,
     ResourceLimitError,
+    Source,
 )
 from rastro.domain.acquisition import AcquisitionResult
 
@@ -65,6 +68,39 @@ async def test_web_extraction_uses_the_same_validation_and_provenance(
     )
     assert "secret" not in caplog.text and "private" not in caplog.text
     assert result.job_id in caplog.text
+
+
+async def test_acquired_extraction_preserves_regional_validation_context_after_redirect():
+    class Regional(BaseModel):
+        name: str
+
+        @field_validator("name")
+        @classmethod
+        def validate_region(cls, value: str, info: ValidationInfo) -> str:
+            assert info.context == {
+                "locale": "pt-BR",
+                "languages": ("pt-BR", "en"),
+                "timezone": "America/Sao_Paulo",
+                "currency": "BRL",
+                "egress": "direct",
+            }
+            return value
+
+    result = await Rastro(
+        acquisition=Acquirer('<script type="application/ld+json">{"name":"Livro"}</script>'),
+        policy=POLICY,
+    ).extract(
+        source=Source(
+            url="https://example.com/original",
+            locale="pt-BR",
+            languages=("pt-BR", "en"),
+            timezone="America/Sao_Paulo",
+            currency="BRL",
+        ),
+        schema=Regional,
+        recipe=Recipe(strategy="jsonld", fields={"name": "/name"}),
+    )
+    assert result.status == Outcome.SUCCESS
 
 
 async def test_failures_are_results_with_no_false_success(schema, source, recipe):

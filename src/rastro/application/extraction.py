@@ -71,7 +71,16 @@ def extract_document[T: BaseModel](
             rejected += 1
             continue
         try:
-            data = schema.model_validate(dict(candidate.values))
+            data = schema.model_validate(
+                dict(candidate.values),
+                context={
+                    "locale": source.locale,
+                    "languages": source.languages,
+                    "timezone": source.timezone,
+                    "currency": source.currency,
+                    "egress": source.egress,
+                },
+            )
         except ValidationError as error:
             for detail in error.errors(
                 include_url=False, include_context=False, include_input=False

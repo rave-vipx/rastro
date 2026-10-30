@@ -68,7 +68,8 @@ Reuse requires every component of `RecipeKey` to match:
 | --- | --- |
 | Source fingerprint | SHA-256 of the normalized, requested URL, including query and excluding fragment. Distinct paths and queries remain isolated. The raw URL is not stored. |
 | Schema fingerprint | SHA-256 of canonical Pydantic JSON Schema. The JSON Schema document itself is not stored. |
-| Locale and timezone | Exact values from `Source`. No implicit regional equivalence. |
+| Locale, languages, timezone and currency | Exact values from `Source`; language order is significant. No implicit regional or currency equivalence. |
+| Network egress | Exact `Source.egress`; v0.1 supports only `direct`. Browser geolocation is a separate, currently unavailable dimension. |
 | Template | Caller-managed template revision; default `page`. Changing a site's template should change this identifier. No DOM fingerprinting is claimed. |
 | Region | Caller-managed deployment/data-context tag; default `default`. It does not select network egress or bypass access restrictions. |
 | Schema revision | Caller-managed validator revision; default `1`. Change it when custom Python validation behavior changes. |
@@ -83,6 +84,11 @@ Changing `schema_revision` isolates otherwise identical schemas. Always supply t
 actual Pydantic class at extraction time: its field constraints, custom validators
 and evidence checks run again. Memory retains that validation-contract reference,
 not executable validators or JSON Schema defaults/examples that might hold secrets.
+
+Keys with empty languages, no currency, and direct egress retain the pre-regional
+canonical JSON exactly, so existing SQLite rows remain reusable. Non-default
+regional context never falls back to that legacy key. This changes no table schema
+and stores no proxy configuration, source URL, extracted value, or validator input.
 
 ## Versions and explicit fallbacks
 

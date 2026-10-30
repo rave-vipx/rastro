@@ -54,9 +54,24 @@ def test_repeat_extraction_reuses_exact_version_and_retains_evidence(
 
 @pytest.mark.parametrize(
     "dimension",
-    ["host", "path", "query", "locale", "timezone", "schema", "template", "region", "revision"],
+    [
+        "host",
+        "path",
+        "query",
+        "locale",
+        "languages",
+        "language_order",
+        "timezone",
+        "currency",
+        "schema",
+        "template",
+        "region",
+        "revision",
+    ],
 )
 def test_incompatible_context_never_reuses(tmp_path, source, schema, recipe, html, dimension):
+    if dimension == "language_order":
+        source = source.model_copy(update={"languages": ("es-UY", "en")})
     repo = SQLiteRecipeRepository(tmp_path / "recipes.db")
     engine = Rastro(repository=repo)
     engine.extract_html(html, source=source, schema=schema, recipe=recipe)
@@ -66,7 +81,10 @@ def test_incompatible_context_never_reuses(tmp_path, source, schema, recipe, htm
         "path": {"url": "https://example.com/other"},
         "query": {"url": "https://example.com/products?token=different"},
         "locale": {"locale": "pt-BR"},
+        "languages": {"languages": ("pt-BR",)},
+        "language_order": {"languages": ("en", "es-UY")},
         "timezone": {"timezone": "America/Montevideo"},
+        "currency": {"currency": "UYU"},
     }
     if dimension in updates:
         source = source.model_copy(update=updates[dimension])

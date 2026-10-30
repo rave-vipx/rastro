@@ -5,7 +5,7 @@ import asyncio
 import re
 from decimal import Decimal
 
-from pydantic import BaseModel, Field, ValidationError, field_validator
+from pydantic import BaseModel, Field, ValidationError, ValidationInfo, field_validator
 
 from rastro import (
     AcquisitionPolicy,
@@ -22,7 +22,10 @@ from rastro import (
 SOURCE = Source(
     url="https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html",
     locale="en-GB",
+    languages=("en-GB", "en"),
     timezone="Europe/London",
+    currency="GBP",
+    egress="direct",
 )
 CONTEXT = RecipeContext(template="books-demo-product-v1", region="gb", schema_revision="1")
 RECIPE = Recipe(
@@ -39,8 +42,13 @@ class Book(BaseModel):
 
     @field_validator("price_gbp", mode="before")
     @classmethod
-    def explicit_pounds(cls, value: object) -> object:
-        if not isinstance(value, str) or re.fullmatch(r"£[0-9]+\.[0-9]{2}", value) is None:
+    def explicit_pounds(cls, value: object, info: ValidationInfo) -> object:
+        if (
+            not isinstance(value, str)
+            or re.fullmatch(r"£[0-9]+\.[0-9]{2}", value) is None
+            or not info.context
+            or info.context.get("currency") != "GBP"
+        ):
             raise ValueError("Expected a GBP price with two decimal places")
         return value[1:]
 

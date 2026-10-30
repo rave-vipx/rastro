@@ -69,6 +69,20 @@ async def test_success_preserves_regional_settings_and_counts():
     assert options["headers"]["User-Agent"].startswith("Rastro/")
 
 
+async def test_ordered_language_preferences_override_locale_header():
+    transport = Transport()
+    result = await client(transport).acquire(
+        Source(
+            url="https://example.com/x",
+            locale="es-UY",
+            languages=("pt-BR", "es-UY", "en"),
+        ),
+        max_bytes=100,
+    )
+    assert result.status == Outcome.SUCCESS
+    assert transport.calls[-1][1]["headers"]["Accept-Language"] == "pt-BR, es-UY, en"
+
+
 @pytest.mark.parametrize(
     ("page", "code", "outcome"),
     [
@@ -264,6 +278,15 @@ async def test_header_injection_is_rejected_before_dns():
         Source(url="https://example.com/", locale="en\r\nX: 1"), max_bytes=100
     )
     assert result.issue_code == "invalid_locale"
+    assert resolver.calls == 0
+
+
+async def test_unsupported_egress_is_rejected_before_dns():
+    resolver = Resolver()
+    source = Source(url="https://example.com/").model_copy(update={"egress": "proxy"})
+    result = await client(resolver=resolver).acquire(source, max_bytes=100)
+    assert result.issue_code == "unsupported_egress"
+    assert result.status == Outcome.PERMANENT_FAILURE
     assert resolver.calls == 0
 
 
