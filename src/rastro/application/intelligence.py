@@ -26,6 +26,7 @@ from rastro.domain.models import (
     Outcome,
     Recipe,
     RecipeAttempt,
+    Representation,
     ResourceLimitError,
     Source,
     schema_fingerprint,
@@ -57,9 +58,11 @@ class RecipeLearner:
         discovery: RecipeDiscovery,
         policy: InferencePolicy,
         repository: RecipeRepository | None,
+        json_discovery: RecipeDiscovery | None = None,
     ) -> None:
         self._model = model
         self._discovery = discovery
+        self._json_discovery = json_discovery
         self._policy = policy
         self._repository = repository
         self._slots = asyncio.Semaphore(policy.max_concurrency)
@@ -73,7 +76,9 @@ class RecipeLearner:
         prepared: PreparedRecipe,
         parser: DocumentParser,
         limits: Limits,
+        representation: Representation = "html",
     ) -> ExtractionResult[T]:
+        """Discover before inference. JSON uses structured discovery only; models propose HTML."""
         fields = schema.model_fields
         if (
             not fields
@@ -84,8 +89,13 @@ class RecipeLearner:
             )
         ):
             raise ConfigurationError("Discovery requires 1-100 bounded fields without aliases")
-        if len(html.encode()) > limits.max_html_bytes:
-            raise ResourceLimitError("HTML input exceeds max_html_bytes")
+        if len(html.encode()) > limits.max_input_bytes(representation):
+            raise ResourceLimitError(
+                f"{representation.upper()} input exceeds max_{representation}_bytes"
+            )
+        discovery = self._json_discovery if representation == "json" else self._discovery
+        if discovery is None:
+            raise ConfigurationError("Structured discovery is not configured")
         required = {name for name, field in fields.items() if field.is_required()}
         attempts: list[RecipeAttempt] = []
         results: list[ExtractionResult[T]] = []
@@ -96,7 +106,7 @@ class RecipeLearner:
 
         async def attempt(candidate: Recipe, origin: Literal["discovery", "model"]) -> bool:
             nonlocal selected, failure
-            candidate = validate_recipe(schema, candidate).model_copy(
+            candidate = validate_recipe(schema, candidate, representation).model_copy(
                 update={"require_evidence": True}
             )
             if not required.issubset(candidate.fields):
@@ -125,7 +135,7 @@ class RecipeLearner:
             return bool(result.records)
 
         candidates = await asyncio.to_thread(
-            self._discovery.discover,
+            discovery.discover,
             html,
             tuple(fields),
             limits,
@@ -139,7 +149,7 @@ class RecipeLearner:
                 complete = True
                 break
 
-        if not complete and self._model is not None:
+        if not complete and self._model is not None and representation == "html":
             inference_start = perf_counter()
             try:
                 async with asyncio.timeout(self._policy.timeout_seconds):

@@ -6,7 +6,7 @@ from hypothesis import strategies as st
 from pydantic import BaseModel, ValidationError
 
 from rastro import Recipe, Source, schema_fingerprint
-from rastro.adapters.scrapling import _resolve
+from rastro.domain.json import resolve_pointer as _resolve
 
 
 @pytest.mark.parametrize(

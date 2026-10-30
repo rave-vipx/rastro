@@ -3,7 +3,7 @@
 from typing import Protocol
 
 from rastro.domain.acquisition import AcquisitionResult, HttpResponse, PinnedTarget
-from rastro.domain.models import Source
+from rastro.domain.models import Representation, Source
 
 
 class Resolver(Protocol):
@@ -17,4 +17,8 @@ class HttpTransport(Protocol):
 
 
 class AcquisitionPort(Protocol):
-    async def acquire(self, source: Source, *, max_bytes: int) -> AcquisitionResult: ...
+    async def acquire(
+        self, source: Source, *, max_bytes: int, representation: Representation = "html"
+    ) -> AcquisitionResult:
+        """Return the decoded document; the engine passes `representation` only for JSON."""
+        ...

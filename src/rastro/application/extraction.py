@@ -18,11 +18,20 @@ from rastro.domain.models import (
     Metrics,
     Outcome,
     Recipe,
+    Representation,
     ResourceLimitError,
     Source,
     schema_fingerprint,
 )
 from rastro.ports.parser import DocumentParser
+
+_INVALID = {
+    "validation_error",
+    "invalid_jsonld",
+    "invalid_json",
+    "invalid_record",
+    "invalid_record_path",
+}
 
 
 def extract_document[T: BaseModel](
@@ -43,8 +52,9 @@ def extract_document[T: BaseModel](
     started_at = datetime.now(UTC)
     job_id = str(uuid4())
     size = len(html.encode("utf-8"))
-    if size > limits.max_html_bytes:
-        raise ResourceLimitError("HTML input exceeds max_html_bytes")
+    if size > limits.max_input_bytes(recipe.representation):
+        kind = recipe.representation
+        raise ResourceLimitError(f"{kind.upper()} input exceeds max_{kind}_bytes")
     extraction_start = perf_counter()
     parsed = parser.parse(html, recipe, limits)
     if len(parsed.candidates) > limits.max_records:
@@ -107,7 +117,7 @@ def extract_document[T: BaseModel](
         status = Outcome.PARTIAL_SUCCESS if issues else Outcome.SUCCESS
     elif any(issue.code in {"ambiguous_match", "missing_evidence"} for issue in issues):
         status = Outcome.INSUFFICIENT_EVIDENCE
-    elif any(issue.code in {"validation_error", "invalid_jsonld"} for issue in issues):
+    elif any(issue.code in _INVALID for issue in issues):
         status = Outcome.INVALID_DATA
     else:
         status = Outcome.MISSING_DATA
@@ -136,9 +146,13 @@ def extract_document[T: BaseModel](
     return result
 
 
-def validate_recipe(schema: type[BaseModel], recipe: Recipe) -> Recipe:
+def validate_recipe(
+    schema: type[BaseModel], recipe: Recipe, representation: Representation = "html"
+) -> Recipe:
     # Revalidate mutable mappings at the trust boundary, even on a frozen model.
     recipe = Recipe.model_validate(recipe.model_dump())
+    if recipe.representation != representation:
+        raise ConfigurationError("JSON recipes require JSON input; HTML recipes require HTML input")
     fields = schema.model_fields
     if not fields or any(
         name not in fields for item in (recipe, *recipe.fallbacks) for name in item.fields
