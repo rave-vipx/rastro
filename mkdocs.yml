@@ -38,6 +38,7 @@ nav:
   - Release checklist: releasing.md
   - Development work log: development/work-log.md
   - Engineering decisions:
+      - Explicit proxy egress: decisions/0008-explicit-egress.md
       - Explicit regional context: decisions/0006-explicit-regional-context.md
       - Reproducible evidence: decisions/0005-reproducible-release-evidence.md
       - Bounded recipe learning: decisions/0004-bounded-recipe-learning.md

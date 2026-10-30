@@ -219,6 +219,7 @@ class RecipeLearner:
                 records=(),
                 issues=(Issue(code=failure),),
                 metrics=Metrics(
+                    egress=source.egress,
                     input_bytes=len(html.encode()),
                     candidates=0,
                     accepted=0,

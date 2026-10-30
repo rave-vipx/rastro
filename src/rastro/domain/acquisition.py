@@ -4,15 +4,109 @@ from __future__ import annotations
 
 import ipaddress
 import re
-from dataclasses import dataclass
-from typing import Self
+from dataclasses import dataclass, field
+from typing import Any, Self
+from urllib.parse import urlsplit
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import (
+    ConfigDict,
+    Field,
+    ModelWrapValidatorHandler,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
+from pydantic_core import PydanticCustomError
 
-from rastro.domain.models import Contract, Outcome
+from rastro.domain.models import EGRESS_NAME, Contract, Outcome
+
+_ENVIRONMENT_NAME = r"^[A-Za-z_][A-Za-z0-9_]{0,127}$"
 
 
-class AcquisitionPolicy(Contract):
+def _exact_host(host: str) -> str:
+    host = host.lower().rstrip(".")
+    try:
+        return str(ipaddress.ip_address(host))
+    except ValueError:
+        if len(host) > 253 or not all(
+            re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", label)
+            for label in host.split(".")
+        ):
+            raise ValueError("Use exact ASCII/Punycode hostnames or IP addresses") from None
+        return host
+
+
+def _without_input(error: ValidationError, title: str) -> ValidationError:
+    """Rebuild errors without input values, which may hold inline proxy credentials."""
+    return ValidationError.from_exception_data(
+        title,
+        [
+            {
+                "type": PydanticCustomError(item["type"], item["msg"]),
+                "loc": item["loc"],
+                "input": None,
+            }
+            for item in error.errors(include_url=False, include_input=False, include_context=False)
+        ],
+        hide_input=True,
+    )
+
+
+class _RedactedErrors(Contract):
+    model_config = ConfigDict(extra="forbid", frozen=True, hide_input_in_errors=True)
+
+    @model_validator(mode="wrap")
+    @classmethod
+    def redact_errors(cls, data: Any, handler: ModelWrapValidatorHandler[Self]) -> Self:
+        try:
+            return handler(data)
+        except ValidationError as error:
+            raise _without_input(error, cls.__name__) from None
+
+
+class EgressProfile(_RedactedErrors):
+    """One administrator-declared HTTP(S) proxy. Credentials are environment references."""
+
+    proxy_url: str = Field(min_length=1, max_length=2048)
+    username_env: str | None = Field(default=None, pattern=_ENVIRONMENT_NAME)
+    password_env: str | None = Field(default=None, pattern=_ENVIRONMENT_NAME)
+
+    @field_validator("proxy_url")
+    @classmethod
+    def normalize_proxy(cls, value: str) -> str:
+        if any(ord(character) <= 32 or ord(character) == 127 for character in value):
+            raise ValueError("Proxy URLs cannot contain whitespace or control characters")
+        parsed = urlsplit(value)
+        try:
+            port = parsed.port
+        except ValueError:
+            raise ValueError("Proxy URLs require a valid port") from None
+        if parsed.netloc.endswith(":") or port == 0:
+            raise ValueError("Proxy URLs require a valid port")
+        if (
+            parsed.scheme.lower() not in {"http", "https"}
+            or parsed.username is not None
+            or parsed.password is not None
+            or parsed.path not in {"", "/"}
+            or parsed.query
+            or parsed.fragment
+            or not parsed.hostname
+        ):
+            raise ValueError(
+                "Proxy URLs must be http(s)://host[:port] without credentials or paths"
+            )
+        host = _exact_host(parsed.hostname)
+        netloc = f"[{host}]" if ":" in host else host
+        return f"{parsed.scheme.lower()}://{netloc}" + (f":{port}" if port else "")
+
+    @model_validator(mode="after")
+    def paired_credentials(self) -> Self:
+        if self.password_env is not None and self.username_env is None:
+            raise ValueError("A proxy password reference requires a username reference")
+        return self
+
+
+class AcquisitionPolicy(_RedactedErrors):
     """An exact host allowlist asserts the caller's permission to acquire a source."""
 
     allowed_hosts: tuple[str, ...] = Field(min_length=1, max_length=64)
@@ -27,23 +121,28 @@ class AcquisitionPolicy(Contract):
     max_retries: int = Field(default=2, ge=0, le=3)
     backoff_seconds: float = Field(default=1, gt=0, le=30, allow_inf_nan=False)
     max_retry_delay_seconds: float = Field(default=30, gt=0, le=120, allow_inf_nan=False)
+    egress_profiles: dict[str, EgressProfile] = Field(default_factory=dict, max_length=16)
 
     @field_validator("allowed_hosts")
     @classmethod
     def normalize_hosts(cls, hosts: tuple[str, ...]) -> tuple[str, ...]:
-        normalized: list[str] = []
-        for host in hosts:
-            host = host.lower().rstrip(".")
-            try:
-                host = str(ipaddress.ip_address(host))
-            except ValueError:
-                if len(host) > 253 or not all(
-                    re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", label)
-                    for label in host.split(".")
-                ):
-                    raise ValueError("Use exact ASCII/Punycode hostnames or IP addresses") from None
-            normalized.append(host)
-        return tuple(dict.fromkeys(normalized))
+        return tuple(dict.fromkeys(_exact_host(host) for host in hosts))
+
+    @field_validator("egress_profiles", mode="before")
+    @classmethod
+    def expand_profiles(cls, profiles: Any) -> Any:
+        if not isinstance(profiles, dict):
+            return profiles
+        for name in profiles:
+            if not isinstance(name, str) or not re.fullmatch(EGRESS_NAME, name):
+                raise ValueError("Egress names must be short lowercase identifiers")
+            if name == "direct":
+                raise ValueError("'direct' is the built-in egress and cannot be redefined")
+        # A bare string is shorthand for a credential-free proxy URL.
+        return {
+            name: {"proxy_url": value} if isinstance(value, str) else value
+            for name, value in profiles.items()
+        }
 
     @model_validator(mode="after")
     def check_timeouts(self) -> Self:
@@ -58,6 +157,16 @@ class PinnedTarget:
     host: str
     port: int
     address: str
+
+
+@dataclass(frozen=True)
+class ProxyRoute:
+    """A resolved proxy for one transfer; credentials never appear in its repr."""
+
+    name: str
+    url: str
+    username: str | None = field(default=None, repr=False)
+    password: str | None = field(default=None, repr=False)
 
 
 @dataclass(frozen=True)
@@ -82,6 +191,7 @@ class AcquisitionResult:
     network_seconds: float = 0
     acquisition_seconds: float = 0
     retry_after_seconds: float | None = None
+    egress: str = "direct"
 
 
 class AcquisitionError(Exception):

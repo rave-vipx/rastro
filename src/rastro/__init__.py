@@ -4,7 +4,7 @@ from importlib.metadata import version
 
 from rastro.adapters.sqlite import SQLiteRecipeRepository
 from rastro.application.engine import Rastro
-from rastro.domain.acquisition import AcquisitionPolicy
+from rastro.domain.acquisition import AcquisitionPolicy, EgressProfile
 from rastro.domain.intelligence import InferencePolicy, ModelError, ModelRequest, RecipeProposal
 from rastro.domain.memory import (
     RecipeConflictError,
@@ -38,6 +38,7 @@ __version__ = version("rastro-engine")
 __all__ = [
     "AcquisitionPolicy",
     "ConfigurationError",
+    "EgressProfile",
     "Evidence",
     "ExtractionRecord",
     "ExtractionResult",

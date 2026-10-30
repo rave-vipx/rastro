@@ -123,6 +123,7 @@ def extract_document[T: BaseModel](
         records=tuple(records),
         issues=tuple(issues),
         metrics=Metrics(
+            egress=source.egress,
             input_bytes=size,
             candidates=len(parsed.candidates),
             accepted=len(records),
