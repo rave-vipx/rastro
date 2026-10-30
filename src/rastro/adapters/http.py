@@ -1,4 +1,4 @@
-"""Public curl_cffi transport: fresh pinned connections and bounded decoded bodies."""
+"""Public curl_cffi transport: fresh pinned or proxied connections and bounded bodies."""
 
 from __future__ import annotations
 
@@ -9,13 +9,21 @@ from curl_cffi.curl import CURL_WRITEFUNC_ERROR
 from curl_cffi.requests import AsyncSession
 from curl_cffi.requests.exceptions import RequestException
 
-from rastro.domain.acquisition import AcquisitionError, HttpResponse, PinnedTarget
+from rastro.domain.acquisition import AcquisitionError, HttpResponse, PinnedTarget, ProxyRoute
 from rastro.domain.models import Outcome
+
+_PROXY_TYPES = {"http": 0, "https": 2}  # CURLPROXY_HTTP and CURLPROXY_HTTPS
 
 
 class CurlTransport:
     async def get(
-        self, target: PinnedTarget, *, headers: dict[str, str], timeout: float, max_bytes: int
+        self,
+        target: PinnedTarget,
+        *,
+        headers: dict[str, str],
+        timeout: float,
+        max_bytes: int,
+        proxy: ProxyRoute | None = None,
     ) -> HttpResponse:
         body = bytearray()
         exceeded = False
@@ -32,19 +40,37 @@ class CurlTransport:
 
         address = f"[{target.address}]" if ":" in target.address else target.address
         options: dict[CurlOpt, object] = {
-            CurlOpt.PROXY: b"",
-            CurlOpt.NOPROXY: b"*",
             CurlOpt.NETRC: 0,
             CurlOpt.FOLLOWLOCATION: 0,
             CurlOpt.PROTOCOLS_STR: b"http,https",
             CurlOpt.REDIR_PROTOCOLS_STR: b"http,https",
             CurlOpt.MAXFILESIZE_LARGE: max_bytes,
         }
-        # Literal addresses bypass DNS already; hostnames must use the validated record.
-        try:
-            ipaddress.ip_address(target.host)
-        except ValueError:
-            options[CurlOpt.RESOLVE] = [f"{target.host}:{target.port}:{address}".encode("ascii")]
+        if proxy is None:
+            options[CurlOpt.PROXY] = b""
+            options[CurlOpt.NOPROXY] = b"*"
+            # Literal addresses bypass DNS already; hostnames must use the validated record.
+            try:
+                ipaddress.ip_address(target.host)
+            except ValueError:
+                options[CurlOpt.RESOLVE] = [
+                    f"{target.host}:{target.port}:{address}".encode("ascii")
+                ]
+        else:
+            # The proxy resolves the target name, so a local RESOLVE pin cannot apply. The
+            # tunnel keeps the proxy a byte relay; TLS still verifies the target hostname.
+            options.update(
+                {
+                    CurlOpt.PROXY: proxy.url.encode("ascii"),
+                    CurlOpt.PROXYTYPE: _PROXY_TYPES[proxy.url.split(":", 1)[0]],
+                    CurlOpt.NOPROXY: b"",
+                    CurlOpt.HTTPPROXYTUNNEL: 1,
+                    CurlOpt.PROXY_CREDENTIAL_NO_REUSE: 1,
+                }
+            )
+            if proxy.username is not None:
+                options[CurlOpt.PROXYUSERNAME] = proxy.username.encode()
+                options[CurlOpt.PROXYPASSWORD] = (proxy.password or "").encode()
         try:
             async with AsyncSession(
                 trust_env=False, curl_options=options, max_clients=1, retry=0
@@ -64,9 +90,13 @@ class CurlTransport:
                 )
                 if exceeded:
                     raise AcquisitionError("body_too_large", Outcome.PERMANENT_FAILURE)
-                if response.primary_ip and ipaddress.ip_address(
-                    response.primary_ip
-                ) != ipaddress.ip_address(target.address):
+                # Through a proxy, primary_ip is the proxy; the target was validated before.
+                if (
+                    proxy is None
+                    and response.primary_ip
+                    and ipaddress.ip_address(response.primary_ip)
+                    != ipaddress.ip_address(target.address)
+                ):
                     raise AcquisitionError("destination_mismatch", Outcome.ACCESS_RESTRICTION)
                 selected_headers = {
                     key: response.headers[key]
@@ -82,6 +112,11 @@ class CurlTransport:
         except RequestException as error:
             if exceeded or error.code == CurlECode.FILESIZE_EXCEEDED:
                 raise AcquisitionError("body_too_large", Outcome.PERMANENT_FAILURE) from None
+            if proxy is not None and error.code in {
+                CurlECode.COULDNT_RESOLVE_PROXY,
+                CurlECode.PROXY,
+            }:
+                raise AcquisitionError("proxy_failure", Outcome.TRANSIENT_FAILURE) from None
             if error.code == CurlECode.OPERATION_TIMEDOUT:
                 raise AcquisitionError("request_timeout", Outcome.TRANSIENT_FAILURE) from None
             if error.code in {CurlECode.PEER_FAILED_VERIFICATION, CurlECode.SSL_CERTPROBLEM}:

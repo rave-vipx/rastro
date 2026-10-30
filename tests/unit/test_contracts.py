@@ -46,7 +46,11 @@ def test_source_accepts_explicit_regional_context_and_legacy_defaults():
         {"languages": ("not_a_language",)},
         {"currency": "usd"},
         {"currency": "US"},
-        {"egress": "proxy"},
+        {"egress": "Proxy"},
+        {"egress": "eu proxy"},
+        {"egress": ""},
+        {"egress": "x" * 65},
+        {"geolocation": "-34.9,-56.2"},
     ],
 )
 def test_source_rejects_invalid_or_unsupported_regional_context(regional):

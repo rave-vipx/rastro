@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import re
 import sys
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from email.message import Message
@@ -21,6 +23,7 @@ from rastro.domain.acquisition import (
     AcquisitionPolicy,
     AcquisitionResult,
     HttpResponse,
+    ProxyRoute,
 )
 from rastro.domain.models import LANGUAGE_TAG, Outcome, Source
 from rastro.ports.acquisition import HttpTransport, Resolver
@@ -51,6 +54,7 @@ class _Operation:
     http_status: int | None = None
     retry_after_seconds: float | None = None
     robots: dict[str, Protego | None] = field(default_factory=dict)
+    proxy: ProxyRoute | None = None
 
 
 def retry_after(value: str | None) -> float | None:
@@ -82,10 +86,18 @@ def _decode(response: HttpResponse) -> str:
 class WebAcquirer:
     """One client per event loop; limits and restriction cooldowns are shared by its jobs."""
 
-    def __init__(self, policy: AcquisitionPolicy, *, transport: HttpTransport, resolver: Resolver):
+    def __init__(
+        self,
+        policy: AcquisitionPolicy,
+        *,
+        transport: HttpTransport,
+        resolver: Resolver,
+        environ: Mapping[str, str] | None = None,
+    ):
         self.policy = policy
         self._transport = transport
         self._resolver = resolver
+        self._environ = environ
         self._slots = asyncio.Semaphore(policy.max_concurrency)
         self._hosts = {
             host: _Host(interval=policy.min_interval_seconds) for host in policy.allowed_hosts
@@ -98,8 +110,7 @@ class WebAcquirer:
         issue: str | None = None
         status = Outcome.SUCCESS
         try:
-            if source.egress != "direct":
-                raise AcquisitionError("unsupported_egress", Outcome.PERMANENT_FAILURE)
+            operation.proxy = self._proxy(source.egress)
             languages = source.languages or (() if source.locale == "und" else (source.locale,))
             if len(languages) > 20 or any(
                 re.fullmatch(LANGUAGE_TAG, language) is None for language in languages
@@ -142,7 +153,27 @@ class WebAcquirer:
             network_seconds=operation.network_seconds,
             acquisition_seconds=perf_counter() - started,
             retry_after_seconds=operation.retry_after_seconds,
+            egress=source.egress,
         )
+
+    def _proxy(self, egress: str) -> ProxyRoute | None:
+        """Resolve one named profile before DNS. There is no fallback to another egress."""
+        if egress == "direct":
+            return None
+        profile = self.policy.egress_profiles.get(egress)
+        if profile is None:
+            raise AcquisitionError("unsupported_egress", Outcome.PERMANENT_FAILURE)
+        environ = os.environ if self._environ is None else self._environ
+        credentials: list[str | None] = []
+        for name in (profile.username_env, profile.password_env):
+            value = None if name is None else environ.get(name)
+            if name is not None and (
+                not value
+                or any(ord(character) < 32 or ord(character) == 127 for character in value)
+            ):
+                raise AcquisitionError("egress_credentials_unavailable", Outcome.PERMANENT_FAILURE)
+            credentials.append(value)
+        return ProxyRoute(egress, profile.proxy_url, *credentials)
 
     def _redirect(self, url: str, response: HttpResponse) -> str:
         location = response.headers.get("location")
@@ -222,11 +253,18 @@ class WebAcquirer:
                                 target = await pin_destination(url, self.policy, self._resolver)
                                 network_start = perf_counter()
                                 try:
+                                    # Older transports need not accept proxy for direct egress.
+                                    route = (
+                                        {}
+                                        if operation.proxy is None
+                                        else {"proxy": operation.proxy}
+                                    )
                                     response = await self._transport.get(
                                         target,
                                         headers=operation.headers,
                                         timeout=self.policy.request_timeout_seconds,
                                         max_bytes=max_bytes,
+                                        **route,
                                     )
                                 finally:
                                     operation.network_seconds += perf_counter() - network_start

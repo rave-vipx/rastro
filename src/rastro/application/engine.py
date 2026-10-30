@@ -243,6 +243,7 @@ class Rastro:
         metrics = result.metrics.model_copy(
             update={
                 "acquisition_method": "http",
+                "egress": fetched.egress,
                 "acquisition_seconds": fetched.acquisition_seconds,
                 "network_seconds": fetched.network_seconds,
                 "request_count": fetched.requests,
@@ -268,6 +269,7 @@ class Rastro:
             status=result.status.value,
             request_count=fetched.requests,
             retry_count=fetched.retries,
+            egress=fetched.egress,
             acquisition_seconds=fetched.acquisition_seconds,
         )
         return result
