@@ -179,8 +179,10 @@ class HttpResponse:
 
 @dataclass(frozen=True)
 class AcquisitionResult:
+    """``body`` is the decoded HTML or JSON document, or None when acquisition failed."""
+
     url: str
-    html: str | None
+    body: str | None
     status: Outcome
     issue_code: str | None
     http_status: int | None = None

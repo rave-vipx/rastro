@@ -12,7 +12,7 @@ from typing import TextIO
 
 from pydantic import BaseModel, Field, ValidationError
 
-from rastro import Outcome, Rastro, RastroError, Recipe, Source, __version__
+from rastro import JsonLdRecipe, Outcome, Rastro, RastroError, Recipe, Source, __version__
 
 
 class _DemoProduct(BaseModel):
@@ -72,10 +72,8 @@ def main(argv: list[str] | None = None) -> int:
             "</script>",
             source=Source(url="https://example.com/products", locale="en-US"),
             schema=_DemoProduct,
-            recipe=Recipe(
-                strategy="jsonld",
-                item_type="Product",
-                fields={"name": "/name", "price": "/offers/price"},
+            recipe=JsonLdRecipe(
+                item_type="Product", fields={"name": "/name", "price": "/offers/price"}
             ),
         )
         print(result.model_dump_json(indent=2))

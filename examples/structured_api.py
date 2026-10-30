@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 from rastro import (
     AcquisitionPolicy,
     ExtractionResult,
+    JsonRecipe,
     Outcome,
     Rastro,
     Recipe,
@@ -93,10 +94,8 @@ async def main() -> None:
     parser.add_argument("--database", default="rastro-recipes.db")
     args = parser.parse_args()
     source = Source(url="https://api.example.com/v1/products", locale="en-US")
-    recipe = Recipe(
-        strategy="json",
-        record_path="/data/products",
-        fields={"name": "/name", "price": "/offer/price"},
+    recipe = JsonRecipe(
+        record_path="/data/products", fields={"name": "/name", "price": "/offer/price"}
     )
     explicit = Rastro().extract_json(API, source=source, schema=Product, recipe=recipe)
     # The first run discovers exact field-name matches; later runs reuse validated memory.

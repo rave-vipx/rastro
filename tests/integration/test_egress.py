@@ -70,7 +70,7 @@ async def test_direct_egress_never_passes_a_proxy_option():
     transport = Transport()
     result = await acquirer(transport).acquire(Source(url="https://example.com/"), max_bytes=500)
     assert result.status == Outcome.SUCCESS and result.egress == "direct"
-    assert transport.calls and all("proxy" not in options for _, options in transport.calls)
+    assert transport.calls and all(options["proxy"] is None for _, options in transport.calls)
 
 
 async def test_selected_profile_routes_every_transfer_after_local_validation():

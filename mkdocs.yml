@@ -39,6 +39,7 @@ nav:
   - Release checklist: releasing.md
   - Development work log: development/work-log.md
   - Engineering decisions:
+      - Recipe model: decisions/0009-recipe-model.md
       - Recovery benchmark protocol: decisions/0011-recovery-benchmark.md
       - Structured JSON responses: decisions/0007-structured-responses.md
       - Explicit proxy egress: decisions/0008-explicit-egress.md

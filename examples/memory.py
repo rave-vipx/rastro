@@ -6,7 +6,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel, Field
 
-from rastro import Rastro, Recipe, RecipeContext, RecipeKey, Source, SQLiteRecipeRepository
+from rastro import JsonLdRecipe, Rastro, RecipeContext, RecipeKey, Source, SQLiteRecipeRepository
 
 
 class Product(BaseModel):
@@ -24,7 +24,7 @@ def main() -> None:
     key = RecipeKey.for_source(source, Product, context)
     recipe = None
     if repository.get(key) is None:
-        recipe = Recipe(strategy="jsonld", fields={"name": "/name", "price": "/price"})
+        recipe = JsonLdRecipe(fields={"name": "/name", "price": "/price"})
     # Synthetic input. No website access or AI model is needed.
     html = '<script type="application/ld+json">{"name":"Notebook","price":"12.50"}</script>'
     result = Rastro(repository=repository).extract_html(

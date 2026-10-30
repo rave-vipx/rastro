@@ -9,7 +9,7 @@ from scrapling.parser import Selector
 
 from rastro.adapters.scrapling import _objects
 from rastro.domain.json import strict_json
-from rastro.domain.models import Limits, Recipe, ResourceLimitError
+from rastro.domain.models import CssRecipe, JsonLdRecipe, Limits, Recipe, ResourceLimitError
 
 
 class ScraplingDiscovery:
@@ -48,8 +48,7 @@ class ScraplingDiscovery:
                 item_type = item.get("@type")
                 try:
                     add(
-                        Recipe(
-                            strategy="jsonld",
+                        JsonLdRecipe(
                             fields=mapping,
                             item_type=item_type if isinstance(item_type, str) else None,
                         )
@@ -78,13 +77,7 @@ class ScraplingDiscovery:
                         break
                 mapping[name] = selector + suffix
             if mapping:
-                add(
-                    Recipe(
-                        strategy="css",
-                        record_selector="[itemscope]:not([itemprop])",
-                        fields=mapping,
-                    )
-                )
+                add(CssRecipe(record_selector="[itemscope]:not([itemprop])", fields=mapping))
             if len(candidates) == max_candidates:
                 break
         return tuple(candidates)

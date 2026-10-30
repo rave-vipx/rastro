@@ -5,7 +5,14 @@ from __future__ import annotations
 from pydantic import ValidationError
 
 from rastro.domain.json import MISSING, escape_token, resolve_pointer, strict_json
-from rastro.domain.models import ConfigurationError, Issue, Limits, Recipe, ResourceLimitError
+from rastro.domain.models import (
+    ConfigurationError,
+    Issue,
+    JsonRecipe,
+    Limits,
+    Recipe,
+    ResourceLimitError,
+)
 from rastro.ports.parser import Candidate, ParsedDocument
 
 _DISCOVERY_SAMPLE = 20
@@ -42,7 +49,7 @@ class JsonParser:
     """Select records by `record_path`, then resolve field pointers relative to each record."""
 
     def parse(self, html: str, recipe: Recipe, limits: Limits) -> ParsedDocument:
-        if recipe.strategy != "json" or recipe.record_path is None:
+        if not isinstance(recipe, JsonRecipe):
             raise ConfigurationError("JSON documents require a json recipe")
         try:
             payload = load_json(html, limits)
@@ -109,7 +116,7 @@ class JsonDiscovery:
             if not mapping:
                 continue
             try:
-                recipe = Recipe(strategy="json", record_path=path, fields=mapping)
+                recipe = JsonRecipe(record_path=path, fields=mapping)
             except ValidationError:
                 continue
             ranked.append((-len(mapping), order, recipe))

@@ -59,7 +59,7 @@ async def test_success_preserves_regional_settings_and_counts():
         Source(url="https://example.com/x", locale="es-UY"), max_bytes=100
     )
     assert result.status == Outcome.SUCCESS
-    assert result.html == "<p>ok</p>"
+    assert result.body == "<p>ok</p>"
     assert result.requests == 2
     assert result.bytes_received == 18
     assert result.acquisition_seconds >= result.network_seconds >= 0
@@ -125,7 +125,7 @@ async def test_http_failures(page, code, outcome):
     )
     assert result.issue_code == code
     assert result.status == outcome
-    assert result.html is None
+    assert result.body is None
 
 
 @pytest.mark.parametrize(
