@@ -14,6 +14,43 @@
 
 M1–M4 are implemented with offline regression tests and quality checks. M5 technical work is complete: regression and held-out comparisons, live HTTP/reuse evidence, two-model live Ollama evidence, structured JSON responses (INT-002) and explicit egress profiles (GEO-001) are recorded. Remaining gates are human decisions: accepting partial DIFF-001 evidence for v0.1, namespace ownership, legal/trademark review and protected publishing. No release dates are promised.
 
+## Pre-v0.2 hardening (active)
+
+Owner decisions after the 0.1.0 release candidate ([ADR 0012](decisions/0012-product-direction.md), specification 1.1). Slices are independent pull requests against `dev`; none is stacked on another.
+
+| Slice | Requirements | Acceptance |
+| --- | --- | --- |
+| Recipe model: strategy union, definition/metadata split, internal shims removed, thinner engine (ADR 0009) | REC-001–004, preparation for REC-005/006 | Behavior preserved; legacy SQLite rows load; no internal compatibility shims |
+| Model provider strategy: OpenAI-compatible adapter and custom-provider contract (ADR 0010) | AI-001–005, AI-007, SEC-011 | Mock-server contract tests; remote opt-in; keys never serialized |
+| Recovery benchmark protocol frozen before repair code (ADR 0011) | DIFF-001, section 17, REPAIR-*, DRIFT-* | Committed and hashed development and sealed corpora; pass criteria decided in advance |
+| Latency profile | P-010, DIFF-001 | Measured hotspots and ranked hypotheses; no optimization without measurement |
+| Field aliases in deterministic discovery | INT-002, DIFF-001 (integration effort) | Pydantic aliases and explicit alias maps resolve differently named source fields |
+| Declarative jobs and machine-readable CLI | JOB-001/002, AGENT-001, INT-001 | A TOML/JSON job runs without Python; JSON output; published JSON Schemas |
+
+### Pre-v0.2 status and handoff (2026-10-30)
+
+| Item | State | Next step |
+| --- | --- | --- |
+| Recovery benchmark protocol (#23) | Merged | None until v0.2 evaluation |
+| Latency profile (#24) | Merged | Implement the measured wins: cache `schema_fingerprint` per schema class (41–45% of the small-page gap) and cheaper per-field provenance (54% of the large-page gap); re-run the profile |
+| Recipe model refactor (#25) | Open; independent review running | Address review findings; update README, getting-started and acquisition examples to the strategy variants; merge `origin/dev` and merge |
+| Model provider strategy (#22) | Open; independent review running | Support `max_completion_tokens` and omitted `temperature` for OpenAI reasoning models (required for OpenAI/Codex API keys); address review findings; merge |
+| Product direction, specification 1.1 (#21) | Open | Merge last; link ADRs 0009–0011 once they exist |
+| Clean-code guidelines | Open (separate PR) | Review and merge |
+| Field aliases in discovery | Not started | After #25 |
+| Declarative jobs and JSON CLI (JOB-001/002, AGENT-001) | Not started | After #25; schema is public API from day one |
+| Repository hygiene | Pending maintainer | Close issues #2–#4 (implemented), promote `dev` to `main`, publication gates in issue #5 |
+
+## v0.2 order of work
+
+1. Mock Lab (MOCK-001–006): the measurement instrument for everything after it.
+2. Structural drift signals (DRIFT-001–005): observe before acting.
+3. Recipe lifecycle and rollback (REC-005/006, REPAIR-006).
+4. Controlled repair (REPAIR-001–005): deterministic candidates first, including Scrapling adaptive relocation (SCR-002); a model only as a last resort.
+5. Semantic consistency (QUAL-005/006).
+6. MCP agent interface (AGENT-002).
+7. Final evaluation against the frozen recovery benchmark (DIFF-001).
+
 ## Current requirement mapping
 
 | Requirement | Evidence / current boundary |
@@ -65,9 +102,9 @@ M1–M4 are implemented with offline regression tests and quality checks. M5 tec
 
 ## Later releases
 
-- **v0.2 — Quality:** synthetic mutation fixtures, controlled repair, recipe CI, rollback, and explainable structural drift.
-- **v0.3 — Sync:** recurring sources, record identity, incremental synchronization, historical changes, monitoring, and alerts.
-- **v0.4 — Studio:** local visual operations built on the same application services.
+- **v0.2 — Quality:** synthetic mutation fixtures, controlled repair (including Scrapling adaptive relocation), recipe CI, rollback, explainable structural drift and an MCP agent interface.
+- **v0.3 — Sync:** term-based source discovery with approval, recurring sources, record identity, incremental synchronization, historical changes, monitoring, and alerts.
+- **v0.4 — Studio:** local visual operations built on the same application services, including a job editor for sites, research terms and wanted data.
 - **v0.5 — Hub:** safe declarative recipe exchange with reproducible tests and explicit privacy boundaries.
 
 See the [master specification](https://github.com/rave-vipx/rastro/blob/main/RASTRO_MASTER_SPEC.md) for the authoritative requirements and acceptance criteria.
