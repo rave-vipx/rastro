@@ -205,7 +205,7 @@ class Rastro:
             allow_discovery=self._discover_recipes,
         )
         fetched = await self._acquisition.acquire(source, max_bytes=self._limits.max_html_bytes)
-        final_source = Source(url=fetched.url, locale=source.locale, timezone=source.timezone)
+        final_source = Source.model_validate({**source.model_dump(), "url": fetched.url})
         issue = fetched.issue_code
         result: ExtractionResult[T] | None = None
         if fetched.html is not None and fetched.status == Outcome.SUCCESS:

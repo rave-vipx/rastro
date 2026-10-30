@@ -69,6 +69,24 @@ async def test_success_preserves_regional_settings_and_counts():
     assert options["headers"]["User-Agent"].startswith("Rastro/")
 
 
+async def test_ordered_language_preferences_override_locale_header():
+    transport = Transport()
+    result = await client(transport).acquire(
+        Source(
+            url="https://example.com/x",
+            locale="es-UY",
+            languages=tuple(f"a{letter}" for letter in "abcdefghijklmnopqrst"),
+        ),
+        max_bytes=100,
+    )
+    assert result.status == Outcome.SUCCESS
+    assert transport.calls[-1][1]["headers"]["Accept-Language"] == (
+        "aa, ab;q=0.95, ac;q=0.9, ad;q=0.85, ae;q=0.8, af;q=0.75, ag;q=0.7, "
+        "ah;q=0.65, ai;q=0.6, aj;q=0.55, ak;q=0.5, al;q=0.45, am;q=0.4, "
+        "an;q=0.35, ao;q=0.3, ap;q=0.25, aq;q=0.2, ar;q=0.15, as;q=0.1, at;q=0.05"
+    )
+
+
 @pytest.mark.parametrize(
     ("page", "code", "outcome"),
     [
@@ -258,12 +276,27 @@ async def test_cancellation_releases_host_and_global_slots():
     assert result.status == Outcome.SUCCESS
 
 
-async def test_header_injection_is_rejected_before_dns():
+@pytest.mark.parametrize(
+    "source",
+    [
+        Source(url="https://example.com/", locale="en\r\nX: 1"),
+        Source(url="https://example.com/").model_copy(update={"languages": ("en\r\nX: 1",)}),
+        Source(url="https://example.com/").model_copy(update={"languages": ("en",) * 21}),
+    ],
+)
+async def test_invalid_language_header_is_rejected_before_dns(source):
     resolver = Resolver()
-    result = await client(resolver=resolver).acquire(
-        Source(url="https://example.com/", locale="en\r\nX: 1"), max_bytes=100
-    )
+    result = await client(resolver=resolver).acquire(source, max_bytes=100)
     assert result.issue_code == "invalid_locale"
+    assert resolver.calls == 0
+
+
+async def test_unsupported_egress_is_rejected_before_dns():
+    resolver = Resolver()
+    source = Source(url="https://example.com/").model_copy(update={"egress": "proxy"})
+    result = await client(resolver=resolver).acquire(source, max_bytes=100)
+    assert result.issue_code == "unsupported_egress"
+    assert result.status == Outcome.PERMANENT_FAILURE
     assert resolver.calls == 0
 
 

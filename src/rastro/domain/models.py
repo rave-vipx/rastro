@@ -12,17 +12,31 @@ from urllib.parse import urlsplit, urlunsplit
 
 from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, field_validator, model_validator
 
+LANGUAGE_TAG = r"[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*"
+
 
 class Contract(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
 
 class Source(Contract):
-    """Origin metadata for supplied HTML. Constructing a source never fetches its URL."""
+    """Origin and explicit regional context. Constructing a source never fetches its URL."""
 
     url: str = Field(min_length=1, max_length=8192)
     locale: str = Field(default="und", min_length=2, max_length=64)
+    languages: tuple[str, ...] = Field(default=(), max_length=20)
     timezone: str = Field(default="UTC", min_length=1, max_length=128)
+    currency: str | None = Field(default=None, pattern=r"^[A-Z]{3}$")
+    egress: Literal["direct"] = "direct"
+
+    @field_validator("languages")
+    @classmethod
+    def validate_languages(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        if any(
+            len(language) > 64 or re.fullmatch(LANGUAGE_TAG, language) is None for language in value
+        ):
+            raise ValueError("Language preferences must contain valid bounded language tags")
+        return value
 
     @field_validator("url")
     @classmethod

@@ -2,9 +2,9 @@ import json
 from decimal import Decimal
 
 import pytest
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, ValidationInfo, field_validator
 
-from rastro import ConfigurationError, Limits, Outcome, Rastro, Recipe, ResourceLimitError
+from rastro import ConfigurationError, Limits, Outcome, Rastro, Recipe, ResourceLimitError, Source
 
 
 def ld(value):
@@ -28,6 +28,67 @@ def test_jsonld_end_to_end_with_provenance(html, source, schema, recipe):
     assert result.metrics.total_seconds >= result.metrics.validation_seconds >= 0
     assert result.metrics.extraction_seconds >= 0
     assert "private" not in result.model_dump_json()
+
+
+def test_explicit_extraction_supplies_regional_validation_context():
+    class RegionalPrice(BaseModel):
+        price: str
+
+        @field_validator("price")
+        @classmethod
+        def validate_region(cls, value: str, info: ValidationInfo) -> str:
+            assert info.context == {
+                "locale": "es-UY",
+                "languages": ("es-UY", "en"),
+                "timezone": "America/Montevideo",
+                "currency": "UYU",
+                "egress": "direct",
+            }
+            return value
+
+    result = Rastro().extract_html(
+        ld({"price": "1250,00"}),
+        source=Source(
+            url="https://example.com/",
+            locale="es-UY",
+            languages=("es-UY", "en"),
+            timezone="America/Montevideo",
+            currency="UYU",
+        ),
+        schema=RegionalPrice,
+        recipe=Recipe(strategy="jsonld", fields={"price": "/price"}),
+    )
+    assert result.status == Outcome.SUCCESS
+
+
+def test_custom_pydantic_init_is_not_bypassed_to_supply_context():
+    initialized = False
+    seen = []
+
+    class CustomInit(BaseModel):
+        name: str
+
+        def __init__(self, **data):
+            nonlocal initialized
+            initialized = True
+            super().__init__(**data)
+
+        @field_validator("name")
+        @classmethod
+        def capture_context(cls, value: str, info: ValidationInfo) -> str:
+            seen.append(info.context)
+            return value
+
+    result = Rastro().extract_html(
+        ld({"name": "Notebook"}),
+        source=Source(url="https://example.com/", currency="UYU"),
+        schema=CustomInit,
+        recipe=Recipe(strategy="jsonld", fields={"name": "/name"}),
+    )
+
+    assert result.status == Outcome.SUCCESS
+    assert initialized
+    assert seen == [None]
 
 
 def test_css_contract_matches_jsonld(html, source, schema, recipe):
