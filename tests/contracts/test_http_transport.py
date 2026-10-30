@@ -8,7 +8,7 @@ from curl_cffi.requests.exceptions import RequestException
 
 from rastro.adapters.dns import SystemResolver
 from rastro.adapters.http import CurlTransport
-from rastro.domain.acquisition import AcquisitionError, PinnedTarget
+from rastro.domain.acquisition import AcquisitionError, PinnedTarget, ProxyRoute
 
 pytestmark = pytest.mark.asyncio
 TARGET = PinnedTarget("https://example.com/a?secret=value", "example.com", 443, "8.8.8.8")
@@ -152,3 +152,85 @@ async def test_truncated_body_cannot_become_success_if_transport_returns(monkeyp
     monkeypatch.setattr(AsyncSession, "get", get)
     with pytest.raises(AcquisitionError, match="body_too_large"):
         await CurlTransport().get(TARGET, headers={}, timeout=1, max_bytes=3)
+
+
+@pytest.mark.parametrize(
+    ("url", "proxy_type"), [("http://proxy.example:3128", 0), ("https://proxy.example", 2)]
+)
+async def test_selected_proxy_replaces_local_pin_and_keeps_safety_options(
+    monkeypatch, url, proxy_type
+):
+    route = ProxyRoute("office", url, "synthetic-user", "synthetic-password")
+
+    async def get(session, request_url, **kwargs):
+        options = session.curl_options
+        assert request_url == TARGET.url and not session.trust_env
+        assert CurlOpt.RESOLVE not in options
+        assert options[CurlOpt.PROXY] == url.encode()
+        assert options[CurlOpt.PROXYTYPE] == proxy_type
+        assert options[CurlOpt.NOPROXY] == b""
+        assert options[CurlOpt.HTTPPROXYTUNNEL] == 1
+        assert options[CurlOpt.PROXY_CREDENTIAL_NO_REUSE] == 1
+        assert options[CurlOpt.PROXYUSERNAME] == b"synthetic-user"
+        assert options[CurlOpt.PROXYPASSWORD] == b"synthetic-password"
+        assert options[CurlOpt.FOLLOWLOCATION] == 0 and options[CurlOpt.NETRC] == 0
+        assert options[CurlOpt.MAXFILESIZE_LARGE] == 10
+        assert kwargs["verify"] and not kwargs["allow_redirects"]
+        assert "proxy" not in kwargs and "proxies" not in kwargs
+        result = Response()
+        result.primary_ip = "192.0.2.10"  # The proxy, not the validated target.
+        result.status_code = 200
+        return result
+
+    monkeypatch.setattr(AsyncSession, "get", get)
+    result = await CurlTransport().get(TARGET, headers={}, timeout=1, max_bytes=10, proxy=route)
+    assert result.status == 200
+
+
+async def test_proxy_without_credentials_sets_no_authentication(monkeypatch):
+    async def get(session, request_url, **kwargs):
+        assert CurlOpt.PROXYUSERNAME not in session.curl_options
+        assert CurlOpt.PROXYPASSWORD not in session.curl_options
+        return Response()
+
+    monkeypatch.setattr(AsyncSession, "get", get)
+    await CurlTransport().get(
+        TARGET, headers={}, timeout=1, max_bytes=1, proxy=ProxyRoute("o", "http://p.example")
+    )
+
+
+@pytest.mark.parametrize(
+    ("error", "code"),
+    [
+        (CurlECode.COULDNT_RESOLVE_PROXY, "proxy_failure"),
+        (CurlECode.PROXY, "proxy_failure"),
+        (CurlECode.OPERATION_TIMEDOUT, "request_timeout"),
+    ],
+)
+async def test_proxy_errors_are_safe_categories(monkeypatch, error, code):
+    async def get(session, url, **kwargs):
+        raise RequestException("http://user:synthetic-password@p.example", code=error)
+
+    monkeypatch.setattr(AsyncSession, "get", get)
+    route = ProxyRoute("o", "http://p.example", "user", "synthetic-password")
+    with pytest.raises(AcquisitionError, match="^" + code + "$") as failure:
+        await CurlTransport().get(TARGET, headers={}, timeout=1, max_bytes=1, proxy=route)
+    assert "synthetic-password" not in str(failure.value) and failure.value.__suppress_context__
+
+
+@pytest.mark.parametrize(
+    "route",
+    [
+        ProxyRoute("o", "socks5h://p.example:1080"),
+        ProxyRoute("o", "ftp://p.example"),
+        ProxyRoute("o", "http://p.example", None, "orphan-password"),
+    ],
+)
+async def test_invalid_proxy_routes_fail_before_any_session(monkeypatch, route):
+    async def get(session, url, **kwargs):
+        pytest.fail("An invalid proxy route must not reach curl")
+
+    monkeypatch.setattr(AsyncSession, "get", get)
+    with pytest.raises(AcquisitionError, match=r"^invalid_proxy_route$") as failure:
+        await CurlTransport().get(TARGET, headers={}, timeout=1, max_bytes=1, proxy=route)
+    assert "orphan-password" not in str(failure.value)

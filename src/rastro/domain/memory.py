@@ -5,12 +5,13 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import UTC, datetime
-from typing import Literal, Self
+from typing import Self
 from urllib.parse import urlsplit, urlunsplit
 
 from pydantic import AwareDatetime, BaseModel, Field, model_validator
 
 from rastro.domain.models import (
+    EGRESS_NAME,
     Contract,
     RastroError,
     Recipe,
@@ -35,7 +36,7 @@ class RecipeKey(Contract):
     languages: tuple[str, ...] = Field(default=(), max_length=20)
     timezone: str = Field(min_length=1, max_length=128)
     currency: str | None = Field(default=None, pattern=r"^[A-Z]{3}$")
-    egress: Literal["direct"] = "direct"
+    egress: str = Field(default="direct", pattern=EGRESS_NAME)
     context: RecipeContext = RecipeContext()
     representation: Representation = "html"
 

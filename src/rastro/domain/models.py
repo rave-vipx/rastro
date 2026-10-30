@@ -7,7 +7,7 @@ import json
 import re
 from datetime import datetime
 from enum import StrEnum
-from typing import Literal, Self
+from typing import Any, Literal, Self
 from urllib.parse import urlsplit, urlunsplit
 
 from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -17,6 +17,7 @@ from rastro.domain.json import POINTER
 LANGUAGE_TAG = r"[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*"
 type Representation = Literal["html", "json"]
 """The document kind a recipe reads and an acquisition requests."""
+EGRESS_NAME = r"^[a-z][a-z0-9_-]{0,63}$"
 
 
 class Contract(BaseModel):
@@ -31,7 +32,15 @@ class Source(Contract):
     languages: tuple[str, ...] = Field(default=(), max_length=20)
     timezone: str = Field(default="UTC", min_length=1, max_length=128)
     currency: str | None = Field(default=None, pattern=r"^[A-Z]{3}$")
-    egress: Literal["direct"] = "direct"
+    egress: str = Field(default="direct", pattern=EGRESS_NAME)
+
+    @model_validator(mode="before")
+    @classmethod
+    def reject_geolocation(cls, data: Any) -> Any:
+        # Egress names a network origin; it never implies a browser-reported location.
+        if isinstance(data, dict) and "geolocation" in data:
+            raise ValueError("Browser geolocation is unavailable without a browser adapter")
+        return data
 
     @field_validator("languages")
     @classmethod
@@ -152,6 +161,7 @@ class Metrics(Contract):
     inference_seconds: float = 0
     storage_seconds: float = 0
     acquisition_method: Literal["provided_html", "provided_json", "http"] = "provided_html"
+    egress: str = Field(default="direct", pattern=EGRESS_NAME)
     acquisition_seconds: float = 0
     network_seconds: float = 0
     request_count: int = 0

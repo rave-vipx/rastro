@@ -301,6 +301,7 @@ class Rastro:
                 records=(),
                 issues=(Issue(code=issue or "invalid_acquisition_result"),),
                 metrics=Metrics(
+                    egress=source.egress,
                     storage_seconds=prepared.storage_seconds,
                     input_bytes=0,
                     candidates=0,
@@ -314,6 +315,7 @@ class Rastro:
         metrics = result.metrics.model_copy(
             update={
                 "acquisition_method": "http",
+                "egress": fetched.egress,
                 "acquisition_seconds": fetched.acquisition_seconds,
                 "network_seconds": fetched.network_seconds,
                 "request_count": fetched.requests,
@@ -339,6 +341,7 @@ class Rastro:
             status=result.status.value,
             request_count=fetched.requests,
             retry_count=fetched.retries,
+            egress=fetched.egress,
             acquisition_seconds=fetched.acquisition_seconds,
         )
         return result

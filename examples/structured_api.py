@@ -43,7 +43,7 @@ class Product(BaseModel):
 async def acquire_over_http(source: Source, recipe: Recipe) -> dict[str, object]:
     try:
         from rastro.application.acquisition import WebAcquirer
-        from rastro.domain.acquisition import HttpResponse, PinnedTarget
+        from rastro.domain.acquisition import HttpResponse, PinnedTarget, ProxyRoute
     except ModuleNotFoundError:
         return {"skipped": "install rastro-engine[http]"}
 
@@ -58,7 +58,13 @@ async def acquire_over_http(source: Source, recipe: Recipe) -> dict[str, object]
             self.content_type = content_type
 
         async def get(
-            self, target: PinnedTarget, *, headers: dict[str, str], timeout: float, max_bytes: int
+            self,
+            target: PinnedTarget,
+            *,
+            headers: dict[str, str],
+            timeout: float,
+            max_bytes: int,
+            proxy: ProxyRoute | None = None,
         ) -> HttpResponse:
             if target.url.endswith("/robots.txt"):
                 return HttpResponse(404, {"content-type": "text/plain"}, b"", 0)
