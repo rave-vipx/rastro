@@ -2,6 +2,18 @@
 
 All notable user-facing changes will be recorded here. No public release has been published.
 
+## Unreleased — pre-v0.2
+
+### Changed
+
+- `Recipe` is now a strategy-discriminated union of `CssRecipe` (`record_selector`), `JsonLdRecipe` (optional `item_type`) and `JsonRecipe` (`record_path`), all exported. `Recipe(...)`, `Recipe.model_validate(...)`, `Recipe.model_validate_json(...)` and Pydantic fields typed `Recipe` return the matching variant, so existing recipe files, `rastro validate-recipe` and stored payloads load unchanged. Each variant rejects other strategies' selectors. `null` selectors written by earlier releases mean absent. Fallbacks are typed per representation. Type-checked code should construct the variant classes, because static checkers see only the shared fields on `Recipe(...)` (REC-002, REC-003, INT-002, QUAL-001). See ADR 0009.
+- Serialized recipes (`model_dump`, `learned_recipe`, new SQLite payloads) contain only the variant's own fields and no longer include `null` selectors for other strategies (REC-002).
+- `StoredRecipe` separates the definition from operational history. `selected_index`, `created_at`, `last_success_at` and `successful_runs` moved to `StoredRecipe.metadata`, a new exported `RecipeMetadata`. `stored.recipe` and `stored.validated_recipe` are unchanged. This prepares REC-005 lifecycle states without changing definitions (REC-001, REC-003).
+- `RecipeProposal` is a strategy union with `CssProposal` and `JsonLdProposal` variants derived from the HTML recipe variants. `proposal_schema()` is unchanged apart from the two variant titles (REC-004, AI-002).
+- `AcquisitionResult.html` is renamed to `body` because it also carries JSON (INT-002).
+- Custom transports and acquisition ports must accept the keywords Rastro now always passes: `HttpTransport.get(..., proxy=None | ProxyRoute)` and `AcquisitionPort.acquire(..., representation="html" | "json")` (INT-002, GEO-005).
+- Internal: prepared extraction moved from `Rastro` into `application.service.ExtractionService`, with no behavior change. SQLite schema is unchanged and needs no migration; M3 and 0.1.0 payloads keep loading (REC-001, QUAL-004).
+
 ## 0.1.0 — release candidate (not yet tagged or published)
 
 First Rastro Engine release candidate: schema-first, verifiable extraction with
