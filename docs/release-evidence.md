@@ -1,7 +1,7 @@
 # v0.1 release evidence register
 
-M5 is **in progress**. This register records evidence and unresolved gates; it is
-not release approval. Requirements: DIFF-001, INT-001–004, REC-001–004,
+M5 technical work is **complete** for the `0.1.0` release candidate. This register
+records evidence and unresolved gates; it is not release approval. Requirements: DIFF-001, INT-001–004, REC-001–004,
 AI-001–004, GEO-001–003, OBS-001/002, and specification sections 17–18.
 
 ## Acceptance status
@@ -14,9 +14,9 @@ AI-001–004, GEO-001–003, OBS-001/002, and specification sections 17–18.
 | Useful timing and inference accounting | SDK metrics, live report, benchmark raw samples | Browser timing is not applicable to the current HTTP-only adapter |
 | Configured Ollama works end to end | Offline adapter/proposal/budget tests; [live Ollama evidence](live-ollama-evidence.md): `qwen3:4b` and `llama3.2:3b` each learned, activated and reused a recipe across processes in 5/5 trials, and all eight live/controlled failure scenarios stayed explicit for both | Two small models on one machine with synthetic inputs; the harder page failed 0/5 for both (safely); broader model quality is unmeasured |
 | Competent comparison | Independent Scrapling + Pydantic baseline: 14-case regression corpus, plus a [held-out evaluation](comparison.md#held-out-evaluation) with 5 sources, 24 structural mutations and an adapted baseline | DIFF-001 **partially** demonstrated: source-specific configuration tied with the adapted baseline (10 vs 10 entries; the adapter costs 33 more one-time lines; 25 entries without adaptation), and 16/16 vs 1/16 visibility items. With a scripted fake model, Rastro with SQLite memory made 0.017 calls per successful record vs 0.167 for Rastro without memory; the baseline makes no model calls. Silent errors were equal (3/24 for every executor), there was no accuracy gain, and Rastro was slower. Maintenance/recovery and real-model quality are unmeasured |
-| Full v0.1 requirements | [Coverage table](roadmap.md) | Separate permitted structured APIs (INT-002), broader currency interpretation and explicit egress configuration (GEO-001) remain incomplete |
+| Full v0.1 requirements | [Coverage table](roadmap.md), including structured JSON responses ([ADR 0007](decisions/0007-structured-responses.md)) and explicit egress profiles ([ADR 0008](decisions/0008-explicit-egress.md)) | DIFF-001 is partial (above). Currency is explicit validation context, not automatic parsing; browser geolocation is inapplicable without a browser adapter |
 | Licenses, naming and distribution | Installed dependency inventory, built wheel/sdist contents, bundled native notices on macOS arm64 and public registry checks below | Ownership, naming/trademark review, legal compatibility, bundled notices on other platforms and final distribution review remain open |
-| Supported documentation tooling | Current strict MkDocs build | Plan the transition before Material's announced end of maintenance |
+| Supported documentation tooling | Current strict MkDocs build with Material 9.8.0; end of life re-verified on 2026-10-30 as 2027-05-05 | Evaluate the Zensical migration before 2027-05-05 or before a release whose support period crosses it |
 | Immutable release and publishing | Development changelog, locked dependencies and CI packaging checks | Approved version/tag/artifact hashes, registry ownership, protected Trusted Publishing and provenance |
 
 ## Live public example
@@ -163,7 +163,8 @@ The existing strict build remains a release check.
 
 ## Next release decision
 
-Close the unfinished technical and evidence gates first. Then verify namespace
+The technical and evidence gates for `0.1.0` are closed, with DIFF-001 recorded as
+partial. Maintainers decide whether that evidence suffices for v0.1, then verify namespace
 ownership, review exact artifacts/notices, approve the version and release commit,
 and configure protected publishing according to the [release checklist](releasing.md).
 No tag, registry upload, Trusted Publisher, or publication secret is created here.

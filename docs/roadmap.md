@@ -1,6 +1,6 @@
 # Roadmap and requirement coverage
 
-**Active release: v0.1 — Rastro Engine.** The repository delivers M1 offline extraction and M2 optional policy-aware HTTP acquisition, M3 SQLite recipe memory, and M4 bounded optional intelligence. This is a development preview, not a completed v0.1 release.
+**Active release: v0.1 — Rastro Engine.** `0.1.0` is a release candidate: M1–M4 and the M5 technical evidence are complete, every section 18 acceptance criterion has recorded evidence, and DIFF-001 is partially demonstrated. Publication (namespace ownership, legal/trademark review, tag and Trusted Publishing) awaits maintainer approval; nothing has been published.
 
 ## v0.1 milestones
 
@@ -12,27 +12,27 @@
 | M4 — Optional intelligence | Ollama adapter, structured candidate recipes, prompt boundary, execution budgets, validation before activation | M2, M3 | No mandatory model; bounded model use; invalid model output cannot become an active recipe |
 | M5 — Release evidence | Competent Scrapling baseline, reproducible results, end-to-end URL example, license/name review, package release | M1–M4 | All v0.1 acceptance criteria demonstrably pass; no unsupported quality/performance claims |
 
-M1–M4 are implemented with offline regression tests and quality checks. M5 is in progress: the first comparison and live HTTP/reuse evidence are available. One local live-model run is recorded. Broader live-model evidence, demonstrated differentiation, unfinished requirements and publication gates remain open. No release dates are promised.
+M1–M4 are implemented with offline regression tests and quality checks. M5 technical work is complete: regression and held-out comparisons, live HTTP/reuse evidence, two-model live Ollama evidence, structured JSON responses (INT-002) and explicit egress profiles (GEO-001) are recorded. Remaining gates are human decisions: accepting partial DIFF-001 evidence for v0.1, namespace ownership, legal/trademark review and protected publishing. No release dates are promised.
 
 ## Current requirement mapping
 
 | Requirement | Evidence / current boundary |
 | --- | --- |
 | INT-001 | Pydantic schemas, supplied HTML, explicit URL acquisition, bounded batches, and acquisition policy. Automatic source discovery remains out of scope. |
-| INT-002 | Partial: verified memory → bounded exact-name JSON-LD → simple DOM microdata → optional model. Explicit fallback recipes remain supported. Acquisition of separate permitted structured APIs remains pending. |
-| INT-003 | Five extraction outcomes plus explicit access restrictions, transient failures, and permanent failures. |
+| INT-002 | Verified memory → bounded exact-name JSON-LD → permitted structured JSON responses (supplied or opt-in `representation="json"` acquisition, RFC 6901 `json` recipes, bounded exact-name discovery) → simple DOM microdata → optional model. Explicit fallback recipes remain supported. Rastro does not discover API endpoints or fetch redundant representations; JSON embedded in HTML scripts is out of scope. See [ADR 0007](decisions/0007-structured-responses.md). |
+| INT-003 | Five extraction outcomes plus explicit access restrictions, transient failures, and permanent failures. Overflowing JSON numbers are invalid data, never success. |
 | INT-004, QUAL-001–004 | Field provenance, Pydantic/custom validation, explicit rejection. No source excerpt retained; defaults have no evidence. |
 | REC-002 | Declarative serialization with unknown/executable fields rejected. |
 | REC-001/003 | SQLite versions keyed by source/template/schema/region; mappings/fallback definitions, validation-contract references, creation/last-success timestamps and successful-run counts. Advanced lifecycle/health remains v0.2. |
 | REC-004 | Model candidates require strict declarative structure, source observations, required-field evidence and full schema success before activation. Evidence policy survives restart; partial/failed candidates never activate. |
-| AI-001–004 | Optional local Ollama adapter, structured proposals, capability boundary and bounded calls/corrections/deadline/context/response/concurrency. Offline contract tests cover these guarantees. One local `qwen3:4b` run verified learning, activation, cross-process reuse and explicit failures ([live evidence](live-ollama-evidence.md)); broader model quality is unmeasured. |
-| GEO-001–003 | Partial: explicit ordered languages with descending Accept-Language weights and locale fallback; locale/languages/timezone/currency/direct-egress reach validators through Pydantic's supported `model_validate` context path; unsupported egress fails before DNS; recipe memory isolates the ordered regional context while retaining default legacy keys. Custom model constructors follow Pydantic semantics and must handle context themselves. Browser geolocation remains inapplicable until a browser adapter exists, and non-direct egress is unsupported. See [ADR 0006](decisions/0006-explicit-regional-context.md). |
-| OBS-001 | Partial: job ID, source metadata, acquisition/network/parsing/validation/total durations, request/record/field counts. Inference call counts and model-phase duration are available; durable history remains pending. |
+| AI-001–004 | Optional local Ollama adapter, structured proposals, capability boundary and bounded calls/corrections/deadline/context/response/concurrency. Offline contract tests cover these guarantees. Live runs with `qwen3:4b` and `llama3.2:3b` (5 trials each) verified learning, activation, zero-inference cross-process reuse and explicit failures; both failed safely on a page with distractors ([live evidence](live-ollama-evidence.md)). Broader model quality is unmeasured. |
+| GEO-001–003, GEO-005 | Explicit ordered languages with descending Accept-Language weights and locale fallback; locale/languages/timezone/currency/egress reach validators through Pydantic's supported `model_validate` context path; unsupported egress fails before DNS; recipe memory isolates the ordered regional context while retaining default legacy keys. Custom model constructors follow Pydantic semantics and must handle context themselves. Named administrator-declared HTTP(S) proxy egress profiles with environment credential references, no rotation or fallback, and egress-isolated memory; a proxy resolves target DNS, so local pinning does not bind proxied connections (trusted-proxy boundary). Browser geolocation is rejected explicitly until a browser adapter exists (GEO-002). See [ADR 0006](decisions/0006-explicit-regional-context.md) and [ADR 0008](decisions/0008-explicit-egress.md). |
+| OBS-001 | Per-execution job ID, source URL, start/completion times, HTTP status, acquisition method and egress profile, acquisition/network/extraction/validation/inference/total durations, request/retry/redirect counts, bytes received, records and fields validated, and outcome, in results and completion logs. Browser rendering duration is not applicable without a browser adapter. Durable, queryable history belongs to OBS-003/004 (v0.3). |
 | OBS-002 | JSON completion logs with correlation IDs; no source content in events. |
 | SEC-001/002/003 | Exact host policy, public destination checks, DNS pinning, per-hop validation, robots enforcement, throttling and restriction outcomes. See ADR 0002 and HTTP tests. |
 | SEC-004/005/007/008 | Recipe and diagnostic boundaries, no recipe code execution, input/candidate/request/body/deadline budgets. Process sandboxing remains the host’s responsibility. |
 | SEC-009/010 | Scoped deletion and last-success retention for recipe memory; no management server. External backups and OS access controls remain the host’s responsibility. |
-| DIFF-001 | Partial M5 evidence: independent baseline and reproducible corpus/results. Equal quality and shared semantic failure; meaningful differentiation is not yet demonstrated. See the [comparison](comparison.md). |
+| DIFF-001 | Partial: against a competent Scrapling + Pydantic baseline on a held-out synthetic set, Rastro ties an adapted baseline on source-specific configuration (10 vs 10 entries, with 33 fewer adapter lines), exposes 16/16 vs 1/16 visibility items, and reduces scripted-model calls per successful record tenfold with SQLite memory. Accuracy and silent-error detection are equal, Rastro is slower, and maintenance/recovery effort is unmeasured. See the [comparison](comparison.md). |
 
 ## M1 progress record
 
@@ -86,15 +86,31 @@ See the [master specification](https://github.com/rave-vipx/rastro/blob/main/RAS
 
 ## M5 progress record
 
-- **Milestone:** first release-evidence slice, v0.1 development preview; M5 is not complete.
-- **Requirements:** partial DIFF-001; evidence for QUAL-003, OBS-001, REC-001–003 and specification sections 17–18.
+- **Milestone:** release evidence for the `0.1.0` release candidate; technical work complete, publication pending approval.
+- **Requirements:** partial DIFF-001; evidence for QUAL-003, OBS-001, REC-001–004, AI-001–004 and specification sections 17–18.
 - **Files:** `benchmarks/`, offline scorer/corpus tests, `examples/catalogue.py`, its synthetic regression tests, [comparison](comparison.md), [release evidence](release-evidence.md) and CI smoke check.
 - **Evidence:** independent Scrapling + Pydantic baseline, 14 synthetic cases, 50 timed samples per executor/case, primitive quality counts and source hashes. Two actual public HTTP runs in separate processes verified field provenance and recipe reuse.
-- **Results:** equal extraction quality; 1 false success out of 8 announced successes for both. Rastro adds provenance and orchestration with higher measured latency. No accuracy, speed or human-effort advantage is claimed.
-- **Distribution:** runtime dependency license inventory and name/docs lifecycle review recorded; no package or protected publisher configured.
+- **Results:** regression corpus: equal extraction quality, 1 false success out of 8 announced successes for both. Held-out set (5 sources, 24 mutations): configuration tie with the adapted baseline, 16/16 vs 1/16 visibility items, tenfold fewer scripted-model calls with memory, equal silent errors (3/24) and higher Rastro latency. No accuracy or speed advantage is claimed.
+- **Distribution:** runtime dependency license inventory, wheel/sdist contents and bundled native notices (macOS arm64) and name/docs lifecycle review recorded; no package or protected publisher configured.
 - **Architecture:** [ADR 0005](decisions/0005-reproducible-release-evidence.md).
-- **Live model:** [one local Ollama run](live-ollama-evidence.md) (`qwen3:4b`, synthetic inputs) found and fixed two adapter defects. Learning, activation and zero-inference reuse passed; a harder page failed safely.
-- **Remaining work:** broader live-model quality evidence, held-out comparison and measurable differentiation, incomplete INT-002/GEO-001 scope, native dependency notice review, namespace ownership and release approval. Rendered snapshots and large pages do not establish browser or pagination behavior.
+- **Live model:** [live Ollama evidence](live-ollama-evidence.md): the first `qwen3:4b` run found and fixed two adapter defects; a two-model run (`qwen3:4b`, `llama3.2:3b`, 5 trials each) passed learning, activation and zero-inference reuse, and both failed safely on the distractor page.
+- **Remaining work (maintainer decisions):** accept or extend the partial DIFF-001 evidence, namespace ownership, legal/trademark review, notices for other platforms' wheels, tag and protected Trusted Publishing. Rendered snapshots and large pages do not establish browser or pagination behavior; maintenance/recovery effort and real-model quality beyond two small models are unmeasured.
+
+## Structured-response vertical slice
+
+- **Release:** v0.1 release candidate.
+- **Requirements:** INT-001–004, QUAL-001–004, REC-001–004, SEC-005/008.
+- **Public behavior:** `json` recipes with RFC 6901 record/field pointers, `extract_json`/`extract_json_async`, opt-in JSON acquisition with strict content-type and UTF-8 checks, byte/depth/node budgets, overflow rejection, `json#` provenance and representation-isolated memory.
+- **Limitations:** no endpoint discovery, no model assistance for JSON, no traversal of arrays inside records, no JSON embedded in HTML.
+- **Architecture:** [ADR 0007](decisions/0007-structured-responses.md).
+
+## Explicit-egress vertical slice
+
+- **Release:** v0.1 release candidate.
+- **Requirements:** GEO-001–003, GEO-005, SEC-001–005, SEC-008, SEC-011.
+- **Public behavior:** named HTTP(S) proxy profiles in `AcquisitionPolicy.egress_profiles`, selected by `Source.egress`; credentials only from environment references and never in results, logs, errors or memory; pre-DNS failures for unknown profiles; denial state shared across egress so origin changes never bypass restrictions.
+- **Limitations:** no SOCKS; proxied connections cannot use the local DNS pin; the proxy is inside the trust boundary.
+- **Architecture:** [ADR 0008](decisions/0008-explicit-egress.md).
 
 ## Regional-context vertical slice
 

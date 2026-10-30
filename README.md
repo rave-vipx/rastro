@@ -20,7 +20,7 @@ Rastro is a Python library for turning web content into **validated records with
 
 The long-term goal is reliable, continuously updated web datasets. We are building that engine incrementally, starting with deterministic extraction and explicit quality signals.
 
-> **Development preview — v0.1 is in progress.** Rastro extracts supplied HTML or permitted HTTP sources using JSON-LD or CSS recipes. HTTP is an optional extra with destination controls, robots enforcement, and bounded asynchronous execution. SQLite recipe memory reuses validated strategies across restarts. Optional local Ollama assistance proposes recipes within strict budgets; every candidate is validated before activation. No PyPI release has been published by this project.
+> **`0.1.0` release candidate — not yet published.** Rastro extracts supplied HTML or JSON, or permitted HTTP sources, using JSON-LD, CSS or JSON-pointer recipes. HTTP is an optional extra with destination controls, robots enforcement, and bounded asynchronous execution. SQLite recipe memory reuses validated strategies across restarts. Optional local Ollama assistance proposes recipes within strict budgets; every candidate is validated before activation. No PyPI release has been published by this project.
 
 ## Why Rastro?
 

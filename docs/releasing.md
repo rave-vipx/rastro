@@ -1,8 +1,8 @@
 # Release checklist
 
-No package release has been published. `0.1.0.dev0` identifies the in-development foundation and does not indicate that all v0.1 requirements are met.
+No package release has been published. `0.1.0` is a release candidate: package metadata carries the intended version, but no tag, registry upload or Trusted Publisher exists until maintainers approve the release.
 
-The [release evidence register](release-evidence.md) records completed checks and open gates; the [comparison](comparison.md) publishes current results without claiming an advantage. M5 remains in progress.
+The [release evidence register](release-evidence.md) records completed checks and open gates; the [comparison](comparison.md) publishes current results, including where Rastro is equal or worse. M5 technical work is complete.
 
 Before a release:
 

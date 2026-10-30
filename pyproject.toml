@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "rastro-engine"
-version = "0.1.0.dev0"
+version = "0.1.0"
 description = "Schema-first web data extraction with explicit outcomes and field-level provenance."
 readme = "README.md"
 requires-python = ">=3.12"
