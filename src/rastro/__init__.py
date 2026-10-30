@@ -1,6 +1,8 @@
 """Rastro: schema-first extraction with field-level provenance."""
 
+from importlib import import_module
 from importlib.metadata import version
+from typing import TYPE_CHECKING
 
 from rastro.adapters.sqlite import SQLiteRecipeRepository
 from rastro.application.engine import Rastro
@@ -34,7 +36,31 @@ from rastro.domain.models import (
 from rastro.ports.model import ModelPort
 from rastro.ports.recipes import RecipeRepository
 
+if TYPE_CHECKING:
+    from rastro.adapters.ollama import OllamaModel as OllamaModel
+    from rastro.adapters.openai_compatible import OpenAICompatibleModel as OpenAICompatibleModel
+
 __version__ = version("rastro-engine")
+
+# Model providers need optional HTTPX; import them lazily so the core install stays light.
+# They are omitted from __all__ so a star import never requires an extra.
+_PROVIDERS = {
+    "OllamaModel": ("rastro.adapters.ollama", "ollama"),
+    "OpenAICompatibleModel": ("rastro.adapters.openai_compatible", "openai"),
+}
+
+
+def __getattr__(name: str) -> object:
+    if name not in _PROVIDERS:
+        raise AttributeError(f"module 'rastro' has no attribute {name!r}")
+    module, extra = _PROVIDERS[name]
+    try:
+        return getattr(import_module(module), name)
+    except ModuleNotFoundError as error:
+        if error.name != "httpx":
+            raise
+        raise ImportError(f"{name} requires: pip install 'rastro-engine[{extra}]'") from None
+
 
 __all__ = [
     "AcquisitionPolicy",
