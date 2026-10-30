@@ -2,7 +2,12 @@
 
 All notable user-facing changes will be recorded here. No public release has been published.
 
-## Unreleased — v0.1 foundation
+## 0.1.0 — release candidate (not yet tagged or published)
+
+First Rastro Engine release candidate: schema-first, verifiable extraction with
+optional policy-aware HTTP acquisition, structured JSON responses, explicit egress
+profiles, SQLite recipe memory and optional bounded Ollama assistance. A release
+date, tag and registry publication await maintainer approval.
 
 ### Added
 
@@ -50,7 +55,9 @@ All notable user-facing changes will be recorded here. No public release has bee
 
 ### Known limitations
 
-- Live Ollama evidence covers one local model and synthetic inputs; broader model quality remains unmeasured. The first comparison shows equal extraction quality and a shared silent semantic error; no comparative advantage is claimed. Recipe memory requires explicit template/region/validator revisions; it stores successful-run metadata, not a durable job history.
-- HTTP supports public standard-port HTML sources with direct egress; no JavaScript/browser geolocation, authentication, proxies, or discovery crawling.
+- DIFF-001 is partially demonstrated: configuration ties an adapted Scrapling + Pydantic baseline, visibility and memory-backed inference use improve, but accuracy and silent-error detection are equal and latency is higher. See `docs/comparison.md`.
+- Live Ollama evidence covers two small local models on synthetic inputs; both fail safely on a page with distractors. Broader model quality remains unmeasured.
+- HTTP supports public standard-port HTML and JSON sources with direct or explicit HTTP(S) proxy egress; no JavaScript rendering, browser geolocation, authentication, SOCKS, or discovery crawling. Proxied connections cannot use the local DNS pin.
+- Recipe memory requires explicit template/region/validator revisions and stores successful-run metadata, not a durable job history (v0.3). Lifecycle, repair and drift belong to v0.2.
 - Pydantic models with a custom `__init__` retain Pydantic's constructor semantics and must handle validation context themselves; Rastro does not bypass user constructors.
-- Schema aliases, alternate structured API discovery, automatic stored-recipe repair, and cross-document synchronization are not supported. Discovery is limited to exact JSON-LD names and simple microdata.
+- Schema aliases, API endpoint discovery, JSON embedded in HTML, automatic stored-recipe repair, and cross-document synchronization are not supported. Discovery is limited to exact JSON-LD names, simple microdata and exact JSON field names.
