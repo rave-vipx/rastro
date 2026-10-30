@@ -32,6 +32,7 @@ All notable user-facing changes will be recorded here. No public release has bee
 - CLI demo, environment diagnostics, and declarative recipe validation.
 - Offline regression and property tests, strict typing, package checks, and documentation.
 - Public contribution and security policies and an incremental v0.1 roadmap.
+- Release evidence records built wheel/sdist contents and a bundled native notice review for `lxml` and `curl-cffi` on macOS arm64 (OBS-001).
 
 ### Fixed
 
