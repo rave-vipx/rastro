@@ -21,7 +21,7 @@ first run unchanged.
 | Does a second process reuse it without inference? | Yes, in every trial: 6/6 and 5/5, `recipe_reused=true`, zero inference and model-port calls |
 | Is the plain-card result repeatable? | Fresh-memory repetitions: `qwen3:4b` 10/10 (both runs), `llama3.2:3b` 5/5 |
 | Does a harder page succeed? | **No, for either model**: `qwen3:4b` 0/10, `llama3.2:3b` 0/5. Every run ended with `insufficient_evidence` and nothing was stored |
-| Do unavailability and invalid output fail visibly? | Yes: all eight scenarios returned explicit non-success outcomes with no records or stored recipe, for both models in both runs |
+| Do unavailability and invalid output fail visibly? | Yes: all eight scenarios returned explicit non-success outcomes with no records or stored recipe: `qwen3:4b` in both runs, `llama3.2:3b` in the multi-model run (its only run) |
 | Did live testing find defects? | Two adapter defects in the first run, fixed with regression tests. None in the multi-model run |
 
 ## Multi-model run: qwen3:4b and llama3.2:3b
@@ -39,8 +39,12 @@ inputs and budgets as the first run below. CPython 3.12.16 (Homebrew), harness S
 ```bash
 uv run --extra ollama python -m benchmarks.live_ollama \
   --model qwen3:4b --model llama3.2:3b --trials 5 --repetitions 5 \
-  --keep-previous --output benchmarks/results/live-ollama.json
+  --output /tmp/rastro-live-ollama.json
 ```
+
+Write to a temporary path to reproduce. The committed report was produced by the same
+command with `--keep-previous --output benchmarks/results/live-ollama.json`, which
+appends to the recorded file. Use that form only to record a new run deliberately.
 
 `--model` can be repeated. `--trials` runs N learn→reuse cycles per model, each a
 pair of separate processes sharing a fresh SQLite file. `--keep-previous` appends
@@ -73,14 +77,27 @@ proposed a mapping that Rastro executed and rejected
 `llama3.2:3b`, a model without thinking support, so the first run's open question
 about such models is now answered for this one.
 
-**Why `distractors` fails (exploratory probe, not part of the recorded report):**
-a probe that captured raw proposals showed two different failure modes. `qwen3:4b`
-again prefixed every selector with `css: `. `llama3.2:3b` returned the **record
-values** as field "selectors" (`"name": "Field Notebook"`, `"price": "12.50"`), with
-the heading as the record container. The AI-002 boundary is meant to block exactly
-that: the model must propose a recipe, never data, and Rastro rejected it. At
-temperature 0, both models repeated the same proposal on the correction call. No
-prompt tuning or selector rewriting was added.
+**Why `distractors` fails (recorded probe):** the
+[probe report](https://github.com/rave-vipx/rastro/blob/dev/benchmarks/results/live-ollama-probe.json)
+holds the raw proposals from one diagnostic run per model. It was recorded on
+2026-10-30 18:08 UTC from commit `daf1905` with no tracked changes, using the same
+model digests. Reproduce it with:
+
+```bash
+uv run --extra ollama python -m benchmarks.live_ollama --probe \
+  --model qwen3:4b --model llama3.2:3b --output /tmp/rastro-live-ollama-probe.json
+```
+
+It shows two different failure modes, each observed in one probe run per model
+with two calls each. `qwen3:4b` prefixed every selector with `css: ` (for example
+`"record_selector": "css: main > article.product-card"`). `llama3.2:3b` returned
+the record values as field "selectors" (`"name": "Field Notebook"`,
+`"price": "12.50"`), with `main article.product-card h2.title` as the record
+container. The AI-002 boundary exists to block that: the model must propose a
+recipe, never data, and Rastro rejected it (`invalid_model_candidate`). In both
+probes, the correction call repeated the first proposal exactly. One probe per model
+does not show that every failed repetition had the same cause. The recorded run
+stores only outcomes, not proposals. No prompt tuning or selector rewriting was added.
 
 What this run adds: the integration path (learn → validate → activate → persist
 → reuse across processes, explicit failures) was repeatable across 10 learn/reuse

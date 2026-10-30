@@ -5,11 +5,13 @@ specification sections 05 and 17–18. They compare Rastro with an independent
 Scrapling + Pydantic baseline written for this repository.
 
 **DIFF-001 status: partially demonstrated.** On the [held-out evaluation](#held-out-evaluation)
-below, Rastro needed less source-specific configuration than per-source baseline
-mappings (10 versus 25 entries), and the same amount as a baseline with a 33-line
-structured-data adapter. It exposed 15 of 16 operational-visibility items; the
-reference baseline exposed 1. SQLite memory reduced scripted-model calls per
-successful record from 0.167 to 0.017. Rastro showed **no** advantage in silent
+below, Rastro needed the same source-specific configuration as the adapted
+baseline required by section 17 (10 versus 10 entries). The adapted baseline needs
+33 more lines of one-time adapter code; versus hand-written per-source mappings
+alone, Rastro needed 10 versus 25 entries. It exposed 15 of 16 operational-visibility
+items; the reference baseline exposed 1. With a scripted fake model, Rastro with
+SQLite memory made 0.017 calls per successful record and Rastro without memory made
+0.167. The baseline makes no model calls. Rastro showed **no** advantage in silent
 error detection or extraction accuracy. Every executor had 3 silent errors in 24
 mutations. Rastro was slower on every page. The
 [first regression result](#first-recorded-result) shows no advantage either. DIFF-001
@@ -153,8 +155,12 @@ added after that corpus and **no engine code changed for it**. The engine is und
 ```bash
 uv sync --locked
 uv run python -m benchmarks.heldout --repetitions 30 --warmup 3 --model-runs 10 \
-  --output heldout.json
+  --output /tmp/rastro-heldout.json
 ```
+
+Write to a temporary path. The committed `benchmarks/results/heldout.json` was
+produced by the same command with that path as `--output`; overwrite it only when
+deliberately regenerating the recorded result.
 
 The run is offline and deterministic except for latency, and needs no model or browser.
 Inputs: [corpus](https://github.com/rave-vipx/rastro/blob/dev/benchmarks/heldout.json),
@@ -229,8 +235,8 @@ on every original page before the mutation run, and the runner checks this.
 
 ### Results
 
-Recorded on 2026-10-30 UTC from commit `6e29830`: Python 3.12.16, Darwin 25.6.0,
-arm64 (Apple M1 Pro); Rastro 0.1.0.dev0, Scrapling 0.5, Pydantic 2.14.1, lxml
+Recorded on 2026-10-30 UTC from commit `eb76f4f`: Python 3.12.16, Darwin 25.6.0,
+arm64; Rastro 0.1.0.dev0, Scrapling 0.5, Pydantic 2.14.1, lxml
 6.1.3. `git_dirty` is true only because of untracked, unrelated `node_modules/` and
 `package.json` files in the worktree. The source hashes in the report identify the
 measured code.
@@ -239,15 +245,27 @@ measured code.
 
 | Executor | Entries | Tokens | Characters | One-time code (logical lines) |
 | --- | ---: | ---: | ---: | --- |
-| `baseline` | 25 | 160 | 438 | 94 (reference executor) |
-| `baseline_adapted` | 10 | 70 | 171 | 94 + 33 (structured adapter) |
-| Rastro | 10 | 70 | 171 | 14 (integration function) |
+| `baseline_adapted` (spec baseline) | 10 | 70 | 171 | 94 + 33 (structured adapter) |
+| Rastro | 10 | 70 | 171 | 19 (integration) |
+| `baseline` (no adaptation) | 25 | 160 | 438 | 94 (reference executor) |
 
-Rastro and the adapted baseline both needed zero entries on the three structured
-sources and the same 5 entries on each CSS source. Rastro needs **60% fewer entries
-than per-source baseline mappings**, and the same number as a baseline with
-a 33-line adapter. The one-time difference is code the developer writes and
-maintains: 127 lines for this baseline versus 14 lines of Rastro integration. That
+Against the adapted baseline, source-specific configuration is a **tie**. Both
+needed zero entries on the three structured sources and the same 5 entries on each
+CSS source. The report evidences the zero counts: `baseline_adapted_mapping_origin`
+is `structured_adapter` on the three structured sources and `hand_written` on
+the two CSS sources, and `baseline_adapted_mappings` lists the mappings produced.
+On three mutated structured pages (`price_removed`, `sku_renamed_mpn`,
+`sku_renamed_gtin`) the adapter could not map every field and fell back to the
+hand-written mappings, which the mutation rows also record. Without adaptation,
+per-source baseline mappings needed 25 entries.
+
+The remaining difference is one-time code the developer writes and maintains: 127
+logical lines for this baseline versus 19 for the Rastro integration. Both sides
+are counted the same way: the baseline counts its executor helpers
+(`_objects`, `_pointer`, `_types`, `_json_items`, `_json_rows`, `run`) and adapter
+(`structured_mappings`); Rastro counts `rastro_extract`, `recipe_for` and
+`explicit_mappings`. Harness wrappers that convert either output to the scorer's
+format are excluded for both, and the report lists the counted functions. The
 count compares against this reference implementation. A packaged baseline library
 could reduce it, and developer time was not measured.
 
@@ -262,9 +280,15 @@ could reduce it, and developer time was not measured.
 
 **There was no silent-error advantage.** All four executors failed silently on the
 same three mutations: a related `Product` added to the JSON-LD graph, a sponsored
-duplicate card, and a price class moved to a unit-price element. Every removed
-field, ambiguous duplicate and malformed block was reported explicitly by all four.
-The differences were:
+duplicate card, and a price class moved to a unit-price element. All four reported
+these explicitly: every removed field (`price_removed`, `currency_removed_one`,
+`price_removed_one`), the malformed block (`one_block_malformed`), and the
+duplicates the oracle requires a warning for (`was_price_added`, `old_price_added`,
+`subtotal_row_added`). All four also failed explicitly on `review_author_added`,
+where a nested author `name` made `name` ambiguous although the data was still
+extractable. Of the seven duplicated-candidate mutations, the other three were
+not explicit reports: two were the silent errors above, and `brand_name_added`
+succeeded correctly for three executors. The differences were:
 
 - `offers_as_list`: only `baseline_adapted` recovered. Its adapter handles one-element
   offer arrays. Rastro memory and rediscovery failed explicitly, because discovery
@@ -313,21 +337,22 @@ is known. Failing case: `hardware_cards` mutation `price_removed_one`, explicit
 recipe. Rastro returned `Issue(code="missing_evidence", record_index=2, field=None)`;
 the expected value is `field="price"`, per the API's "field names where applicable".
 The checklist records it as "no", and it is reported for an engine fix. It was not
-changed here.
+changed here. A pending engine fix (PR #18) adds the field name. After it merges,
+this item, its pinned test and the recorded report need updating.
 
 **5. Latency on original pages (ms, p50 / p95)**
 
 | Source | Baseline | Baseline adapted | Rastro explicit | Rastro rediscover | Rastro memory reuse |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| `outdoor_jsonld` | 0.030 / 0.035 | 0.072 / 0.090 | 0.258 / 0.309 | 0.604 / 0.727 | 1.138 / 1.430 |
-| `pantry_microdata` | 0.136 / 0.145 | 0.230 / 0.254 | 0.389 / 0.466 | 0.930 / 1.163 | 1.501 / 1.832 |
-| `hardware_cards` | 0.150 / 0.161 | 0.157 / 0.172 | 0.401 / 0.460 | 0.605 / 0.776 | 1.365 / 1.609 |
-| `deli_table` | 0.103 / 0.117 | 0.111 / 0.128 | 0.380 / 0.475 | 0.524 / 0.689 | 1.217 / 1.666 |
-| `books_jsonld_blocks` | 0.045 / 0.055 | 0.109 / 0.146 | 0.315 / 0.415 | 0.746 / 0.992 | 1.408 / 1.703 |
+| `outdoor_jsonld` | 0.030 / 0.044 | 0.076 / 0.119 | 0.257 / 0.368 | 0.612 / 0.895 | 1.206 / 1.448 |
+| `pantry_microdata` | 0.133 / 0.139 | 0.221 / 0.245 | 0.377 / 0.452 | 0.919 / 1.088 | 1.368 / 1.707 |
+| `hardware_cards` | 0.147 / 0.153 | 0.153 / 0.167 | 0.381 / 0.419 | 0.575 / 0.674 | 1.293 / 1.649 |
+| `deli_table` | 0.102 / 0.112 | 0.108 / 0.145 | 0.377 / 0.630 | 0.551 / 0.740 | 1.274 / 1.558 |
+| `books_jsonld_blocks` | 0.045 / 0.049 | 0.099 / 0.129 | 0.299 / 0.416 | 0.709 / 1.021 | 1.279 / 1.599 |
 
-Rastro is slower in every configuration: 2.7–8.6× the baseline p50 with an explicit
+Rastro is slower in every configuration: 2.6–8.6× the baseline p50 with an explicit
 recipe. Memory reuse adds a SQLite read on each call, and rediscovery adds an event
-loop hop plus discovery. The absolute cost is about 1–1.5 ms per page offline. That
+loop hop plus discovery. The absolute cost is about 1.2–1.4 ms per page offline with memory reuse. That
 is small next to network acquisition, which was not measured here.
 
 ### Limits
