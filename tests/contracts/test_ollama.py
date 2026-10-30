@@ -80,7 +80,9 @@ def test_endpoint_rejects_nonliteral_nonloopback_and_unsafe_origins(url):
 
 
 @pytest.mark.parametrize(
-    "name", ["", "model\nAuthorization:secret", "model-cloud", "foo:cloud", "x" * 201]
+    "name",
+    ["", "model\nAuthorization:secret", "model-cloud", "foo:cloud", "x" * 201],
+    ids=["empty", "header-injection", "cloud-suffix", "cloud-tag", "too-long"],
 )
 def test_model_name_is_bounded_and_local(name):
     with pytest.raises(ConfigurationError):

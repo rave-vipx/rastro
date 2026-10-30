@@ -411,6 +411,7 @@ async def test_robots_expansion_is_rejected_before_the_parser(monkeypatch):
         "Request-rate: -1/10",
         "Request-rate: 0/10",
     ],
+    ids=["huge-rate", "nan-delay", "inf-delay", "negative-delay", "negative-rate", "zero-rate"],
 )
 async def test_invalid_robots_intervals_cannot_poison_shared_host(directive):
     transport = Transport(
