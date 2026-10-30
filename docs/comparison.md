@@ -8,7 +8,7 @@ Scrapling + Pydantic baseline written for this repository.
 below, Rastro needed the same source-specific configuration as the adapted
 baseline required by section 17 (10 versus 10 entries). The adapted baseline needs
 33 more lines of one-time adapter code; versus hand-written per-source mappings
-alone, Rastro needed 10 versus 25 entries. It exposed 15 of 16 operational-visibility
+alone, Rastro needed 10 versus 25 entries. It exposed 16 of 16 operational-visibility
 items; the reference baseline exposed 1. With a scripted fake model, Rastro with
 SQLite memory made 0.017 calls per successful record and Rastro without memory made
 0.167. The baseline makes no model calls. Rastro showed **no** advantage in silent
@@ -235,7 +235,8 @@ on every original page before the mutation run, and the runner checks this.
 
 ### Results
 
-Recorded on 2026-10-30 UTC from commit `eb76f4f`: Python 3.12.16, Darwin 25.6.0,
+Recorded on 2026-10-30 UTC from commit `20ad721`, which includes the PR #17 and #18 engine
+changes: Python 3.12.16, Darwin 25.6.0,
 arm64; Rastro 0.1.0.dev0, Scrapling 0.5, Pydantic 2.14.1, lxml
 6.1.3. `git_dirty` is true only because of untracked, unrelated `node_modules/` and
 `package.json` files in the worktree. The source hashes in the report identify the
@@ -322,7 +323,7 @@ says nothing about how often a real model proposes a valid recipe.
 | Explicit outcome status | yes | yes |
 | Issue category and record index | no | yes |
 | Issue names the field for an ambiguous value | no | yes |
-| Issue names the field for a missing required value | no | **no** |
+| Issue names the field for a missing required value | no | yes |
 | Per-field locator, extraction method, source URL and observation time | no | yes |
 | Recipe version, reuse flag, attempt origins, inspectable learned recipe | no | yes |
 | Job ID, timestamps, schema fingerprint | no | yes |
@@ -330,29 +331,33 @@ says nothing about how often a real model proposes a valid recipe.
 | Structured completion log event | no | yes |
 
 The full report has 16 items, with groups split out: the baseline has 1 and Rastro
-has 15. The baseline returns only status and records. Adding the rest is unmeasured
-engineering work, not impossible. **Observed Rastro defect:** `missing_evidence`
-issues carry `record_index` but `field=None`, even though the missing required field
-is known. Failing case: `hardware_cards` mutation `price_removed_one`, explicit
-recipe. Rastro returned `Issue(code="missing_evidence", record_index=2, field=None)`;
-the expected value is `field="price"`, per the API's "field names where applicable".
-The checklist records it as "no", and it is reported for an engine fix. It was not
-changed here. A pending engine fix (PR #18) adds the field name. After it merges,
-this item, its pinned test and the recorded report need updating.
+has 16. The baseline returns only status and records. Adding the rest is unmeasured
+engineering work, not impossible.
+
+An earlier recording of this evaluation (commit `eb76f4f`, before PR #18) found a
+Rastro defect. `missing_evidence` issues carried `record_index` but `field=None`,
+even though the missing required field was known. Failing case: `hardware_cards`
+mutation `price_removed_one`, explicit recipe. Rastro returned
+`Issue(code="missing_evidence", record_index=2, field=None)`, and that recording
+showed Rastro at 15 of 16 items. PR #18 fixed the engine. The same case now returns
+`field="price"`, and a test asserts it. The regenerated report is otherwise
+unchanged: every effort, mutation-outcome and model-call count matches the earlier
+recording exactly. Learned recipes now also serialize the new `record_path: null`
+field.
 
 **5. Latency on original pages (ms, p50 / p95)**
 
 | Source | Baseline | Baseline adapted | Rastro explicit | Rastro rediscover | Rastro memory reuse |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| `outdoor_jsonld` | 0.030 / 0.044 | 0.076 / 0.119 | 0.257 / 0.368 | 0.612 / 0.895 | 1.206 / 1.448 |
-| `pantry_microdata` | 0.133 / 0.139 | 0.221 / 0.245 | 0.377 / 0.452 | 0.919 / 1.088 | 1.368 / 1.707 |
-| `hardware_cards` | 0.147 / 0.153 | 0.153 / 0.167 | 0.381 / 0.419 | 0.575 / 0.674 | 1.293 / 1.649 |
-| `deli_table` | 0.102 / 0.112 | 0.108 / 0.145 | 0.377 / 0.630 | 0.551 / 0.740 | 1.274 / 1.558 |
-| `books_jsonld_blocks` | 0.045 / 0.049 | 0.099 / 0.129 | 0.299 / 0.416 | 0.709 / 1.021 | 1.279 / 1.599 |
+| `outdoor_jsonld` | 0.029 / 0.032 | 0.070 / 0.089 | 0.252 / 0.273 | 0.582 / 0.691 | 1.116 / 1.328 |
+| `pantry_microdata` | 0.132 / 0.134 | 0.218 / 0.233 | 0.369 / 0.410 | 0.888 / 0.949 | 1.342 / 1.563 |
+| `hardware_cards` | 0.146 / 0.157 | 0.153 / 0.163 | 0.381 / 0.422 | 0.574 / 0.635 | 1.284 / 1.479 |
+| `deli_table` | 0.100 / 0.104 | 0.105 / 0.115 | 0.349 / 0.453 | 0.488 / 0.529 | 1.168 / 1.321 |
+| `books_jsonld_blocks` | 0.045 / 0.047 | 0.099 / 0.118 | 0.301 / 0.322 | 0.646 / 0.739 | 1.173 / 1.304 |
 
-Rastro is slower in every configuration: 2.6–8.6× the baseline p50 with an explicit
+Rastro is slower in every configuration: 2.6–8.7× the baseline p50 with an explicit
 recipe. Memory reuse adds a SQLite read on each call, and rediscovery adds an event
-loop hop plus discovery. The absolute cost is about 1.2–1.4 ms per page offline with memory reuse. That
+loop hop plus discovery. The absolute cost is about 1.1–1.3 ms per page offline with memory reuse. That
 is small next to network acquisition, which was not measured here.
 
 ### Limits
