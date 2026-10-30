@@ -88,7 +88,7 @@ The harness refuses a model that `/api/tags` does not list. It unloads the model
 before learning, so the first call includes model load time. It runs learning and
 reuse in two separate Python processes that share one temporary SQLite file. Live
 and controlled scenarios are labelled with `evidence_kind`. The
-[raw report](https://github.com/rave-vipx/rastro/blob/staging/benchmarks/results/live-ollama.json)
+[raw report](https://github.com/rave-vipx/rastro/blob/ff9566d623edb4d02df5f4f11c1be248e5056d7d/benchmarks/results/live-ollama.json)
 contains synthetic values and operational metadata only. It includes no home paths,
 keys or credentials. Without the environment variable, the live test is skipped, and
 the default test suite stays offline.
