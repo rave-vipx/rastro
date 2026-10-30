@@ -514,7 +514,7 @@ def visibility(sources: list[HeldoutSource], loop: asyncio.AbstractEventLoop) ->
             all(issue.code and issue.record_index is not None for issue in ambiguous + missing),
         ),
         "issue_names_field_for_ambiguous_value": (None, any(i.field for i in ambiguous)),
-        # Observed defect: missing_evidence omits the known missing required field name.
+        # Before PR #18, missing_evidence omitted the known missing required field name.
         "issue_names_field_for_missing_required_value": (None, any(i.field for i in missing)),
         "per_field_locator": (None, bool(evidence.locator)),
         "per_field_extraction_method": (None, bool(evidence.method)),

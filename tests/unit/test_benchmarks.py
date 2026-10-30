@@ -237,15 +237,10 @@ def test_heldout_report_counts_and_known_differences() -> None:
         "baseline": True,
         "rastro": True,
     }
-    missing = "issue_names_field_for_missing_required_value"
-    assert all(row["rastro"] for item, row in checklist.items() if item != missing)
-    # Recorded Rastro limitation: the missing required field is known but not reported.
-    # UPDATE AFTER PR #18 MERGES: that engine fix adds the field name to missing_evidence
-    # issues. Then expect checklist[missing]["rastro"] is True and field == "price" below,
-    # regenerate benchmarks/results/heldout.json and update docs/comparison.md.
-    assert checklist[missing]["rastro"] is False
+    assert all(row["rastro"] for row in checklist.values())
+    # missing_evidence names the missing required field (fixed in PR #18).
     assert report["visibility"]["missing_value_issues"] == [
-        {"code": "missing_evidence", "record_index": 2, "field": None}
+        {"code": "missing_evidence", "record_index": 2, "field": "price"}
     ]
     assert len(report["latency"]) == len(HELDOUT)
 
