@@ -1,7 +1,10 @@
+import json
+
 import pytest
 from pydantic import ValidationError
 
 from rastro import InferencePolicy, ModelRequest, RecipeProposal
+from rastro.domain.intelligence import proposal_schema
 
 
 @pytest.mark.parametrize(
@@ -33,8 +36,26 @@ def test_context_budget_includes_instructions_schema_and_escaped_data():
     request = ModelRequest(system="trusted", content='Unicode: 😀 "quoted"')
     assert request.context_bytes > len(request.model_dump_json().encode())
     assert request.context_bytes > 500
+    assert request.context_bytes > len(json.dumps(proposal_schema()))
 
 
 def test_proposal_cannot_choose_runtime_evidence_policy():
     with pytest.raises(ValidationError):
         RecipeProposal(strategy="jsonld", fields={"name": "/name"}, require_evidence=False)
+
+
+def test_proposal_schema_encodes_strategy_specific_recipe_rules():
+    # Constrained decoding cannot emit a CSS recipe without its record selector.
+    variants = {
+        variant["properties"]["strategy"]["const"]: variant
+        for variant in proposal_schema()["anyOf"]
+    }
+    css, jsonld = variants.pop("css"), variants.pop("jsonld")
+    assert not variants
+    assert set(css["required"]) == {"strategy", "fields", "record_selector"}
+    assert set(css["properties"]) == {"strategy", "fields", "record_selector"}
+    assert set(jsonld["required"]) == {"strategy", "fields"}
+    assert set(jsonld["properties"]) == {"strategy", "fields", "item_type"}
+    assert css["additionalProperties"] is False and jsonld["additionalProperties"] is False
+    RecipeProposal(strategy="css", fields={"name": "h2::text"}, record_selector="article").recipe()
+    RecipeProposal(strategy="jsonld", fields={"name": "/name"}).recipe()
