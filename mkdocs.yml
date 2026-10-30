@@ -38,6 +38,7 @@ nav:
   - Release checklist: releasing.md
   - Development work log: development/work-log.md
   - Engineering decisions:
+      - Model providers: decisions/0010-model-providers.md
       - Structured JSON responses: decisions/0007-structured-responses.md
       - Explicit proxy egress: decisions/0008-explicit-egress.md
       - Explicit regional context: decisions/0006-explicit-regional-context.md
