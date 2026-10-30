@@ -50,7 +50,7 @@ Recorded on **2026-10-25 UTC**, in separate Python 3.12.15 processes:
 The result was `A Light in the Attic`, GBP `51.77`, with URL, timestamp, CSS locator
 and recipe version for both fields. The requests include robots retrieval; each
 process checks policy again. These two timings are observations, not a speedup
-experiment. [Raw execution results](https://github.com/rave-vipx/rastro/blob/staging/benchmarks/results/live-catalogue.json)
+experiment. [Raw execution results](https://github.com/rave-vipx/rastro/blob/dev/benchmarks/results/live-catalogue.json)
 contain public demo values and operational metadata, with no saved HTML, cookies,
 credentials or private content. A synthetic equivalent tests persistence and rejects
 missing currency, other currency symbols, malformed decimals and negative prices.
@@ -63,7 +63,7 @@ Reproduce the installed-runtime metadata inventory after `uv sync --locked`:
 uv run python -m benchmarks.licenses --output runtime-licenses.json
 ```
 
-The [recorded inventory](https://github.com/rave-vipx/rastro/blob/staging/benchmarks/results/runtime-licenses.json)
+The [recorded inventory](https://github.com/rave-vipx/rastro/blob/dev/benchmarks/results/runtime-licenses.json)
 contains 22 transitive/direct runtime dependencies across core, HTTP and Ollama,
 with locked versions, declared license metadata, license-file hashes and the lock
 hash. It was collected from macOS arm64 installations; other platform wheels and
