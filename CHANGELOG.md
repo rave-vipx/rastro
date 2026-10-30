@@ -2,6 +2,14 @@
 
 All notable user-facing changes will be recorded here. No public release has been published.
 
+## Unreleased — pre-v0.2
+
+### Added
+
+- `OpenAICompatibleModel`, a Chat Completions `ModelPort` strategy for OpenAI, OpenRouter, vLLM, LM Studio, llama.cpp server and Ollama's `/v1`, behind a new `openai` extra. It sends `json_schema` structured outputs (or explicit `response_format="json_object"`), never tools; loopback endpoints work without opt-in while any other host requires `allow_remote=True` and HTTPS; API keys are referenced only through `api_key_env`; `InferencePolicy` deadline, context, response-byte, token and concurrency budgets are enforced in the adapter and failures map to `ModelError` categories (AI-001–005, SEC-004/005/011, P-001, P-007). See ADR 0010.
+- `rastro.OllamaModel` and `rastro.OpenAICompatibleModel` lazy public exports; core `import rastro` still does not import HTTPX, and a missing extra raises an `ImportError` naming it (P-002).
+- "Choosing or writing a model provider" documentation with provider examples and the custom `ModelPort` contract.
+
 ## 0.1.0 — release candidate (not yet tagged or published)
 
 First Rastro Engine release candidate: schema-first, verifiable extraction with

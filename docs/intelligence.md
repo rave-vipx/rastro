@@ -82,6 +82,170 @@ existing HTTP policy before learning. Redirects preserve the requested URL's mem
 identity and use the final URL for evidence. `extract_many` shares model concurrency
 limits across its bounded workers.
 
+## Choosing or writing a model provider
+
+`model=` accepts any object implementing `ModelPort`, the provider strategy
+interface. Rastro ships two optional strategies; both need HTTPX, so the core
+install never does (P-002). Requirements: **AI-001–005, SEC-004/005/011, P-001, P-007**.
+
+| Provider | Install | Endpoint | Use when |
+| --- | --- | --- | --- |
+| `OllamaModel` | `rastro-engine[ollama]` | native `/api/chat`, loopback only | A local Ollama service; strictest local-only checks |
+| `OpenAICompatibleModel` | `rastro-engine[openai]` | `POST {base_url}/chat/completions` | Any Chat Completions server, local or (opt-in) remote |
+
+Both are importable from `rastro` lazily (`from rastro import OpenAICompatibleModel`);
+without the extra, the attribute access raises an `ImportError` naming it. They are
+intentionally absent from `rastro.__all__`, so `from rastro import *` stays core-only.
+
+### OpenAI-compatible endpoints
+
+```python
+from rastro import InferencePolicy, OpenAICompatibleModel, Rastro
+
+# Local servers: literal loopback addresses need no opt-in.
+ollama_v1 = OpenAICompatibleModel("llama3.2:3b")  # http://127.0.0.1:11434/v1
+lm_studio = OpenAICompatibleModel("qwen2.5-7b-instruct", base_url="http://127.0.0.1:1234/v1")
+vllm = OpenAICompatibleModel("Qwen/Qwen2.5-7B-Instruct", base_url="http://127.0.0.1:8000/v1")
+llama_cpp = OpenAICompatibleModel(
+    "local", base_url="http://127.0.0.1:8080/v1", response_format="json_object"
+)
+
+# Remote services: page content leaves the machine, so opt in explicitly.
+openai = OpenAICompatibleModel(
+    "gpt-4.1-mini",
+    base_url="https://api.openai.com/v1",
+    api_key_env="OPENAI_API_KEY",
+    allow_remote=True,
+)
+openrouter = OpenAICompatibleModel(
+    "openai/gpt-4.1-mini",
+    base_url="https://openrouter.ai/api/v1",
+    api_key_env="OPENROUTER_API_KEY",
+    allow_remote=True,
+)
+
+engine = Rastro(model=openai, inference_policy=InferencePolicy(max_calls=2))
+```
+
+Model names above are examples; use one your server actually serves.
+
+**Request.** One non-streaming completion (`n: 1`) with the fixed system message,
+the untrusted JSON data envelope as the user message, `temperature: 0`,
+`max_tokens` from `InferencePolicy.max_output_tokens`, and
+`response_format: {"type": "json_schema", "json_schema": {"name": "rastro_recipe_proposal", "strict": false, "schema": proposal_schema()}}`.
+No `tools`, `tool_choice` or `functions` are ever sent. OpenAI's *strict* structured
+outputs cannot express the recipe field map or the per-strategy `anyOf`, so the schema
+is a best-effort decoding constraint; Rastro validates every proposal regardless.
+For servers without `json_schema` support, pass `response_format="json_object"`:
+JSON mode is requested and the schema is appended to the trusted system message.
+There is no automatic fallback or transport retry; choose the mode explicitly.
+
+**Endpoint rules.** `base_url` is an HTTP(S) origin with an optional plain path such as
+`/v1` or `/api/v1`. Credentials, queries, fragments, dot segments and port `0` are
+rejected. Literal IPv4 loopback addresses and `::1` work without opt-in. Every other
+host, including `localhost` and LAN addresses, requires `allow_remote=True` **and**
+HTTPS. Model names are bounded to `[A-Za-z0-9][A-Za-z0-9._:/@+-]{0,199}`; on a
+loopback endpoint without `allow_remote`, names containing `cloud` are rejected because
+local servers such as Ollama can proxy them off the machine. Redirects are never
+followed and ambient proxy environment variables are ignored (`trust_env=False`).
+
+**API keys.** Pass only the environment variable's name in `api_key_env`. The variable
+must exist when the adapter is created and is read again for each request, so keys can
+rotate; it is sent only as `Authorization: Bearer …`. The value is never stored on
+the object, shown by `repr`, logged, serialized into recipes or included in errors.
+A key that disappears later yields `model_unavailable` without a request.
+
+**Budgets and failures.** The adapter applies the same `InferencePolicy` as the
+learner: context bytes are checked before any connection, one deadline covers the
+adapter's concurrency slot wait plus the whole request, the raw body is streamed
+against `max_response_bytes`, compressed responses are refused, and
+`max_concurrency` bounds in-flight calls per adapter instance and event loop. The
+body is parsed with strict JSON (duplicate keys, `NaN` and invalid UTF-8 rejected).
+Non-200 statuses (including 3xx and 429) map to `model_unavailable`, timeouts to
+`model_timeout`, oversized bodies to `model_response_limit`, and malformed bodies,
+multiple choices, a `finish_reason` other than `stop` (`length`, `content_filter`,
+`tool_calls`), refusals, tool calls or reported `completion_tokens` above budget to
+`invalid_model_response`. Provider bodies never appear in errors.
+
+**Privacy.** Opting into any model sends the page document to that endpoint. With
+`allow_remote=True`, that is a third-party service under its own retention terms;
+keep the default loopback endpoint when local processing is mandatory (P-001). The
+recorded live check against Ollama's `/v1` endpoint is described in
+[ADR 0010](decisions/0010-model-providers.md); it is not a model-quality claim.
+
+### Writing a custom provider
+
+Implement one coroutine. A provider is trusted infrastructure code, but what it
+returns is untrusted: Rastro parses and validates it like any model output.
+
+```python
+import asyncio
+from collections.abc import Callable
+
+from rastro import InferencePolicy, ModelError, ModelRequest, Rastro
+from rastro.domain.intelligence import proposal_schema
+
+
+class LocalRuntimeModel:
+    """Wrap a blocking local runtime, e.g. an in-process llama.cpp binding."""
+
+    def __init__(self, run: Callable[[str, str, dict[str, object], int], str]) -> None:
+        self._run = run
+
+    async def generate(self, request: ModelRequest, policy: InferencePolicy) -> str:
+        if request.context_bytes > policy.max_context_bytes:
+            raise ModelError("model_context_limit")
+        try:
+            async with asyncio.timeout(policy.timeout_seconds):
+                text = await asyncio.to_thread(
+                    self._run,
+                    request.system,
+                    request.content,
+                    proposal_schema(),
+                    policy.max_output_tokens,
+                )
+        except TimeoutError:
+            raise ModelError("model_timeout") from None
+        except OSError:
+            raise ModelError("model_unavailable") from None
+        if len(text.encode()) > policy.max_response_bytes:
+            raise ModelError("model_response_limit")
+        return text
+
+
+engine = Rastro(model=LocalRuntimeModel(lambda system, user, schema, tokens: "{}"))
+```
+
+The contract:
+
+1. **Return JSON text** for one recipe proposal matching `proposal_schema()`. Do not
+   parse it into records or repair it; Rastro strict-parses, validates against
+   `RecipeProposal`, executes it on the original document and validates the schema.
+2. **Keep messages separate.** Send `request.system` as trusted instructions and
+   `request.content` (the untrusted page envelope) as user data. Never add tools,
+   function calling, browsing or code execution.
+3. **Raise `ModelError`** with one of its fixed categories (`model_unavailable`,
+   `model_timeout`, `model_response_limit`, `invalid_model_response`,
+   `model_context_limit`) and `from None`, so provider messages, bodies and keys never
+   surface. Truncated, refused or tool-calling responses are `invalid_model_response`.
+   Other exceptions propagate as programmer errors.
+4. **Respect the policy and cancellation.** Honour `timeout_seconds`,
+   `max_context_bytes`, `max_response_bytes` and `max_output_tokens`; never retry
+   behind Rastro's back (the learner owns call and repair budgets). Let
+   `asyncio.CancelledError` propagate and close network streams. Rastro additionally
+   bounds the phase deadline, call count and concurrency.
+5. **Handle secrets by reference.** Read keys from the environment or a secret
+   manager at call time; never accept them as constructor strings, log them or put
+   them in `repr`.
+
+An Anthropic Messages API provider, for example, sends `request.system` as the
+top-level system prompt and `request.content` as the user turn, sets `max_tokens`
+from the policy, asks for JSON matching `proposal_schema()`, rejects any non-text or
+tool-use content and any truncated stop reason, reads its key from an environment
+variable and maps HTTP/SDK errors to the categories above. Anthropic's API is not
+Chat Completions-compatible by default, so it needs its own strategy rather than
+`OpenAICompatibleModel`.
+
 ## Selection and activation
 
 1. An explicit recipe or exact-context stored recipe is executed first. Neither a
@@ -165,8 +329,8 @@ System instructions are fixed; page text lives in a separate JSON data envelope.
 Only field names and required-field names accompany the HTML. Source URLs and full
 Pydantic schemas, descriptions, defaults and examples are not sent as prompt metadata.
 The HTML itself may contain sensitive content: opting into a model authorizes sending
-that document to the configured local service. Prompt separation does not guarantee
-semantic correctness. A malicious page or model can still suggest the wrong existing
+that document to the configured service (remote only with `allow_remote=True`).
+Prompt separation does not guarantee semantic correctness. A malicious page or model can still suggest the wrong existing
 node; use meaningful schema validators and review samples.
 
 The enforceable boundary is declarative output plus independent source/schema
@@ -176,7 +340,8 @@ values from source content; keep the database and results private when needed.
 
 Default tests use synthetic pages and fake model/HTTP transports with sockets
 disabled. They cover attacks, limits, cancellation, activation, restart and M3
-payload compatibility. Core wheel installation is checked without HTTPX or Ollama.
+payload compatibility. Core wheel installation is checked without HTTPX or Ollama. The OpenAI-compatible
+adapter has its own offline contract and mock-server learning tests.
 These tests do not claim real-model quality. The separate
 [live Ollama evidence](live-ollama-evidence.md) records one local `qwen3:4b` run
 with its opt-in harness, model digest and limitations.

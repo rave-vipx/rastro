@@ -74,6 +74,32 @@ Rastro does not bypass or replace the constructor. Such a constructor must arran
 context propagation as documented by Pydantic. Rastro does not infer a currency or
 convert values. Validator transformations do not create source evidence.
 
+## Model providers
+
+```python
+from rastro import OllamaModel, OpenAICompatibleModel  # lazy; need an optional extra
+
+OllamaModel(model, *, base_url="http://127.0.0.1:11434")                  # [ollama]
+OpenAICompatibleModel(model, *, base_url="http://127.0.0.1:11434/v1",     # [openai]
+                      api_key_env=None, allow_remote=False,
+                      response_format="json_schema")
+```
+
+`model=` on `Rastro` and `Rastro.web` accepts any `ModelPort` strategy:
+`async generate(request: ModelRequest, policy: InferencePolicy) -> str`, returning
+JSON text for one recipe proposal or raising `ModelError`. Provider classes are
+resolved lazily, so `import rastro` never imports HTTPX; accessing one without its
+extra raises `ImportError` naming the extra. They are not in `rastro.__all__`.
+
+`OpenAICompatibleModel` speaks the Chat Completions API. Non-loopback `base_url`
+values raise `ConfigurationError` unless `allow_remote=True` and HTTPS are both
+present. `api_key_env` names an environment variable that must be set at construction
+and is read per request; the key is never stored, logged or shown by `repr`.
+`response_format="json_object"` selects JSON mode for servers without JSON Schema
+support. Constructor validation raises `ConfigurationError`; request failures raise
+`ModelError`, which the learner turns into explicit outcomes. See
+[choosing or writing a model provider](intelligence.md#choosing-or-writing-a-model-provider).
+
 ## Results
 
 `ExtractionResult` contains:
