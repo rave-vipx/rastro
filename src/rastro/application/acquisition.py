@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import re
 import sys
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from email.message import Message
@@ -21,8 +23,9 @@ from rastro.domain.acquisition import (
     AcquisitionPolicy,
     AcquisitionResult,
     HttpResponse,
+    ProxyRoute,
 )
-from rastro.domain.models import LANGUAGE_TAG, Outcome, Source
+from rastro.domain.models import LANGUAGE_TAG, Outcome, Representation, Source
 from rastro.ports.acquisition import HttpTransport, Resolver
 
 _USER_AGENT = "Rastro/0.1 (+https://github.com/rave-vipx/rastro)"
@@ -51,6 +54,7 @@ class _Operation:
     http_status: int | None = None
     retry_after_seconds: float | None = None
     robots: dict[str, Protego | None] = field(default_factory=dict)
+    proxy: ProxyRoute | None = None
 
 
 def retry_after(value: str | None) -> float | None:
@@ -68,10 +72,19 @@ def retry_after(value: str | None) -> float | None:
         return None
 
 
-def _decode(response: HttpResponse) -> str:
+def _decode(response: HttpResponse, representation: Representation = "html") -> str:
     media = Message()
     media["content-type"] = response.headers.get("content-type", "")
-    if media.get_content_type() not in {"text/html", "application/xhtml+xml"}:
+    content_type = media.get_content_type()
+    if representation == "json":
+        # RFC 8259: JSON exchanged between systems is UTF-8; other charsets are invalid.
+        if content_type != "application/json" and not (
+            content_type.startswith("application/") and content_type.endswith("+json")
+        ):
+            raise AcquisitionError("unsupported_content_type", Outcome.PERMANENT_FAILURE)
+        if (media.get_content_charset() or "utf-8") not in {"utf-8", "utf8"}:
+            raise AcquisitionError("invalid_encoding", Outcome.INVALID_DATA)
+    elif content_type not in {"text/html", "application/xhtml+xml"}:
         raise AcquisitionError("unsupported_content_type", Outcome.PERMANENT_FAILURE)
     try:
         return response.body.decode(media.get_content_charset() or "utf-8", errors="strict")
@@ -82,24 +95,34 @@ def _decode(response: HttpResponse) -> str:
 class WebAcquirer:
     """One client per event loop; limits and restriction cooldowns are shared by its jobs."""
 
-    def __init__(self, policy: AcquisitionPolicy, *, transport: HttpTransport, resolver: Resolver):
+    def __init__(
+        self,
+        policy: AcquisitionPolicy,
+        *,
+        transport: HttpTransport,
+        resolver: Resolver,
+        environ: Mapping[str, str] | None = None,
+    ):
         self.policy = policy
         self._transport = transport
         self._resolver = resolver
+        self._environ = environ
         self._slots = asyncio.Semaphore(policy.max_concurrency)
         self._hosts = {
             host: _Host(interval=policy.min_interval_seconds) for host in policy.allowed_hosts
         }
 
-    async def acquire(self, source: Source, *, max_bytes: int) -> AcquisitionResult:
+    async def acquire(
+        self, source: Source, *, max_bytes: int, representation: Representation = "html"
+    ) -> AcquisitionResult:
         started = perf_counter()
-        operation = _Operation(source.url, {"User-Agent": _USER_AGENT, "Accept": "text/html"})
+        accept = "application/json" if representation == "json" else "text/html"
+        operation = _Operation(source.url, {"User-Agent": _USER_AGENT, "Accept": accept})
         html: str | None = None
         issue: str | None = None
         status = Outcome.SUCCESS
         try:
-            if source.egress != "direct":
-                raise AcquisitionError("unsupported_egress", Outcome.PERMANENT_FAILURE)
+            operation.proxy = self._proxy(source.egress)
             languages = source.languages or (() if source.locale == "und" else (source.locale,))
             if len(languages) > 20 or any(
                 re.fullmatch(LANGUAGE_TAG, language) is None for language in languages
@@ -119,7 +142,7 @@ class WebAcquirer:
                     response = await self._request(url, operation, max_bytes=max_bytes)
                     if response.status not in _REDIRECTS:
                         self._check_status(response.status)
-                        html = _decode(response)
+                        html = _decode(response, representation)
                         break
                     if hop == self.policy.max_redirects:
                         raise AcquisitionError("redirect_limit", Outcome.PERMANENT_FAILURE)
@@ -142,7 +165,27 @@ class WebAcquirer:
             network_seconds=operation.network_seconds,
             acquisition_seconds=perf_counter() - started,
             retry_after_seconds=operation.retry_after_seconds,
+            egress=source.egress,
         )
+
+    def _proxy(self, egress: str) -> ProxyRoute | None:
+        """Resolve one named profile before DNS. There is no fallback to another egress."""
+        if egress == "direct":
+            return None
+        profile = self.policy.egress_profiles.get(egress)
+        if profile is None:
+            raise AcquisitionError("unsupported_egress", Outcome.PERMANENT_FAILURE)
+        environ = os.environ if self._environ is None else self._environ
+        credentials: list[str | None] = []
+        for name in (profile.username_env, profile.password_env):
+            value = None if name is None else environ.get(name)
+            if name is not None and (
+                not value
+                or any(ord(character) < 32 or ord(character) == 127 for character in value)
+            ):
+                raise AcquisitionError("egress_credentials_unavailable", Outcome.PERMANENT_FAILURE)
+            credentials.append(value)
+        return ProxyRoute(egress, profile.proxy_url, *credentials)
 
     def _redirect(self, url: str, response: HttpResponse) -> str:
         location = response.headers.get("location")
@@ -222,11 +265,18 @@ class WebAcquirer:
                                 target = await pin_destination(url, self.policy, self._resolver)
                                 network_start = perf_counter()
                                 try:
+                                    # Older transports need not accept proxy for direct egress.
+                                    route = (
+                                        {}
+                                        if operation.proxy is None
+                                        else {"proxy": operation.proxy}
+                                    )
                                     response = await self._transport.get(
                                         target,
                                         headers=operation.headers,
                                         timeout=self.policy.request_timeout_seconds,
                                         max_bytes=max_bytes,
+                                        **route,
                                     )
                                 finally:
                                     operation.network_seconds += perf_counter() - network_start

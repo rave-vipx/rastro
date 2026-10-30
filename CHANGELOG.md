@@ -8,6 +8,11 @@ All notable user-facing changes will be recorded here. No public release has bee
 
 - Held-out DIFF-001 evaluation (`python -m benchmarks.heldout`): five new synthetic sources with 24 structural mutations, measuring source-specific configuration, silent errors when re-running working integrations, scripted-model calls per successful record with SQLite memory, an observed visibility checklist and latency against a schema-generic baseline with a structured-data adapter. Results show partial DIFF-001 evidence and no silent-error or latency advantage (DIFF-001, QUAL-003, OBS-001).
 - Multi-model live Ollama harness (`--model` repeatable, `--trials`, `--keep-previous`) with recorded `qwen3:4b` and `llama3.2:3b` runs, a versioned report that keeps earlier runs, and a `--probe` mode that records raw proposals for diagnosis (AI-001–004, REC-001, REC-004).
+- Permitted structured JSON responses: a declarative `json` recipe strategy with an RFC 6901 `record_path` and relative field pointers, `Rastro.extract_json`/`extract_json_async`, and opt-in `representation="json"` HTTP acquisition that sends `Accept: application/json` and rejects non-JSON content types as permanent failures (INT-001–004, SEC-001/005).
+- Strict JSON budgets (`max_json_bytes`, `max_json_depth`, `max_json_nodes`), duplicate-key rejection, `json` evidence with absolute pointer locators, explicit `invalid_json`/`invalid_record`/`invalid_record_path`/`record_path_not_found` issues, and the public `Representation` type (QUAL-001–004, SEC-008).
+- Deterministic JSON recipe discovery by exact field names over the root object and arrays of objects. JSON recipe memory uses representation-isolated keys, and existing HTML keys and legacy payloads are unchanged (INT-002, REC-001–004). Includes the offline `examples/structured_api.py` and ADR 0007.
+- Explicit network egress profiles: `AcquisitionPolicy.egress_profiles` declares named HTTP(S) proxies selected per `Source.egress`, with environment-variable credential references, pre-DNS configuration failures, unchanged target validation, no rotation or fallback, egress-isolated recipe memory and `metrics.egress` (GEO-001–003, GEO-005, SEC-001–005, SEC-008, SEC-011). `Source` rejects `geolocation` explicitly.
+
 - Opt-in live Ollama harness and recorded `qwen3:4b` evidence: cross-process learning and zero-inference reuse, plus labelled live/controlled failure scenarios (AI-001–004, REC-004).
 - Explicit ordered language preferences with descending Accept-Language weights, currency, timezone and direct-egress context through Pydantic's supported `model_validate` path; early rejection of invalid headers and unsupported egress (GEO-001/002).
 - Regional recipe isolation by language order, currency and egress with unchanged default canonical keys for existing SQLite memory (GEO-003, REC-001).
@@ -37,6 +42,8 @@ All notable user-facing changes will be recorded here. No public release has bee
 
 ### Fixed
 
+- JSON-LD and JSON decoding now reject numbers that overflow or underflow a finite float (for example `1e999`, `-1e999`, `1e-999`) and integers over 4,300 digits. These are explicit invalid outcomes instead of `inf` or `0.0` records that report success (QUAL-004, SEC-005).
+- `missing_evidence` issues now name each field that lacks evidence, for all strategies (QUAL-003, INT-004).
 - The Ollama adapter disables thinking. Capable models no longer spend the output budget and deadline on hidden reasoning (AI-003).
 - The decoding schema now requires `record_selector` for CSS proposals and forbids it for JSON-LD, matching recipe validation (AI-002, REC-004).
 

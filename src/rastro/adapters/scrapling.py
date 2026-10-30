@@ -7,28 +7,9 @@ from collections.abc import Iterator
 from cssselect import SelectorError
 from scrapling.parser import Selector
 
-from rastro.domain.json import strict_json
+from rastro.domain.json import MISSING, resolve_pointer, strict_json
 from rastro.domain.models import ConfigurationError, Issue, Limits, Recipe, ResourceLimitError
 from rastro.ports.parser import Candidate, ParsedDocument
-
-_MISSING = object()
-
-
-def _resolve(value: object, pointer: str) -> object:
-    for token in pointer.split("/")[1:]:
-        key = token.replace("~1", "/").replace("~0", "~")
-        if isinstance(value, dict):
-            value = value.get(key, _MISSING)
-        elif isinstance(value, list) and key.isascii() and key.isdigit():
-            if len(key) > 1 and key.startswith("0"):
-                return _MISSING
-            # Avoid parsing an unbounded integer from an untrusted pointer.
-            if len(key) > 9 or int(key) >= len(value):
-                return _MISSING
-            value = value[int(key)]
-        else:
-            return _MISSING
-    return value
 
 
 def _objects(value: object, path: str = "") -> Iterator[tuple[dict[str, object], str]]:
@@ -108,8 +89,8 @@ class ScraplingParser:
                 values: dict[str, object] = {}
                 locators: dict[str, str] = {}
                 for field, pointer in recipe.fields.items():
-                    value = _resolve(item, pointer)
-                    if value is not _MISSING:
+                    value = resolve_pointer(item, pointer)
+                    if value is not MISSING:
                         values[field] = value
                         locators[field] = f"jsonld[{block_index}]#{path}{pointer}"
                 candidates.append(Candidate(values, locators))

@@ -24,6 +24,7 @@ from rastro.domain.models import (
     Outcome,
     Recipe,
     RecipeAttempt,
+    Representation,
     Source,
 )
 from rastro.ports.parser import DocumentParser
@@ -57,6 +58,7 @@ class RecipeMemory:
         recipe_version: int | None,
         *,
         allow_discovery: bool = False,
+        representation: Representation = "html",
     ) -> PreparedRecipe:
         started, started_at = perf_counter(), datetime.now(UTC)
         if recipe is not None and recipe_version is not None:
@@ -67,12 +69,12 @@ class RecipeMemory:
             if recipe is None or context is not None or recipe_version is not None:
                 raise ConfigurationError("Recipe reuse and context require a repository")
             return PreparedRecipe(
-                validate_recipe(schema, recipe), None, None, 0, started, started_at
+                validate_recipe(schema, recipe, representation), None, None, 0, started, started_at
             )
-        key = RecipeKey.for_source(source, schema, context)
+        key = RecipeKey.for_source(source, schema, context, representation=representation)
         if recipe is not None:
             return PreparedRecipe(
-                validate_recipe(schema, recipe), key, None, 0, started, started_at
+                validate_recipe(schema, recipe, representation), key, None, 0, started, started_at
             )
         storage_start = perf_counter()
         stored = self._repository.get(key, version=recipe_version)
@@ -86,7 +88,7 @@ class RecipeMemory:
         ):
             raise RecipeStorageError("Repository returned an incompatible recipe")
         return PreparedRecipe(
-            validate_recipe(schema, stored.recipe),
+            validate_recipe(schema, stored.recipe, representation),
             key,
             stored.selected_index,
             storage_seconds,

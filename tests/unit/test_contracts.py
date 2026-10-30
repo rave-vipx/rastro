@@ -6,7 +6,7 @@ from hypothesis import strategies as st
 from pydantic import BaseModel, ValidationError
 
 from rastro import Recipe, Source, schema_fingerprint
-from rastro.adapters.scrapling import _resolve
+from rastro.domain.json import resolve_pointer as _resolve
 
 
 @pytest.mark.parametrize(
@@ -46,7 +46,11 @@ def test_source_accepts_explicit_regional_context_and_legacy_defaults():
         {"languages": ("not_a_language",)},
         {"currency": "usd"},
         {"currency": "US"},
-        {"egress": "proxy"},
+        {"egress": "Proxy"},
+        {"egress": "eu proxy"},
+        {"egress": ""},
+        {"egress": "x" * 65},
+        {"geolocation": "-34.9,-56.2"},
     ],
 )
 def test_source_rejects_invalid_or_unsupported_regional_context(regional):

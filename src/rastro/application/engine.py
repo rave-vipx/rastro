@@ -26,6 +26,7 @@ from rastro.domain.models import (
     Metrics,
     Outcome,
     Recipe,
+    Representation,
     ResourceLimitError,
     Source,
     schema_fingerprint,
@@ -42,7 +43,7 @@ _LOG = structlog.wrap_logger(
 
 
 class Rastro:
-    """Extract supplied HTML, or explicitly configure permission-aware HTTP acquisition."""
+    """Extract supplied HTML or JSON, or configure permission-aware HTTP acquisition."""
 
     def __init__(
         self,
@@ -57,10 +58,13 @@ class Rastro:
         discover_recipes: bool = False,
         discovery: RecipeDiscovery | None = None,
     ) -> None:
+        from rastro.adapters.structured import JsonDiscovery, JsonParser
+
         if parser is None:
             from rastro.adapters.scrapling import ScraplingParser
 
             parser = ScraplingParser()
+        self._json_parser = JsonParser()
         self._memory = RecipeMemory(repository)
         if discovery is None:
             from rastro.adapters.discovery import ScraplingDiscovery
@@ -75,6 +79,7 @@ class Rastro:
             discovery=discovery,
             policy=inference_policy,
             repository=repository,
+            json_discovery=JsonDiscovery(),
         )
         self._parser = parser
         self._limits = limits or Limits()
@@ -102,6 +107,31 @@ class Rastro:
             prepared=prepared,
             parser=self._parser,
             limits=self._limits,
+        )
+
+    def extract_json[T: BaseModel](
+        self,
+        text: str,
+        *,
+        source: Source,
+        schema: type[T],
+        recipe: Recipe | None = None,
+        context: RecipeContext | None = None,
+        recipe_version: int | None = None,
+    ) -> ExtractionResult[T]:
+        """Extract supplied JSON text with a `json` recipe; does no fetching."""
+        prepared = self._memory.prepare(
+            source, schema, recipe, context, recipe_version, representation="json"
+        )
+        return _provided_json(
+            self._memory.extract(
+                text,
+                source=source,
+                schema=schema,
+                prepared=prepared,
+                parser=self._json_parser,
+                limits=self._limits,
+            )
         )
 
     @classmethod
@@ -156,29 +186,56 @@ class Rastro:
         )
         return await self._extract_prepared(html, source, schema, prepared)
 
+    async def extract_json_async[T: BaseModel](
+        self,
+        text: str,
+        *,
+        source: Source,
+        schema: type[T],
+        recipe: Recipe | None = None,
+        context: RecipeContext | None = None,
+        recipe_version: int | None = None,
+    ) -> ExtractionResult[T]:
+        """Extract supplied JSON, with optional cold-context structured discovery."""
+        prepared = await asyncio.to_thread(
+            self._memory.prepare,
+            source,
+            schema,
+            recipe,
+            context,
+            recipe_version,
+            allow_discovery=self._discover_recipes,
+            representation="json",
+        )
+        result = await self._extract_prepared(text, source, schema, prepared, "json")
+        return _provided_json(result)
+
     async def _extract_prepared[T: BaseModel](
         self,
-        html: str,
+        text: str,
         source: Source,
         schema: type[T],
         prepared: PreparedRecipe,
+        representation: Representation = "html",
     ) -> ExtractionResult[T]:
+        parser = self._json_parser if representation == "json" else self._parser
         if prepared.definition is None:
             return await self._learner.extract(
-                html,
+                text,
                 source=source,
                 schema=schema,
                 prepared=prepared,
-                parser=self._parser,
+                parser=parser,
                 limits=self._limits,
+                representation=representation,
             )
         return await asyncio.to_thread(
             self._memory.extract,
-            html,
+            text,
             source=source,
             schema=schema,
             prepared=prepared,
-            parser=self._parser,
+            parser=parser,
             limits=self._limits,
         )
 
@@ -190,8 +247,12 @@ class Rastro:
         recipe: Recipe | None = None,
         context: RecipeContext | None = None,
         recipe_version: int | None = None,
+        representation: Representation = "html",
     ) -> ExtractionResult[T]:
-        """Acquire one permitted source, then validate it through the offline engine."""
+        """Acquire one permitted source, then validate it through the offline engine.
+
+        `representation="json"` requests `application/json` and requires a JSON response.
+        """
         if self._acquisition is None:
             raise ConfigurationError("Use Rastro.web(policy) or supply an acquisition port")
         started, started_at = perf_counter(), datetime.now(UTC)
@@ -203,14 +264,24 @@ class Rastro:
             context,
             recipe_version,
             allow_discovery=self._discover_recipes,
+            representation=representation,
         )
-        fetched = await self._acquisition.acquire(source, max_bytes=self._limits.max_html_bytes)
+        max_bytes = self._limits.max_input_bytes(representation)
+        if representation == "json":
+            fetched = await self._acquisition.acquire(
+                source, max_bytes=max_bytes, representation="json"
+            )
+        else:
+            # HTML ports predating structured responses need not accept `representation`.
+            fetched = await self._acquisition.acquire(source, max_bytes=max_bytes)
         final_source = Source.model_validate({**source.model_dump(), "url": fetched.url})
         issue = fetched.issue_code
         result: ExtractionResult[T] | None = None
         if fetched.html is not None and fetched.status == Outcome.SUCCESS:
             try:
-                result = await self._extract_prepared(fetched.html, final_source, schema, prepared)
+                result = await self._extract_prepared(
+                    fetched.html, final_source, schema, prepared, representation
+                )
             except ResourceLimitError:
                 issue = "extraction_limit"
         if result is None:
@@ -230,6 +301,7 @@ class Rastro:
                 records=(),
                 issues=(Issue(code=issue or "invalid_acquisition_result"),),
                 metrics=Metrics(
+                    egress=source.egress,
                     storage_seconds=prepared.storage_seconds,
                     input_bytes=0,
                     candidates=0,
@@ -243,6 +315,7 @@ class Rastro:
         metrics = result.metrics.model_copy(
             update={
                 "acquisition_method": "http",
+                "egress": fetched.egress,
                 "acquisition_seconds": fetched.acquisition_seconds,
                 "network_seconds": fetched.network_seconds,
                 "request_count": fetched.requests,
@@ -268,6 +341,7 @@ class Rastro:
             status=result.status.value,
             request_count=fetched.requests,
             retry_count=fetched.retries,
+            egress=fetched.egress,
             acquisition_seconds=fetched.acquisition_seconds,
         )
         return result
@@ -280,12 +354,13 @@ class Rastro:
         recipe: Recipe | None = None,
         context: RecipeContext | None = None,
         recipe_version: int | None = None,
+        representation: Representation = "html",
     ) -> tuple[ExtractionResult[T], ...]:
         """Preserve input order with a bounded worker pool; cancellation cancels all jobs."""
         if self._acquisition is None or self._policy is None:
             raise ConfigurationError("Batch acquisition requires Rastro.web(policy)")
         if recipe is not None:
-            recipe = validate_recipe(schema, recipe)
+            recipe = validate_recipe(schema, recipe, representation)
         if len(sources) > self._policy.max_sources:
             raise ResourceLimitError("Batch exceeds max_sources")
         pending = iter(enumerate(tuple(sources)))
@@ -299,9 +374,15 @@ class Rastro:
                     recipe=recipe,
                     context=context,
                     recipe_version=recipe_version,
+                    representation=representation,
                 )
 
         async with asyncio.TaskGroup() as group:
             for _ in range(min(len(sources), self._policy.max_concurrency)):
                 group.create_task(worker())
         return tuple(result for result in results if result is not None)
+
+
+def _provided_json[T: BaseModel](result: ExtractionResult[T]) -> ExtractionResult[T]:
+    metrics = result.metrics.model_copy(update={"acquisition_method": "provided_json"})
+    return result.model_copy(update={"metrics": metrics})
