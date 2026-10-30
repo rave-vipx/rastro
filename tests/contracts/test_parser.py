@@ -47,3 +47,30 @@ def test_domain_does_not_import_infrastructure():
                 name.split(".")[0] in forbidden or name.startswith("rastro.adapters")
                 for name in imports
             )
+
+
+def test_missing_evidence_names_each_unproven_field(source, schema, recipe):
+    candidates = [
+        Candidate({"name": "A", "price": 1}, {"name": "n", "price": "p"}),
+        Candidate({"name": "B", "price": 2}, {"name": "n"}),
+    ]
+    result = Rastro(parser=FakeParser(candidates)).extract_html(
+        "provided", source=source, schema=schema, recipe=recipe
+    )
+    assert result.status == Outcome.PARTIAL_SUCCESS
+    assert [(i.code, i.record_index, i.field) for i in result.issues] == [
+        ("missing_evidence", 1, "price")
+    ]
+    assert result.metrics.rejected == 1
+
+
+def test_required_evidence_names_missing_required_fields(source, schema, recipe):
+    candidates = [Candidate({"name": "A"}, {"name": "n"})] * 3
+    strict = recipe.model_copy(update={"require_evidence": True})
+    result = Rastro(parser=FakeParser(candidates)).extract_html(
+        "provided", source=source, schema=schema, recipe=strict
+    )
+    assert result.status == Outcome.INSUFFICIENT_EVIDENCE
+    assert [(i.code, i.record_index, i.field) for i in result.issues] == [
+        ("missing_evidence", index, "price") for index in range(3)
+    ]

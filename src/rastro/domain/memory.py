@@ -15,6 +15,7 @@ from rastro.domain.models import (
     Contract,
     RastroError,
     Recipe,
+    Representation,
     Source,
     schema_fingerprint,
 )
@@ -37,10 +38,16 @@ class RecipeKey(Contract):
     currency: str | None = Field(default=None, pattern=r"^[A-Z]{3}$")
     egress: str = Field(default="direct", pattern=EGRESS_NAME)
     context: RecipeContext = RecipeContext()
+    representation: Representation = "html"
 
     @classmethod
     def for_source(
-        cls, source: Source, schema: type[BaseModel], context: RecipeContext | None = None
+        cls,
+        source: Source,
+        schema: type[BaseModel],
+        context: RecipeContext | None = None,
+        *,
+        representation: Representation = "html",
     ) -> RecipeKey:
         source = Source.model_validate(source.model_dump())
         parts = urlsplit(source.url)
@@ -55,6 +62,7 @@ class RecipeKey(Contract):
             currency=source.currency,
             egress=source.egress,
             context=context or RecipeContext(),
+            representation=representation,
         )
 
     def canonical(self) -> str:
@@ -63,6 +71,9 @@ class RecipeKey(Contract):
         if not key.languages and key.currency is None and key.egress == "direct":
             for field in ("languages", "currency", "egress"):
                 payload.pop(field)
+        # HTML keys predate structured responses; JSON recipes never share their memory.
+        if key.representation == "html":
+            payload.pop("representation")
         return json.dumps(payload, sort_keys=True, separators=(",", ":"))
 
 

@@ -25,7 +25,7 @@ from rastro.domain.acquisition import (
     HttpResponse,
     ProxyRoute,
 )
-from rastro.domain.models import LANGUAGE_TAG, Outcome, Source
+from rastro.domain.models import LANGUAGE_TAG, Outcome, Representation, Source
 from rastro.ports.acquisition import HttpTransport, Resolver
 
 _USER_AGENT = "Rastro/0.1 (+https://github.com/rave-vipx/rastro)"
@@ -72,10 +72,19 @@ def retry_after(value: str | None) -> float | None:
         return None
 
 
-def _decode(response: HttpResponse) -> str:
+def _decode(response: HttpResponse, representation: Representation = "html") -> str:
     media = Message()
     media["content-type"] = response.headers.get("content-type", "")
-    if media.get_content_type() not in {"text/html", "application/xhtml+xml"}:
+    content_type = media.get_content_type()
+    if representation == "json":
+        # RFC 8259: JSON exchanged between systems is UTF-8; other charsets are invalid.
+        if content_type != "application/json" and not (
+            content_type.startswith("application/") and content_type.endswith("+json")
+        ):
+            raise AcquisitionError("unsupported_content_type", Outcome.PERMANENT_FAILURE)
+        if (media.get_content_charset() or "utf-8") not in {"utf-8", "utf8"}:
+            raise AcquisitionError("invalid_encoding", Outcome.INVALID_DATA)
+    elif content_type not in {"text/html", "application/xhtml+xml"}:
         raise AcquisitionError("unsupported_content_type", Outcome.PERMANENT_FAILURE)
     try:
         return response.body.decode(media.get_content_charset() or "utf-8", errors="strict")
@@ -103,9 +112,12 @@ class WebAcquirer:
             host: _Host(interval=policy.min_interval_seconds) for host in policy.allowed_hosts
         }
 
-    async def acquire(self, source: Source, *, max_bytes: int) -> AcquisitionResult:
+    async def acquire(
+        self, source: Source, *, max_bytes: int, representation: Representation = "html"
+    ) -> AcquisitionResult:
         started = perf_counter()
-        operation = _Operation(source.url, {"User-Agent": _USER_AGENT, "Accept": "text/html"})
+        accept = "application/json" if representation == "json" else "text/html"
+        operation = _Operation(source.url, {"User-Agent": _USER_AGENT, "Accept": accept})
         html: str | None = None
         issue: str | None = None
         status = Outcome.SUCCESS
@@ -130,7 +142,7 @@ class WebAcquirer:
                     response = await self._request(url, operation, max_bytes=max_bytes)
                     if response.status not in _REDIRECTS:
                         self._check_status(response.status)
-                        html = _decode(response)
+                        html = _decode(response, representation)
                         break
                     if hop == self.policy.max_redirects:
                         raise AcquisitionError("redirect_limit", Outcome.PERMANENT_FAILURE)

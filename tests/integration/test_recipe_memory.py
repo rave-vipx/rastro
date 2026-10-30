@@ -60,15 +60,17 @@ def test_pre_regional_sqlite_row_is_reused_after_restart(tmp_path, source, schem
     path = tmp_path / "legacy.db"
     key = RecipeKey.for_source(source, schema)
     legacy_key = key.model_dump(mode="json")
-    for field in ("languages", "currency", "egress"):
+    for field in ("languages", "currency", "egress", "representation"):
         legacy_key.pop(field)
+    legacy_recipe = recipe.model_dump(mode="json")
+    legacy_recipe.pop("record_path")
     SQLiteRecipeRepository(path).get(key)
     with closing(sqlite3.connect(path)) as db:
         db.execute(
             "INSERT INTO recipes VALUES (?, 1, ?, 0, ?, ?, 1)",
             (
                 json.dumps(legacy_key, sort_keys=True, separators=(",", ":")),
-                recipe.model_dump_json(),
+                json.dumps(legacy_recipe),
                 "2026-01-01T00:00:00.000000+00:00",
                 "2026-01-01T00:00:00.000000+00:00",
             ),
