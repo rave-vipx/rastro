@@ -79,10 +79,46 @@ emit a warning; use the selector configuration above when warnings are errors.
 | `backoff_seconds` | `1` | Initial exponential retry delay. |
 | `max_retry_delay_seconds` | `30` | Cap on local backoff; fallback cooldown for 429 with missing/invalid Retry-After. Never shortens a valid server delay. |
 
-`Limits.max_html_bytes` bounds decoded response bytes during transfer and UTF-8
+`Limits.max_html_bytes` (`max_json_bytes` for JSON requests) bounds decoded response bytes during transfer and UTF-8
 input bytes before extraction. Redirect bodies obey the same limit. Robots bodies
 have a separate 512,000-byte cap. Oversized bodies produce an explicit failure;
 partial bodies are never passed off as successful documents.
+
+## JSON responses
+
+To extract from a permitted JSON API, pass `representation="json"` with a `json`
+recipe, or omit the recipe and enable discovery:
+
+```python
+result = await engine.extract(
+    source=Source(url="https://api.example.com/v1/products"),
+    schema=Product,
+    recipe=Recipe(
+        strategy="json",
+        record_path="/data/products",
+        fields={"name": "/name", "price": "/offer/price"},
+    ),
+    representation="json",
+)
+```
+
+`extract_many(..., representation="json")` applies the same rules to each source.
+The request uses the same allowlist, robots rules, DNS pinning, redirect checks,
+pacing, retries and budgets as HTML acquisition. Only two things change:
+
+- `Accept: application/json` replaces `Accept: text/html`. HTML requests are
+  unchanged, and the header is only changed when the caller asks for JSON.
+- A 200 response must declare `application/json` or an `application/*+json` type,
+  such as `application/problem+json`. Any other type, including HTML, fails with
+  `unsupported_content_type` (`permanent_failure`). The body is never parsed as
+  another representation and nothing else is fetched. A declared charset other than
+  UTF-8 fails with `invalid_encoding` (RFC 8259).
+
+Strict decoding, the depth/node/record budgets and the outcomes are described in
+[structured JSON responses](api.md#structured-json-responses). Budget breaches
+report `extraction_limit`. A custom `AcquisitionPort` receives
+`representation="json"` only for JSON requests. HTML calls keep the original
+signature, so existing ports continue to work.
 
 ## Source rules and failures
 
@@ -106,7 +142,7 @@ and fail closed. These conservative limits may reject otherwise valid large file
 - **408/425/500/502/503/504:** bounded retries; Retry-After defers to the caller with
   `retry_after_seconds` and a shared cooldown instead of retrying early.
 - **Other failures:** explicit transient or permanent outcomes. Only a complete
-  HTTP 200 HTML/XHTML document enters extraction. Unsupported content types,
+  HTTP 200 HTML/XHTML document (or JSON document, when requested) enters extraction. Unsupported content types,
   invalid declared encoding, and incomplete 206 responses are rejected.
 
 `http_status` is the last received response status, including robots. Issue codes
