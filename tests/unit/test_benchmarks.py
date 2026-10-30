@@ -201,7 +201,13 @@ def test_heldout_report_counts_and_known_differences() -> None:
     assert effort["totals"]["rastro"]["entries"] == effort["totals"]["baseline_adapted"]["entries"]
     for row in effort["per_source"]:
         assert row["rastro_discovered"] is (row["kind"] in heldout.STRUCTURED)
+        origin = "structured_adapter" if row["kind"] in heldout.STRUCTURED else "hand_written"
+        assert row["baseline_adapted_mapping_origin"] == origin
+        assert row["baseline_adapted_auto_mapped"] is (origin == "structured_adapter")
+        assert row["baseline_adapted_mappings"]
         assert row["rastro_discovery_with_currency_field_name"] == "insufficient_evidence"
+    lines = effort["one_time_code_logical_lines"]
+    assert lines["rastro_integration"] > heldout.logical_lines(heldout.rastro_extract)
     mutations = report["mutations"]
     for name, summary in mutations["summary"].items():
         assert (
@@ -234,6 +240,9 @@ def test_heldout_report_counts_and_known_differences() -> None:
     missing = "issue_names_field_for_missing_required_value"
     assert all(row["rastro"] for item, row in checklist.items() if item != missing)
     # Recorded Rastro limitation: the missing required field is known but not reported.
+    # UPDATE AFTER PR #18 MERGES: that engine fix adds the field name to missing_evidence
+    # issues. Then expect checklist[missing]["rastro"] is True and field == "price" below,
+    # regenerate benchmarks/results/heldout.json and update docs/comparison.md.
     assert checklist[missing]["rastro"] is False
     assert report["visibility"]["missing_value_issues"] == [
         {"code": "missing_evidence", "record_index": 2, "field": None}

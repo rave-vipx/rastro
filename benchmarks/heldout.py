@@ -164,13 +164,20 @@ def run_baseline(source: HeldoutSource, html: str) -> Run:
     return Run(*baseline.run(html, source.baseline_mappings, Product))
 
 
-def run_baseline_adapted(source: HeldoutSource, html: str) -> Run:
-    mappings = (
+def adapted_mappings(source: HeldoutSource, html: str) -> tuple[tuple[Mapping, ...], str]:
+    """The adapted baseline's mappings and their origin, so zero-entry counts are evidenced."""
+    automatic = (
         baseline.structured_mappings(html, tuple(Product.model_fields))
         if source.kind in STRUCTURED
         else ()
     )
-    return Run(*baseline.run(html, mappings or source.baseline_mappings, Product))
+    if automatic:
+        return automatic, "structured_adapter"
+    return source.baseline_mappings, "hand_written"
+
+
+def run_baseline_adapted(source: HeldoutSource, html: str) -> Run:
+    return Run(*baseline.run(html, adapted_mappings(source, html)[0], Product))
 
 
 def _run(result: ExtractionResult[Any]) -> Run:
@@ -241,10 +248,12 @@ def integration_effort(sources: list[HeldoutSource], loop: asyncio.AbstractEvent
     rows: list[dict[str, Any]] = []
     for source in sources:
         manual = config_size(source.baseline_mappings)
+        mappings, origin = adapted_mappings(source, source.html)
         adapted = run_baseline_adapted(source, source.html)
-        adapted_auto = source.kind in STRUCTURED and classify(adapted, source.expected)[
-            "outcome"
-        ] == ("correct_success")
+        adapted_auto = (
+            origin == "structured_adapter"
+            and classify(adapted, source.expected)["outcome"] == "correct_success"
+        )
         discovered = loop.run_until_complete(rastro_extract(source, source.html))
         rastro_auto = classify(_run(discovered), source.expected)["outcome"] == "correct_success"
         legacy = loop.run_until_complete(rastro_extract(source, source.html, schema=LegacyProduct))
@@ -256,6 +265,10 @@ def integration_effort(sources: list[HeldoutSource], loop: asyncio.AbstractEvent
                 "baseline": manual,
                 "baseline_adapted": zero if adapted_auto else manual,
                 "baseline_adapted_auto_mapped": adapted_auto,
+                "baseline_adapted_mapping_origin": origin,
+                "baseline_adapted_mappings": [
+                    mapping.model_dump(mode="json", exclude_none=True) for mapping in mappings
+                ],
                 "rastro": zero if rastro_auto else config_size(explicit_mappings(source)),
                 "rastro_discovered": rastro_auto,
                 "rastro_learned_recipe": discovered.learned_recipe.model_dump(mode="json")
@@ -283,7 +296,26 @@ def integration_effort(sources: list[HeldoutSource], loop: asyncio.AbstractEvent
                 baseline.run,
             ),
             "baseline_structured_adapter": logical_lines(baseline.structured_mappings),
-            "rastro_integration": logical_lines(rastro_extract),
+            "rastro_integration": logical_lines(rastro_extract, recipe_for, explicit_mappings),
+        },
+        # Harness wrappers that convert either executor's output to Run are excluded for both.
+        "one_time_code_functions": {
+            "baseline_reference_executor": [
+                "_objects",
+                "_pointer",
+                "_types",
+                "_json_items",
+                "_json_rows",
+                "run",
+            ],
+            "baseline_structured_adapter": ["structured_mappings"],
+            "rastro_integration": ["rastro_extract", "recipe_for", "explicit_mappings"],
+            "excluded_harness_wrappers": [
+                "run_baseline",
+                "run_baseline_adapted",
+                "adapted_mappings",
+                "_run",
+            ],
         },
     }
 
@@ -332,6 +364,7 @@ def mutation_outcomes(sources: list[HeldoutSource], loop: asyncio.AbstractEventL
                         "kind": mutation.kind,
                         "requires_warning": mutation.requires_warning,
                         "rastro_memory_reused": memory.recipe_reused,
+                        "baseline_adapted_mapping_origin": adapted_mappings(source, html)[1],
                         "rastro_memory_issues": sorted({issue.code for issue in memory.issues}),
                         **{
                             name: classify(

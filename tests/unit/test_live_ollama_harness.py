@@ -10,6 +10,7 @@ from benchmarks.live_ollama import (
     collect,
     extract,
     merge,
+    parsed,
     summarize_model,
 )
 from rastro import Outcome, Rastro, Recipe
@@ -92,3 +93,8 @@ def test_report_versioning_keeps_every_previous_run() -> None:
 async def test_collect_rejects_invalid_budgets_before_any_request(trials, repetitions) -> None:
     with pytest.raises(ValueError):
         await collect("unused", repetitions, trials)
+
+
+def test_probe_keeps_unparseable_proposals_verbatim() -> None:
+    assert parsed('{"strategy": "css"}') == {"strategy": "css"}
+    assert parsed("css: not json") == "css: not json"

@@ -87,10 +87,13 @@ class CountingModel:
     def __init__(self, model: ModelPort) -> None:
         self.model = model
         self.calls = 0
+        self.outputs: list[str] = []
 
     async def generate(self, request: ModelRequest, policy: InferencePolicy) -> str:
         self.calls += 1
-        return await self.model.generate(request, policy)
+        output = await self.model.generate(request, policy)
+        self.outputs.append(output)
+        return output
 
 
 def sha256(data: bytes) -> str:
@@ -455,6 +458,32 @@ async def collect(model: str, repetitions: int, trials: int = 1) -> dict[str, An
     return report
 
 
+def parsed(output: str) -> Any:
+    """Keep unparseable model output verbatim instead of failing the probe."""
+    try:
+        return json.loads(output)
+    except ValueError:
+        return output
+
+
+async def probe(model: str, html_name: str = "distractors") -> dict[str, Any]:
+    """Record raw model proposals for one input; diagnostic only, never activated or reused."""
+    with httpx.Client(trust_env=False, timeout=60) as client:
+        env = environment(client, model)
+    counting = CountingModel(model_for(model))
+    summary = await extract(counting, None, html=INPUTS[html_name])
+    return {
+        "evidence_kind": "live_model_probe",
+        "input": html_name,
+        "environment": env,
+        "status": summary["status"],
+        "issues": summary["issues"],
+        "recipe_attempts": summary["recipe_attempts"],
+        "inference_calls": summary["inference_calls"],
+        "raw_proposals": [parsed(output) for output in counting.outputs],
+    }
+
+
 def merge(previous: dict[str, Any] | None, run: dict[str, Any]) -> dict[str, Any]:
     """Version the report: keep every earlier run, including the unversioned v1 layout."""
     earlier: list[dict[str, Any]] = []
@@ -482,11 +511,24 @@ def main() -> int:
         action="store_true",
         help="Append to an existing --output report instead of replacing it",
     )
+    parser.add_argument(
+        "--probe",
+        action="store_true",
+        help="Record raw proposals for the distractors input instead of the full run",
+    )
     parser.add_argument("--phase", choices=("learn", "reuse"), help=argparse.SUPPRESS)
     parser.add_argument("--database", type=Path, help=argparse.SUPPRESS)
     args = parser.parse_args()
     if args.phase:
         print(json.dumps(asyncio.run(phase(args.phase, args.model[0], args.database))))
+        return 0
+    if args.probe:
+        probes = {model: asyncio.run(probe(model)) for model in args.model}
+        text = json.dumps({"format_version": 1, "probes": probes}, indent=2) + "\n"
+        if args.output:
+            args.output.write_text(text)
+        else:
+            print(text, end="")
         return 0
     models = {}
     for model in args.model:
