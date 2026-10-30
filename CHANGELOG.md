@@ -6,7 +6,7 @@ All notable user-facing changes will be recorded here. No public release has bee
 
 ### Added
 
-- Explicit ordered language preferences, currency, timezone and direct-egress context for every Pydantic validation path; canonical Accept-Language headers and early rejection of unsupported egress (GEO-001/002).
+- Explicit ordered language preferences with descending Accept-Language weights, currency, timezone and direct-egress context through Pydantic's supported `model_validate` path; early rejection of invalid headers and unsupported egress (GEO-001/002).
 - Regional recipe isolation by language order, currency and egress with unchanged default canonical keys for existing SQLite memory (GEO-003, REC-001).
 
 - Reproducible offline comparison against an independent Scrapling + Pydantic baseline: synthetic corpus, multiset quality scoring, raw timing samples and source hashes (DIFF-001, QUAL-003).
@@ -36,4 +36,5 @@ All notable user-facing changes will be recorded here. No public release has bee
 
 - Live Ollama quality evidence remains pending. The first comparison shows equal extraction quality and a shared silent semantic error; no comparative advantage is claimed. Recipe memory requires explicit template/region/validator revisions; it stores successful-run metadata, not a durable job history.
 - HTTP supports public standard-port HTML sources with direct egress; no JavaScript/browser geolocation, authentication, proxies, or discovery crawling.
+- Pydantic models with a custom `__init__` retain Pydantic's constructor semantics and must handle validation context themselves; Rastro does not bypass user constructors.
 - Schema aliases, alternate structured API discovery, automatic stored-recipe repair, and cross-document synchronization are not supported. Discovery is limited to exact JSON-LD names and simple microdata.

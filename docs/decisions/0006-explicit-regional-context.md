@@ -18,15 +18,21 @@ unreachable even when callers use all regional defaults.
 
 Add ordered, syntactically validated `Source.languages`, optional uppercase
 three-letter `currency`, and explicit `egress="direct"`. Explicit languages form
-Accept-Language in caller order; an empty tuple retains the existing locale fallback.
-The direct-only literal and the acquisition boundary both reject unsupported egress
-before DNS. No proxy, rotation, inferred location, or browser configuration is added.
+Accept-Language in caller order. The first has implicit quality `1`; subsequent
+preferences decrease by `0.05`, leaving the twentieth at `0.05`. An empty tuple
+retains the existing unweighted locale fallback. The direct-only literal and the
+acquisition boundary both reject unsupported egress before DNS. No proxy, rotation,
+inferred location, or browser configuration is added.
 
-Pass locale, languages, timezone, currency and egress as `ValidationInfo.context`
-through the shared extraction function. This covers explicit, persisted, discovered,
-model-proposed and HTTP-acquired recipes without changing parser/acquisition ports.
-Currency interpretation remains trusted schema behavior; Rastro does not guess or
-convert values, and validator defaults/transformations gain no evidence.
+Pass locale, languages, timezone, currency and egress to `schema.model_validate` as
+`ValidationInfo.context` through the shared extraction function. This covers
+explicit, persisted, discovered, model-proposed and HTTP-acquired recipes whose
+validators use Pydantic's supported context path, without changing parser/acquisition
+ports. A custom model `__init__` retains Pydantic's constructor semantics and must
+handle context accordingly; Rastro does not bypass user constructors or promise
+context for that unsupported path. Currency interpretation remains trusted schema
+behavior; Rastro does not guess or convert values, and validator
+defaults/transformations gain no evidence.
 
 Extend `RecipeKey` with the ordered regional values. Its canonical JSON omits the
 new fields only when languages are empty, currency is absent and egress is direct,
@@ -37,6 +43,8 @@ regional context gets a distinct key and never falls back to legacy memory.
 
 - Existing callers and stored default-context recipes remain compatible.
 - Language order and currency differences cannot share recipes.
+- Descending weights express caller priority for up to 20 languages; servers may
+  still ignore content negotiation.
 - `direct` describes actual network origin, not browser geolocation. GEO-001 stays
   partial until a browser adapter makes browser geolocation applicable or a secure
   pinned non-direct egress adapter is introduced.
@@ -45,6 +53,7 @@ regional context gets a distinct key and never falls back to legacy memory.
 
 ## Verification
 
-Offline tests cover contract validation, ordered headers, pre-DNS egress rejection,
-Pydantic context in explicit/acquired/learning paths, redirect preservation,
-regional memory misses, language order and legacy canonical SQLite reuse.
+Offline tests cover contract validation, 20 descending language weights, CRLF and
+pre-DNS egress rejection, Pydantic context in explicit/acquired/learning paths,
+custom-`__init__` constructor preservation, redirect preservation, regional memory
+misses, a real legacy SQLite row, and currency-aware model learning/reuse.

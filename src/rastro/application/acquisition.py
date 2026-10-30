@@ -101,10 +101,15 @@ class WebAcquirer:
             if source.egress != "direct":
                 raise AcquisitionError("unsupported_egress", Outcome.PERMANENT_FAILURE)
             languages = source.languages or (() if source.locale == "und" else (source.locale,))
-            if any(re.fullmatch(LANGUAGE_TAG, language) is None for language in languages):
+            if len(languages) > 20 or any(
+                re.fullmatch(LANGUAGE_TAG, language) is None for language in languages
+            ):
                 raise AcquisitionError("invalid_locale", Outcome.PERMANENT_FAILURE)
             if languages:
-                operation.headers["Accept-Language"] = ", ".join(languages)
+                operation.headers["Accept-Language"] = ", ".join(
+                    language if index == 0 else f"{language};q={(20 - index) / 20:g}"
+                    for index, language in enumerate(languages)
+                )
             async with asyncio.timeout(self.policy.operation_timeout_seconds):
                 url = source.url
                 for hop in range(self.policy.max_redirects + 1):

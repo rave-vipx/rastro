@@ -13,7 +13,7 @@ await Rastro.extract(*, source, schema, recipe=None, context=None, recipe_versio
 await Rastro.extract_many(sources, *, schema, recipe=None, context=None, recipe_version=None)
 ```
 
-`html` is a UTF-8-compatible Python string. `schema` is a Pydantic `BaseModel` subclass with declared fields. `recipe.fields` maps model field names to extraction expressions. Aliases and root models are outside this milestone's supported schema contract. Custom validators run as trusted caller code and receive the source's regional context through Pydantic `ValidationInfo.context`.
+`html` is a UTF-8-compatible Python string. `schema` is a Pydantic `BaseModel` subclass with declared fields. `recipe.fields` maps model field names to extraction expressions. Aliases and root models are outside this milestone's supported schema contract. Custom validators run as trusted caller code. Rastro supplies the source's regional context through Pydantic's `model_validate` context path, subject to Pydantic's constructor semantics described below.
 
 The `extract_html` call is synchronous, does no fetching, and returns `ExtractionResult[YourModel]`. Persistence is opt-in through `repository`; omitting `recipe` then reuses an exact-context validated version. See [recipe memory](memory.md). Asynchronous methods optionally learn cold-context recipes when `discover_recipes=True` or `model=` is configured; see [optional intelligence](intelligence.md). Parser injection is an infrastructure seam for trusted adapters implementing `DocumentParser`.
 
@@ -23,7 +23,7 @@ For HTTP acquisition, construct `Rastro.web(AcquisitionPolicy(...))` and use the
 
 | Object | Fields and behavior |
 | --- | --- |
-| `Source` | HTTP(S) `url`; `locale` (`und`); ordered `languages` (`()`); `timezone` (`UTC`); optional three-letter uppercase `currency`; and `egress` (`direct`, the only supported value). Credentials, invalid language tags/currency codes and unsupported egress are rejected. Explicit languages form Accept-Language; otherwise a defined locale remains the compatible fallback. |
+| `Source` | HTTP(S) `url`; `locale` (`und`); ordered `languages` (`()`); `timezone` (`UTC`); optional three-letter uppercase `currency`; and `egress` (`direct`, the only supported value). Credentials, invalid language tags/currency codes and unsupported egress are rejected. Explicit languages form Accept-Language with descending quality weights; otherwise a defined locale remains the compatible fallback. |
 | `Recipe` | `strategy` (`jsonld` or `css`), required `fields`, positive `version` (default `1`), optional `item_type` for JSON-LD, required `record_selector` for CSS, up to three flat `fallbacks` sharing its version. `require_evidence` (default `False`) requires observations for required fields before validation; learned recipes set it to `True`. Version maximum: 2,147,483,647. |
 | `Limits` | `max_html_bytes` (2,000,000), `max_records` (1,000), `max_jsonld_blocks` (100). |
 
@@ -33,9 +33,13 @@ JSON-LD type matching is exact and accepts an `@type` string or array. Nested fi
 
 Recipes serialize using `recipe.model_dump_json()` and load with `Recipe.model_validate_json(text)`. Loading a recipe never evaluates Python. Schema compatibility is checked before parsing.
 
-Pydantic validators receive `locale`, `languages`, `timezone`, `currency`, and
+Rastro calls `schema.model_validate(..., context=...)`, so validators supported by
+that Pydantic path receive `locale`, `languages`, `timezone`, `currency`, and
 `egress` in `ValidationInfo.context` for explicit recipes, persisted recipes, cold
-discovery/model learning, and acquired pages. Rastro does not infer a currency or
+discovery/model learning, and acquired pages. A model with a custom `__init__`
+follows Pydantic's constructor semantics and may validate without that context;
+Rastro does not bypass or replace the constructor. Such a constructor must arrange
+context propagation as documented by Pydantic. Rastro does not infer a currency or
 convert values. Validator transformations do not create source evidence.
 
 ## Results

@@ -52,6 +52,34 @@ def test_repeat_extraction_reuses_exact_version_and_retains_evidence(
         engine.extract_html(html, source=source, schema=schema, recipe_version=3)
 
 
+def test_pre_regional_sqlite_row_is_reused_after_restart(tmp_path, source, schema, recipe, html):
+    import json
+    import sqlite3
+
+    path = tmp_path / "legacy.db"
+    key = RecipeKey.for_source(source, schema)
+    legacy_key = key.model_dump(mode="json")
+    for field in ("languages", "currency", "egress"):
+        legacy_key.pop(field)
+    SQLiteRecipeRepository(path).get(key)
+    with sqlite3.connect(path) as db:
+        db.execute(
+            "INSERT INTO recipes VALUES (?, 1, ?, 0, ?, ?, 1)",
+            (
+                json.dumps(legacy_key, sort_keys=True, separators=(",", ":")),
+                recipe.model_dump_json(),
+                "2026-01-01T00:00:00.000000+00:00",
+                "2026-01-01T00:00:00.000000+00:00",
+            ),
+        )
+
+    result = Rastro(repository=SQLiteRecipeRepository(path)).extract_html(
+        html, source=source, schema=schema
+    )
+
+    assert result.status == Outcome.SUCCESS and result.recipe_reused
+
+
 @pytest.mark.parametrize(
     "dimension",
     [

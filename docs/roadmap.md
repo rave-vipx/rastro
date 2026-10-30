@@ -26,7 +26,7 @@ M1–M4 are implemented with offline regression tests and quality checks. M5 is 
 | REC-001/003 | SQLite versions keyed by source/template/schema/region; mappings/fallback definitions, validation-contract references, creation/last-success timestamps and successful-run counts. Advanced lifecycle/health remains v0.2. |
 | REC-004 | Model candidates require strict declarative structure, source observations, required-field evidence and full schema success before activation. Evidence policy survives restart; partial/failed candidates never activate. |
 | AI-001–004 | Optional local Ollama adapter, structured proposals, capability boundary and bounded calls/corrections/deadline/context/response/concurrency. Offline contract tests cover these guarantees; live-model quality remains release evidence. |
-| GEO-001–003 | Partial: explicit ordered languages with locale fallback drive Accept-Language; locale/languages/timezone/currency/direct-egress reach Pydantic validators; unsupported egress fails before DNS; recipe memory isolates the ordered regional context while retaining default legacy keys. Browser geolocation remains inapplicable until a browser adapter exists, and non-direct egress is unsupported. See [ADR 0006](decisions/0006-explicit-regional-context.md). |
+| GEO-001–003 | Partial: explicit ordered languages with descending Accept-Language weights and locale fallback; locale/languages/timezone/currency/direct-egress reach validators through Pydantic's supported `model_validate` context path; unsupported egress fails before DNS; recipe memory isolates the ordered regional context while retaining default legacy keys. Custom model constructors follow Pydantic semantics and must handle context themselves. Browser geolocation remains inapplicable until a browser adapter exists, and non-direct egress is unsupported. See [ADR 0006](decisions/0006-explicit-regional-context.md). |
 | OBS-001 | Partial: job ID, source metadata, acquisition/network/parsing/validation/total durations, request/record/field counts. Inference call counts and model-phase duration are available; durable history remains pending. |
 | OBS-002 | JSON completion logs with correlation IDs; no source content in events. |
 | SEC-001/002/003 | Exact host policy, public destination checks, DNS pinning, per-hop validation, robots enforcement, throttling and restriction outcomes. See ADR 0002 and HTTP tests. |
@@ -99,11 +99,13 @@ See the [master specification](https://github.com/rave-vipx/rastro/blob/main/RAS
 
 - **Release:** v0.1 development preview; GEO-001 remains partial.
 - **Requirements:** GEO-001–003 and REC-001 compatibility.
-- **Public behavior:** ordered language preferences, explicit currency/timezone and
-  direct egress are available to every Pydantic validation path. Unsupported egress
-  is rejected before DNS; no proxy or false geolocation is introduced.
-- **Evidence:** offline contract, acquisition, redirect, discovery, validator-context,
-  memory-isolation, language-order and legacy-key/SQLite reuse tests.
+- **Public behavior:** ordered language preferences use descending HTTP weights;
+  explicit currency/timezone and direct egress reach validators through Pydantic's
+  supported `model_validate` context path. Unsupported egress is rejected before DNS;
+  no proxy or false geolocation is introduced.
+- **Evidence:** offline contract, 20-language acquisition, CRLF, redirect, discovery,
+  validator-context/custom-constructor, memory-isolation, model-currency/reuse and
+  real legacy-row SQLite tests.
 - **Limitations:** no browser adapter/geolocation and no non-direct egress adapter.
   Separate structured API acquisition (INT-002) and DIFF-001 evidence remain open.
 - **Architecture:** [ADR 0006](decisions/0006-explicit-regional-context.md).

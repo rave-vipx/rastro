@@ -86,6 +86,38 @@ async def test_learned_recipe_supplies_regional_validation_context(source):
 
 
 @pytest.mark.asyncio
+async def test_model_recipe_uses_currency_context_and_is_reused_after_restart(tmp_path, source):
+    seen = []
+
+    class Regional(BaseModel):
+        name: str
+
+        @field_validator("name")
+        @classmethod
+        def validate_currency(cls, value: str, info: ValidationInfo) -> str:
+            seen.append(info.context["currency"])
+            return value
+
+    path = tmp_path / "recipes.db"
+    model = Model(
+        json.dumps(
+            {"strategy": "css", "record_selector": ".product", "fields": {"name": "h2::text"}}
+        )
+    )
+    regional = source.model_copy(update={"currency": "JPY"})
+    learned = await Rastro(model=model, repository=SQLiteRecipeRepository(path)).extract_html_async(
+        PAGE, source=regional, schema=Regional
+    )
+    reused = Rastro(repository=SQLiteRecipeRepository(path)).extract_html(
+        PAGE, source=regional, schema=Regional
+    )
+
+    assert learned.status == reused.status == Outcome.SUCCESS
+    assert reused.recipe_reused and len(model.requests) == 1
+    assert seen == ["JPY", "JPY"]
+
+
+@pytest.mark.asyncio
 async def test_invalid_candidates_exhaust_budget_without_activation(tmp_path, source, schema):
     repo = SQLiteRecipeRepository(tmp_path / "recipes.db")
     model = Model('{"execute": "rm -rf /"}', PROPOSAL)

@@ -61,6 +61,36 @@ def test_explicit_extraction_supplies_regional_validation_context():
     assert result.status == Outcome.SUCCESS
 
 
+def test_custom_pydantic_init_is_not_bypassed_to_supply_context():
+    initialized = False
+    seen = []
+
+    class CustomInit(BaseModel):
+        name: str
+
+        def __init__(self, **data):
+            nonlocal initialized
+            initialized = True
+            super().__init__(**data)
+
+        @field_validator("name")
+        @classmethod
+        def capture_context(cls, value: str, info: ValidationInfo) -> str:
+            seen.append(info.context)
+            return value
+
+    result = Rastro().extract_html(
+        ld({"name": "Notebook"}),
+        source=Source(url="https://example.com/", currency="UYU"),
+        schema=CustomInit,
+        recipe=Recipe(strategy="jsonld", fields={"name": "/name"}),
+    )
+
+    assert result.status == Outcome.SUCCESS
+    assert initialized
+    assert seen == [None]
+
+
 def test_css_contract_matches_jsonld(html, source, schema, recipe):
     css = Recipe(
         strategy="css",

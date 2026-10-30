@@ -123,11 +123,13 @@ Received bytes count completed HTTP responses, including robots and redirects;
 interrupted transfers may be undercounted. Input bytes measure UTF-8 HTML passed
 to the parser. Extraction and validation durations remain separate.
 
-Ordered `Source.languages` set Accept-Language without invented quality weights.
-When languages are empty, a valid `locale` remains the backward-compatible header;
-`und` omits it. Invalid tags fail before DNS. Locale, languages, timezone, currency,
-and egress are passed to trusted Pydantic validators; Rastro does not infer regional
-rules or currency. The remote server decides whether to honor Accept-Language.
+Ordered `Source.languages` set Accept-Language with descending quality weights: the
+first preference has the implicit weight `1`, then weights decrease by `0.05` down
+to `0.05` for the twentieth preference. When languages are empty, a valid `locale`
+remains the backward-compatible unweighted header; `und` omits it. Invalid tags fail
+before DNS. Locale, languages, timezone, currency, and egress are passed through
+Pydantic's `model_validate` context; Rastro does not infer regional rules or currency.
+The remote server decides whether to honor Accept-Language.
 
 `egress="direct"` explicitly means the configured transport connects from the
 current machine. It is distinct from browser geolocation, which is unavailable
