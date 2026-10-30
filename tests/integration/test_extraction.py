@@ -143,7 +143,11 @@ def test_partial_success_keeps_accounting(source, schema, recipe):
     assert result.issues[0].record_index == 1
 
 
-@pytest.mark.parametrize("raw", ["{", '{"price":NaN}', '{"name":"A","name":"B"}', "[" * 2000])
+@pytest.mark.parametrize(
+    "raw",
+    ["{", '{"price":NaN}', '{"name":"A","name":"B"}', "[" * 2000],
+    ids=["truncated", "nan", "duplicate-key", "deep-nesting"],
+)
 def test_invalid_jsonld_is_visible(raw, source, schema, recipe):
     result = Rastro().extract_html(
         '<script type="application/ld+json">' + raw + "</script>",
