@@ -15,7 +15,7 @@ AI-001–004, GEO-001–003, OBS-001/002, and specification sections 17–18.
 | Configured Ollama works end to end | Offline adapter/proposal/budget tests; [live Ollama evidence](live-ollama-evidence.md): `qwen3:4b` and `llama3.2:3b` each learned, activated and reused a recipe across processes in 5/5 trials, and all eight live/controlled failure scenarios stayed explicit for both | Two small models on one machine with synthetic inputs; the harder page failed 0/5 for both (safely); broader model quality is unmeasured |
 | Competent comparison | Independent Scrapling + Pydantic baseline: 14-case regression corpus, plus a [held-out evaluation](comparison.md#held-out-evaluation) with 5 sources, 24 structural mutations and an adapted baseline | DIFF-001 **partially** demonstrated: source-specific configuration tied with the adapted baseline (10 vs 10 entries; the adapter costs 33 more one-time lines; 25 entries without adaptation), and 16/16 vs 1/16 visibility items. With a scripted fake model, Rastro with SQLite memory made 0.017 calls per successful record vs 0.167 for Rastro without memory; the baseline makes no model calls. Silent errors were equal (3/24 for every executor), there was no accuracy gain, and Rastro was slower. Maintenance/recovery and real-model quality are unmeasured |
 | Full v0.1 requirements | [Coverage table](roadmap.md) | Separate permitted structured APIs (INT-002), broader currency interpretation and explicit egress configuration (GEO-001) remain incomplete |
-| Licenses, naming and distribution | Installed dependency inventory and public registry checks below | Ownership, naming/trademark review, bundled native notices and final distribution review remain open |
+| Licenses, naming and distribution | Installed dependency inventory, built wheel/sdist contents, bundled native notices on macOS arm64 and public registry checks below | Ownership, naming/trademark review, legal compatibility, bundled notices on other platforms and final distribution review remain open |
 | Supported documentation tooling | Current strict MkDocs build | Plan the transition before Material's announced end of maintenance |
 | Immutable release and publishing | Development changelog, locked dependencies and CI packaging checks | Approved version/tag/artifact hashes, registry ownership, protected Trusted Publishing and provenance |
 
@@ -103,6 +103,48 @@ notices and review the exact artifacts selected for distribution, including the
 MPL and alternative-license declarations. No legal compatibility or trademark
 clearance is asserted by this inventory. The wheel contains Rastro's source, not
 vendored dependencies; installers resolve dependencies separately.
+
+### Bundled native notices
+
+On 2026-10-30, `uv build` produced `rastro_engine-0.1.0.dev0-py3-none-any.whl` and
+`rastro_engine-0.1.0.dev0.tar.gz`. The wheel is pure Python and contains only
+Rastro's `rastro/` modules, `py.typed`, and the generated `.dist-info` metadata
+(`METADATA`, `WHEEL`, `entry_points.txt`, `licenses/LICENSE`, `RECORD`). The
+source distribution additionally contains `tests/`, `examples/`, `benchmarks/`
+(including the recorded result JSON) and `docs/`, plus project files such as
+`README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `SECURITY.md`, `mkdocs.yml`,
+`pyproject.toml`, `uv.lock` and `RASTRO_MASTER_SPEC.md`. Neither artifact
+contains third-party code, native binaries or vendored dependencies; Rastro's
+own distributions therefore do not redistribute the libraries below, and
+installers resolve them separately.
+
+The installed runtime inspected on macOS arm64 (CPython 3.12.16) does include
+native wheels:
+
+- `curl-cffi` 0.16.3 (`cp310-abi3-macosx_11_0_arm64`) ships one native
+  extension, `curl_cffi/_wrapper.abi3.so`. `otool -L` shows only
+  `/usr/lib/libc++.1.dylib` and `/usr/lib/libSystem.B.dylib`, so the HTTP stack
+  is statically linked; embedded build paths name `curl-impersonate` and
+  `boringssl`, and nghttp2/nghttp3 symbols are present. The only notice shipped
+  with the installed wheel is
+  `curl_cffi-0.16.3.dist-info/licenses/LICENSE` (MIT). No separate third-party
+  notice file for the statically linked components was found.
+- `lxml` 6.1.3 (`cp312-cp312-macosx_10_13_universal2`) ships native extensions
+  (`etree`, `objectify`, `builder`, `sax`, `_elementpath`, `html/diff`,
+  `html/_difflib`, all `cpython-312-darwin.so`, universal2) with no separate
+  `.dylib` or `.dylibs/` payload; `libxml2`, `libxslt` and `libexslt` are
+  statically linked (for example, `otool -L` on `etree` lists only
+  `libSystem.B.dylib`). The wheel ships
+  `lxml-6.1.3.dist-info/licenses/LICENSE.txt` (BSD-3-Clause) and `LICENSES.txt`,
+  whose "Binary wheels" section names the bundled libraries: zlib (zlib
+  license), iconv (LGPL 2.1), libxml2 (MIT), libxslt (MIT) and libexslt (MIT).
+
+These binaries and notices are distributed by the `curl-cffi` and `lxml`
+projects, not by Rastro. Legal compatibility review (notably iconv's LGPL 2.1,
+the alternative-license declarations and the unenumerated `curl-impersonate`
+components), trademark and naming clearance, and inspection of wheels for other
+platforms and Python versions remain open human review; this record makes no
+legal conclusion.
 
 ## Naming and documentation lifecycle
 
