@@ -1,11 +1,13 @@
 """Verify the release evidence oracle and scoring (DIFF-001, QUAL-003)."""
 
+import asyncio
 from dataclasses import replace
 from decimal import Decimal
 
 import pytest
+from pytest_socket import disable_socket, enable_socket
 
-from benchmarks import baseline, rastro_runner
+from benchmarks import baseline, heldout, rastro_runner
 from benchmarks.contracts import Observation
 from benchmarks.run import load_cases, run
 from benchmarks.scoring import percentile95, score
@@ -111,3 +113,139 @@ def test_report_runs_without_git_in_source_distribution(monkeypatch) -> None:
     report = run(repetitions=1, warmup=0)
     assert report["git_revision"] is None
     assert report["git_dirty"] is None
+
+
+# Held-out DIFF-001 evaluation (benchmarks/heldout.py, benchmarks/heldout.json).
+
+HELDOUT = {source.name: source for source in heldout.load_sources()}
+SILENT = {"related_product_added", "sponsored_duplicate", "price_class_reassigned"}
+
+
+def offline_loop() -> asyncio.AbstractEventLoop:
+    # The loop's private wake-up socket pair is not network access (see conftest).
+    enable_socket()
+    try:
+        return asyncio.new_event_loop()
+    finally:
+        disable_socket()
+
+
+def test_heldout_corpus_is_disjoint_and_every_mutation_changes_the_page() -> None:
+    regression = {case.document.html for case in CASES.values()}
+    assert not regression & {source.html for source in HELDOUT.values()}
+    names = [(source.name, m.name) for source in HELDOUT.values() for m in source.mutations]
+    assert len(names) == len(set(names)) == 24
+    for source in HELDOUT.values():
+        assert (source.rastro_recipe is None) is (source.kind in heldout.STRUCTURED)
+        for mutation in source.mutations:
+            assert mutation.apply(source.html) != source.html
+            if mutation.requires_warning is False:
+                # Non-warning oracles keep the original records: data is still on the page.
+                assert mutation.expected == source.expected
+
+
+def test_heldout_mutation_must_apply() -> None:
+    mutation = heldout.Mutation(name="x", kind="k", replace=(("absent", "y"),), expected=())
+    with pytest.raises(ValueError, match="does not apply"):
+        mutation.apply("<p>page</p>")
+
+
+def test_heldout_classification_separates_silent_errors() -> None:
+    expected = HELDOUT["hardware_cards"].expected
+    extra = (*expected, expected[0])
+    silent = heldout.classify(heldout.Run("success", extra), expected)
+    assert silent["outcome"] == "silent_error" and silent["extra_records"] == 1
+    warned = heldout.classify(heldout.Run("success", expected), expected, requires_warning=True)
+    assert warned["outcome"] == "silent_error"
+    explicit = heldout.classify(heldout.Run("partial_success", expected[:2]), expected)
+    assert explicit["outcome"] == "explicit_non_success" and explicit["correct_records"] == 2
+    scaled = expected[0].model_copy(update={"price": Decimal("24.900")})
+    exact = heldout.classify(heldout.Run("success", (scaled, *expected[1:])), expected)
+    assert exact["outcome"] == "correct_success"
+
+
+def test_heldout_effort_counters() -> None:
+    mapping = HELDOUT["hardware_cards"].baseline_mappings[0]
+    assert heldout.config_size([mapping]) == {"entries": 5, "tokens": 35, "characters": 103}
+
+    def sample() -> int:
+        """Docstring lines are not configuration."""
+        # Neither are comments.
+        return 1
+
+    assert heldout.logical_lines(sample) == 2
+
+
+def test_baseline_reports_malformed_jsonld_instead_of_raising() -> None:
+    source = HELDOUT["books_jsonld_blocks"]
+    html = next(m for m in source.mutations if m.name == "one_block_malformed").apply(source.html)
+    status, records = baseline.run(html, source.baseline_mappings, heldout.Product)
+    assert status == "partial_success" and len(records) == 2
+
+
+def test_baseline_structured_adapter_handles_offer_lists_and_microdata() -> None:
+    fields = tuple(heldout.Product.model_fields)
+    source = HELDOUT["outdoor_jsonld"]
+    html = next(m for m in source.mutations if m.name == "offers_as_list").apply(source.html)
+    (mapping,) = baseline.structured_mappings(html, fields)
+    assert mapping.fields["price"] == "/offers/0/price" and mapping.item_type == "Product"
+    (microdata,) = baseline.structured_mappings(HELDOUT["pantry_microdata"].html, fields)
+    assert microdata.strategy == "css"
+    assert baseline.structured_mappings(HELDOUT["deli_table"].html, fields) == ()
+
+
+def test_heldout_report_counts_and_known_differences() -> None:
+    report = heldout.run(repetitions=1, warmup=0, model_runs=2, loop_factory=offline_loop)
+    effort = report["integration_effort"]
+    assert effort["totals"]["baseline"]["entries"] == 25
+    assert effort["totals"]["rastro"]["entries"] == effort["totals"]["baseline_adapted"]["entries"]
+    for row in effort["per_source"]:
+        assert row["rastro_discovered"] is (row["kind"] in heldout.STRUCTURED)
+        origin = "structured_adapter" if row["kind"] in heldout.STRUCTURED else "hand_written"
+        assert row["baseline_adapted_mapping_origin"] == origin
+        assert row["baseline_adapted_auto_mapped"] is (origin == "structured_adapter")
+        assert row["baseline_adapted_mappings"]
+        assert row["rastro_discovery_with_currency_field_name"] == "insufficient_evidence"
+    lines = effort["one_time_code_logical_lines"]
+    assert lines["rastro_integration"] > heldout.logical_lines(heldout.rastro_extract)
+    mutations = report["mutations"]
+    for name, summary in mutations["summary"].items():
+        assert (
+            (summary["correct_success"] + summary["explicit_non_success"] + summary["silent_error"])
+            == summary["mutations"]
+            == 24
+        )
+        silent = {
+            row["mutation"]
+            for row in mutations["mutations"]
+            if row[name]["outcome"] == "silent_error"
+        }
+        assert silent == SILENT
+    outcome = {row["mutation"]: row for row in mutations["mutations"]}
+    assert outcome["offers_as_list"]["baseline_adapted"]["outcome"] == "correct_success"
+    assert outcome["offers_as_list"]["rastro_memory"]["outcome"] == "explicit_non_success"
+    assert outcome["brand_name_added"]["rastro_memory"]["outcome"] == "correct_success"
+    assert outcome["brand_name_added"]["rastro_rediscover"]["outcome"] == "explicit_non_success"
+    model = report["model_reuse"]["summary"]
+    css_sources = sum(source.rastro_recipe is not None for source in HELDOUT.values())
+    assert model["scripted_valid_first/memory"]["inference_calls"] == css_sources
+    assert model["scripted_valid_first/no_memory"]["inference_calls"] == 2 * css_sources
+    assert model["scripted_one_rejection/memory"]["inference_calls"] == 2 * css_sources
+    checklist = {row["item"]: row for row in report["visibility"]["checklist"]}
+    assert checklist["explicit_outcome_status"] == {
+        "item": "explicit_outcome_status",
+        "baseline": True,
+        "rastro": True,
+    }
+    assert all(row["rastro"] for row in checklist.values())
+    # missing_evidence names the missing required field (fixed in PR #18).
+    assert report["visibility"]["missing_value_issues"] == [
+        {"code": "missing_evidence", "record_index": 2, "field": "price"}
+    ]
+    assert len(report["latency"]) == len(HELDOUT)
+
+
+@pytest.mark.parametrize("budget", [(0, 0, 1), (1, -1, 1), (1, 0, 0)])
+def test_invalid_heldout_budget(budget) -> None:
+    with pytest.raises(ValueError):
+        heldout.run(*budget)

@@ -1,22 +1,116 @@
 # Live Ollama evidence
 
-This report records one end-to-end validation of optional recipe learning against
-a real local Ollama model. It is evidence for the M5 register, not release approval,
+This report records end-to-end validation of optional recipe learning against
+real local Ollama models. It is evidence for the M5 register, not release approval,
 and it does not claim that v0.1 is complete. Requirements: **AI-001–004, REC-001,
 REC-004, INT-002, INT-003, QUAL-001, QUAL-003, QUAL-004, OBS-001**.
+
+There are two recorded runs. The [first run](#first-run-qwen34b) (04:39 UTC) used
+`qwen3:4b` only. It found and fixed two adapter defects. The
+[multi-model run](#multi-model-run-qwen34b-and-llama323b) (17:47 UTC) repeated the
+same scenarios for `qwen3:4b` and `llama3.2:3b`, with five learn/reuse trials each.
+The [raw report](https://github.com/rave-vipx/rastro/blob/dev/benchmarks/results/live-ollama.json)
+uses `format_version: 2`: `runs` holds the latest run and `previous_runs` keeps the
+first run unchanged.
 
 ## Summary
 
 | Question | Observation |
 | --- | --- |
-| Does a configured model learn a recipe without a deterministic route? | Yes, for the plain synthetic product card: one call, validated, activated and stored |
-| Does a second process reuse it without inference? | Yes: `recipe_reused=true`, zero inference calls, zero model-port calls |
-| Is the plain-card result repeatable? | 5 of 5 fresh-memory runs succeeded with the expected record |
-| Does a harder page succeed? | No: 0 of 5. Every run ended with `insufficient_evidence` and nothing was stored |
-| Do unavailability and invalid output fail visibly? | Yes: eight scenarios returned explicit non-success outcomes and stored nothing |
-| Did live testing find defects? | Two adapter defects, fixed with regression tests before this recording |
+| Does a configured model learn a recipe without a deterministic route? | Yes for the plain synthetic card: `qwen3:4b` 6/6 learn processes across both runs, `llama3.2:3b` 5/5. Each used one call, then validation, activation and storage |
+| Does a second process reuse it without inference? | Yes, in every trial: 6/6 and 5/5, `recipe_reused=true`, zero inference and model-port calls |
+| Is the plain-card result repeatable? | Fresh-memory repetitions: `qwen3:4b` 10/10 (both runs), `llama3.2:3b` 5/5 |
+| Does a harder page succeed? | **No, for either model**: `qwen3:4b` 0/10, `llama3.2:3b` 0/5. Every run ended with `insufficient_evidence` and nothing was stored |
+| Do unavailability and invalid output fail visibly? | Yes: all eight scenarios returned explicit non-success outcomes with no records or stored recipe: `qwen3:4b` in both runs, `llama3.2:3b` in the multi-model run (its only run) |
+| Did live testing find defects? | Two adapter defects in the first run, fixed with regression tests. None in the multi-model run |
 
-## Integration versus recipe quality
+## Multi-model run: qwen3:4b and llama3.2:3b
+
+Recorded on **2026-10-30 17:47–17:48 UTC** from commit `606324e` (the multi-model
+harness), with no tracked changes. Same machine, Ollama 0.40.13 build, and
+inputs and budgets as the first run below. CPython 3.12.16 (Homebrew), harness SHA-256
+`6635479e…aaaa173`, `uv.lock` SHA-256 `e21515d8…c9621b` (unchanged).
+
+| Model | Digest | Details |
+| --- | --- | --- |
+| `qwen3:4b` | `359d7dd4bcda…` (same as first run) | GGUF, Qwen3, 4.0B, Q4_K_M, 2,497,293,931 bytes |
+| `llama3.2:3b` | `a80c4f17acd5…` | GGUF, Llama, 3.2B, Q4_K_M, 2,019,393,189 bytes |
+
+```bash
+uv run --extra ollama python -m benchmarks.live_ollama \
+  --model qwen3:4b --model llama3.2:3b --trials 5 --repetitions 5 \
+  --output /tmp/rastro-live-ollama.json
+```
+
+Write to a temporary path to reproduce. The committed report was produced by the same
+command with `--keep-previous --output benchmarks/results/live-ollama.json`, which
+appends to the recorded file. Use that form only to record a new run deliberately.
+
+`--model` can be repeated. `--trials` runs N learn→reuse cycles per model, each a
+pair of separate processes sharing a fresh SQLite file. `--keep-previous` appends
+to an existing report instead of replacing it. Each model is unloaded before its
+first trial, so trial 0 includes model load time. The other model could remain
+resident (`/api/ps` listed it), so both models shared the 16 GB of memory.
+
+| Per model (5 trials, 5 repetitions per input) | `qwen3:4b` | `llama3.2:3b` |
+| --- | ---: | ---: |
+| Learn success / activated (stored) / expected record | 5 / 5 / 5 | 5 / 5 / 5 |
+| Reuse success with zero inference and model-port calls | 5 | 5 |
+| `product_card` repetitions (success) | 5/5 | 5/5 |
+| `distractors` repetitions (success) | 0/5 | 0/5 |
+| Total inference calls (learn + repetitions) | 20 | 20 |
+| Learn inference seconds, min / median / max (max = cold load) | 1.769 / 1.776 / 4.823 | 1.140 / 1.152 / 3.537 |
+| Reuse extraction seconds, min / median / max | 0.0043 / 0.0046 / 0.0049 | 0.0044 / 0.0045 / 0.0047 |
+| Repetition inference seconds, min / median / max | 1.713 / 2.814 / 4.307 | 1.095 / 1.734 / 2.622 |
+| Failure scenarios with explicit non-success, no records, nothing stored | 8 / 8 | 8 / 8 |
+
+Learned recipes: `qwen3:4b` proposed `record_selector="main > article.product-card"`
+and `llama3.2:3b` proposed `"main article"`. Both used `h2.title::text` and
+`span.amount::text`, identically in all five trials. Every `distractors` run used two
+calls and ended with `invalid_model_candidate`.
+
+The failure scenarios matched the first run, with one difference: for
+`unsatisfiable_contract` (a required `sku` absent from the page), `llama3.2:3b`
+proposed a mapping that Rastro executed and rejected
+(`candidate_validation_failed`). `qwen3:4b` produced an invalid candidate
+(`invalid_model_candidate`). Both stayed explicit. `think: false` is accepted by
+`llama3.2:3b`, a model without thinking support, so the first run's open question
+about such models is now answered for this one.
+
+**Why `distractors` fails (recorded probe):** the
+[probe report](https://github.com/rave-vipx/rastro/blob/dev/benchmarks/results/live-ollama-probe.json)
+holds the raw proposals from one diagnostic run per model. It was recorded on
+2026-10-30 18:08 UTC from commit `daf1905` with no tracked changes, using the same
+model digests. Reproduce it with:
+
+```bash
+uv run --extra ollama python -m benchmarks.live_ollama --probe \
+  --model qwen3:4b --model llama3.2:3b --output /tmp/rastro-live-ollama-probe.json
+```
+
+It shows two different failure modes, each observed in one probe run per model
+with two calls each. `qwen3:4b` prefixed every selector with `css: ` (for example
+`"record_selector": "css: main > article.product-card"`). `llama3.2:3b` returned
+the record values as field "selectors" (`"name": "Field Notebook"`,
+`"price": "12.50"`), with `main article.product-card h2.title` as the record
+container. The AI-002 boundary exists to block that: the model must propose a
+recipe, never data, and Rastro rejected it (`invalid_model_candidate`). In both
+probes, the correction call repeated the first proposal exactly. One probe per model
+does not show that every failed repetition had the same cause. The recorded run
+stores only outcomes, not proposals. No prompt tuning or selector rewriting was added.
+
+What this run adds: the integration path (learn → validate → activate → persist
+→ reuse across processes, explicit failures) was repeatable across 10 learn/reuse
+trials on two model families. It does **not** add evidence of recipe quality beyond
+the easy fixture. Two small models failed the harder page every time. Multi-page or
+real-site model quality remains unmeasured.
+
+## First run: qwen3:4b
+
+The sections below describe the first run unchanged. They are kept under
+`previous_runs[0]` in the raw report.
+
+### Integration versus recipe quality
 
 This run shows that the **integration works**. A configured local model is
 called within budgets when deterministic discovery fails. Its proposal is executed
@@ -48,7 +142,7 @@ benchmark before changing anything:
 - The instructions do not explain how the record container relates to the field
   selectors.
 
-## Tested code and environment
+### Tested code and environment
 
 Recorded on **2026-10-30 04:39 UTC** from commit `41819c9f5be4001a899be38398773bc3cf6289b9`
 with no tracked changes. That commit is based on `dev` at `1d68dd3`.
@@ -70,7 +164,7 @@ Ollama ran as a foreground user process, not the desktop app. It had no launch a
 or login item, and it listened only on `127.0.0.1:11434`. Cloud models were disabled
 with `OLLAMA_NO_CLOUD=1`. No other model was installed, and no paid service was used.
 
-## Reproduce
+### Reproduce
 
 Install Ollama from an official release and pull the model yourself; Rastro and
 this harness never pull models or start services.
@@ -80,7 +174,7 @@ OLLAMA_HOST=127.0.0.1:11434 OLLAMA_NO_CLOUD=1 ollama serve   # separate terminal
 OLLAMA_HOST=127.0.0.1:11434 ollama pull qwen3:4b
 uv sync --locked --extra ollama
 uv run --extra ollama python -m benchmarks.live_ollama --model qwen3:4b \
-  --output /tmp/live-ollama.json
+  --trials 1 --output /tmp/live-ollama.json   # --trials 1 matches this first run
 RASTRO_LIVE_OLLAMA_MODEL=qwen3:4b uv run --extra ollama pytest tests/live --no-cov
 ```
 
@@ -93,7 +187,7 @@ contains synthetic values and operational metadata only. It includes no home pat
 keys or credentials. Without the environment variable, the live test is skipped, and
 the default test suite stays offline.
 
-## Inputs and budgets
+### Inputs and budgets
 
 Both inputs are synthetic pages without JSON-LD or microdata, using the schema
 `name: str (min length 1)` and `price: Decimal (≥ 0, finite)`.
@@ -114,7 +208,7 @@ limits: 30 s model phase, 32,768 context bytes, 65,536 response bytes, 2,048 out
 tokens, an 8,192-token context window and concurrency 1. The adapter sends
 non-streaming chat with temperature 0, `think: false` and a per-strategy JSON Schema.
 
-## Learning and reuse
+### Learning and reuse
 
 | Observation | Process 1: learn | Process 2: reuse |
 | --- | --- | --- |
@@ -132,7 +226,7 @@ the source, validated `Field Notebook` / `12.50`, and stored version 1 with
 `require_evidence=true`. Both processes reported CSS locators for both fields. The
 model generated a recipe, never the record values.
 
-## Repetitions
+### Repetitions
 
 Each run used a fresh memory file and a warm model.
 
@@ -150,7 +244,7 @@ correction call usually repeats the proposal. The rejection is the intended
 fail-visible behavior. No prompt tuning, selector rewriting or validation relaxation
 was added for one model.
 
-## Failure scenarios
+### Failure scenarios
 
 | Scenario | Evidence kind | Setup | Outcome / issue | Calls |
 | --- | --- | --- | --- | --- |
@@ -168,7 +262,7 @@ exercises the real adapter and HTTP path, but it is not model behavior. The exis
 offline adapter and attack tests (fake transports) remain separate controlled
 evidence.
 
-## Defects found and fixed
+### Defects found and fixed
 
 Both defects were reproduced live and covered by a failing test before the fix
 (commit `40b8131`).
@@ -191,7 +285,10 @@ Both defects were reproduced live and covered by a failing test before the fix
    accounting measures it. `RecipeProposal` and `Recipe` validation remain
    authoritative and unchanged.
 
-## Limitations
+### Limitations
+
+These limitations were written for the first run; the multi-model run above
+narrows the first two.
 
 - One model on one machine with two small synthetic inputs and five repetitions each.
   This does not measure general extraction quality or compare models. Timings are

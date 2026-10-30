@@ -13,6 +13,7 @@ import hashlib
 import json
 import platform
 import socket
+import statistics
 import subprocess
 import sys
 import tempfile
@@ -86,10 +87,13 @@ class CountingModel:
     def __init__(self, model: ModelPort) -> None:
         self.model = model
         self.calls = 0
+        self.outputs: list[str] = []
 
     async def generate(self, request: ModelRequest, policy: InferencePolicy) -> str:
         self.calls += 1
-        return await self.model.generate(request, policy)
+        output = await self.model.generate(request, policy)
+        self.outputs.append(output)
+        return output
 
 
 def sha256(data: bytes) -> str:
@@ -339,7 +343,61 @@ async def failures(model: str, work: Path) -> list[dict[str, Any]]:
     return reports
 
 
-async def collect(model: str, repetitions: int) -> dict[str, Any]:
+def _stats(values: list[float]) -> dict[str, float] | None:
+    if not values:
+        return None
+    ordered = sorted(values)
+    return {
+        "min": ordered[0],
+        "median": round(statistics.median(ordered), 4),
+        "max": ordered[-1],
+    }
+
+
+def summarize_model(report: dict[str, Any]) -> dict[str, Any]:
+    """Derive per-model counts from raw phases so readers can recompute them."""
+    trials = report["trials"]
+    learned = [trial["learn"] for trial in trials]
+    reused = [trial["reuse"] for trial in trials]
+    runs = [item for value in report["repetitions"].values() for item in value["results"]]
+    phases = learned + reused + runs
+    return {
+        "trials": len(trials),
+        "learn_success": sum(item["status"] == "success" for item in learned),
+        "activated": sum(item["stored_recipe"] is not None for item in learned),
+        "learn_matches_expected": sum(
+            [record["data"] for record in item["records"]] == [EXPECTED] for item in learned
+        ),
+        "reuse_success": sum(
+            item["status"] == "success"
+            and item["recipe_reused"]
+            and item["inference_calls"] == 0
+            and item["model_port_calls"] == 0
+            for item in reused
+        ),
+        "learn_failures": {
+            status: sum(item["status"] == status for item in learned)
+            for status in sorted({item["status"] for item in learned} - {"success"})
+        },
+        "repetition_success": {
+            name: f"{value['success']}/{value['runs']}"
+            for name, value in report["repetitions"].items()
+        },
+        "inference_calls": sum(item["inference_calls"] for item in phases),
+        "learn_inference_seconds": _stats([item["inference_seconds"] for item in learned]),
+        "reuse_total_seconds": _stats([item["total_seconds"] for item in reused]),
+        "repetition_inference_seconds": _stats([item["inference_seconds"] for item in runs]),
+        "failure_scenarios_explicit": sum(
+            item["status"] != "success" and not item["records"] and item["stored_recipe"] is None
+            for item in report["failures"]
+        ),
+        "failure_scenarios": len(report["failures"]),
+    }
+
+
+async def collect(model: str, repetitions: int, trials: int = 1) -> dict[str, Any]:
+    if not 1 <= trials <= 20 or not 0 <= repetitions <= 20:
+        raise ValueError("Use 1-20 trials and 0-20 repetitions")
     with httpx.Client(trust_env=False, timeout=60) as client:
         env = environment(client, model)
         with tempfile.TemporaryDirectory(prefix="rastro-live-ollama-") as directory:
@@ -352,9 +410,19 @@ async def collect(model: str, repetitions: int) -> dict[str, Any]:
             # Unload so the first learning call includes model load time.
             ollama(client, "POST", "/api/generate", json={"model": model, "keep_alive": 0})
             loaded_before = [item["name"] for item in ollama(client, "GET", "/api/ps")["models"]]
-            database = work / "memory.db"
-            learn = run_phase("learn", model, database)
-            reuse = run_phase("reuse", model, database)
+            cycles = []
+            for index in range(trials):
+                # Each trial learns into fresh memory, then a new process reuses it.
+                database = work / f"memory-{index}.db"
+                learn = run_phase("learn", model, database)
+                cycles.append(
+                    {
+                        "trial": index,
+                        "model_loaded_cold": index == 0,
+                        "learn": learn,
+                        "reuse": run_phase("reuse", model, database),
+                    }
+                )
             stability = {
                 name: [
                     await extract(model_for(model), work / f"{name}-{index}.db", html=html)
@@ -363,13 +431,14 @@ async def collect(model: str, repetitions: int) -> dict[str, Any]:
                 for name, html in INPUTS.items()
             }
             failure_reports = await failures(model, work)
-    return {
+    report = {
         "scope": "synthetic input; real local Ollama unless evidence_kind says otherwise",
         "environment": env,
         "no_model_precheck": precheck,
         "models_loaded_before_learn": loaded_before,
-        "learn": learn,
-        "reuse": reuse,
+        "learn": cycles[0]["learn"],
+        "reuse": cycles[0]["reuse"],
+        "trials": cycles,
         "expected_record": EXPECTED,
         "repetitions": {
             name: {
@@ -385,21 +454,96 @@ async def collect(model: str, repetitions: int) -> dict[str, Any]:
         },
         "failures": failure_reports,
     }
+    report["summary"] = summarize_model(report)
+    return report
+
+
+def parsed(output: str) -> Any:
+    """Keep unparseable model output verbatim instead of failing the probe."""
+    try:
+        return json.loads(output)
+    except ValueError:
+        return output
+
+
+async def probe(model: str, html_name: str = "distractors") -> dict[str, Any]:
+    """Record raw model proposals for one input; diagnostic only, never activated or reused."""
+    with httpx.Client(trust_env=False, timeout=60) as client:
+        env = environment(client, model)
+    counting = CountingModel(model_for(model))
+    summary = await extract(counting, None, html=INPUTS[html_name])
+    return {
+        "evidence_kind": "live_model_probe",
+        "input": html_name,
+        "environment": env,
+        "status": summary["status"],
+        "issues": summary["issues"],
+        "recipe_attempts": summary["recipe_attempts"],
+        "inference_calls": summary["inference_calls"],
+        "raw_proposals": [parsed(output) for output in counting.outputs],
+    }
+
+
+def merge(previous: dict[str, Any] | None, run: dict[str, Any]) -> dict[str, Any]:
+    """Version the report: keep every earlier run, including the unversioned v1 layout."""
+    earlier: list[dict[str, Any]] = []
+    if previous is not None:
+        if previous.get("format_version") == 2:
+            earlier = [*previous["previous_runs"], *previous["runs"]]
+        else:
+            earlier = [{"format_version": 1, **previous}]
+    return {"format_version": 2, "runs": [run], "previous_runs": earlier}
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--model", required=True, help="An already-installed local model")
+    parser.add_argument(
+        "--model",
+        required=True,
+        action="append",
+        help="An already-installed local model; repeat to compare models",
+    )
     parser.add_argument("--output", type=Path, help="Write the JSON report to this path")
     parser.add_argument("--repetitions", type=int, default=5)
+    parser.add_argument("--trials", type=int, default=5, help="Learn/reuse cycles per model")
+    parser.add_argument(
+        "--keep-previous",
+        action="store_true",
+        help="Append to an existing --output report instead of replacing it",
+    )
+    parser.add_argument(
+        "--probe",
+        action="store_true",
+        help="Record raw proposals for the distractors input instead of the full run",
+    )
     parser.add_argument("--phase", choices=("learn", "reuse"), help=argparse.SUPPRESS)
     parser.add_argument("--database", type=Path, help=argparse.SUPPRESS)
     args = parser.parse_args()
     if args.phase:
-        print(json.dumps(asyncio.run(phase(args.phase, args.model, args.database))))
+        print(json.dumps(asyncio.run(phase(args.phase, args.model[0], args.database))))
         return 0
-    report = asyncio.run(collect(args.model, args.repetitions))
-    text = json.dumps(report, indent=2) + "\n"
+    if args.probe:
+        probes = {model: asyncio.run(probe(model)) for model in args.model}
+        text = json.dumps({"format_version": 1, "probes": probes}, indent=2) + "\n"
+        if args.output:
+            args.output.write_text(text)
+        else:
+            print(text, end="")
+        return 0
+    models = {}
+    for model in args.model:
+        models[model] = asyncio.run(collect(model, args.repetitions, args.trials))
+    run = {
+        "recorded_at": datetime.now(UTC).isoformat(),
+        "trials_per_model": args.trials,
+        "repetitions_per_input": args.repetitions,
+        "summary": {name: report["summary"] for name, report in models.items()},
+        "models": models,
+    }
+    previous = None
+    if args.keep_previous and args.output and args.output.exists():
+        previous = json.loads(args.output.read_text())
+    text = json.dumps(merge(previous, run), indent=2) + "\n"
     if args.output:
         args.output.write_text(text)
     else:
