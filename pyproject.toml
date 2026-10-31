@@ -41,7 +41,7 @@ rastro = "rastro.cli:main"
 [dependency-groups]
 dev = [
   "hypothesis>=6,<7",
-  "mypy>=1.19,<2",
+  "mypy>=1.19,<3",
   "pip-audit>=2.9,<3",
   "pytest>=9,<10",
   "pytest-asyncio>=1,<2",
