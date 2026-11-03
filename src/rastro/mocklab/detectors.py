@@ -85,16 +85,20 @@ def normalize(text: str) -> str:
     return unicodedata.normalize("NFKC", unquote(text))
 
 
-def secret_categories(text: str) -> tuple[str, ...]:
+def secret_categories(text: str, *, include_opaque: bool = True) -> tuple[str, ...]:
     """Names of the detectors that match ``text``; never the matched values."""
     views = {text, normalize(text)}
-    found = [name for name, pattern in SECRET_PATTERNS.items() if any(map(pattern.search, views))]
+    found = [
+        name
+        for name, pattern in SECRET_PATTERNS.items()
+        if (include_opaque or name != "opaque_token") and any(map(pattern.search, views))
+    ]
     found += [name for name, check in _CHECKED.items() if any(map(check, views))]
     return tuple(found)
 
 
-def contains_secret(text: str) -> bool:
-    return bool(secret_categories(text))
+def contains_secret(text: str, *, include_opaque: bool = True) -> bool:
+    return bool(secret_categories(text, include_opaque=include_opaque))
 
 
 def selector_tokens(text: str) -> frozenset[str]:

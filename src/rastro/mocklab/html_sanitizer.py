@@ -14,7 +14,7 @@ from html import escape
 from html.parser import HTMLParser
 
 from rastro.domain.json import strict_json
-from rastro.mocklab.detectors import scrub_url
+from rastro.mocklab.detectors import contains_secret, scrub_url
 from rastro.mocklab.json_scrubber import scrub_json
 from rastro.mocklab.retention import RetentionPlan
 from rastro.mocklab.seeds import DeterministicStream
@@ -122,7 +122,9 @@ class _Rewriter(HTMLParser):
         if name in _URL_ATTRIBUTES:
             return scrub_url(value, self._stream, self._plan.tokens)
         return "".join(
-            part if part.isspace() or part in self._plan.tokens else self._stream.placeholder(part)
+            part
+            if part.isspace() or (part in self._plan.tokens and not contains_secret(part))
+            else self._stream.placeholder(part)
             for part in _split_tokens(value)
         )
 

@@ -4,6 +4,12 @@ All notable user-facing changes will be recorded here. No public release has bee
 
 ## Unreleased
 
+### Added
+
+- Synthetic failure scenarios with explicit outcomes and versioned labels (MOCK-003, MOCK-004; #40).
+- Instant Mock Lab fixture bundles: labeled, sanitized, reproducible and replayable offline (MOCK-001, MOCK-004, MOCK-005, MOCK-006; #45; ADR 0014).
+- Top-level Mock Lab fixture exports and support for extracted opaque product values while scrubbing structural attributes and URL paths (MOCK-001, MOCK-004, MOCK-005).
+
 ## 0.1.0rc1 — 2026-11-03
 
 Release candidate tagged on `main`; not published to any package registry. Final `0.1.0` waits on the release gates in issue #5.
