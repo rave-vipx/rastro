@@ -13,6 +13,7 @@ All notable user-facing changes will be recorded here. No public release has bee
 - `AcquisitionResult.html` is renamed to `body` because it also carries JSON (INT-002).
 - Custom transports and acquisition ports must accept the keywords Rastro now always passes: `HttpTransport.get(..., proxy=None | ProxyRoute)` and `AcquisitionPort.acquire(..., representation="html" | "json")` (INT-002, GEO-005).
 - Internal: prepared extraction moved from `Rastro` into `application.service.ExtractionService`, with no behavior change. SQLite schema is unchanged and needs no migration; M3 and 0.1.0 payloads keep loading (REC-001, QUAL-004).
+- The README, getting-started and acquisition guides now construct `CssRecipe`, `JsonLdRecipe` and `JsonRecipe` directly instead of `Recipe(strategy=...)`, so every documented example is the typed form (REC-002, QUAL-001).
 
 ### Added
 

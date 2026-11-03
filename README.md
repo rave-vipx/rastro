@@ -50,7 +50,7 @@ The demo uses synthetic HTML and prints JSON containing `status: "success"`, one
 ```python
 from decimal import Decimal
 from pydantic import BaseModel, Field
-from rastro import Outcome, Rastro, Recipe, Source
+from rastro import JsonLdRecipe, Outcome, Rastro, Source
 
 
 class Product(BaseModel):
@@ -68,8 +68,7 @@ result = Rastro().extract_html(
     html,
     source=Source(url="https://example.com/products", locale="en-US"),
     schema=Product,
-    recipe=Recipe(
-        strategy="jsonld",
+    recipe=JsonLdRecipe(
         item_type="Product",
         fields={"name": "/name", "price": "/offers/price"},
     ),
@@ -85,8 +84,9 @@ else:
 `Source.url` labels the supplied document; this method does not fetch it. JSON-LD mappings use JSON pointers. For ordinary HTML, use a CSS recipe:
 
 ```python
-recipe = Recipe(
-    strategy="css",
+from rastro import CssRecipe
+
+recipe = CssRecipe(
     record_selector="article.product",
     fields={"name": "h2::text", "price": "span::attr(data-price)"},
 )
