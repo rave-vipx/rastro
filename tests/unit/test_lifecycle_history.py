@@ -46,7 +46,21 @@ def test_history_events_are_strictly_ordered(sequences):
         LifecycleHistory(key=KEY, versions=(), events=tuple(event(n) for n in sequences))
 
 
-@pytest.mark.parametrize("reason", ["", "x" * 501, "tab\there", "nul\x00", 5])
+@pytest.mark.parametrize(
+    "reason",
+    [
+        "",
+        "x" * 501,
+        "tab\there",
+        "nul\x00",
+        5,
+        # Reviewer inputs: C1 CSI, bidi override, line separator and blank text.
+        "\x9b31mCSI_ESCAPE\x9b0m",
+        "bidi\u202etext",
+        "sep\u2028x",
+        "   ",
+    ],
+)
 def test_reasons_are_bounded_printable_text(reason):
     with pytest.raises(ValidationError):
         check_reason(reason)

@@ -4,19 +4,27 @@ from __future__ import annotations
 
 from typing import Annotated, Self
 
-from pydantic import AwareDatetime, Field, TypeAdapter, model_validator
+from pydantic import AfterValidator, AwareDatetime, Field, TypeAdapter, model_validator
 
 from rastro.domain.lifecycle import LifecycleAction, RecipeState, VersionStatus
 from rastro.domain.memory import RecipeKey
 from rastro.domain.sources import Contract
 
-# Printable text only: reasons are operator notes, never raw documents or records.
-REASON = Field(min_length=1, max_length=500, pattern=r"^[^\x00-\x1f\x7f]+$")
-_REASON: TypeAdapter[str] = TypeAdapter(Annotated[str, REASON])
+def _printable(reason: str) -> str:
+    # isprintable() rejects C0/C1 controls, ANSI escape introducers, bidi overrides and
+    # line or paragraph separators, so a reason cannot spoof terminal or log output.
+    if not reason.isprintable() or not reason.strip():
+        raise ValueError("Reasons must be non-blank printable text")
+    return reason
+
+
+# Operator notes only, never raw documents, records or credentials.
+type Reason = Annotated[str, Field(min_length=1, max_length=500), AfterValidator(_printable)]
+_REASON: TypeAdapter[str] = TypeAdapter(Reason)
 
 
 def check_reason(reason: str) -> str:
-    """Return ``reason`` if it is 1-500 printable characters; raise ValueError otherwise."""
+    """Return ``reason`` if it is 1-500 non-blank printable characters; raise otherwise."""
     return _REASON.validate_python(reason, strict=True)
 
 
@@ -28,7 +36,7 @@ class LifecycleEvent(Contract):
     from_state: RecipeState | None
     to_state: RecipeState
     action: LifecycleAction
-    reason: str = REASON
+    reason: Reason
     at: AwareDatetime
 
 

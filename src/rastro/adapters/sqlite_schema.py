@@ -61,6 +61,15 @@ def _add_lifecycle(db: sqlite3.Connection) -> None:
         "ROW_NUMBER() OVER (PARTITION BY key ORDER BY version), version, NULL, state, "
         "'migrated', 'Imported from recipe schema 1', created_at FROM recipes"
     )
+    # Sequence numbers are never reissued while a key keeps any stored version.
+    db.execute("""CREATE TABLE recipe_event_sequences (
+        key TEXT PRIMARY KEY,
+        last_sequence INTEGER NOT NULL CHECK (last_sequence > 0)
+    ) WITHOUT ROWID""")
+    db.execute(
+        "INSERT INTO recipe_event_sequences "
+        "SELECT key, MAX(sequence) FROM recipe_events GROUP BY key"
+    )
 
 
 # Index i migrates schema i to schema i + 1. Never edit or reorder released steps.

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import math
 import sqlite3
 from collections.abc import Iterator
@@ -14,29 +13,33 @@ from pydantic import ValidationError
 
 from rastro.adapters.sqlite_lifecycle import (
     apply_changes,
+    delete_events,
     drop_orphan_events,
+    next_version,
     read_history,
     serving_status,
     version_status,
 )
+from rastro.adapters.sqlite_records import (
+    check_lifecycle_input,
+    check_state,
+    check_version,
+    encode,
+    find,
+    find_serving,
+    insert_candidate,
+)
 from rastro.adapters.sqlite_schema import migrate
 from rastro.domain.lifecycle import RecipeState, plan_creation, plan_rollback, plan_transition
-from rastro.domain.lifecycle_history import LifecycleHistory, check_reason
+from rastro.domain.lifecycle_history import LifecycleHistory
 from rastro.domain.memory import (
     RecipeConflictError,
     RecipeKey,
-    RecipeMetadata,
     RecipeStorageError,
     StoredRecipe,
     utc_timestamp,
 )
 from rastro.domain.models import ConfigurationError, Recipe
-
-_MAX_PAYLOAD = 600_000
-_ROW = (
-    "SELECT version, payload, selected_index, created_at, last_success_at, successful_runs, "
-    "state FROM recipes WHERE key = ?"
-)
 
 
 class SQLiteRecipeRepository:
@@ -75,100 +78,92 @@ class SQLiteRecipeRepository:
         except (sqlite3.Error, OSError, ValidationError, ValueError, TypeError, RecursionError):
             raise RecipeStorageError("Recipe storage operation failed") from None
 
-    @classmethod
-    def _read(cls, db: sqlite3.Connection, key: RecipeKey, version: int) -> StoredRecipe:
-        stored = cls._find(db, key, version)
+    @staticmethod
+    def _read(db: sqlite3.Connection, key: RecipeKey, identity: str, version: int) -> StoredRecipe:
+        stored = find(db, key, identity, version)
         if stored is None:
             raise RecipeStorageError("Recipe version disappeared during a write")
         return stored
 
-    @staticmethod
-    def _find(db: sqlite3.Connection, key: RecipeKey, version: int) -> StoredRecipe | None:
-        row = db.execute(f"{_ROW} AND version = ?", (key.canonical(), version)).fetchone()
-        if row is None:
-            return None
-        version, payload, index, created, success, count, state = row
-        stored = StoredRecipe.model_validate(
-            dict(
-                key=key,
-                recipe=json.loads(str(payload)),
-                metadata=dict(
-                    selected_index=index,
-                    created_at=created,
-                    last_success_at=success,
-                    successful_runs=count,
-                    state=state,
-                ),
-            )
-        )
-        if stored.recipe.version != version:
-            raise RecipeStorageError("Inconsistent recipe version")
-        return stored
-
     def get(self, key: RecipeKey, *, version: int | None = None) -> StoredRecipe | None:
         """Return the pinned version in any state, or else the serving version."""
-        self._check_version(version)
+        check_version(version)
         identity = key.canonical()
         with self._connection() as db:
             if version is None:
-                serving = serving_status(db, identity)
-                if serving is None:
-                    return None
-                version = serving.version
-            return self._find(db, key, version)
+                return find_serving(db, key, identity)
+            return find(db, key, identity, version)
+
+    def next_version(self, key: RecipeKey) -> int:
+        """One above the highest stored version of ``key`` in any state, or 1."""
+        identity = key.canonical()
+        with self._connection() as db:
+            return next_version(db, identity)
 
     def save_success(
-        self,
-        key: RecipeKey,
-        recipe: Recipe,
-        *,
-        selected_index: int,
-        at: datetime,
-        candidate: bool = False,
+        self, key: RecipeKey, recipe: Recipe, *, selected_index: int, at: datetime
     ) -> StoredRecipe:
-        """Record a validated success. A new version becomes active unless ``candidate``.
+        """Record a validated success; a new version higher than the serving one activates.
 
         Existing versions only update success history; their state never changes here.
         """
-        recipe = Recipe.model_validate(recipe.model_dump())
+        recipe, payload = encode(key, recipe, selected_index=selected_index, at=at)
         timestamp = utc_timestamp(at)
-        StoredRecipe(  # Validate the selection before touching storage.
-            key=key,
-            recipe=recipe,
-            metadata=RecipeMetadata(
-                selected_index=selected_index, created_at=at, last_success_at=at, successful_runs=1
-            ),
-        )
-        payload = json.dumps(recipe.model_dump(mode="json"), sort_keys=True, separators=(",", ":"))
-        if len(payload.encode()) > _MAX_PAYLOAD:
-            raise RecipeStorageError("Recipe payload exceeds storage budget")
         identity = key.canonical()
         with self._connection(write=True) as db:
             existing = db.execute(
                 "SELECT payload FROM recipes WHERE key = ? AND version = ?",
                 (identity, recipe.version),
             ).fetchone()
+            if existing is None:
+                self._create(db, identity, recipe, payload, selected_index, at, candidate=False)
+                return self._read(db, key, identity, recipe.version)
             # Compare validated definitions so new optional defaults do not conflict with M3 JSON.
-            if existing is not None and Recipe.model_validate_json(existing[0]) != recipe:
+            if Recipe.model_validate_json(existing[0]) != recipe:
                 raise RecipeConflictError("Recipe definition changed; increment its version")
             db.execute(
-                "INSERT INTO recipes (key, version, payload, selected_index, created_at, "
-                "last_success_at, successful_runs, state) VALUES (?, ?, ?, ?, ?, ?, 1, "
-                "'candidate') ON CONFLICT(key, version) DO UPDATE SET "
-                "selected_index = CASE WHEN excluded.last_success_at >= last_success_at "
-                "THEN excluded.selected_index ELSE selected_index END, "
-                "created_at = MIN(created_at, excluded.created_at), "
-                "last_success_at = MAX(last_success_at, excluded.last_success_at), "
-                "successful_runs = successful_runs + 1",
-                (identity, recipe.version, payload, selected_index, timestamp, timestamp),
+                "UPDATE recipes SET "
+                "selected_index = CASE WHEN ? >= last_success_at "
+                "THEN ? ELSE selected_index END, "
+                "created_at = MIN(created_at, ?), "
+                "last_success_at = MAX(last_success_at, ?), "
+                "successful_runs = successful_runs + 1 WHERE key = ? AND version = ?",
+                (timestamp, selected_index, timestamp, timestamp, identity, recipe.version),
             )
-            if existing is None:
-                changes = plan_creation(
-                    recipe.version, candidate=candidate, serving=serving_status(db, identity)
-                )
-                reason = "Stored candidate" if candidate else "Validated extraction succeeded"
-                apply_changes(db, identity, changes, reason=reason, at=at)
-            return self._read(db, key, recipe.version)
+            return self._read(db, key, identity, recipe.version)
+
+    def save_candidate(
+        self, key: RecipeKey, recipe: Recipe, *, selected_index: int, at: datetime
+    ) -> StoredRecipe:
+        """Store an evaluated proposal as a new candidate version (REC-006).
+
+        Candidates never touch existing versions: any stored version number conflicts.
+        """
+        recipe, payload = encode(key, recipe, selected_index=selected_index, at=at)
+        identity = key.canonical()
+        with self._connection(write=True) as db:
+            if find(db, key, identity, recipe.version) is not None:
+                raise RecipeConflictError("Candidates require a new recipe version")
+            self._create(db, identity, recipe, payload, selected_index, at, candidate=True)
+            return self._read(db, key, identity, recipe.version)
+
+    @staticmethod
+    def _create(
+        db: sqlite3.Connection,
+        identity: str,
+        recipe: Recipe,
+        payload: str,
+        selected_index: int,
+        at: datetime,
+        *,
+        candidate: bool,
+    ) -> None:
+        insert_candidate(db, identity, recipe, payload, selected_index=selected_index, at=at)
+        changes = plan_creation(
+            recipe.version, candidate=candidate, serving=serving_status(db, identity)
+        )
+        reason = "Stored candidate" if candidate else "Validated extraction succeeded"
+        apply_changes(db, identity, changes, reason=reason, at=at)
 
     def transition(
         self, key: RecipeKey, version: int, state: RecipeState, *, reason: str, at: datetime
@@ -178,70 +173,49 @@ class SQLiteRecipeRepository:
         Promotion retires the version that was serving. Raises
         ``LifecycleTransitionError`` for transitions the state machine forbids.
         """
-        self._check_version(version, required=True)
-        target_state = self._state(state)
-        reason = self._reason(reason)
-        utc_timestamp(at)  # Reject naive timestamps before opening storage.
+        check_version(version, required=True)
+        target_state = check_state(state)
+        reason = check_lifecycle_input(reason, at)
         identity = key.canonical()
         with self._connection(write=True) as db:
             target = version_status(db, identity, version)
             changes = plan_transition(target, target_state, serving=serving_status(db, identity))
             apply_changes(db, identity, changes, reason=reason, at=at)
-            return self._read(db, key, version)
+            return self._read(db, key, identity, version)
 
     def rollback(self, key: RecipeKey, version: int, *, reason: str, at: datetime) -> StoredRecipe:
         """Return a retired version that previously served to active service (REPAIR-006)."""
-        self._check_version(version, required=True)
-        reason = self._reason(reason)
-        utc_timestamp(at)  # Reject naive timestamps before opening storage.
+        check_version(version, required=True)
+        reason = check_lifecycle_input(reason, at)
         identity = key.canonical()
         with self._connection(write=True) as db:
             target = version_status(db, identity, version)
             changes = plan_rollback(target, serving=serving_status(db, identity))
             apply_changes(db, identity, changes, reason=reason, at=at)
-            return self._read(db, key, version)
+            return self._read(db, key, identity, version)
 
     def history(self, key: RecipeKey) -> LifecycleHistory:
         """Return version states and ordered lifecycle events for ``key``."""
+        identity = key.canonical()  # Invalid keys fail before any file is created.
         with self._connection() as db:
-            return read_history(db, key)
-
-    @staticmethod
-    def _check_version(version: int | None, *, required: bool = False) -> None:
-        if version is None and not required:
-            return
-        if type(version) is not int or not 1 <= version <= 2_147_483_647:
-            raise ConfigurationError("Recipe version is out of range")
-
-    @staticmethod
-    def _state(state: RecipeState) -> RecipeState:
-        try:
-            return RecipeState(state)
-        except ValueError:
-            raise ConfigurationError("Unknown recipe lifecycle state") from None
-
-    @staticmethod
-    def _reason(reason: str) -> str:
-        try:
-            return check_reason(reason)
-        except ValidationError:
-            raise ConfigurationError(
-                "Lifecycle reasons must be 1-500 printable characters"
-            ) from None
+            return read_history(db, key, identity)
 
     def delete(self, key: RecipeKey, *, version: int | None = None) -> int:
-        self._check_version(version)
+        check_version(version)
+        identity = key.canonical()
         with self._connection(write=True) as db:
             count = db.execute(
                 "DELETE FROM recipes WHERE key = ? AND (? IS NULL OR version = ?)",
-                (key.canonical(), version, version),
+                (identity, version, version),
             ).rowcount
-            drop_orphan_events(db)
+            if count:
+                delete_events(db, identity, version)
             return count
 
     def prune(self, *, before: datetime) -> int:
         cutoff = utc_timestamp(before)
         with self._connection(write=True) as db:
             count = db.execute("DELETE FROM recipes WHERE last_success_at < ?", (cutoff,)).rowcount
-            drop_orphan_events(db)
+            if count:
+                drop_orphan_events(db)
             return count
