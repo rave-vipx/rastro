@@ -40,11 +40,18 @@ class OpenAICompatibleModel:
         api_key_env: str | None = None,
         allow_remote: bool = False,
         response_format: Literal["json_schema", "json_object"] = "json_schema",
+        token_limit: Literal["max_tokens", "max_completion_tokens"] = "max_tokens",
+        temperature: float | None = 0,
     ) -> None:
         if not _MODEL.fullmatch(model):
             raise ConfigurationError("Select a bounded model name")
         if response_format not in {"json_schema", "json_object"}:
             raise ConfigurationError("response_format must be json_schema or json_object")
+        if token_limit not in {"max_tokens", "max_completion_tokens"}:
+            raise ConfigurationError("token_limit must be max_tokens or max_completion_tokens")
+        # Reasoning models reject sampling parameters; None omits temperature entirely.
+        if temperature is not None and (isinstance(temperature, bool) or not 0 <= temperature <= 2):
+            raise ConfigurationError("temperature must be between 0 and 2, or None")
         try:
             parts = urlsplit(base_url)
             hostname = parts.hostname or ""
@@ -90,6 +97,8 @@ class OpenAICompatibleModel:
         # Only the variable name is kept; the key is read per request and never stored.
         self._api_key_env = api_key_env
         self._response_format = response_format
+        self._token_limit = token_limit
+        self._temperature = temperature
         self._slots: weakref.WeakKeyDictionary[
             asyncio.AbstractEventLoop, tuple[int, asyncio.Semaphore]
         ] = weakref.WeakKeyDictionary()
@@ -126,7 +135,7 @@ class OpenAICompatibleModel:
             # JSON mode constrains syntax only, so the trusted prompt carries the schema.
             system += "\nRespond with JSON matching this schema: " + json.dumps(proposal_schema())
             response_format = {"type": "json_object"}
-        return {
+        payload: dict[str, Any] = {
             "model": self._model,
             "stream": False,
             "messages": [
@@ -134,10 +143,12 @@ class OpenAICompatibleModel:
                 {"role": "user", "content": request.content},
             ],
             "response_format": response_format,
-            "temperature": 0,
-            "max_tokens": policy.max_output_tokens,
+            self._token_limit: policy.max_output_tokens,
             "n": 1,
         }
+        if self._temperature is not None:
+            payload["temperature"] = self._temperature
+        return payload
 
     def _headers(self) -> dict[str, str]:
         headers = {"Accept": "application/json", "Accept-Encoding": "identity"}

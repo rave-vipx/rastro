@@ -101,6 +101,38 @@ async def test_json_object_fallback_carries_schema_in_trusted_instructions(monke
     assert user == {"role": "user", "content": REQUEST.content}
 
 
+@pytest.mark.asyncio
+async def test_reasoning_models_use_completion_token_limit_without_temperature(monkeypatch):
+    requests = []
+
+    def handle(request):
+        requests.append(json.loads(request.content))
+        return response(completion())
+
+    install_transport(monkeypatch, handle)
+    model = OpenAICompatibleModel("local", token_limit="max_completion_tokens", temperature=None)
+    await model.generate(REQUEST, POLICY)
+    payload = requests[0]
+    assert payload["max_completion_tokens"] == POLICY.max_output_tokens
+    assert "max_tokens" not in payload
+    assert "temperature" not in payload
+
+
+@pytest.mark.parametrize(
+    "options",
+    [
+        {"token_limit": "max_output"},
+        {"temperature": -0.1},
+        {"temperature": 2.5},
+        {"temperature": True},
+    ],
+    ids=["unknown-token-limit", "negative-temperature", "high-temperature", "bool-temperature"],
+)
+def test_invalid_sampling_options_are_rejected(options):
+    with pytest.raises(ConfigurationError):
+        OpenAICompatibleModel("local", **options)
+
+
 def test_unknown_response_format_is_rejected():
     with pytest.raises(ConfigurationError):
         OpenAICompatibleModel("local", response_format="text")

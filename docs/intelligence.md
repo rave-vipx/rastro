@@ -140,6 +140,11 @@ For servers without `json_schema` support, pass `response_format="json_object"`:
 JSON mode is requested and the schema is appended to the trusted system message.
 There is no automatic fallback or transport retry; choose the mode explicitly.
 
+OpenAI reasoning models (for example models used with an OpenAI or Codex API key)
+reject `max_tokens` and sampling parameters. Pass
+`token_limit="max_completion_tokens"` and `temperature=None` to send
+`max_completion_tokens` and omit `temperature`; the budget is unchanged.
+
 **Endpoint rules.** `base_url` is an HTTP(S) origin with an optional plain path such as
 `/v1` or `/api/v1`. Credentials, queries, fragments, dot segments and port `0` are
 rejected. Literal IPv4 loopback addresses and `::1` work without opt-in. Every other
