@@ -7,12 +7,13 @@ from typing import Annotated, ClassVar, Literal, Self
 from pydantic import Field, model_validator
 
 from rastro.mocklab.mutations import html_dom
-from rastro.mocklab.mutations.contracts import MutationCategory, MutationChange
-from rastro.mocklab.mutations.html_base import ClassToken, CssSelector, HtmlOperator
-from rastro.mocklab.mutations.html_dom import HtmlDom, Node
+from rastro.mocklab.mutations.contracts import MutationCategory
+from rastro.mocklab.mutations.html_base import ClassToken, CssSelector, Edit, HtmlOperator
+from rastro.mocklab.mutations.html_dom import Node
 from rastro.mocklab.seeds import DeterministicStream
 
-type AttributeName = Annotated[str, Field(pattern=r"^[A-Za-z_:][A-Za-z0-9_.:-]{0,63}$")]
+type AttributeName = Annotated[str, Field(pattern=r"^[a-z_:][a-z0-9_.:-]{0,63}$")]
+"""Lowercase, as lxml stores HTML attribute names."""
 
 
 class HtmlChangeClasses(HtmlOperator):
@@ -36,17 +37,17 @@ class HtmlChangeClasses(HtmlOperator):
         current = html_dom.classes(node)
         return self._next(current, "") != current or (self.hash_suffix and bool(current))
 
-    def edit(self, dom: HtmlDom, node: Node, stream: DeterministicStream) -> MutationChange:
-        path, current = dom.path(node), html_dom.classes(node)
+    def edit(self, node: Node, stream: DeterministicStream) -> Edit:
+        current = html_dom.classes(node)
         suffix = f"-{stream.letters(6)}" if self.hash_suffix else ""
         updated = self._next(current, suffix)
         html_dom.set_classes(node, updated)
-        return self.change(dom, node, path, " ".join(current), " ".join(updated))
+        return Edit(node, " ".join(current), " ".join(updated))
 
     def _next(self, current: list[str], suffix: str) -> list[str]:
-        kept = [self.rename.get(token, token) + suffix for token in current]
-        tokens = [new for old, new in zip(current, kept, strict=True) if old not in self.remove]
-        return list(dict.fromkeys([*tokens, *self.add]))
+        """Only configured edits: existing duplicate tokens are kept as they are."""
+        tokens = [self.rename.get(t, t) + suffix for t in current if t not in self.remove]
+        return tokens + [token for token in self.add if token not in tokens]
 
 
 class HtmlRemoveField(HtmlOperator):
@@ -62,13 +63,12 @@ class HtmlRemoveField(HtmlOperator):
             return not html_dom.is_document_level(node)
         return self.attribute in node.attrib
 
-    def edit(self, dom: HtmlDom, node: Node, stream: DeterministicStream) -> MutationChange:
-        path = dom.path(node)
+    def edit(self, node: Node, stream: DeterministicStream) -> Edit:
         if self.attribute is None:
             html_dom.remove(node)
-            return self.removal(path, str(node.tag))
+            return Edit(None, str(node.tag), None)
         value = node.attrib.pop(self.attribute)
-        return self.change(dom, node, path, f"{self.attribute}={value}", None)
+        return Edit(node, f"{self.attribute}={value}", None)
 
 
 class HtmlChangeLabel(HtmlOperator):
@@ -88,14 +88,14 @@ class HtmlChangeLabel(HtmlOperator):
         current = self._current(node)
         return current is not None and self._replaced(current) != current
 
-    def edit(self, dom: HtmlDom, node: Node, stream: DeterministicStream) -> MutationChange:
-        path, current = dom.path(node), self._current(node) or ""
+    def edit(self, node: Node, stream: DeterministicStream) -> Edit:
+        current = self._current(node) or ""
         updated = self._replaced(current)
         if self.attribute is None:
             node.text = updated
         else:
             node.set(self.attribute, updated)
-        return self.change(dom, node, path, current, updated)
+        return Edit(node, current, updated)
 
     def _current(self, node: Node) -> str | None:
         if self.attribute is None:
@@ -129,15 +129,15 @@ class HtmlModifyPagination(HtmlOperator):
         fixed = self.mode == "rewrite_href" and "{token}" not in self.href_template
         return href is not None and not (fixed and href == self.href_template)
 
-    def edit(self, dom: HtmlDom, node: Node, stream: DeterministicStream) -> MutationChange:
-        path, href = dom.path(node), node.get("href")
+    def edit(self, node: Node, stream: DeterministicStream) -> Edit:
+        before = f"href={node.get('href')}"
         if self.mode == "remove":
             html_dom.remove(node)
-            return self.removal(path, f"href={href}")
+            return Edit(None, before, None)
         if self.mode == "disable":
             del node.attrib["href"]
             node.set("aria-disabled", "true")
-            return self.change(dom, node, path, f"href={href}", "aria-disabled=true")
+            return Edit(node, before, "aria-disabled=true")
         updated = self.href_template.replace("{token}", stream.letters(8))
         node.set("href", updated)
-        return self.change(dom, node, path, f"href={href}", f"href={updated}")
+        return Edit(node, before, f"href={updated}")

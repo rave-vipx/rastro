@@ -7,19 +7,22 @@ edge, like the rest of the package (ADR 0014). Domain code never imports this mo
 from __future__ import annotations
 
 import copy
+import re
 from typing import Any, cast
 
 from cssselect import HTMLTranslator, SelectorError
 from lxml import etree  # type: ignore[import-untyped]
 from lxml import html as lhtml
 
-from rastro.domain.sources import Limits, ResourceLimitError
+from rastro.mocklab.errors import MockLabError
+from rastro.mocklab.mutations.limits import check_bytes
 
 type Node = Any
 """An lxml element; lxml ships no type information."""
 
 _TRANSLATOR = HTMLTranslator()
 _DOCUMENT_TAGS = frozenset({"html", "head", "body"})
+_XML_DECLARATION = re.compile(r"\A\s*<\?xml[^>]*\?>")
 
 
 def css_selector(selector: str) -> str:
@@ -36,16 +39,17 @@ def css_selector(selector: str) -> str:
 class HtmlDom:
     """A parsed document that can be queried, edited in place and serialized."""
 
-    def __init__(self, root: Node, doctype: str | None) -> None:
+    def __init__(self, root: Node) -> None:
         self._root = root
-        self._doctype = doctype
 
     @classmethod
     def parse(cls, document: str) -> HtmlDom | None:
-        """Parse within ``Limits.max_html_bytes``; ``None`` when there is no element."""
-        if len(document.encode()) > Limits().max_html_bytes:
-            raise ResourceLimitError("HTML input exceeds max_html_bytes")
-        cleaned = document.replace("\x00", "")
+        """Parse within ``Limits.max_html_bytes``; ``None`` when there is no element.
+
+        A leading XML declaration (XHTML) is dropped: lxml refuses it on text input.
+        """
+        check_bytes(document, "html")
+        cleaned = _XML_DECLARATION.sub("", document.replace("\x00", ""), count=1)
         if not cleaned.strip():
             return None
         parser = lhtml.HTMLParser(remove_comments=False, default_doctype=False)
@@ -53,7 +57,9 @@ class HtmlDom:
             root = lhtml.document_fromstring(cleaned, parser=parser)
         except etree.ParserError:
             return None
-        return cls(root, root.getroottree().docinfo.doctype or None)
+        except ValueError:
+            raise MockLabError("HTML document cannot be parsed") from None
+        return cls(root)
 
     def select(self, selector: str) -> list[Node]:
         """Matching elements in document order."""
@@ -68,7 +74,19 @@ class HtmlDom:
         return str(etree.ElementTree(self._root).getpath(node))
 
     def serialize(self) -> str:
-        return str(lhtml.tostring(self._root, encoding="unicode", doctype=self._doctype))
+        """The whole tree: doctype and comments outside the root element included."""
+        tree = self._root.getroottree()
+        return str(etree.tostring(tree, method="html", encoding="unicode"))
+
+
+def stable(document: str) -> bool:
+    """True when reparsing ``document`` yields the same markup.
+
+    libxml2 repairs invalid nesting (a ``<p>`` around a ``<div>``, an ``<a>`` inside an
+    ``<a>``) on the next parse; such an edit would be reported but never seen.
+    """
+    reparsed = HtmlDom.parse(document)
+    return reparsed is not None and reparsed.serialize() == document
 
 
 def is_document_level(node: Node) -> bool:

@@ -9,7 +9,7 @@ from pydantic import Field
 from rastro.domain.json import MISSING, escape_token
 from rastro.mocklab.mutations.contracts import MutationCategory, MutationChange
 from rastro.mocklab.mutations.json_base import JsonFieldOperator
-from rastro.mocklab.mutations.json_doc import Record, sibling
+from rastro.mocklab.mutations.json_doc import NewKey, Record, sibling
 from rastro.mocklab.seeds import DeterministicStream
 
 
@@ -39,14 +39,15 @@ class JsonWrapValue(JsonFieldOperator):
     operator: Literal["json_wrap_value"] = "json_wrap_value"
     category: ClassVar[MutationCategory] = "element_wrapping"
 
-    wrapper_key: str = Field(default="value", min_length=1, max_length=128)
+    wrapper_key: NewKey = "value"
 
     def edit(
         self, path: str, parent: Record, key: str, stream: DeterministicStream
     ) -> MutationChange:
         before = parent[key]
         parent[key] = {self.wrapper_key: before}
-        return self.change(path, f"{path}/{escape_token(self.wrapper_key)}", before, before)
+        after_path = f"{path}/{escape_token(self.wrapper_key)}"
+        return self.change(path, after_path, before, parent[key])
 
 
 class JsonRemoveField(JsonFieldOperator):
@@ -76,7 +77,7 @@ class JsonRenameKey(JsonFieldOperator):
     operator: Literal["json_rename_key"] = "json_rename_key"
     category: ClassVar[MutationCategory] = "changed_labels"
 
-    new_key: str = Field(min_length=1, max_length=128)
+    new_key: NewKey
 
     def eligible(self, parent: Record, key: str) -> bool:
         return self.new_key not in parent

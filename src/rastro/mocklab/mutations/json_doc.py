@@ -5,11 +5,13 @@ from __future__ import annotations
 import json
 from typing import Annotated
 
-from pydantic import Field
+from pydantic import AfterValidator, Field
 
 from rastro.domain.json import escape_token, resolve_pointer, strict_json
 from rastro.domain.sources import Limits, ResourceLimitError
+from rastro.mocklab.labels import SYNTHETIC_KEY
 from rastro.mocklab.mutations.contracts import SkipReason
+from rastro.mocklab.mutations.limits import check_bytes
 
 _TOKEN = r"/(?:[^~/]|~[01])*"
 type Pointer = Annotated[str, Field(max_length=1024, pattern=rf"^(?:{_TOKEN})*$")]
@@ -17,13 +19,18 @@ type FieldPointer = Annotated[str, Field(max_length=1024, pattern=rf"^(?:{_TOKEN
 """A non-root pointer, resolved relative to each record."""
 
 type Record = dict[str, object]
+type NewKey = Annotated[str, Field(min_length=1, max_length=128), AfterValidator(_unreserved)]
+
+
+def _unreserved(key: str) -> str:
+    if key == SYNTHETIC_KEY:
+        raise ValueError("The synthetic label key is reserved")
+    return key
 
 
 def decode(document: str) -> tuple[object, SkipReason | None]:
     """Decode strict JSON within ``Limits``; the reason is set when nothing can be mutated."""
-    limits = Limits()
-    if len(document.encode()) > limits.max_json_bytes:
-        raise ResourceLimitError("JSON input exceeds max_json_bytes")
+    check_bytes(document, "json")
     if not document.strip():
         return None, "empty_document"
     try:
@@ -32,17 +39,19 @@ def decode(document: str) -> tuple[object, SkipReason | None]:
         return None, "invalid_document"
     except RecursionError:
         raise ResourceLimitError("JSON nesting exceeds max_json_depth") from None
-    _check_size(payload, limits)
+    check_tree(payload)
     return payload, None
 
 
-def _check_size(payload: object, limits: Limits) -> None:
+def check_tree(payload: object) -> None:
+    """Raise ``ResourceLimitError`` beyond ``Limits.max_json_nodes`` or ``max_json_depth``."""
+    limits = Limits()
     nodes, pending = 0, [(payload, 0)]
     while pending:
         value, depth = pending.pop()
         nodes += 1
         if nodes > limits.max_json_nodes or depth > limits.max_json_depth:
-            raise ResourceLimitError("JSON input exceeds max_json_nodes or max_json_depth")
+            raise ResourceLimitError("JSON document exceeds max_json_nodes or max_json_depth")
         if isinstance(value, dict):
             pending.extend((child, depth + 1) for child in value.values())
         elif isinstance(value, list):

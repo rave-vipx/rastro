@@ -25,6 +25,7 @@ type SkipReason = Literal[
     "invalid_document",
     "target_not_found",
     "no_eligible_target",
+    "unstable_markup",
 ]
 """Why an operator found nothing to change; each is an explicit, non-success outcome."""
 

@@ -55,20 +55,28 @@ operators edit `field` (a pointer inside each record) in every object found at `
 points at one object or an array of objects. `max_targets` limits how many eligible targets change;
 the seed decides which ones.
 
+`HtmlWrapElement` accepts only flow containers as `wrapper_tag` (`div`, `section`, `article`,
+`span`, `main`, `aside`, `header`, `footer`) and never wraps elements whose parent is prescribed
+(`li`, `dt`, `dd`, table parts, `option`, head elements): parsers would drop or move such a
+wrapper.
+
 ## Explicit outcomes
 
 An operator never reports success without a change. Each `MutationResult` is either:
 
-- `applied`, with one or more `MutationChange` records: the configured `target`, `path_before` and
-  `path_after` (XPath for HTML, RFC 6901 pointers for JSON; `path_after` is `null` when the node was
-  removed) and `before`/`after` summaries (JSON values are JSON-encoded); or
+- `applied`, with one or more `MutationChange` records: the configured `target`, `path_before`
+  (the node's path in the operator's input) and `path_after` (its path in the operator's output,
+  `null` when the node was removed). Paths are XPath for HTML and RFC 6901 pointers for JSON.
+  `before`/`after` summarize the changed property; JSON values are JSON-encoded; or
 - `no_applicable_target`, with no changes, the document unchanged and a `reason`:
   `empty_document`, `invalid_document`, `target_not_found` (nothing matched) or
   `no_eligible_target` (matches exist but the edit would change nothing, for example removing a
-  class that is absent or emptying an empty container).
+  class that is absent or emptying an empty container) or `unstable_markup` (the edited HTML
+  would not survive reparsing: libxml2 would repair it, for example a `<div>` wrapped inside a
+  `<p>`, so the change would be reported but never seen by an extractor).
 
-A plan is `applied` when at least one step applied. Otherwise its `document` is the input, unchanged
-and unlabeled, because no artifact was produced.
+A plan is `applied` when at least one step applied. Otherwise no artifact exists: its `document` is
+the input unchanged and its `label` is `None`.
 
 ## Reproducibility
 
@@ -78,6 +86,10 @@ and unlabeled, because no artifact was produced.
 - Each step draws from its own SHA-256 stream keyed by seed, step index and operator name. Output
   does not depend on Python's `random` module, `PYTHONHASHSEED` or on the other steps' choices, so
   equal plans and inputs give byte-identical documents.
+- Byte identity of HTML output holds for a given lxml and libxml2 version: parser repairs and
+  serialization are libxml2 details. JSON output depends only on Python's `json` module. Golden
+  SHA-256 tests (recorded with lxml 6.1.3 and libxml2 2.14.6) fail when a dependency update changes
+  the bytes.
 - Configurations are strict: unknown keys, wrong types, invalid selectors or pointers, and operators
   without an effect (`HtmlChangeClasses` with nothing to do) are rejected. In Python, pass tuples
   for sequence fields; JSON arrays are accepted by `from_json`.
@@ -88,14 +100,22 @@ When a plan applies, its document carries `SyntheticLabel(kind="mutation", seed=
 leading HTML comment, or the first JSON key `"__rastro_synthetic__"`. A label already present on the
 input, such as a fixture body's, is removed before mutating so operators never see it. JSON
 documents whose root is not an object cannot carry a label, so applying a plan that changes one
-raises `MockLabError`. The label does not include the plan; store `plan.to_json()` or
-`result.plan_fingerprint` beside the artifact to trace it.
+raises `MockLabError`. `JsonRenameKey.new_key` and `JsonWrapValue.wrapper_key` cannot use that key.
+The label does not include the plan, and relabeling a fixture body replaces the fixture's seed with
+the plan's. Store `plan.to_json()` (or `result.plan_fingerprint`) and the source fixture's manifest
+beside the artifact to trace it.
 
 ## Limits
 
-- HTML is parsed and serialized with lxml (installed with Scrapling). Serialization normalizes the
-  markup: a fragment gains `<html><body>`, and the doctype and attribute quoting are rewritten.
+- HTML is parsed and serialized with lxml and cssselect, declared dependencies (ADR 0014). This
+  editing code stays in Mock Lab, outside domain code. Serialization normalizes the markup: a
+  fragment gains `<html><body>`, and the doctype and attribute quoting are rewritten. Comments and
+  the doctype outside the root element are kept; a leading XML declaration (XHTML) is dropped.
+- JSON output is re-encoded compactly, so the text of every number may change even when its value
+  does not (`1E2` becomes `100.0`, `1.50` becomes `1.5`).
 - Inputs above `Limits().max_html_bytes` or `max_json_bytes`, or JSON beyond `max_json_depth` or
-  `max_json_nodes`, raise `ResourceLimitError`.
+  `max_json_nodes`, raise `ResourceLimitError`; so does a plan whose output exceeds them, for
+  example after many duplications. Documents containing lone surrogates, which cannot be written as
+  UTF-8, raise `MockLabError`.
 - Operators edit document structure, not text content. Use fixtures (see
   [Mock Lab fixtures](mock-lab.md)) for sanitized source data.

@@ -131,6 +131,11 @@ explicitly.
   evidence URLs can be rewritten consistently.
 - Mock Lab composes adapters itself (`ScraplingParser`, `JsonParser`, `Rastro`) at the edge, as the
   public facade does. Domain code remains free of I/O and Scrapling.
+- Structural mutations (MOCK-002) edit HTML trees with lxml and cssselect directly, both declared
+  dependencies (they were already installed with Scrapling). Scrapling's parser port returns
+  candidates, not editable trees, so routing edits through it would add indirection without
+  removing lxml. This code stays in `rastro.mocklab.mutations`, outside domain code, and
+  byte-identical HTML output is guaranteed only for a given lxml and libxml2 version.
 - Bundles with JSON array roots are refused until a label convention for them is agreed.
 
 ## Alternatives considered

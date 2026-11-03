@@ -2,20 +2,50 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import ClassVar, Literal
 
 from pydantic import Field
 
 from rastro.mocklab.mutations import html_dom
-from rastro.mocklab.mutations.contracts import MutationCategory, MutationChange
-from rastro.mocklab.mutations.html_base import ClassToken, HtmlOperator
-from rastro.mocklab.mutations.html_dom import HtmlDom, Node
+from rastro.mocklab.mutations.contracts import MutationCategory
+from rastro.mocklab.mutations.html_base import ClassToken, Edit, HtmlOperator
+from rastro.mocklab.mutations.html_dom import Node
 from rastro.mocklab.mutations.rng import non_identity_permutation
 from rastro.mocklab.seeds import DeterministicStream
 
+type WrapperTag = Literal["div", "section", "article", "span", "main", "aside", "header", "footer"]
+"""Flow containers; libxml2 and HTML5 parsers keep them where wrapping puts them."""
 
-def _tags(nodes: list[Node]) -> str:
-    return ",".join(str(node.tag) for node in nodes)
+_FIXED_PARENT = frozenset(
+    {
+        "li",
+        "dt",
+        "dd",
+        "tr",
+        "td",
+        "th",
+        "thead",
+        "tbody",
+        "tfoot",
+        "caption",
+        "col",
+        "colgroup",
+        "option",
+        "optgroup",
+        "title",
+        "meta",
+        "link",
+        "base",
+        "style",
+    }
+)
+"""Elements whose parent is prescribed; a wrapper would be dropped or moved by parsers."""
+
+
+def _slots(children: list[Node], order: Iterable[int]) -> str:
+    """Children as ``<original index>:<tag>``, in document order."""
+    return ",".join(f"{index}:{children[index].tag}" for index in order)
 
 
 class HtmlReorderChildren(HtmlOperator):
@@ -27,12 +57,11 @@ class HtmlReorderChildren(HtmlOperator):
     def eligible(self, node: Node) -> bool:
         return len(html_dom.element_children(node)) >= 2
 
-    def edit(self, dom: HtmlDom, node: Node, stream: DeterministicStream) -> MutationChange:
-        path, children = dom.path(node), html_dom.element_children(node)
+    def edit(self, node: Node, stream: DeterministicStream) -> Edit:
+        children = html_dom.element_children(node)
         order = non_identity_permutation(stream, len(children))
         html_dom.reorder_children(node, order)
-        after = ",".join(str(index) for index in order)
-        return self.change(dom, node, path, _tags(children), f"order={after}")
+        return Edit(node, _slots(children, range(len(children))), _slots(children, order))
 
 
 class HtmlWrapElement(HtmlOperator):
@@ -42,13 +71,15 @@ class HtmlWrapElement(HtmlOperator):
     category: ClassVar[MutationCategory] = "element_wrapping"
     structural_only: ClassVar[bool] = True
 
-    wrapper_tag: str = Field(default="div", pattern=r"^[a-z][a-z0-9-]{0,31}$")
+    wrapper_tag: WrapperTag = "div"
     wrapper_class: ClassToken | None = None
 
-    def edit(self, dom: HtmlDom, node: Node, stream: DeterministicStream) -> MutationChange:
-        path = dom.path(node)
+    def eligible(self, node: Node) -> bool:
+        return str(node.tag).lower() not in _FIXED_PARENT
+
+    def edit(self, node: Node, stream: DeterministicStream) -> Edit:
         wrapper = html_dom.wrap(node, self.wrapper_tag, self.wrapper_class)
-        return self.change(dom, node, path, None, f"wrapper={dom.path(wrapper)}")
+        return Edit(node, None, "wrapper=", (wrapper,))
 
 
 class HtmlDuplicateElement(HtmlOperator):
@@ -60,11 +91,9 @@ class HtmlDuplicateElement(HtmlOperator):
 
     copies: int = Field(default=1, ge=1, le=20)
 
-    def edit(self, dom: HtmlDom, node: Node, stream: DeterministicStream) -> MutationChange:
-        path = dom.path(node)
+    def edit(self, node: Node, stream: DeterministicStream) -> Edit:
         clones = html_dom.duplicate(node, self.copies)
-        after = ",".join(dom.path(clone) for clone in clones)
-        return self.change(dom, node, path, None, f"copies={after}")
+        return Edit(node, None, "copies=", tuple(clones))
 
 
 class HtmlEmptyContainer(HtmlOperator):
@@ -76,7 +105,7 @@ class HtmlEmptyContainer(HtmlOperator):
     def eligible(self, node: Node) -> bool:
         return len(node) > 0 or bool(node.text and node.text.strip())
 
-    def edit(self, dom: HtmlDom, node: Node, stream: DeterministicStream) -> MutationChange:
-        path, before = dom.path(node), f"children={len(node)}"
+    def edit(self, node: Node, stream: DeterministicStream) -> Edit:
+        before = f"children={len(node)},text={bool(node.text and node.text.strip())}"
         html_dom.clear(node)
-        return self.change(dom, node, path, before, "children=0")
+        return Edit(node, before, "children=0,text=False")

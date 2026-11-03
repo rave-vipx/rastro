@@ -48,8 +48,9 @@ def test_reorder_moves_children_and_reports_the_permutation():
     assert texts(result.document, ".name") != ["Alpha", "Beta", "Gamma"]
     (change,) = result.changes
     assert change.path_before == change.path_after == "/html/body/ul"
-    assert change.before == "li,li,li"
-    assert change.after is not None and change.after.startswith("order=")
+    assert change.before == "0:li,1:li,2:li"
+    assert change.after is not None and change.after != change.before
+    assert sorted(change.after.split(",")) == ["0:li", "1:li", "2:li"]
 
 
 def test_change_classes_renames_removes_adds_and_hashes():
@@ -114,7 +115,8 @@ def test_duplicate_element_inserts_copies_after_the_original():
 def test_empty_container_removes_children_and_skips_empty_ones():
     result = HtmlEmptyContainer(selector="ul").apply(PAGE, stream())
     assert texts(result.document, "li") == []
-    assert result.changes[0].before == "children=3"
+    assert result.changes[0].before == "children=3,text=False"
+    assert result.changes[0].after == "children=0,text=False"
     again = HtmlEmptyContainer(selector="ul").apply(result.document, stream())
     assert again.reason == "no_eligible_target"
 

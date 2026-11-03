@@ -1,5 +1,6 @@
 """MutationPlan serialization, composition, labels and reproducibility (MOCK-002, MOCK-006)."""
 
+import hashlib
 import json
 import os
 import subprocess
@@ -27,13 +28,14 @@ from rastro.mocklab.mutations import (
     HtmlReorderChildren,
     HtmlWrapElement,
     JsonDuplicateItem,
+    JsonModifyPagination,
     JsonRenameKey,
     JsonReorder,
     MutationPlan,
     MutationResult,
     MutationStatus,
 )
-from rastro.mocklab.mutations.html_dom import HtmlDom
+from rastro.mocklab.mutations.html_dom import HtmlDom, stable
 from rastro.mocklab.mutations.rng import non_identity_permutation, sample_indices
 from rastro.mocklab.seeds import DeterministicStream
 
@@ -85,6 +87,28 @@ _SCRIPT = (
     "plan = MutationPlan.from_json(sys.argv[1]);"
     "print(hashlib.sha256(plan.apply(sys.argv[2]).document.encode()).hexdigest())"
 )
+
+
+JSON_PLAN = MutationPlan(
+    seed=9,
+    operators=(
+        JsonReorder(pointer="/items"),
+        JsonDuplicateItem(pointer="/items", max_targets=2),
+        JsonModifyPagination(field="/next"),
+    ),
+)
+
+
+@pytest.mark.parametrize(
+    ("plan", "document", "digest"),
+    [
+        (HTML_PLAN, PAGE, "539e7722f38289a42216ea592334a3a08966d2ee3b8904011ccc94b790475960"),
+        (JSON_PLAN, API, "0a500799b0c3eba49b50a7d777fad7fa760787f44eb927cacd1918afeb045b37"),
+    ],
+)
+def test_golden_digests_catch_byte_changes_across_releases(plan, document, digest):
+    """Recorded with lxml 6.1.3 and libxml2 2.14.6; a bump that changes bytes fails here."""
+    assert hashlib.sha256(plan.apply(document).document.encode()).hexdigest() == digest
 
 
 def test_output_does_not_depend_on_hash_randomization():
@@ -219,7 +243,7 @@ def test_any_plan_output_reparses_and_reproduces(seed, operators):
     plan = MutationPlan(seed=seed, operators=tuple(operators))
     result = plan.apply(PAGE)
     assert result == plan.apply(PAGE)
-    reparsed = HtmlDom.parse(result.document)
-    assert reparsed is not None and reparsed.select("body")
+    body = result.document.split("\n", 1)[1] if result.label else result.document
+    assert stable(body)
     if result.status is MutationStatus.APPLIED:
         assert read_html_label(result.document).seed == seed

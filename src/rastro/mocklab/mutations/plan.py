@@ -37,7 +37,7 @@ from rastro.mocklab.mutations.json_containers import (
     JsonEmptyContainer,
     JsonReorder,
 )
-from rastro.mocklab.mutations.json_doc import encode
+from rastro.mocklab.mutations.json_doc import check_tree, encode
 from rastro.mocklab.mutations.json_fields import (
     JsonChangeType,
     JsonModifyPagination,
@@ -45,6 +45,7 @@ from rastro.mocklab.mutations.json_fields import (
     JsonRenameKey,
     JsonWrapValue,
 )
+from rastro.mocklab.mutations.limits import check_bytes
 from rastro.mocklab.mutations.rng import step_stream
 
 type MutationOperator = Annotated[
@@ -72,13 +73,14 @@ class MutationPlanResult(StrictContract):
     """The outcome of a plan.
 
     When at least one step applied, ``document`` is a Mock Lab artifact that starts with
-    (HTML) or contains (JSON) ``label``. When no step applied, it is the input unchanged.
+    (HTML) or contains (JSON) ``label``. When no step applied, no artifact exists:
+    ``document`` is the input unchanged and ``label`` is ``None``.
     """
 
     status: MutationStatus
     representation: Representation
     plan_fingerprint: str
-    label: SyntheticLabel
+    label: SyntheticLabel | None
     document: str
     steps: tuple[MutationResult, ...]
 
@@ -116,21 +118,26 @@ class MutationPlan(StrictContract):
         return cls.model_validate_json(text)
 
     def apply(self, document: str) -> MutationPlanResult:
-        """Apply every operator; raise ``MockLabError`` if the output cannot carry a label."""
+        """Apply every operator.
+
+        Raises ``MockLabError`` when the output cannot carry a label or is not valid UTF-8,
+        and ``ResourceLimitError`` when it exceeds the default ``Limits``.
+        """
         current = _without_label(document, self.representation)
         steps: list[MutationResult] = []
         for index, operator in enumerate(self.operators):
             step = operator.apply(current, step_stream(self.seed, index, operator.operator))
             steps.append(step)
             current = step.document
-        label = SyntheticLabel(kind="mutation", seed=self.seed)
         applied = any(step.status is MutationStatus.APPLIED for step in steps)
+        label = SyntheticLabel(kind="mutation", seed=self.seed) if applied else None
+        output = document if label is None else _artifact(current, label, self.representation)
         return MutationPlanResult(
             status=MutationStatus.APPLIED if applied else MutationStatus.NO_APPLICABLE_TARGET,
             representation=self.representation,
             plan_fingerprint=self.fingerprint,
             label=label,
-            document=_with_label(current, label, self.representation) if applied else document,
+            document=output,
             steps=tuple(steps),
         )
 
@@ -153,7 +160,13 @@ def _without_label(document: str, representation: Representation) -> str:
     return encode(payload)
 
 
-def _with_label(document: str, label: SyntheticLabel, representation: Representation) -> str:
+def _artifact(document: str, label: SyntheticLabel, representation: Representation) -> str:
+    """Label the output and check it against the same limits inputs must meet."""
     if representation == "html":
-        return label_html(document, label)
-    return encode(label_json(json.loads(document), label))
+        output = label_html(document, label)
+    else:
+        payload = label_json(json.loads(document), label)
+        check_tree(payload)
+        output = encode(payload)
+    check_bytes(output, representation)
+    return output
