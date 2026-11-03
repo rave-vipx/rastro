@@ -56,7 +56,7 @@ Owner decisions after the 0.1.0 release candidate ([ADR 0012](decisions/0012-pro
 
 ### Wave 1 (in progress)
 
-Mock Lab core (MOCK-001, MOCK-004, MOCK-005, MOCK-006), controlled structural mutations (MOCK-002), representative failure scenarios (MOCK-003), and recipe lifecycle and rollback (REC-005/006, REPAIR-006). Each part lands as its own pull request against `dev`.
+Merged into `dev`: representative failure scenarios (MOCK-003; #40), Mock Lab core (MOCK-001, MOCK-004, MOCK-005, MOCK-006; #45) and follow-ups (#47), and recipe lifecycle and rollback (REC-005/006, REPAIR-006; #46). Controlled structural mutations (MOCK-002; PR #48) remain in review.
 
 ## Current requirement mapping
 
@@ -67,7 +67,7 @@ Mock Lab core (MOCK-001, MOCK-004, MOCK-005, MOCK-006), controlled structural mu
 | INT-003 | Five extraction outcomes plus explicit access restrictions, transient failures, and permanent failures. Overflowing JSON numbers are invalid data, never success. |
 | INT-004, QUAL-001–004 | Field provenance, Pydantic/custom validation, explicit rejection. No source excerpt retained; defaults have no evidence. |
 | REC-002 | Declarative serialization with unknown/executable fields rejected. |
-| REC-001/003 | SQLite versions keyed by source/template/schema/region; mappings/fallback definitions, validation-contract references, creation/last-success timestamps and successful-run counts. Advanced lifecycle/health remains v0.2. |
+| REC-001/003, REC-005/006, REPAIR-006 | SQLite versions keyed by source/template/schema/region; mappings/fallback definitions, validation-contract references, timestamps and successful-run counts. Lifecycle states, candidate storage, history and rollback are delivered at the domain and storage level ([ADR 0015](decisions/0015-recipe-lifecycle.md)); no facade or CLI surface, automatic degradation or repair yet. Repair and drift work builds on `save_candidate` and `RecipeLifecycle`. |
 | REC-004 | Model candidates require strict declarative structure, source observations, required-field evidence and full schema success before activation. Evidence policy survives restart; partial/failed candidates never activate. |
 | AI-001–004 | Optional local Ollama adapter, structured proposals, capability boundary and bounded calls/corrections/deadline/context/response/concurrency. Offline contract tests cover these guarantees. Live runs with `qwen3:4b` and `llama3.2:3b` (5 trials each) verified learning, activation, zero-inference cross-process reuse and explicit failures; both failed safely on a page with distractors ([live evidence](live-ollama-evidence.md)). Broader model quality is unmeasured. |
 | GEO-001–003, GEO-005 | Explicit ordered languages with descending Accept-Language weights and locale fallback; locale/languages/timezone/currency/egress reach validators through Pydantic's supported `model_validate` context path; unsupported egress fails before DNS; recipe memory isolates the ordered regional context while retaining default legacy keys. Custom model constructors follow Pydantic semantics and must handle context themselves. Named administrator-declared HTTP(S) proxy egress profiles with environment credential references, no rotation or fallback, and egress-isolated memory; a proxy resolves target DNS, so local pinning does not bind proxied connections (trusted-proxy boundary). Browser geolocation is rejected explicitly until a browser adapter exists (GEO-002). See [ADR 0006](decisions/0006-explicit-regional-context.md) and [ADR 0008](decisions/0008-explicit-egress.md). |
