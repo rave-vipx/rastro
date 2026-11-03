@@ -95,6 +95,7 @@ def extract_document[T: BaseModel](
         try:
             data = schema.model_validate(
                 dict(candidate.values),
+                by_name=True,
                 context={
                     "locale": source.locale,
                     "languages": source.languages,
@@ -165,8 +166,6 @@ def validate_recipe(
         name not in fields for item in (recipe, *recipe.fallbacks) for name in item.fields
     ):
         raise ConfigurationError("Recipe mappings must reference declared schema fields")
-    if any(field.alias or field.validation_alias for field in fields.values()):
-        raise ConfigurationError("Schema aliases are not supported in this milestone")
     return recipe
 
 
