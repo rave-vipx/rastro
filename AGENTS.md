@@ -1,7 +1,8 @@
 # Working on Rastro
 
-Read `RASTRO_MASTER_SPEC.md` before implementation. The active release is **v0.1**;
-`docs/roadmap.md` tracks milestone scope and unfinished requirements.
+Read `RASTRO_MASTER_SPEC.md` before implementation. The active milestone is **v0.2**;
+v0.1 is complete at release candidate `0.1.0rc1` (`dev` promoted to `main` on 2026-11-03),
+not published. `docs/roadmap.md` tracks milestone scope and unfinished requirements.
 
 - Deliver one usable vertical slice at a time, with tests and documentation.
 - Keep domain code independent of adapters. Use Scrapling through the parser or acquisition boundary.
