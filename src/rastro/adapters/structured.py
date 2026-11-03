@@ -13,6 +13,7 @@ from rastro.domain.models import (
     Recipe,
     ResourceLimitError,
 )
+from rastro.ports.discovery import AliasMap
 from rastro.ports.parser import Candidate, ParsedDocument
 
 _DISCOVERY_SAMPLE = 20
@@ -85,15 +86,27 @@ class JsonParser:
 
 
 class JsonDiscovery:
-    """Match exact field names in the root object or arrays of objects; never fetch URLs."""
+    """Match exact field names and declared aliases; never fetch URLs."""
 
     def discover(
-        self, html: str, fields: tuple[str, ...], limits: Limits, *, max_candidates: int
+        self,
+        html: str,
+        fields: tuple[str, ...],
+        limits: Limits,
+        *,
+        max_candidates: int,
+        aliases: AliasMap | None = None,
     ) -> tuple[Recipe, ...]:
         try:
             payload = load_json(html, limits)
         except ValueError:
             return ()
+        names = {
+            field: tuple(dict.fromkeys((field, *aliases.get(field, ()))))
+            if aliases is not None
+            else (field,)
+            for field in fields
+        }
         sets: list[tuple[str, list[dict[str, object]]]] = []
         if isinstance(payload, dict):
             sets.append(("", [payload]))
@@ -112,7 +125,7 @@ class JsonDiscovery:
             pending.extend(reversed(children))
         ranked: list[tuple[int, int, Recipe]] = []
         for order, (path, records) in enumerate(sets):
-            mapping = _common_paths(records[:_DISCOVERY_SAMPLE], fields)
+            mapping = _common_paths(records[:_DISCOVERY_SAMPLE], names)
             if not mapping:
                 continue
             try:
@@ -125,11 +138,16 @@ class JsonDiscovery:
         return tuple(recipe for _, _, recipe in ranked[:max_candidates])
 
 
-def _common_paths(records: list[dict[str, object]], fields: tuple[str, ...]) -> dict[str, str]:
+def _common_paths(
+    records: list[dict[str, object]], names: dict[str, tuple[str, ...]]
+) -> dict[str, str]:
     """Keep a field only where every sampled record that has it agrees on one pointer."""
+    owners: dict[str, tuple[str, ...]] = {}
+    for field, accepted in names.items():
+        for name in accepted:
+            owners[name] = (*owners.get(name, ()), field)
     agreed: dict[str, str] = {}
     rejected: set[str] = set()
-    wanted = set(fields)
     for record in records:
         found: dict[str, list[str]] = {}
         pending: list[tuple[dict[str, object], str]] = [(record, "")]
@@ -137,11 +155,11 @@ def _common_paths(records: list[dict[str, object]], fields: tuple[str, ...]) -> 
             current, prefix = pending.pop()
             for key, value in current.items():
                 pointer = f"{prefix}/{escape_token(key)}"
-                if key in wanted:
-                    found.setdefault(key, []).append(pointer)
+                for field in owners.get(key, ()):
+                    found.setdefault(field, []).append(pointer)
                 if isinstance(value, dict):
                     pending.append((value, pointer))
         for name, pointers in found.items():
             if len(pointers) != 1 or agreed.setdefault(name, pointers[0]) != pointers[0]:
                 rejected.add(name)
-    return {name: agreed[name] for name in fields if name in agreed and name not in rejected}
+    return {name: agreed[name] for name in names if name in agreed and name not in rejected}

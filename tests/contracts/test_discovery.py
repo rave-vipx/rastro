@@ -6,8 +6,10 @@ from rastro import Limits, ResourceLimitError
 from rastro.adapters.discovery import ScraplingDiscovery
 
 
-def discover(html, *, fields=("name", "price"), limits=None, maximum=8):
-    return ScraplingDiscovery().discover(html, fields, limits or Limits(), max_candidates=maximum)
+def discover(html, *, fields=("name", "price"), aliases=None, limits=None, maximum=8):
+    return ScraplingDiscovery().discover(
+        html, fields, limits or Limits(), max_candidates=maximum, aliases=aliases
+    )
 
 
 def block(value):
@@ -51,6 +53,40 @@ def test_microdata_requires_safe_names_and_unambiguous_matches():
     candidates = discover(html, fields=("name", "price", 'unsafe"name'), maximum=1)
     assert candidates[0].fields == {"name": '[itemprop~="name"]::attr(href)'}
     assert discover("<div itemscope><p>No properties</p></div>") == ()
+
+
+def test_aliases_map_the_model_field_to_the_exact_source_key():
+    html = block(
+        {"@type": "Product", "name": "Book", "offers": {"price": 3, "priceCurrency": "EUR"}}
+    )
+    (candidate,) = discover(
+        html, fields=("name", "currency"), aliases={"currency": ("priceCurrency",)}
+    )
+    assert candidate.fields["currency"] == "/offers/priceCurrency"
+
+
+def test_aliases_matching_different_nodes_leave_the_field_unmapped():
+    html = block(
+        {"name": "Book", "currency": "USD", "offers": {"priceCurrency": "EUR", "price": 3}}
+    )
+    (candidate,) = discover(
+        html, fields=("name", "currency"), aliases={"currency": ("priceCurrency",)}
+    )
+    assert candidate.fields == {"name": "/name"}
+
+
+def test_microdata_aliases_match_exact_itemprops():
+    html = (
+        '<div itemscope><span itemprop="name">Book</span>'
+        '<meta itemprop="priceCurrency" content="EUR"></div>'
+    )
+    (candidate,) = discover(
+        html, fields=("name", "currency"), aliases={"currency": ("priceCurrency",)}
+    )
+    assert candidate.fields == {
+        "name": '[itemprop~="name"]::text',
+        "currency": '[itemprop~="priceCurrency"]::attr(content)',
+    }
 
 
 @pytest.mark.parametrize(

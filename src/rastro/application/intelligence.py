@@ -14,6 +14,7 @@ import structlog
 from pydantic import BaseModel, ValidationError
 
 from rastro.application.extraction import extract_document, validate_recipe
+from rastro.application.field_aliases import discovery_aliases as resolve_discovery_aliases
 from rastro.application.memory import PreparedRecipe
 from rastro.domain.intelligence import InferencePolicy, ModelError, ModelRequest, RecipeProposal
 from rastro.domain.json import strict_json
@@ -31,7 +32,7 @@ from rastro.domain.models import (
     Source,
     schema_fingerprint,
 )
-from rastro.ports.discovery import RecipeDiscovery
+from rastro.ports.discovery import AliasMap, RecipeDiscovery
 from rastro.ports.model import ModelPort
 from rastro.ports.parser import DocumentParser
 from rastro.ports.recipes import RecipeRepository
@@ -59,12 +60,14 @@ class RecipeLearner:
         policy: InferencePolicy,
         repository: RecipeRepository | None,
         json_discovery: RecipeDiscovery | None = None,
+        discovery_aliases: AliasMap | None = None,
     ) -> None:
         self._model = model
         self._discovery = discovery
         self._json_discovery = json_discovery
         self._policy = policy
         self._repository = repository
+        self._discovery_aliases = dict(discovery_aliases) if discovery_aliases is not None else None
         self._slots = asyncio.Semaphore(policy.max_concurrency)
 
     async def extract[T: BaseModel](
@@ -80,15 +83,8 @@ class RecipeLearner:
     ) -> ExtractionResult[T]:
         """Discover before inference. JSON uses structured discovery only; models propose HTML."""
         fields = schema.model_fields
-        if (
-            not fields
-            or len(fields) > 100
-            or any(
-                len(name) > 256 or field.alias or field.validation_alias
-                for name, field in fields.items()
-            )
-        ):
-            raise ConfigurationError("Discovery requires 1-100 bounded fields without aliases")
+        if not fields or len(fields) > 100 or any(len(name) > 256 for name in fields):
+            raise ConfigurationError("Discovery requires 1-100 bounded fields")
         if len(html.encode()) > limits.max_input_bytes(representation):
             raise ResourceLimitError(
                 f"{representation.upper()} input exceeds max_{representation}_bytes"
@@ -140,6 +136,7 @@ class RecipeLearner:
             tuple(fields),
             limits,
             max_candidates=self._policy.max_discovery_candidates,
+            aliases=resolve_discovery_aliases(fields, self._discovery_aliases),
         )
         if len(candidates) > self._policy.max_discovery_candidates:
             raise ResourceLimitError("Discovery returned too many candidates")

@@ -27,8 +27,10 @@ def parse(text, recipe=RECIPE, limits=None):
     return JsonParser().parse(text, recipe, limits or Limits())
 
 
-def discover(text, fields=("name", "price"), limits=None, maximum=8):
-    return JsonDiscovery().discover(text, fields, limits or Limits(), max_candidates=maximum)
+def discover(text, fields=("name", "price"), aliases=None, limits=None, maximum=8):
+    return JsonDiscovery().discover(
+        text, fields, limits or Limits(), max_candidates=maximum, aliases=aliases
+    )
 
 
 def test_array_records_use_relative_pointers_with_absolute_locators():
@@ -106,6 +108,34 @@ def test_discovery_drops_ambiguous_and_inconsistent_field_names():
         }
     )
     assert discover(text) == ()
+
+
+def test_discovery_maps_aliases_and_drops_ambiguous_ones():
+    text = json.dumps(
+        {
+            "items": [
+                {"name": "A", "pricing": {"priceCurrency": "USD"}},
+                {"name": "B", "pricing": {"priceCurrency": "EUR"}},
+            ]
+        }
+    )
+    (recipe,) = discover(
+        text, fields=("name", "currency"), aliases={"currency": ("priceCurrency",)}
+    )
+    assert recipe.fields == {"name": "/name", "currency": "/pricing/priceCurrency"}
+
+    both = json.dumps(
+        {
+            "items": [
+                {"name": "A", "currency": "USD", "pricing": {"priceCurrency": "EUR"}},
+                {"name": "B", "currency": "USD", "pricing": {"priceCurrency": "EUR"}},
+            ]
+        }
+    )
+    (ambiguous,) = discover(
+        both, fields=("name", "currency"), aliases={"currency": ("priceCurrency",)}
+    )
+    assert ambiguous.fields == {"name": "/name"}
 
 
 def test_discovery_is_bounded_and_never_raises_for_invalid_json():

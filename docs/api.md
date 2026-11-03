@@ -4,9 +4,10 @@
 
 ```python
 Rastro(*, parser=None, limits=None, acquisition=None, policy=None, repository=None,
-       model=None, inference_policy=None, discover_recipes=False, discovery=None)
+       model=None, inference_policy=None, discover_recipes=False, discovery=None,
+       discovery_aliases=None)
 Rastro.web(policy, *, limits=None, repository=None, model=None,
-           inference_policy=None, discover_recipes=False)
+           inference_policy=None, discover_recipes=False, discovery_aliases=None)
 Rastro.extract_html(html, *, source, schema, recipe=None, context=None, recipe_version=None)
 Rastro.extract_json(text, *, source, schema, recipe=None, context=None, recipe_version=None)
 await Rastro.extract_html_async(html, *, source, schema, recipe=None, context=None, recipe_version=None)
@@ -17,7 +18,7 @@ await Rastro.extract_many(sources, *, schema, recipe=None, context=None, recipe_
                           representation="html")
 ```
 
-`html` is a UTF-8-compatible Python string. `schema` is a Pydantic `BaseModel` subclass with declared fields. `recipe.fields` maps model field names to extraction expressions. Aliases and root models are outside this milestone's supported schema contract. Custom validators run as trusted caller code. Rastro supplies the source's regional context through Pydantic's `model_validate` context path, subject to Pydantic's constructor semantics described below.
+`html` is a UTF-8-compatible Python string. `schema` is a Pydantic `BaseModel` subclass with declared fields. `recipe.fields` maps model field names to extraction expressions. Field aliases are accepted: a recipe still names the model field, and discovery may also match the declared alias or a configured `discovery_aliases` entry. Root models are outside this milestone's supported schema contract. Custom validators run as trusted caller code. Rastro supplies the source's regional context through Pydantic's `model_validate` context path, subject to Pydantic's constructor semantics described below.
 
 The `extract_html` call is synchronous, does no fetching, and returns `ExtractionResult[YourModel]`. Persistence is opt-in through `repository`; omitting `recipe` then reuses an exact-context validated version. See [recipe memory](memory.md). Asynchronous methods optionally learn cold-context recipes when `discover_recipes=True` or `model=` is configured; see [optional intelligence](intelligence.md). Parser injection is an infrastructure seam for trusted adapters implementing `DocumentParser`.
 
@@ -99,7 +100,7 @@ result = Rastro().extract_json(text, source=source, schema=Product, recipe=recip
 
 Evidence uses method `json` with locator `json#<absolute pointer>`, for example `json#/data/products/1/offer/price`. JSON recipes require JSON input and HTML recipes require HTML input: a mismatched explicit recipe raises `ConfigurationError` before any request. Recipe memory keys include the representation. HTML keys keep their existing canonical form, so a stored JSON recipe never answers an HTML request for the same source (or the reverse).
 
-With `discover_recipes=True`, `extract_json_async` and JSON HTTP extraction discover recipes deterministically. Candidates are the root object and every array whose elements are all objects, up to `max_records` elements. In up to 20 sampled records, a field maps only when its exact name occurs once per record, and every sampled record containing it agrees on its pointer. Synonyms, case folding and array traversal are not attempted. Candidates are ranked by mapped field count, then document order. Like other learned recipes, they require evidence for required fields and must validate successfully before they are persisted. Recipe proposals from a model cover only HTML strategies, so a configured model is not consulted for JSON documents. If no discovered candidate validates, the result is `insufficient_evidence` with `no_valid_recipe`.
+With `discover_recipes=True`, `extract_json_async` and JSON HTTP extraction discover recipes deterministically. Candidates are the root object and every array whose elements are all objects, up to `max_records` elements. In up to 20 sampled records, a field maps only when its exact name occurs once per record, and every sampled record containing it agrees on its pointer. Synonyms, case folding and array traversal are not attempted. A field also matches its declared Pydantic aliases (`Field(alias=...)`, a string `validation_alias`, or string `AliasChoices`) and any extra names in the typed `discovery_aliases` map (`{"currency": ("priceCurrency",)}`) passed when discovery is configured. Matching stays exact and case-sensitive, the model field name is always accepted, and more than one matching node for a field leaves that field unmapped as ambiguous. Recipes always map the model field name, so evidence locators show the matched source key. Candidates are ranked by mapped field count, then document order. Like other learned recipes, they require evidence for required fields and must validate successfully before they are persisted. Recipe proposals from a model cover only HTML strategies, so a configured model is not consulted for JSON documents. If no discovered candidate validates, the result is `insufficient_evidence` with `no_valid_recipe`.
 
 The pipeline order is memory, then JSON-LD, then structured JSON, then DOM selectors, then the optional model. Each step applies only to the representation it reads, and Rastro never fetches a second representation of the same source. An HTML request runs memory, JSON-LD, DOM and the model. A JSON request runs memory and structured JSON.
 
@@ -113,6 +114,32 @@ follows Pydantic's constructor semantics and may validate without that context;
 Rastro does not bypass or replace the constructor. Such a constructor must arrange
 context propagation as documented by Pydantic. Rastro does not infer a currency or
 convert values. Validator transformations do not create source evidence.
+
+## Model providers
+
+```python
+from rastro import OllamaModel, OpenAICompatibleModel  # lazy; need an optional extra
+
+OllamaModel(model, *, base_url="http://127.0.0.1:11434")                  # [ollama]
+OpenAICompatibleModel(model, *, base_url="http://127.0.0.1:11434/v1",     # [openai]
+                      api_key_env=None, allow_remote=False,
+                      response_format="json_schema")
+```
+
+`model=` on `Rastro` and `Rastro.web` accepts any `ModelPort` strategy:
+`async generate(request: ModelRequest, policy: InferencePolicy) -> str`, returning
+JSON text for one recipe proposal or raising `ModelError`. Provider classes are
+resolved lazily, so `import rastro` never imports HTTPX; accessing one without its
+extra raises `ImportError` naming the extra. They are not in `rastro.__all__`.
+
+`OpenAICompatibleModel` speaks the Chat Completions API. Non-loopback `base_url`
+values raise `ConfigurationError` unless `allow_remote=True` and HTTPS are both
+present. `api_key_env` names an environment variable that must be set at construction
+and is read per request; the key is never stored, logged or shown by `repr`.
+`response_format="json_object"` selects JSON mode for servers without JSON Schema
+support. Constructor validation raises `ConfigurationError`; request failures raise
+`ModelError`, which the learner turns into explicit outcomes. See
+[choosing or writing a model provider](intelligence.md#choosing-or-writing-a-model-provider).
 
 ## Results
 
@@ -149,7 +176,7 @@ No raw HTML or excerpt is retained. User values and custom validator messages ar
 
 ### Exceptions
 
-`ConfigurationError` reports invalid selector syntax, unknown schema fields, or unsupported aliases. `ResourceLimitError` rejects oversized input or too many candidates/blocks. `RecipeNotFoundError` reports a missing stored recipe; `RecipeStorageError` reports persistence failures and `RecipeConflictError` reports changed content at an existing key/version. All derive from `RastroError`. Invalid public input models raise Pydantic `ValidationError`. Exceptions do not produce a truncated successful result.
+`ConfigurationError` reports invalid selector syntax, unknown schema fields, or malformed `discovery_aliases`. `ResourceLimitError` rejects oversized input or too many candidates/blocks. `RecipeNotFoundError` reports a missing stored recipe; `RecipeStorageError` reports persistence failures and `RecipeConflictError` reports changed content at an existing key/version. All derive from `RastroError`. Invalid public input models raise Pydantic `ValidationError`. Exceptions do not produce a truncated successful result.
 
 Programmer errors in custom validators or adapters propagate. This service does not hide arbitrary application failures.
 

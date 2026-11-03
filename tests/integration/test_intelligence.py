@@ -1,7 +1,8 @@
 import json
+from decimal import Decimal
 
 import pytest
-from pydantic import BaseModel, ValidationInfo, field_validator
+from pydantic import AliasChoices, BaseModel, Field, ValidationInfo, field_validator
 
 from rastro import InferencePolicy, Outcome, Rastro, RecipeKey, SQLiteRecipeRepository
 
@@ -473,7 +474,7 @@ async def test_custom_discovery_can_supply_multiple_candidates_but_cannot_exceed
     valid = Recipe.model_validate_json(PROPOSAL)
 
     class Discovery:
-        def discover(self, html, fields, limits, *, max_candidates):
+        def discover(self, html, fields, limits, *, max_candidates, aliases=None):
             return (valid.model_copy(update={"record_selector": ".absent"}), valid)
 
     result = await Rastro(discover_recipes=True, discovery=Discovery()).extract_html_async(
@@ -488,17 +489,79 @@ async def test_custom_discovery_can_supply_multiple_candidates_but_cannot_exceed
         ).extract_html_async(PAGE, source=source, schema=schema)
 
 
-@pytest.mark.asyncio
-async def test_unsupported_discovery_schemas_fail_explicitly(source):
-    from pydantic import BaseModel, Field
+CURRENCY_PAGE = (
+    '<script type="application/ld+json">{"@type":"Product","name":"Notebook",'
+    '"offers":{"price":"12.50","priceCurrency":"USD"}}</script>'
+)
 
+
+@pytest.mark.asyncio
+async def test_discovery_uses_declared_field_alias_and_keeps_the_source_key(source):
+    class Aliased(BaseModel):
+        name: str
+        price: Decimal
+        currency: str = Field(alias="priceCurrency")
+
+    result = await Rastro(discover_recipes=True).extract_html_async(
+        CURRENCY_PAGE, source=source, schema=Aliased
+    )
+
+    assert result.status == Outcome.SUCCESS
+    assert result.learned_recipe is not None
+    assert result.learned_recipe.fields["currency"] == "/offers/priceCurrency"
+    record = result.records[0]
+    assert record.data.currency == "USD"
+    assert record.evidence["currency"].locator == "jsonld[0]#/offers/priceCurrency"
+
+
+@pytest.mark.asyncio
+async def test_discovery_uses_alias_choices_and_explicit_alias_map(source):
+    class Choices(BaseModel):
+        name: str
+        price: Decimal
+        currency: str = Field(validation_alias=AliasChoices("currency", "priceCurrency"))
+
+    class Mapped(BaseModel):
+        name: str
+        price: Decimal
+        currency: str = "USD"
+
+    chosen = await Rastro(discover_recipes=True).extract_html_async(
+        CURRENCY_PAGE, source=source, schema=Choices
+    )
+    mapped = await Rastro(
+        discover_recipes=True, discovery_aliases={"currency": ("priceCurrency",)}
+    ).extract_html_async(CURRENCY_PAGE, source=source, schema=Mapped)
+
+    assert chosen.status == mapped.status == Outcome.SUCCESS
+    assert chosen.learned_recipe.fields["currency"] == "/offers/priceCurrency"
+    assert mapped.learned_recipe.fields["currency"] == "/offers/priceCurrency"
+    assert mapped.records[0].data.currency == "USD"
+
+
+@pytest.mark.asyncio
+async def test_several_matching_aliases_leave_the_field_unmapped(source):
     from rastro import ConfigurationError
 
-    class Aliased(BaseModel):
-        name: str = Field(alias="title")
+    class RequiredCurrency(BaseModel):
+        name: str
+        currency: str
 
-    with pytest.raises(ConfigurationError):
-        await Rastro(discover_recipes=True).extract_html_async(PAGE, source=source, schema=Aliased)
+    page = (
+        '<script type="application/ld+json">{"name":"Notebook","currency":"USD",'
+        '"offers":{"priceCurrency":"EUR"}}</script>'
+    )
+    result = await Rastro(
+        discover_recipes=True, discovery_aliases={"currency": ("priceCurrency",)}
+    ).extract_html_async(page, source=source, schema=RequiredCurrency)
+
+    assert result.status == Outcome.INSUFFICIENT_EVIDENCE
+    assert result.learned_recipe is None
+    assert result.issues[0].code == "missing_required_mapping"
+    with pytest.raises(ConfigurationError, match="undeclared"):
+        await Rastro(
+            discover_recipes=True, discovery_aliases={"unknown": ("priceCurrency",)}
+        ).extract_html_async(page, source=source, schema=RequiredCurrency)
 
 
 @pytest.mark.asyncio

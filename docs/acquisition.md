@@ -11,7 +11,7 @@ Supply a schema, explicit recipe, and the exact hosts you have permission to acc
 
 ```python
 from pydantic import BaseModel
-from rastro import AcquisitionPolicy, Rastro, Recipe, Source
+from rastro import AcquisitionPolicy, CssRecipe, Rastro, Source
 
 
 class Article(BaseModel):
@@ -30,7 +30,7 @@ async def extract_article():
             egress="direct",
         ),
         schema=Article,
-        recipe=Recipe(strategy="css", record_selector="article", fields={"title": "h1::text"}),
+        recipe=CssRecipe(record_selector="article", fields={"title": "h1::text"}),
     )
     return result
 ```
@@ -91,11 +91,12 @@ To extract from a permitted JSON API, pass `representation="json"` with a `json`
 recipe, or omit the recipe and enable discovery:
 
 ```python
+from rastro import JsonRecipe
+
 result = await engine.extract(
     source=Source(url="https://api.example.com/v1/products"),
     schema=Product,
-    recipe=Recipe(
-        strategy="json",
+    recipe=JsonRecipe(
         record_path="/data/products",
         fields={"name": "/name", "price": "/offer/price"},
     ),

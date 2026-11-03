@@ -178,6 +178,8 @@ def _evidence_builder(
     recipe_version: int,
 ) -> Callable[[str], Evidence]:
     """Validate shared provenance once and clone per-field Evidence for each locator."""
+    # Clones bypass re-validation of the shared fields; tests/unit/test_evidence_builder.py
+    # pins equivalence with validated Evidence so a Pydantic upgrade cannot change it silently.
     template = Evidence(
         source_url=source_url,
         observed_at=observed_at,

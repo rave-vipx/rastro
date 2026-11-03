@@ -24,7 +24,7 @@ from rastro.domain.models import (
     Source,
 )
 from rastro.ports.acquisition import AcquisitionPort
-from rastro.ports.discovery import RecipeDiscovery
+from rastro.ports.discovery import AliasMap, RecipeDiscovery
 from rastro.ports.model import ModelPort
 from rastro.ports.parser import DocumentParser
 from rastro.ports.recipes import RecipeRepository
@@ -45,6 +45,7 @@ class Rastro:
         inference_policy: InferencePolicy | None = None,
         discover_recipes: bool = False,
         discovery: RecipeDiscovery | None = None,
+        discovery_aliases: AliasMap | None = None,
     ) -> None:
         from rastro.adapters.structured import JsonDiscovery, JsonParser
 
@@ -66,6 +67,7 @@ class Rastro:
             policy=inference_policy,
             repository=repository,
             json_discovery=JsonDiscovery(),
+            discovery_aliases=discovery_aliases,
         )
         if acquisition is not None and policy is None:
             raise ConfigurationError("An acquisition port requires a batch policy")
@@ -132,6 +134,7 @@ class Rastro:
         model: ModelPort | None = None,
         inference_policy: InferencePolicy | None = None,
         discover_recipes: bool = False,
+        discovery_aliases: AliasMap | None = None,
     ) -> Rastro:
         """Create an HTTP client. Install rastro-engine[http]; use one event loop per client."""
         try:
@@ -150,6 +153,7 @@ class Rastro:
             model=model,
             inference_policy=inference_policy,
             discover_recipes=discover_recipes,
+            discovery_aliases=discovery_aliases,
         )
 
     async def extract_html_async[T: BaseModel](
