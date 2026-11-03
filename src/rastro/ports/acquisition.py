@@ -11,7 +11,7 @@ class Resolver(Protocol):
 
 
 class HttpTransport(Protocol):
-    """``proxy`` is passed only for an explicitly selected non-direct egress profile."""
+    """``proxy`` is None for direct egress, else the explicitly selected profile's route."""
 
     async def get(
         self,
@@ -20,13 +20,13 @@ class HttpTransport(Protocol):
         headers: dict[str, str],
         timeout: float,
         max_bytes: int,
-        proxy: ProxyRoute | None = None,
+        proxy: ProxyRoute | None,
     ) -> HttpResponse: ...
 
 
 class AcquisitionPort(Protocol):
     async def acquire(
-        self, source: Source, *, max_bytes: int, representation: Representation = "html"
+        self, source: Source, *, max_bytes: int, representation: Representation
     ) -> AcquisitionResult:
-        """Return the decoded document; the engine passes `representation` only for JSON."""
+        """Return the decoded HTML or JSON document requested by `representation`."""
         ...

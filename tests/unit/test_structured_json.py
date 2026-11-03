@@ -6,7 +6,7 @@ from hypothesis import given
 from hypothesis import strategies as st
 from pydantic import ValidationError
 
-from rastro import Limits, Recipe, RecipeKey, ResourceLimitError, Source
+from rastro import JsonLdRecipe, Limits, Recipe, RecipeKey, ResourceLimitError, Source
 from rastro.adapters.structured import load_json
 from rastro.domain.json import MISSING, escape_token, resolve_pointer, strict_json
 
@@ -90,7 +90,8 @@ def test_json_recipe_round_trips_and_reports_representation():
 
 def test_legacy_recipe_payload_without_record_path_loads():
     legacy = {"strategy": "jsonld", "fields": {"name": "/name"}, "version": 1}
-    assert Recipe.model_validate_json(json.dumps(legacy)).record_path is None
+    loaded = Recipe.model_validate_json(json.dumps(legacy))
+    assert isinstance(loaded, JsonLdRecipe) and not hasattr(loaded, "record_path")
 
 
 def test_representation_isolates_memory_without_changing_html_keys(schema):

@@ -77,9 +77,9 @@ class RecipeKey(Contract):
         return json.dumps(payload, sort_keys=True, separators=(",", ":"))
 
 
-class StoredRecipe(Contract):
-    key: RecipeKey
-    recipe: Recipe
+class RecipeMetadata(Contract):
+    """Operational history of one stored version, kept apart from its definition."""
+
     selected_index: int = Field(ge=0, le=3)
     created_at: AwareDatetime
     last_success_at: AwareDatetime
@@ -87,16 +87,28 @@ class StoredRecipe(Contract):
 
     @model_validator(mode="after")
     def valid_history(self) -> Self:
-        if self.selected_index > len(self.recipe.fallbacks):
-            raise ValueError("Validated alternative does not exist")
         if self.last_success_at < self.created_at:
             raise ValueError("Recipe success precedes creation")
+        return self
+
+
+class StoredRecipe(Contract):
+    """A validated definition and its operational metadata for one exact context."""
+
+    key: RecipeKey
+    recipe: Recipe
+    metadata: RecipeMetadata
+
+    @model_validator(mode="after")
+    def valid_selection(self) -> Self:
+        if self.metadata.selected_index > len(self.recipe.fallbacks):
+            raise ValueError("Validated alternative does not exist")
         return self
 
     @property
     def validated_recipe(self) -> Recipe:
         """Only the alternative that actually passed extraction is eligible for reuse."""
-        return (self.recipe, *self.recipe.fallbacks)[self.selected_index]
+        return (self.recipe, *self.recipe.fallbacks)[self.metadata.selected_index]
 
 
 class RecipeStorageError(RastroError):

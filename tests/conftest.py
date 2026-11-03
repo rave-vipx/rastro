@@ -32,6 +32,26 @@ def recipe() -> Recipe:
     )
 
 
+# Exact payload shapes written by earlier releases for the `recipe` fixture.
+# M3 predates require_evidence and record_path; 0.1.0 serialized every selector.
+LEGACY_RECIPE_PAYLOADS = {
+    "m3": (
+        '{"fallbacks":[],"fields":{"name":"/name","price":"/offers/price"},'
+        '"item_type":"Product","record_selector":null,"strategy":"jsonld","version":1}'
+    ),
+    "v0.1": (
+        '{"fallbacks":[],"fields":{"name":"/name","price":"/offers/price"},'
+        '"item_type":"Product","record_path":null,"record_selector":null,'
+        '"require_evidence":false,"strategy":"jsonld","version":1}'
+    ),
+}
+
+
+@pytest.fixture(params=sorted(LEGACY_RECIPE_PAYLOADS))
+def legacy_payload(request) -> str:
+    return LEGACY_RECIPE_PAYLOADS[request.param]
+
+
 @pytest.fixture
 def html() -> str:
     return (Path(__file__).parent / "fixtures" / "products.html").read_text()

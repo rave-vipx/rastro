@@ -6,9 +6,12 @@ Rastro starts as a modular monolith. The implemented flow is:
 Python SDK / CLI
        │
        ▼
-application.Rastro
+application.Rastro (facade)
        │
-       ├── domain: source, recipe, outcomes, evidence, limits
+       ▼
+application.ExtractionService
+       │
+       ├── domain: source, recipe variants, outcomes, evidence, limits
        │
        ├── ports.RecipeRepository ◄── adapters.SQLiteRecipeRepository
        │
@@ -30,13 +33,14 @@ The SDK and CLI call the same service. Public imports live in `rastro.__init__`;
 
 ## Implemented boundaries
 
-- `domain/models.py`: explicit, serializable contracts and configuration/resource errors.
+- `domain/models.py`: explicit, serializable contracts, the `Recipe` strategy union (`CssRecipe`, `JsonLdRecipe`, `JsonRecipe`) and configuration/resource errors.
 - `ports/parser.py`: candidate and parsed-document contracts independent of Scrapling.
 - `adapters/scrapling.py`: deterministic JSON-LD discovery and CSS selection without fetching.
-- `application/engine.py`: public SDK, acquisition orchestration and bounded async batch workers.
+- `application/engine.py`: the public `Rastro` facade, adapter wiring and bounded async batch workers.
+- `application/service.py`: prepared extraction for supplied and acquired documents: parser selection by representation, learner or memory path, metric stamping and acquisition failure results.
 - `application/extraction.py`: deterministic parsing, validation and field evidence.
 - `application/memory.py`: context lookup, explicit fallback attempts and success-only persistence.
-- `domain/memory.py`, `ports/recipes.py`: identity, metadata, errors and repository contract.
+- `domain/memory.py`, `ports/recipes.py`: identity, stored definitions with separate operational metadata, errors and repository contract.
 - `adapters/sqlite.py`: transactional versioned persistence, migrations, retention and deletion.
 - `domain/acquisition.py`, `ports/acquisition.py`: policies, pinned destination and transport contracts.
 - `application/acquisition.py`, `application/destinations.py`: source rules, destination checks, retries and budgets.
@@ -56,6 +60,8 @@ The [HTTP transport ADR](decisions/0002-policy-aware-acquisition.md) records the
 The [recipe memory ADR](decisions/0003-sqlite-recipe-memory.md) records identity, validation, versioning, privacy and asynchronous storage decisions.
 
 The [optional intelligence ADR](decisions/0004-bounded-recipe-learning.md) records the model boundary, budgets, required-field evidence persistence and optional transport choice.
+
+The [recipe model ADR](decisions/0009-recipe-model.md) records the strategy union, the definition/metadata split and legacy payload loading.
 
 Implementation references:
 

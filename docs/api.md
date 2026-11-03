@@ -30,7 +30,7 @@ For HTTP acquisition, construct `Rastro.web(AcquisitionPolicy(...))` and use the
 | Object | Fields and behavior |
 | --- | --- |
 | `Source` | HTTP(S) `url`; `locale` (`und`); ordered `languages` (`()`); `timezone` (`UTC`); optional three-letter uppercase `currency`; and `egress` (`direct`, or the name of a policy egress profile). Credentials, invalid language tags/currency codes/egress names and a `geolocation` value (no browser adapter in v0.1) are rejected; an egress name missing from the policy fails before DNS. Explicit languages form Accept-Language with descending quality weights; otherwise a defined locale remains the compatible fallback. |
-| `Recipe` | `strategy` (`jsonld`, `css` or `json`), required `fields`, positive `version` (default `1`), optional `item_type` for JSON-LD, required `record_selector` for CSS, required `record_path` for JSON, up to three flat `fallbacks` sharing its version and document representation. `require_evidence` (default `False`) requires observations for required fields before validation; learned recipes set it to `True`. Version maximum: 2,147,483,647. |
+| `Recipe` | A union of `CssRecipe`, `JsonLdRecipe` and `JsonRecipe` discriminated by `strategy` (see [recipe variants](#recipe-variants)). All share required `fields`, positive `version` (default `1`), `require_evidence` (default `False`) and up to three flat `fallbacks` sharing its version and document representation. `require_evidence` requires observations for required fields before validation; learned recipes set it to `True`. Version maximum: 2,147,483,647. |
 | `Limits` | `max_html_bytes` (2,000,000), `max_records` (1,000), `max_jsonld_blocks` (100), `max_json_bytes` (2,000,000), `max_json_depth` (32), `max_json_nodes` (100,000). |
 | `AcquisitionPolicy` | Exact `allowed_hosts`, request budgets and timeouts (see [policy defaults](acquisition.md#policy-defaults)), plus `egress_profiles`: up to 16 names mapped to an `EgressProfile` (`proxy_url`, optional `username_env`/`password_env` environment-variable references) or a bare `http(s)://host[:port]` string. See [network egress](acquisition.md#network-egress). |
 
@@ -38,13 +38,53 @@ CSS fields must end in `::text` or `::attr(name)` and match at most one value in
 
 JSON-LD type matching is exact and accepts an `@type` string or array. Nested field values are traversed only by explicit JSON pointers. The object count budget includes filtered-out objects to bound scanning. Malformed blocks, duplicate JSON keys, nonstandard `NaN`/`Infinity` values, and numbers that overflow or underflow a finite float (such as `1e999` or `1e-999`) or have more than 4,300 integer digits are reported as invalid JSON-LD. Rastro never turns them into infinity, zero, or a successful empty record.
 
+## Recipe variants
+
+A recipe is a declarative **definition** of what to extract. `Recipe` is the shared
+base of three variants, selected by `strategy`:
+
+| Variant | `strategy` | Strategy-specific field | Field expressions |
+| --- | --- | --- | --- |
+| `CssRecipe` | `css` | required `record_selector` | CSS ending in `::text` or `::attr(name)` |
+| `JsonLdRecipe` | `jsonld` | optional `item_type` | absolute RFC 6901 pointers within each JSON-LD object |
+| `JsonRecipe` | `json` | required `record_path` (RFC 6901, `""` is the document) | absolute RFC 6901 pointers from each record |
+
+```python
+from rastro import CssRecipe, JsonLdRecipe, JsonRecipe, Recipe
+
+css = CssRecipe(record_selector="article", fields={"name": "h2::text"})
+jsonld = JsonLdRecipe(item_type="Product", fields={"name": "/name"})
+api = JsonRecipe(record_path="/data/products", fields={"name": "/name"})
+
+loaded = Recipe.model_validate_json(text)  # -> CssRecipe, JsonLdRecipe or JsonRecipe
+same = Recipe(strategy="css", record_selector="article", fields={"name": "h2::text"})
+assert isinstance(same, CssRecipe) and isinstance(same, Recipe)
+```
+
+- `Recipe(...)`, `Recipe.model_validate(...)`, `Recipe.model_validate_json(...)` and
+  Pydantic fields annotated `Recipe` select the variant named by `strategy`. A missing
+  or unknown strategy raises `ValidationError`. Prefer the variant constructors in
+  type-checked code: static checkers see only the shared fields on `Recipe(...)`.
+- Each variant rejects the other strategies' selectors: a `CssRecipe` with
+  `item_type`, a `JsonLdRecipe` with `record_selector` or `record_path`, or a
+  `JsonRecipe` with either HTML selector is invalid. An explicit `null` for another
+  strategy's selector means "absent", so files and stored payloads written by 0.1.0
+  (which serialized every selector) still load.
+- Fallbacks are typed by representation: `CssRecipe` and `JsonLdRecipe` accept CSS and
+  JSON-LD fallbacks; `JsonRecipe` accepts only JSON fallbacks.
+- `recipe.representation` is `"html"` for CSS and JSON-LD and `"json"` for JSON.
+- Serialization contains only the variant's own fields.
+
+Operational history (creation time, last success, run counts, the validated
+alternative) is never part of a definition; see `StoredRecipe.metadata` in
+[recipe memory](memory.md#inspect-delete-and-retain).
+
 ## Structured JSON responses
 
 A `json` recipe reads one JSON document: supplied text, or an HTTP response requested with `representation="json"` (see the [HTTP guide](acquisition.md#json-responses)).
 
 ```python
-recipe = Recipe(
-    strategy="json",
+recipe = JsonRecipe(
     record_path="/data/products",  # RFC 6901 pointer; "" selects the whole document
     fields={"name": "/name", "price": "/offer/price"},  # relative to each record
 )
@@ -63,7 +103,7 @@ With `discover_recipes=True`, `extract_json_async` and JSON HTTP extraction disc
 
 The pipeline order is memory, then JSON-LD, then structured JSON, then DOM selectors, then the optional model. Each step applies only to the representation it reads, and Rastro never fetches a second representation of the same source. An HTML request runs memory, JSON-LD, DOM and the model. A JSON request runs memory and structured JSON.
 
-Recipes serialize using `recipe.model_dump_json()` and load with `Recipe.model_validate_json(text)`. Loading a recipe never evaluates Python. Schema compatibility is checked before parsing.
+Recipes serialize using `recipe.model_dump_json()` and load with `Recipe.model_validate_json(text)`, which returns the matching variant. Loading a recipe never evaluates Python. Schema compatibility is checked before parsing.
 
 Rastro calls `schema.model_validate(..., context=...)`, so validators supported by
 that Pydantic path receive `locale`, `languages`, `timezone`, `currency`, and

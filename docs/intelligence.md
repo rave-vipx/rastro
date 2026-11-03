@@ -93,6 +93,14 @@ limits across its bounded workers.
 4. Only after deterministic candidates fail does the optional model propose a
    JSON-LD or CSS recipe. Model output cannot set versions, fallbacks, evidence
    policy, record values, tools, endpoints or executable code.
+
+   `RecipeProposal` is a strategy union whose `CssProposal` and `JsonLdProposal`
+   variants are derived from `CssRecipe` and `JsonLdRecipe` minus `version`,
+   `require_evidence` and `fallbacks`, so selector constraints have one source.
+   `proposal_schema()` is the single constrained-decoding schema builder for model
+   adapters: an `anyOf` of the two proposal variants, each with
+   `additionalProperties: false`. A proposal becomes a recipe only through
+   `proposal.recipe()`, which validates it as the matching `Recipe` variant.
 5. The recipe must map all required fields, produce source observations with
    locators, and pass the full Pydantic contract. Only `success` activates it in
    memory. `partial_success` returns its valid records and stops without activation.
