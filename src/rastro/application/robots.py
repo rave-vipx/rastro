@@ -5,7 +5,7 @@ import re
 
 from protego import Protego
 
-from rastro.domain.acquisition import AcquisitionError
+from rastro.domain.acquisition import AcquisitionError, HttpResponse
 from rastro.domain.models import Outcome
 
 
@@ -52,3 +52,14 @@ def parse_robots(body: bytes) -> Protego:
         return Protego.parse(text)
     except ValueError:
         raise AcquisitionError("invalid_robots", Outcome.ACCESS_RESTRICTION) from None
+
+
+def parse_robots_response(response: HttpResponse) -> tuple[Protego, float]:
+    """Validate a 200 robots.txt response and return its parsed rules and min interval."""
+    if "html" in response.headers.get("content-type", "").lower():
+        raise AcquisitionError("invalid_robots", Outcome.ACCESS_RESTRICTION)
+    rules = parse_robots(response.body)
+    delay = rules.crawl_delay("Rastro") or 0
+    rate = rules.request_rate("Rastro")
+    # Conservatively space requests by the whole window, avoiding bursts.
+    return rules, max(delay, rate.seconds if rate else 0)

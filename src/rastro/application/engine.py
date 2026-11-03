@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-import asyncio
 from collections.abc import Sequence
 
 from pydantic import BaseModel
 
-from rastro.application.extraction import validate_recipe
 from rastro.application.intelligence import RecipeLearner
 from rastro.application.memory import RecipeMemory
 from rastro.application.service import ExtractionService
@@ -20,7 +18,6 @@ from rastro.domain.models import (
     Limits,
     Recipe,
     Representation,
-    ResourceLimitError,
     Source,
 )
 from rastro.ports.acquisition import AcquisitionPort
@@ -53,33 +50,31 @@ class Rastro:
             from rastro.adapters.scrapling import ScraplingParser
 
             parser = ScraplingParser()
-        memory = RecipeMemory(repository)
         if discovery is None:
             from rastro.adapters.discovery import ScraplingDiscovery
 
             discovery = ScraplingDiscovery()
-        inference_policy = InferencePolicy.model_validate(
+        if acquisition is not None and policy is None:
+            raise ConfigurationError("An acquisition port requires a batch policy")
+        validated_policy = InferencePolicy.model_validate(
             (inference_policy or InferencePolicy()).model_dump()
         )
         learner = RecipeLearner(
             model=model,
             discovery=discovery,
-            policy=inference_policy,
+            policy=validated_policy,
             repository=repository,
             json_discovery=JsonDiscovery(),
             discovery_aliases=discovery_aliases,
         )
-        if acquisition is not None and policy is None:
-            raise ConfigurationError("An acquisition port requires a batch policy")
-        self._acquisition = acquisition
-        self._policy = policy
         self._service = ExtractionService(
             parsers={"html": parser, "json": JsonParser()},
-            memory=memory,
+            memory=RecipeMemory(repository),
             learner=learner,
             limits=limits or Limits(),
             discover_recipes=discover_recipes or model is not None,
             acquisition=acquisition,
+            policy=policy,
         )
 
     def extract_html[T: BaseModel](
@@ -232,27 +227,11 @@ class Rastro:
         representation: Representation = "html",
     ) -> tuple[ExtractionResult[T], ...]:
         """Preserve input order with a bounded worker pool; cancellation cancels all jobs."""
-        if self._acquisition is None or self._policy is None:
-            raise ConfigurationError("Batch acquisition requires Rastro.web(policy)")
-        if recipe is not None:
-            recipe = validate_recipe(schema, recipe, representation)
-        if len(sources) > self._policy.max_sources:
-            raise ResourceLimitError("Batch exceeds max_sources")
-        pending = iter(enumerate(tuple(sources)))
-        results: list[ExtractionResult[T] | None] = [None] * len(sources)
-
-        async def worker() -> None:
-            for index, source in pending:
-                results[index] = await self.extract(
-                    source=source,
-                    schema=schema,
-                    recipe=recipe,
-                    context=context,
-                    recipe_version=recipe_version,
-                    representation=representation,
-                )
-
-        async with asyncio.TaskGroup() as group:
-            for _ in range(min(len(sources), self._policy.max_concurrency)):
-                group.create_task(worker())
-        return tuple(result for result in results if result is not None)
+        return await self._service.extract_many(
+            sources,
+            schema=schema,
+            recipe=recipe,
+            context=context,
+            recipe_version=recipe_version,
+            representation=representation,
+        )
