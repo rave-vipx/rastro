@@ -73,6 +73,15 @@ from rastro.domain.models import (
     Source,
     schema_fingerprint,
 )
+from rastro.mocklab import (
+    FixtureBundle,
+    MockLabError,
+    SanitizationError,
+    SyntheticLabel,
+    build_fixture,
+    load_fixture,
+    verify_fixture,
+)
 from rastro.ports.model import ModelPort
 from rastro.ports.recipes import RecipeRepository
 
@@ -115,6 +124,7 @@ __all__ = [
     "ExtractionRecord",
     "ExtractionResult",
     "FileJobSource",
+    "FixtureBundle",
     "InferencePolicy",
     "IntegerField",
     "Issue",
@@ -132,6 +142,7 @@ __all__ = [
     "JsonRecipe",
     "Limits",
     "Metrics",
+    "MockLabError",
     "ModelError",
     "ModelPort",
     "ModelRequest",
@@ -155,19 +166,24 @@ __all__ = [
     "Representation",
     "ResourceLimitError",
     "SQLiteRecipeRepository",
+    "SanitizationError",
     "Source",
     "StoredRecipe",
     "StringField",
+    "SyntheticLabel",
     "UrlField",
     "UrlJobSource",
     "__version__",
+    "build_fixture",
     "build_job_schema",
     "job_json_schema",
     "job_run_json_schema",
+    "load_fixture",
     "load_job",
     "parse_job",
     "run_job",
     "run_job_async",
     "run_job_file",
     "schema_fingerprint",
+    "verify_fixture",
 ]

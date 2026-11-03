@@ -93,10 +93,11 @@ Everything else is replaced:
 Pattern detectors are a second line of defense: JWTs, bearer/basic tokens, common API-key
 formats, credential assignments, secret-looking URL parameters, emails, phone numbers, US social
 security numbers, Luhn-valid card numbers, mod-97-valid IBANs, padded base64, long hex strings and
-long letter-digit tokens. Text is checked as written and after percent-decoding and NFKC
-normalization. If an extracted value, a retained structural
-value or allowlisted header matches one, or any finished file still does, generation raises
-`SanitizationError`. Diagnostics name the file or field and the category, never the matched value.
+long letter-digit tokens in structural attributes and URL paths. Text is checked as written and
+after percent-decoding and NFKC normalization. Other detectors apply to extracted values,
+retained structural values, allowlisted headers and finished files; matches raise
+`SanitizationError`. Opaque structural attribute and URL path values are scrubbed. Diagnostics
+name the file or field and the category, never the matched value.
 
 Placeholders come from a SHA-256 counter stream keyed by seed and namespace, never by the original
 content. They reveal length and whitespace layout, nothing else, and are not open to dictionary
@@ -125,8 +126,8 @@ explicitly.
 - Extracted values that look like personal data (an email field, say) block generation. Synthetic
   substitution of extracted values is future work.
 - Hostnames are kept. A confidential hostname would survive unless it matches a detector.
-- Extracted values that look like long identifiers (UUIDs, opaque SKUs of 20+ mixed characters)
-  block generation, a deliberate fail-closed false positive.
+- Opaque mixed letter-digit identifiers can survive when extracted; other sensitive-pattern
+  detectors remain active.
 - Source URLs whose paths carry identifiers (`/orders/<id>`) cannot become fixtures until
   evidence URLs can be rewritten consistently.
 - Mock Lab composes adapters itself (`ScraplingParser`, `JsonParser`, `Rastro`) at the edge, as the

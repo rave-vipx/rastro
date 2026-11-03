@@ -125,3 +125,10 @@ def test_key_placeholders_fail_closed_when_they_cannot_be_unique(monkeypatch):
 def test_linked_data_non_string_types_are_scrubbed():
     out = scrub_json({"@type": {"x": "Jane"}}, frozenset(), stream(), linked_data=True)
     assert "Jane" not in json.dumps(out) and "@type" in out
+
+
+@pytest.mark.parametrize("value", ["SKU-ABCD1234EFGH5678", "ProductNameWithLongCamelCase2024"])
+def test_opaque_selector_named_attributes_and_url_paths_are_scrubbed(value):
+    plan = RetentionPlan(selector_text=value)
+    out = sanitize_html(f'<p class="{value}"><a href="/{value}">x</a></p>', plan, stream())
+    assert value not in out

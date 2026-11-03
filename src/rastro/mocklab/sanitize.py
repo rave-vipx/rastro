@@ -44,7 +44,7 @@ def allowed_headers(headers: Mapping[str, str] | None) -> dict[str, str]:
         key = name.lower()
         if key not in ALLOWED_HEADERS:
             continue
-        if contains_secret(value):
+        if contains_secret(value, include_opaque=False):
             raise SanitizationError(f"Response header {key!r} looks like sensitive data")
         kept[key] = value
     return kept
@@ -53,7 +53,7 @@ def allowed_headers(headers: Mapping[str, str] | None) -> dict[str, str]:
 def assert_clean(files: Mapping[str, bytes]) -> None:
     """Raise ``SanitizationError`` naming the file and pattern, never the matched value."""
     for name, data in sorted(files.items()):
-        found = secret_categories(data.decode())
+        found = secret_categories(data.decode(), include_opaque=False)
         if found:
             raise SanitizationError(
                 f"Generated file {name} still matches sensitive patterns: {', '.join(found)}"
