@@ -1,0 +1,1412 @@
+{
+  "$defs": {
+    "AcquisitionPolicy": {
+      "additionalProperties": false,
+      "description": "An exact host allowlist asserts the caller's permission to acquire a source.",
+      "properties": {
+        "allow_http": {
+          "default": false,
+          "title": "Allow Http",
+          "type": "boolean"
+        },
+        "allowed_hosts": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 64,
+          "minItems": 1,
+          "title": "Allowed Hosts",
+          "type": "array"
+        },
+        "backoff_seconds": {
+          "default": 1,
+          "exclusiveMinimum": 0,
+          "maximum": 30,
+          "title": "Backoff Seconds",
+          "type": "number"
+        },
+        "egress_profiles": {
+          "additionalProperties": {
+            "$ref": "#/$defs/EgressProfile"
+          },
+          "maxProperties": 16,
+          "title": "Egress Profiles",
+          "type": "object"
+        },
+        "max_concurrency": {
+          "default": 4,
+          "maximum": 32,
+          "minimum": 1,
+          "title": "Max Concurrency",
+          "type": "integer"
+        },
+        "max_redirects": {
+          "default": 5,
+          "maximum": 10,
+          "minimum": 0,
+          "title": "Max Redirects",
+          "type": "integer"
+        },
+        "max_requests": {
+          "default": 30,
+          "maximum": 100,
+          "minimum": 1,
+          "title": "Max Requests",
+          "type": "integer"
+        },
+        "max_retries": {
+          "default": 2,
+          "maximum": 3,
+          "minimum": 0,
+          "title": "Max Retries",
+          "type": "integer"
+        },
+        "max_retry_delay_seconds": {
+          "default": 30,
+          "exclusiveMinimum": 0,
+          "maximum": 120,
+          "title": "Max Retry Delay Seconds",
+          "type": "number"
+        },
+        "max_sources": {
+          "default": 100,
+          "maximum": 1000,
+          "minimum": 1,
+          "title": "Max Sources",
+          "type": "integer"
+        },
+        "min_interval_seconds": {
+          "default": 1,
+          "maximum": 60,
+          "minimum": 0,
+          "title": "Min Interval Seconds",
+          "type": "number"
+        },
+        "operation_timeout_seconds": {
+          "default": 60,
+          "exclusiveMinimum": 0,
+          "maximum": 600,
+          "title": "Operation Timeout Seconds",
+          "type": "number"
+        },
+        "request_timeout_seconds": {
+          "default": 15,
+          "exclusiveMinimum": 0,
+          "maximum": 120,
+          "title": "Request Timeout Seconds",
+          "type": "number"
+        }
+      },
+      "required": [
+        "allowed_hosts"
+      ],
+      "title": "AcquisitionPolicy",
+      "type": "object"
+    },
+    "BooleanField": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "required": {
+          "default": true,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "type": {
+          "const": "boolean",
+          "default": "boolean",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "BooleanField",
+      "type": "object"
+    },
+    "CssRecipe": {
+      "additionalProperties": false,
+      "description": "Select HTML records with ``record_selector``; fields end in ::text or ::attr(name).",
+      "properties": {
+        "fallbacks": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/HtmlRecipe"
+          },
+          "maxItems": 3,
+          "title": "Fallbacks",
+          "type": "array"
+        },
+        "fields": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "maxProperties": 100,
+          "minProperties": 1,
+          "title": "Fields",
+          "type": "object"
+        },
+        "record_selector": {
+          "maxLength": 1024,
+          "minLength": 1,
+          "title": "Record Selector",
+          "type": "string"
+        },
+        "require_evidence": {
+          "default": false,
+          "title": "Require Evidence",
+          "type": "boolean"
+        },
+        "strategy": {
+          "const": "css",
+          "default": "css",
+          "title": "Strategy",
+          "type": "string"
+        },
+        "version": {
+          "default": 1,
+          "maximum": 2147483647,
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "fields",
+        "record_selector"
+      ],
+      "title": "CssRecipe",
+      "type": "object"
+    },
+    "DateField": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "required": {
+          "default": true,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "type": {
+          "const": "date",
+          "default": "date",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "DateField",
+      "type": "object"
+    },
+    "DateTimeField": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "required": {
+          "default": true,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "type": {
+          "const": "datetime",
+          "default": "datetime",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "DateTimeField",
+      "type": "object"
+    },
+    "DecimalField": {
+      "additionalProperties": false,
+      "properties": {
+        "ge": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ge"
+        },
+        "le": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Le"
+        },
+        "name": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "required": {
+          "default": true,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "type": {
+          "const": "decimal",
+          "default": "decimal",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "DecimalField",
+      "type": "object"
+    },
+    "EgressProfile": {
+      "additionalProperties": false,
+      "description": "One administrator-declared HTTP(S) proxy. Credentials are environment references.",
+      "properties": {
+        "password_env": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Password Env"
+        },
+        "proxy_url": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Proxy Url",
+          "type": "string"
+        },
+        "username_env": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Username Env"
+        }
+      },
+      "required": [
+        "proxy_url"
+      ],
+      "title": "EgressProfile",
+      "type": "object"
+    },
+    "FileJobSource": {
+      "additionalProperties": false,
+      "description": "Local HTML or JSON file source resolved within the job file's directory by default.",
+      "properties": {
+        "kind": {
+          "const": "file",
+          "default": "file",
+          "title": "Kind",
+          "type": "string"
+        },
+        "path": {
+          "maxLength": 1024,
+          "minLength": 1,
+          "title": "Path",
+          "type": "string"
+        },
+        "recipe": {
+          "anyOf": [
+            {
+              "discriminator": {
+                "mapping": {
+                  "css": "#/$defs/CssRecipe",
+                  "json": "#/$defs/JsonRecipe",
+                  "jsonld": "#/$defs/JsonLdRecipe"
+                },
+                "propertyName": "strategy"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/CssRecipe"
+                },
+                {
+                  "$ref": "#/$defs/JsonLdRecipe"
+                },
+                {
+                  "$ref": "#/$defs/JsonRecipe"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Recipe"
+        },
+        "region": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RegionalContext"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "representation": {
+          "$ref": "#/$defs/Representation",
+          "default": "html"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "maxLength": 8192,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Url"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "title": "FileJobSource",
+      "type": "object"
+    },
+    "HtmlRecipe": {
+      "discriminator": {
+        "mapping": {
+          "css": "#/$defs/CssRecipe",
+          "jsonld": "#/$defs/JsonLdRecipe"
+        },
+        "propertyName": "strategy"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/CssRecipe"
+        },
+        {
+          "$ref": "#/$defs/JsonLdRecipe"
+        }
+      ]
+    },
+    "InferencePolicy": {
+      "additionalProperties": false,
+      "description": "Per-extraction budgets; concurrency is shared by one Rastro instance/event loop.",
+      "properties": {
+        "context_tokens": {
+          "default": 8192,
+          "maximum": 32768,
+          "minimum": 512,
+          "title": "Context Tokens",
+          "type": "integer"
+        },
+        "max_calls": {
+          "default": 2,
+          "maximum": 4,
+          "minimum": 1,
+          "title": "Max Calls",
+          "type": "integer"
+        },
+        "max_concurrency": {
+          "default": 1,
+          "maximum": 16,
+          "minimum": 1,
+          "title": "Max Concurrency",
+          "type": "integer"
+        },
+        "max_context_bytes": {
+          "default": 32768,
+          "maximum": 262144,
+          "minimum": 1,
+          "title": "Max Context Bytes",
+          "type": "integer"
+        },
+        "max_discovery_candidates": {
+          "default": 8,
+          "maximum": 32,
+          "minimum": 1,
+          "title": "Max Discovery Candidates",
+          "type": "integer"
+        },
+        "max_output_tokens": {
+          "default": 2048,
+          "maximum": 8192,
+          "minimum": 1,
+          "title": "Max Output Tokens",
+          "type": "integer"
+        },
+        "max_repair_attempts": {
+          "default": 1,
+          "maximum": 3,
+          "minimum": 0,
+          "title": "Max Repair Attempts",
+          "type": "integer"
+        },
+        "max_response_bytes": {
+          "default": 65536,
+          "maximum": 1048576,
+          "minimum": 1,
+          "title": "Max Response Bytes",
+          "type": "integer"
+        },
+        "timeout_seconds": {
+          "default": 30,
+          "exclusiveMinimum": 0,
+          "maximum": 300,
+          "title": "Timeout Seconds",
+          "type": "number"
+        }
+      },
+      "title": "InferencePolicy",
+      "type": "object"
+    },
+    "IntegerField": {
+      "additionalProperties": false,
+      "properties": {
+        "ge": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ge"
+        },
+        "le": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Le"
+        },
+        "name": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "required": {
+          "default": true,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "type": {
+          "const": "integer",
+          "default": "integer",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "IntegerField",
+      "type": "object"
+    },
+    "JobField": {
+      "discriminator": {
+        "mapping": {
+          "boolean": "#/$defs/BooleanField",
+          "date": "#/$defs/DateField",
+          "datetime": "#/$defs/DateTimeField",
+          "decimal": "#/$defs/DecimalField",
+          "integer": "#/$defs/IntegerField",
+          "number": "#/$defs/NumberField",
+          "string": "#/$defs/StringField",
+          "url": "#/$defs/UrlField"
+        },
+        "propertyName": "type"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/StringField"
+        },
+        {
+          "$ref": "#/$defs/IntegerField"
+        },
+        {
+          "$ref": "#/$defs/NumberField"
+        },
+        {
+          "$ref": "#/$defs/BooleanField"
+        },
+        {
+          "$ref": "#/$defs/DecimalField"
+        },
+        {
+          "$ref": "#/$defs/DateField"
+        },
+        {
+          "$ref": "#/$defs/DateTimeField"
+        },
+        {
+          "$ref": "#/$defs/UrlField"
+        }
+      ]
+    },
+    "JobModelProvider": {
+      "discriminator": {
+        "mapping": {
+          "ollama": "#/$defs/OllamaProvider",
+          "openai_compatible": "#/$defs/OpenAICompatibleProvider"
+        },
+        "propertyName": "provider"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/OllamaProvider"
+        },
+        {
+          "$ref": "#/$defs/OpenAICompatibleProvider"
+        }
+      ]
+    },
+    "JobSource": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/UrlJobSource"
+        },
+        {
+          "$ref": "#/$defs/FileJobSource"
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "JsonLdRecipe": {
+      "additionalProperties": false,
+      "description": "Map JSON-LD objects, optionally of one ``item_type``, with absolute JSON pointers.",
+      "properties": {
+        "fallbacks": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/HtmlRecipe"
+          },
+          "maxItems": 3,
+          "title": "Fallbacks",
+          "type": "array"
+        },
+        "fields": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "maxProperties": 100,
+          "minProperties": 1,
+          "title": "Fields",
+          "type": "object"
+        },
+        "item_type": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Item Type"
+        },
+        "require_evidence": {
+          "default": false,
+          "title": "Require Evidence",
+          "type": "boolean"
+        },
+        "strategy": {
+          "const": "jsonld",
+          "default": "jsonld",
+          "title": "Strategy",
+          "type": "string"
+        },
+        "version": {
+          "default": 1,
+          "maximum": 2147483647,
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "fields"
+      ],
+      "title": "JsonLdRecipe",
+      "type": "object"
+    },
+    "JsonRecipe": {
+      "additionalProperties": false,
+      "description": "Select JSON records at ``record_path``; fields are pointers relative to each record.",
+      "properties": {
+        "fallbacks": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/JsonRecipe"
+          },
+          "maxItems": 3,
+          "title": "Fallbacks",
+          "type": "array"
+        },
+        "fields": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "maxProperties": 100,
+          "minProperties": 1,
+          "title": "Fields",
+          "type": "object"
+        },
+        "record_path": {
+          "maxLength": 1024,
+          "title": "Record Path",
+          "type": "string"
+        },
+        "require_evidence": {
+          "default": false,
+          "title": "Require Evidence",
+          "type": "boolean"
+        },
+        "strategy": {
+          "const": "json",
+          "default": "json",
+          "title": "Strategy",
+          "type": "string"
+        },
+        "version": {
+          "default": 1,
+          "maximum": 2147483647,
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "fields",
+        "record_path"
+      ],
+      "title": "JsonRecipe",
+      "type": "object"
+    },
+    "Limits": {
+      "additionalProperties": false,
+      "properties": {
+        "max_html_bytes": {
+          "default": 2000000,
+          "maximum": 20000000,
+          "minimum": 1,
+          "title": "Max Html Bytes",
+          "type": "integer"
+        },
+        "max_json_bytes": {
+          "default": 2000000,
+          "maximum": 20000000,
+          "minimum": 1,
+          "title": "Max Json Bytes",
+          "type": "integer"
+        },
+        "max_json_depth": {
+          "default": 32,
+          "maximum": 256,
+          "minimum": 1,
+          "title": "Max Json Depth",
+          "type": "integer"
+        },
+        "max_json_nodes": {
+          "default": 100000,
+          "maximum": 1000000,
+          "minimum": 1,
+          "title": "Max Json Nodes",
+          "type": "integer"
+        },
+        "max_jsonld_blocks": {
+          "default": 100,
+          "maximum": 1000,
+          "minimum": 1,
+          "title": "Max Jsonld Blocks",
+          "type": "integer"
+        },
+        "max_records": {
+          "default": 1000,
+          "maximum": 10000,
+          "minimum": 1,
+          "title": "Max Records",
+          "type": "integer"
+        }
+      },
+      "title": "Limits",
+      "type": "object"
+    },
+    "NumberField": {
+      "additionalProperties": false,
+      "properties": {
+        "ge": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ge"
+        },
+        "le": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Le"
+        },
+        "name": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "required": {
+          "default": true,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "type": {
+          "const": "number",
+          "default": "number",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "NumberField",
+      "type": "object"
+    },
+    "OllamaProvider": {
+      "additionalProperties": false,
+      "description": "Local Ollama model configuration; never accepts remote hosts or inline secrets.",
+      "properties": {
+        "base_url": {
+          "default": "http://127.0.0.1:11434",
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Base Url",
+          "type": "string"
+        },
+        "base_url_env": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Z_][A-Z0-9_]{0,127}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Base Url Env"
+        },
+        "model": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,199}$",
+          "title": "Model",
+          "type": "string"
+        },
+        "provider": {
+          "const": "ollama",
+          "default": "ollama",
+          "title": "Provider",
+          "type": "string"
+        }
+      },
+      "required": [
+        "model"
+      ],
+      "title": "OllamaProvider",
+      "type": "object"
+    },
+    "OpenAICompatibleProvider": {
+      "additionalProperties": false,
+      "description": "Chat Completions model configuration; credentials are env variable names only.",
+      "properties": {
+        "allow_remote": {
+          "default": false,
+          "title": "Allow Remote",
+          "type": "boolean"
+        },
+        "api_key_env": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Z_][A-Z0-9_]{0,127}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Api Key Env"
+        },
+        "base_url": {
+          "default": "http://127.0.0.1:11434/v1",
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Base Url",
+          "type": "string"
+        },
+        "base_url_env": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Z_][A-Z0-9_]{0,127}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Base Url Env"
+        },
+        "model": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/@+-]{0,199}$",
+          "title": "Model",
+          "type": "string"
+        },
+        "provider": {
+          "const": "openai_compatible",
+          "default": "openai_compatible",
+          "title": "Provider",
+          "type": "string"
+        },
+        "response_format": {
+          "default": "json_schema",
+          "enum": [
+            "json_schema",
+            "json_object"
+          ],
+          "title": "Response Format",
+          "type": "string"
+        },
+        "temperature": {
+          "anyOf": [
+            {
+              "maximum": 2,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": 0,
+          "title": "Temperature"
+        },
+        "token_limit": {
+          "default": "max_tokens",
+          "enum": [
+            "max_tokens",
+            "max_completion_tokens"
+          ],
+          "title": "Token Limit",
+          "type": "string"
+        }
+      },
+      "required": [
+        "model"
+      ],
+      "title": "OpenAICompatibleProvider",
+      "type": "object"
+    },
+    "RecipeContext": {
+      "additionalProperties": false,
+      "description": "Caller-managed template, region and custom-validator revision identifiers.",
+      "properties": {
+        "region": {
+          "default": "default",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,127}$",
+          "title": "Region",
+          "type": "string"
+        },
+        "schema_revision": {
+          "default": "1",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,127}$",
+          "title": "Schema Revision",
+          "type": "string"
+        },
+        "template": {
+          "default": "page",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,127}$",
+          "title": "Template",
+          "type": "string"
+        }
+      },
+      "title": "RecipeContext",
+      "type": "object"
+    },
+    "RegionalContext": {
+      "additionalProperties": false,
+      "description": "Explicit regional settings applied to sources unless overridden per source.",
+      "properties": {
+        "currency": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Z]{3}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Currency"
+        },
+        "egress": {
+          "default": "direct",
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+          "title": "Egress",
+          "type": "string"
+        },
+        "languages": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Languages",
+          "type": "array"
+        },
+        "locale": {
+          "default": "und",
+          "maxLength": 64,
+          "minLength": 2,
+          "title": "Locale",
+          "type": "string"
+        },
+        "timezone": {
+          "default": "UTC",
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Timezone",
+          "type": "string"
+        }
+      },
+      "title": "RegionalContext",
+      "type": "object"
+    },
+    "Representation": {
+      "enum": [
+        "html",
+        "json"
+      ],
+      "type": "string"
+    },
+    "StringField": {
+      "additionalProperties": false,
+      "properties": {
+        "max_length": {
+          "anyOf": [
+            {
+              "maximum": 1000000,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Length"
+        },
+        "min_length": {
+          "anyOf": [
+            {
+              "maximum": 1000000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min Length"
+        },
+        "name": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "pattern": {
+          "anyOf": [
+            {
+              "maxLength": 1024,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pattern"
+        },
+        "required": {
+          "default": true,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "type": {
+          "const": "string",
+          "default": "string",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "StringField",
+      "type": "object"
+    },
+    "UrlField": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "required": {
+          "default": true,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "type": {
+          "const": "url",
+          "default": "url",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "UrlField",
+      "type": "object"
+    },
+    "UrlJobSource": {
+      "additionalProperties": false,
+      "description": "Permitted HTTP(S) job source; its host must appear in acquisition.allowed_hosts.",
+      "properties": {
+        "kind": {
+          "const": "url",
+          "default": "url",
+          "title": "Kind",
+          "type": "string"
+        },
+        "recipe": {
+          "anyOf": [
+            {
+              "discriminator": {
+                "mapping": {
+                  "css": "#/$defs/CssRecipe",
+                  "json": "#/$defs/JsonRecipe",
+                  "jsonld": "#/$defs/JsonLdRecipe"
+                },
+                "propertyName": "strategy"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/CssRecipe"
+                },
+                {
+                  "$ref": "#/$defs/JsonLdRecipe"
+                },
+                {
+                  "$ref": "#/$defs/JsonRecipe"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Recipe"
+        },
+        "region": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RegionalContext"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "representation": {
+          "$ref": "#/$defs/Representation",
+          "default": "html"
+        },
+        "url": {
+          "maxLength": 8192,
+          "minLength": 1,
+          "title": "Url",
+          "type": "string"
+        }
+      },
+      "required": [
+        "url"
+      ],
+      "title": "UrlJobSource",
+      "type": "object"
+    }
+  },
+  "$id": "https://rave-vipx.github.io/rastro/schemas/job.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Declarative extraction job (`format_version = 1`). Pure data; never executes code.",
+  "properties": {
+    "acquisition": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AcquisitionPolicy"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "context": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RecipeContext"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "discover_recipes": {
+      "default": false,
+      "title": "Discover Recipes",
+      "type": "boolean"
+    },
+    "discovery_aliases": {
+      "additionalProperties": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "maxProperties": 100,
+      "title": "Discovery Aliases",
+      "type": "object"
+    },
+    "fields": {
+      "items": {
+        "$ref": "#/$defs/JobField"
+      },
+      "maxItems": 100,
+      "minItems": 1,
+      "title": "Fields",
+      "type": "array"
+    },
+    "format_version": {
+      "const": 1,
+      "title": "Format Version",
+      "type": "integer"
+    },
+    "inference_policy": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/InferencePolicy"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "limits": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Limits"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "model": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/JobModelProvider"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "recipe": {
+      "anyOf": [
+        {
+          "discriminator": {
+            "mapping": {
+              "css": "#/$defs/CssRecipe",
+              "json": "#/$defs/JsonRecipe",
+              "jsonld": "#/$defs/JsonLdRecipe"
+            },
+            "propertyName": "strategy"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/CssRecipe"
+            },
+            {
+              "$ref": "#/$defs/JsonLdRecipe"
+            },
+            {
+              "$ref": "#/$defs/JsonRecipe"
+            }
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Recipe"
+    },
+    "recipe_memory": {
+      "anyOf": [
+        {
+          "maxLength": 1024,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Recipe Memory"
+    },
+    "recipe_version": {
+      "anyOf": [
+        {
+          "maximum": 2147483647,
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Recipe Version"
+    },
+    "region": {
+      "$ref": "#/$defs/RegionalContext",
+      "default": {
+        "currency": null,
+        "egress": "direct",
+        "languages": [],
+        "locale": "und",
+        "timezone": "UTC"
+      }
+    },
+    "sources": {
+      "items": {
+        "$ref": "#/$defs/JobSource"
+      },
+      "maxItems": 1000,
+      "minItems": 1,
+      "title": "Sources",
+      "type": "array"
+    }
+  },
+  "required": [
+    "format_version",
+    "sources",
+    "fields"
+  ],
+  "title": "Job",
+  "type": "object"
+}

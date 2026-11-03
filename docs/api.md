@@ -141,6 +141,24 @@ support. Constructor validation raises `ConfigurationError`; request failures ra
 `ModelError`, which the learner turns into explicit outcomes. See
 [choosing or writing a model provider](intelligence.md#choosing-or-writing-a-model-provider).
 
+## Declarative jobs
+
+```python
+from rastro import (
+    Job,
+    JobExitCode,
+    JobRunResult,
+    build_job_schema,
+    load_job,
+    parse_job,
+    run_job,
+    run_job_async,
+    run_job_file,
+)
+```
+
+`Job` (`format_version = 1`) loads from UTF-8 TOML or strict JSON via `parse_job` / `load_job`, builds a deterministic dynamic `JobRecord` Pydantic model (`build_job_schema`), and executes through `Rastro` / `Rastro.web` (`run_job`, `run_job_async`, `run_job_file`), returning `JobRunResult` (`schema_version = 1`, `data_trust = "untrusted_source_data"`). Published JSON Schemas (`job_json_schema()`, `job_run_json_schema()`) and `rastro job {validate,run,schema}` expose the same contract without Python code; see [declarative jobs](jobs.md).
+
 ## Results
 
 `ExtractionResult` contains:

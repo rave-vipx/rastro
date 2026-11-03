@@ -87,8 +87,11 @@ uv run rastro doctor
 uv run rastro demo
 uv run rastro --verbose demo
 uv run rastro validate-recipe examples/product.recipe.json
+uv run rastro job schema
+uv run rastro job validate job.toml
+uv run rastro job run job.toml --output json
 ```
 
-Stdout contains JSON, except for help and version. Verbose execution events go to stderr as JSON. Exit `0` indicates success, `1` an extraction result that is not fully successful, and `2` invalid input or usage. `validate-recipe` checks the declarative structure; compatibility with a particular schema and CSS syntax are checked at extraction time.
+Stdout contains JSON, except for help and version. Verbose execution events go to stderr as JSON. For `demo`, exit `0` indicates success, `1` an extraction result that is not fully successful, and `2` invalid input or usage. `validate-recipe` checks the declarative structure; compatibility with a particular schema and CSS syntax are checked at extraction time.
 
-Fetching URLs and loading arbitrary schema modules from the CLI are not implemented.
+`rastro job` validates and runs declarative TOML or JSON job files (`0` full success, `3` partial success, `1` failure, `2` configuration or usage error) without importing arbitrary Python schema modules; see [declarative jobs](jobs.md).
