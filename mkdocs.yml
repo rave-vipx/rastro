@@ -37,6 +37,7 @@ nav:
   - Architecture: architecture.md
   - Roadmap: roadmap.md
   - Release checklist: releasing.md
+  - Clean code and module size: development/clean-code.md
   - Development work log: development/work-log.md
   - Engineering decisions:
       - Recipe model: decisions/0009-recipe-model.md
