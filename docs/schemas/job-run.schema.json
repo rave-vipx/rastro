@@ -1,0 +1,714 @@
+{
+  "$defs": {
+    "CssRecipe": {
+      "additionalProperties": false,
+      "description": "Select HTML records with ``record_selector``; fields end in ::text or ::attr(name).",
+      "properties": {
+        "fallbacks": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/HtmlRecipe"
+          },
+          "maxItems": 3,
+          "title": "Fallbacks",
+          "type": "array"
+        },
+        "fields": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "maxProperties": 100,
+          "minProperties": 1,
+          "title": "Fields",
+          "type": "object"
+        },
+        "record_selector": {
+          "maxLength": 1024,
+          "minLength": 1,
+          "title": "Record Selector",
+          "type": "string"
+        },
+        "require_evidence": {
+          "default": false,
+          "title": "Require Evidence",
+          "type": "boolean"
+        },
+        "strategy": {
+          "const": "css",
+          "default": "css",
+          "title": "Strategy",
+          "type": "string"
+        },
+        "version": {
+          "default": 1,
+          "maximum": 2147483647,
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "fields",
+        "record_selector"
+      ],
+      "title": "CssRecipe",
+      "type": "object"
+    },
+    "Evidence": {
+      "additionalProperties": false,
+      "properties": {
+        "locator": {
+          "title": "Locator",
+          "type": "string"
+        },
+        "method": {
+          "enum": [
+            "jsonld",
+            "css",
+            "json"
+          ],
+          "title": "Method",
+          "type": "string"
+        },
+        "observed_at": {
+          "format": "date-time",
+          "title": "Observed At",
+          "type": "string"
+        },
+        "recipe_version": {
+          "title": "Recipe Version",
+          "type": "integer"
+        },
+        "source_url": {
+          "title": "Source Url",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_url",
+        "observed_at",
+        "method",
+        "locator",
+        "recipe_version"
+      ],
+      "title": "Evidence",
+      "type": "object"
+    },
+    "ExtractionRecord_JobRecordData_": {
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "$ref": "#/$defs/JobRecordData"
+        },
+        "evidence": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Evidence"
+          },
+          "title": "Evidence",
+          "type": "object"
+        }
+      },
+      "required": [
+        "data",
+        "evidence"
+      ],
+      "title": "ExtractionRecord[JobRecordData]",
+      "type": "object"
+    },
+    "ExtractionResult_JobRecordData_": {
+      "additionalProperties": false,
+      "properties": {
+        "completed_at": {
+          "format": "date-time",
+          "title": "Completed At",
+          "type": "string"
+        },
+        "http_status": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Http Status"
+        },
+        "issues": {
+          "items": {
+            "$ref": "#/$defs/Issue"
+          },
+          "title": "Issues",
+          "type": "array"
+        },
+        "job_id": {
+          "title": "Job Id",
+          "type": "string"
+        },
+        "learned_recipe": {
+          "anyOf": [
+            {
+              "discriminator": {
+                "mapping": {
+                  "css": "#/$defs/CssRecipe",
+                  "json": "#/$defs/JsonRecipe",
+                  "jsonld": "#/$defs/JsonLdRecipe"
+                },
+                "propertyName": "strategy"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/CssRecipe"
+                },
+                {
+                  "$ref": "#/$defs/JsonLdRecipe"
+                },
+                {
+                  "$ref": "#/$defs/JsonRecipe"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Learned Recipe"
+        },
+        "locale": {
+          "title": "Locale",
+          "type": "string"
+        },
+        "metrics": {
+          "$ref": "#/$defs/Metrics"
+        },
+        "recipe_attempts": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/RecipeAttempt"
+          },
+          "title": "Recipe Attempts",
+          "type": "array"
+        },
+        "recipe_reused": {
+          "default": false,
+          "title": "Recipe Reused",
+          "type": "boolean"
+        },
+        "recipe_version": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Recipe Version"
+        },
+        "records": {
+          "items": {
+            "$ref": "#/$defs/ExtractionRecord_JobRecordData_"
+          },
+          "title": "Records",
+          "type": "array"
+        },
+        "requested_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Requested Url"
+        },
+        "retry_after_seconds": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Retry After Seconds"
+        },
+        "schema_fingerprint": {
+          "title": "Schema Fingerprint",
+          "type": "string"
+        },
+        "source_url": {
+          "title": "Source Url",
+          "type": "string"
+        },
+        "started_at": {
+          "format": "date-time",
+          "title": "Started At",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "timezone": {
+          "title": "Timezone",
+          "type": "string"
+        }
+      },
+      "required": [
+        "job_id",
+        "status",
+        "source_url",
+        "locale",
+        "timezone",
+        "schema_fingerprint",
+        "started_at",
+        "completed_at",
+        "records",
+        "issues",
+        "metrics"
+      ],
+      "title": "ExtractionResult[JobRecordData]",
+      "type": "object"
+    },
+    "HtmlRecipe": {
+      "discriminator": {
+        "mapping": {
+          "css": "#/$defs/CssRecipe",
+          "jsonld": "#/$defs/JsonLdRecipe"
+        },
+        "propertyName": "strategy"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/CssRecipe"
+        },
+        {
+          "$ref": "#/$defs/JsonLdRecipe"
+        }
+      ]
+    },
+    "Issue": {
+      "additionalProperties": false,
+      "description": "Safe diagnostics: no input values or user-supplied validation messages.",
+      "properties": {
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "field": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Field"
+        },
+        "record_index": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Record Index"
+        }
+      },
+      "required": [
+        "code"
+      ],
+      "title": "Issue",
+      "type": "object"
+    },
+    "JobRecordData": {
+      "additionalProperties": true,
+      "description": "Open object shape representing dynamically validated record payloads in JSON Schema.",
+      "properties": {},
+      "title": "JobRecordData",
+      "type": "object"
+    },
+    "JobRunStatus": {
+      "enum": [
+        "success",
+        "partial_success",
+        "failed"
+      ],
+      "type": "string"
+    },
+    "JobSummary": {
+      "additionalProperties": false,
+      "description": "Aggregate execution metadata across all sources in one job run.",
+      "properties": {
+        "failed": {
+          "minimum": 0,
+          "title": "Failed",
+          "type": "integer"
+        },
+        "format_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Format Version",
+          "type": "integer"
+        },
+        "partial": {
+          "minimum": 0,
+          "title": "Partial",
+          "type": "integer"
+        },
+        "records_accepted": {
+          "minimum": 0,
+          "title": "Records Accepted",
+          "type": "integer"
+        },
+        "records_rejected": {
+          "minimum": 0,
+          "title": "Records Rejected",
+          "type": "integer"
+        },
+        "schema_fingerprint": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Schema Fingerprint",
+          "type": "string"
+        },
+        "source_count": {
+          "minimum": 1,
+          "title": "Source Count",
+          "type": "integer"
+        },
+        "status": {
+          "$ref": "#/$defs/JobRunStatus"
+        },
+        "succeeded": {
+          "minimum": 0,
+          "title": "Succeeded",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_fingerprint",
+        "source_count",
+        "succeeded",
+        "partial",
+        "failed",
+        "records_accepted",
+        "records_rejected",
+        "status"
+      ],
+      "title": "JobSummary",
+      "type": "object"
+    },
+    "JsonLdRecipe": {
+      "additionalProperties": false,
+      "description": "Map JSON-LD objects, optionally of one ``item_type``, with absolute JSON pointers.",
+      "properties": {
+        "fallbacks": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/HtmlRecipe"
+          },
+          "maxItems": 3,
+          "title": "Fallbacks",
+          "type": "array"
+        },
+        "fields": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "maxProperties": 100,
+          "minProperties": 1,
+          "title": "Fields",
+          "type": "object"
+        },
+        "item_type": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Item Type"
+        },
+        "require_evidence": {
+          "default": false,
+          "title": "Require Evidence",
+          "type": "boolean"
+        },
+        "strategy": {
+          "const": "jsonld",
+          "default": "jsonld",
+          "title": "Strategy",
+          "type": "string"
+        },
+        "version": {
+          "default": 1,
+          "maximum": 2147483647,
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "fields"
+      ],
+      "title": "JsonLdRecipe",
+      "type": "object"
+    },
+    "JsonRecipe": {
+      "additionalProperties": false,
+      "description": "Select JSON records at ``record_path``; fields are pointers relative to each record.",
+      "properties": {
+        "fallbacks": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/JsonRecipe"
+          },
+          "maxItems": 3,
+          "title": "Fallbacks",
+          "type": "array"
+        },
+        "fields": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "maxProperties": 100,
+          "minProperties": 1,
+          "title": "Fields",
+          "type": "object"
+        },
+        "record_path": {
+          "maxLength": 1024,
+          "title": "Record Path",
+          "type": "string"
+        },
+        "require_evidence": {
+          "default": false,
+          "title": "Require Evidence",
+          "type": "boolean"
+        },
+        "strategy": {
+          "const": "json",
+          "default": "json",
+          "title": "Strategy",
+          "type": "string"
+        },
+        "version": {
+          "default": 1,
+          "maximum": 2147483647,
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "fields",
+        "record_path"
+      ],
+      "title": "JsonRecipe",
+      "type": "object"
+    },
+    "Metrics": {
+      "additionalProperties": false,
+      "properties": {
+        "accepted": {
+          "title": "Accepted",
+          "type": "integer"
+        },
+        "acquisition_method": {
+          "default": "provided_html",
+          "enum": [
+            "provided_html",
+            "provided_json",
+            "http"
+          ],
+          "title": "Acquisition Method",
+          "type": "string"
+        },
+        "acquisition_seconds": {
+          "default": 0,
+          "title": "Acquisition Seconds",
+          "type": "number"
+        },
+        "bytes_received": {
+          "default": 0,
+          "title": "Bytes Received",
+          "type": "integer"
+        },
+        "candidates": {
+          "title": "Candidates",
+          "type": "integer"
+        },
+        "egress": {
+          "default": "direct",
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+          "title": "Egress",
+          "type": "string"
+        },
+        "extraction_seconds": {
+          "title": "Extraction Seconds",
+          "type": "number"
+        },
+        "fields_validated": {
+          "default": 0,
+          "title": "Fields Validated",
+          "type": "integer"
+        },
+        "inference_calls": {
+          "default": 0,
+          "title": "Inference Calls",
+          "type": "integer"
+        },
+        "inference_seconds": {
+          "default": 0,
+          "title": "Inference Seconds",
+          "type": "number"
+        },
+        "input_bytes": {
+          "title": "Input Bytes",
+          "type": "integer"
+        },
+        "network_seconds": {
+          "default": 0,
+          "title": "Network Seconds",
+          "type": "number"
+        },
+        "redirect_count": {
+          "default": 0,
+          "title": "Redirect Count",
+          "type": "integer"
+        },
+        "rejected": {
+          "title": "Rejected",
+          "type": "integer"
+        },
+        "request_count": {
+          "default": 0,
+          "title": "Request Count",
+          "type": "integer"
+        },
+        "retry_count": {
+          "default": 0,
+          "title": "Retry Count",
+          "type": "integer"
+        },
+        "storage_seconds": {
+          "default": 0,
+          "title": "Storage Seconds",
+          "type": "number"
+        },
+        "total_seconds": {
+          "title": "Total Seconds",
+          "type": "number"
+        },
+        "validation_seconds": {
+          "title": "Validation Seconds",
+          "type": "number"
+        }
+      },
+      "required": [
+        "input_bytes",
+        "candidates",
+        "accepted",
+        "rejected",
+        "extraction_seconds",
+        "validation_seconds",
+        "total_seconds"
+      ],
+      "title": "Metrics",
+      "type": "object"
+    },
+    "Outcome": {
+      "enum": [
+        "success",
+        "partial_success",
+        "missing_data",
+        "invalid_data",
+        "access_restriction",
+        "transient_failure",
+        "permanent_failure",
+        "insufficient_evidence"
+      ],
+      "title": "Outcome",
+      "type": "string"
+    },
+    "RecipeAttempt": {
+      "additionalProperties": false,
+      "properties": {
+        "index": {
+          "title": "Index",
+          "type": "integer"
+        },
+        "origin": {
+          "default": "explicit",
+          "enum": [
+            "explicit",
+            "memory",
+            "discovery",
+            "model"
+          ],
+          "title": "Origin",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/Outcome"
+        }
+      },
+      "required": [
+        "index",
+        "status"
+      ],
+      "title": "RecipeAttempt",
+      "type": "object"
+    }
+  },
+  "$id": "https://rave-vipx.github.io/rastro/schemas/job-run.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "data_trust": {
+      "const": "untrusted_source_data",
+      "default": "untrusted_source_data",
+      "title": "Data Trust",
+      "type": "string"
+    },
+    "job": {
+      "$ref": "#/$defs/JobSummary"
+    },
+    "results": {
+      "items": {
+        "$ref": "#/$defs/ExtractionResult_JobRecordData_"
+      },
+      "minItems": 1,
+      "title": "Results",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "job",
+    "results"
+  ],
+  "title": "JobRunResult[JobRecordData]",
+  "type": "object"
+}

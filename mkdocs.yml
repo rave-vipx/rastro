@@ -25,6 +25,7 @@ theme:
 nav:
   - Overview: index.md
   - Getting started: getting-started.md
+  - Declarative jobs: jobs.md
   - HTTP acquisition: acquisition.md
   - Recipe memory: memory.md
   - Optional intelligence: intelligence.md
@@ -40,6 +41,7 @@ nav:
   - Clean code and module size: development/clean-code.md
   - Development work log: development/work-log.md
   - Engineering decisions:
+      - Declarative jobs and CLI contracts: decisions/0013-declarative-jobs.md
       - Recovery benchmark protocol: decisions/0011-recovery-benchmark.md
       - Model providers: decisions/0010-model-providers.md
       - Recipe model: decisions/0009-recipe-model.md

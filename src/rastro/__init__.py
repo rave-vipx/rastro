@@ -6,8 +6,44 @@ from typing import TYPE_CHECKING
 
 from rastro.adapters.sqlite import SQLiteRecipeRepository
 from rastro.application.engine import Rastro
+from rastro.application.jobs import load_job, run_job, run_job_async, run_job_file
 from rastro.domain.acquisition import AcquisitionPolicy, EgressProfile
 from rastro.domain.intelligence import InferencePolicy, ModelError, ModelRequest, RecipeProposal
+from rastro.domain.job_fields import (
+    BooleanField,
+    DateField,
+    DateTimeField,
+    DecimalField,
+    IntegerField,
+    JobField,
+    JobFieldType,
+    NumberField,
+    StringField,
+    UrlField,
+    build_job_schema,
+)
+from rastro.domain.job_providers import (
+    JobModelProvider,
+    OllamaProvider,
+    OpenAICompatibleProvider,
+)
+from rastro.domain.job_results import (
+    JobExitCode,
+    JobRecordData,
+    JobRunResult,
+    JobRunStatus,
+    JobSummary,
+    job_run_json_schema,
+)
+from rastro.domain.jobs import (
+    FileJobSource,
+    Job,
+    JobSource,
+    RegionalContext,
+    UrlJobSource,
+    job_json_schema,
+    parse_job,
+)
 from rastro.domain.memory import (
     RecipeConflictError,
     RecipeContext,
@@ -68,14 +104,30 @@ def __getattr__(name: str) -> object:
 
 __all__ = [
     "AcquisitionPolicy",
+    "BooleanField",
     "ConfigurationError",
     "CssRecipe",
+    "DateField",
+    "DateTimeField",
+    "DecimalField",
     "EgressProfile",
     "Evidence",
     "ExtractionRecord",
     "ExtractionResult",
+    "FileJobSource",
     "InferencePolicy",
+    "IntegerField",
     "Issue",
+    "Job",
+    "JobExitCode",
+    "JobField",
+    "JobFieldType",
+    "JobModelProvider",
+    "JobRecordData",
+    "JobRunResult",
+    "JobRunStatus",
+    "JobSource",
+    "JobSummary",
     "JsonLdRecipe",
     "JsonRecipe",
     "Limits",
@@ -83,6 +135,9 @@ __all__ = [
     "ModelError",
     "ModelPort",
     "ModelRequest",
+    "NumberField",
+    "OllamaProvider",
+    "OpenAICompatibleProvider",
     "Outcome",
     "Rastro",
     "RastroError",
@@ -96,11 +151,23 @@ __all__ = [
     "RecipeProposal",
     "RecipeRepository",
     "RecipeStorageError",
+    "RegionalContext",
     "Representation",
     "ResourceLimitError",
     "SQLiteRecipeRepository",
     "Source",
     "StoredRecipe",
+    "StringField",
+    "UrlField",
+    "UrlJobSource",
     "__version__",
+    "build_job_schema",
+    "job_json_schema",
+    "job_run_json_schema",
+    "load_job",
+    "parse_job",
+    "run_job",
+    "run_job_async",
+    "run_job_file",
     "schema_fingerprint",
 ]
