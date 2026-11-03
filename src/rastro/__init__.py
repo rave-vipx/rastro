@@ -44,6 +44,13 @@ from rastro.domain.jobs import (
     job_json_schema,
     parse_job,
 )
+from rastro.domain.lifecycle import (
+    LifecycleAction,
+    LifecycleTransitionError,
+    RecipeState,
+    VersionStatus,
+)
+from rastro.domain.lifecycle_history import LifecycleEvent, LifecycleHistory
 from rastro.domain.memory import (
     RecipeConflictError,
     RecipeContext,
@@ -83,7 +90,7 @@ from rastro.mocklab import (
     verify_fixture,
 )
 from rastro.ports.model import ModelPort
-from rastro.ports.recipes import RecipeRepository
+from rastro.ports.recipes import RecipeLifecycle, RecipeRepository
 
 if TYPE_CHECKING:
     from rastro.adapters.ollama import OllamaModel as OllamaModel
@@ -140,6 +147,10 @@ __all__ = [
     "JobSummary",
     "JsonLdRecipe",
     "JsonRecipe",
+    "LifecycleAction",
+    "LifecycleEvent",
+    "LifecycleHistory",
+    "LifecycleTransitionError",
     "Limits",
     "Metrics",
     "MockLabError",
@@ -157,10 +168,12 @@ __all__ = [
     "RecipeConflictError",
     "RecipeContext",
     "RecipeKey",
+    "RecipeLifecycle",
     "RecipeMetadata",
     "RecipeNotFoundError",
     "RecipeProposal",
     "RecipeRepository",
+    "RecipeState",
     "RecipeStorageError",
     "RegionalContext",
     "Representation",
@@ -173,6 +186,7 @@ __all__ = [
     "SyntheticLabel",
     "UrlField",
     "UrlJobSource",
+    "VersionStatus",
     "__version__",
     "build_fixture",
     "build_job_schema",
