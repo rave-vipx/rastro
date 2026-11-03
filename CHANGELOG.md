@@ -2,7 +2,11 @@
 
 All notable user-facing changes will be recorded here. No public release has been published.
 
-## Unreleased — pre-v0.2
+## Unreleased
+
+## 0.1.0rc1 — 2026-11-03
+
+Release candidate tagged on `main`; not published to any package registry. Final `0.1.0` waits on the release gates in issue #5.
 
 ### Changed
 
