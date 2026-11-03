@@ -13,14 +13,12 @@ class RecipeRepository(Protocol):
     def get(self, key: RecipeKey, *, version: int | None = None) -> StoredRecipe | None: ...
 
     def save_success(
-        self,
-        key: RecipeKey,
-        recipe: Recipe,
-        *,
-        selected_index: int,
-        at: datetime,
-        candidate: bool = False,
+        self, key: RecipeKey, recipe: Recipe, *, selected_index: int, at: datetime
     ) -> StoredRecipe: ...
+
+    def next_version(self, key: RecipeKey) -> int:
+        """One above the highest stored version of ``key`` in any state, or 1."""
+        ...
 
     def delete(self, key: RecipeKey, *, version: int | None = None) -> int: ...
 
@@ -29,6 +27,10 @@ class RecipeRepository(Protocol):
 
 class RecipeLifecycle(Protocol):
     """Lifecycle control used by repair, drift and operators (REC-005, REPAIR-006)."""
+
+    def save_candidate(
+        self, key: RecipeKey, recipe: Recipe, *, selected_index: int, at: datetime
+    ) -> StoredRecipe: ...
 
     def transition(
         self, key: RecipeKey, version: int, state: RecipeState, *, reason: str, at: datetime

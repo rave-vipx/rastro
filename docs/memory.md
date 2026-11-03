@@ -92,7 +92,8 @@ and stores no proxy configuration, source URL, extracted value, or validator inp
 
 ## Versions and explicit fallbacks
 
-The default lookup chooses the highest stored version for the exact key. Use
+The default lookup chooses the version that currently serves the exact key: the
+one that is `active` or `degraded` (see [recipe lifecycle](recipe-lifecycle.md)). Use
 `recipe_version=1` with `recipe` omitted to pin a stored version. Versions are
 integers from 1 to 2,147,483,647. The definition at a key/version is immutable:
 changing mappings, selectors or fallbacks requires incrementing `Recipe.version`.
@@ -138,14 +139,16 @@ repository.prune(before=datetime.now(UTC) - timedelta(days=30))
 A `StoredRecipe` keeps the **definition** (`recipe`: what to extract) apart from
 its **operational metadata** (`metadata`: a `RecipeMetadata` with the validated
 alternative, creation time, last success and successful run count). Definitions are
-immutable per version; metadata changes with every successful run. Future lifecycle
-state belongs to the metadata, so it can evolve without changing definitions.
+immutable per version; metadata changes with every successful run. `metadata.state`
+holds the version's lifecycle state (`RecipeState`), which changes without changing
+the definition.
 
 Here `repository` is your `SQLiteRecipeRepository` instance. `prune` deletes every
 version whose last successful execution is strictly older than the aware timestamp.
 Cleanup is caller-triggered; there is no scheduler or implicit retention period.
-Deleting a version can expose the next-highest remaining version to default lookup;
-pin a version when that behavior is unsuitable. Counters measure successful
+Deleting the serving version leaves the key with no serving version: default lookup
+misses until a rollback, a promotion or a new successful version. Other versions are
+never exposed implicitly. Counters measure successful
 validations, not a health score or a durable job/failure history.
 
 Deletion uses SQLite `secure_delete=ON` with no application-created backups.

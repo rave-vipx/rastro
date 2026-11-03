@@ -10,6 +10,7 @@ from rastro.domain.lifecycle import LifecycleAction, RecipeState, VersionStatus
 from rastro.domain.memory import RecipeKey
 from rastro.domain.sources import Contract
 
+
 def _printable(reason: str) -> str:
     # isprintable() rejects C0/C1 controls, ANSI escape introducers, bidi overrides and
     # line or paragraph separators, so a reason cannot spoof terminal or log output.

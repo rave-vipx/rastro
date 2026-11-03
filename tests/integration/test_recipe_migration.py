@@ -100,7 +100,7 @@ def test_failed_migration_leaves_schema_1_file_untouched(old_database, keys):
     assert markers(old_database) == (1, 0x52535452)
 
 
-@pytest.mark.parametrize(("version", "application"), [(3, 0x52535452), (1, 7)])
+@pytest.mark.parametrize(("version", "application"), [(3, 0x52535452), (1, 7), (2, 7), (2, 0)])
 def test_newer_or_foreign_versioned_files_are_not_migrated(tmp_path, keys, version, application):
     path = tmp_path / "other.db"
     with closing(sqlite3.connect(path)) as db:

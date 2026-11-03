@@ -54,14 +54,29 @@ gates.
 
 ### `save_success` keeps v0.1 adoption semantics
 
-A successful explicit recipe is a caller decision. A new version saved without
-`candidate=True` becomes active and supersedes the serving version, so 0.1.0
+A successful explicit recipe is a caller decision. A new version saved through
+`save_success` becomes active and supersedes the serving version, so 0.1.0
 behaviour is preserved: an explicit version 2 that succeeds is reused afterwards.
-Repair code stores proposals with `candidate=True`, and those never displace the
-serving version. A new version lower than the serving version is also stored as a
-candidate. That keeps the ADR 0003 guarantee that a request completing late cannot
+A new version lower than the serving version is stored as a candidate instead. That keeps the ADR 0003 guarantee that a request completing late cannot
 supersede a newer version. Repeated success on an existing version never changes its state.
 Without this rule, re-running a pinned old version would silently roll back the key.
+
+### Candidates enter only through the lifecycle port
+
+Repair code stores proposals with `RecipeLifecycle.save_candidate`, which only
+inserts new version numbers. A candidate flag on `save_success` was rejected: on an
+existing version, its upsert path would update the serving version's selected
+alternative and statistics. A store without lifecycle support could also ignore the
+flag and serve the candidate. Keeping `save_success` at its 0.1.0 signature means
+callers that need candidates must hold a store that implements lifecycle control.
+
+### Learning never reuses a stored version number
+
+Before 0.2, an unpinned miss meant the key had no rows, so learning stored version 1.
+Now a miss only means no version serves. `RecipeRepository.next_version` returns one
+above every stored version, and learning stamps that number on proposals before
+evaluating them, so evidence and storage agree. A rejected version 1 can neither
+make learning fail with a conflict nor leave a relearned recipe inactive.
 
 ### Append-only history per key
 
@@ -69,7 +84,11 @@ Every change appends a `recipe_events` row with a key-wide sequence number, the
 version, previous and new state, action, caller-supplied reason (1–500 printable
 characters) and UTC timestamp. `history(key)` returns a strict `LifecycleHistory`
 model that serializes to stable JSON. `delete` and `prune` remove the history of the
-versions they remove, consistent with the privacy guarantees of ADR 0003.
+versions they remove, consistent with the privacy guarantees of ADR 0003. The caller's reason is
+recorded only on the target version's event; the displaced version's `superseded`
+event uses a fixed reason, so deleting a version deletes every note about it. A
+per-key counter (`recipe_event_sequences`) keeps sequence numbers from being
+reissued while the key keeps any version.
 
 ### Schema 2 through a forward-only migration
 
@@ -81,7 +100,8 @@ every step, so new and upgraded databases share the same DDL. Step 1 → 2:
    only successful, validated versions;
 3. retires every version below the highest of its key, which preserves the schema 1
    serving rule exactly;
-4. creates the serving-version partial unique index and `recipe_events`;
+4. creates the serving-version partial unique index, `recipe_events` and the
+   per-key sequence counter;
 5. writes one `migrated` event per existing row.
 
 All steps and the `user_version` change commit in one transaction. A failure leaves
@@ -101,7 +121,7 @@ retired but remain rollback targets, so no capability is lost.
   `degraded`, and promotion would move rows between tables.
 - **Make every new version a candidate.** Strictest reading of REC-006, but it breaks
   the 0.1.0 contract that a successful explicit recipe is adopted. The REC-006 risk is
-  automatic repair, which uses `candidate=True`.
+  automatic repair, which uses `save_candidate`.
 - **Mark all migrated rows active.** Rejected for the reason given above.
 
 ## Consequences
@@ -109,9 +129,10 @@ retired but remain rollback targets, so no capability is lost.
 - Databases opened by this version cannot be opened by 0.1.0, which rejects unknown
   schema versions explicitly rather than misreading them. Users who might downgrade
   should copy the file first.
-- `RecipeRepository.save_success` gains a keyword-only `candidate` flag. The new
-  `RecipeLifecycle` port (`transition`, `rollback`, `history`) is separate, so
-  repositories that do not support lifecycle control remain valid recipe stores.
+- `RecipeRepository` gains `next_version`; `save_success` keeps its 0.1.0 signature.
+  The new `RecipeLifecycle` port (`save_candidate`, `transition`, `rollback`,
+  `history`) is separate, so repositories without lifecycle control remain valid
+  recipe stores but cannot hold candidates.
 - No facade or CLI surface is added yet. Repair, drift and agent slices will decide
   how operators trigger promotion and rollback.
 

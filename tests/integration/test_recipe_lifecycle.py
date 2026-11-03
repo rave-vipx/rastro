@@ -7,6 +7,7 @@ import pytest
 
 from rastro import ConfigurationError, Outcome, Rastro
 from rastro.adapters.sqlite import SQLiteRecipeRepository
+from rastro.adapters.sqlite_lifecycle import SUPERSEDED_REASON
 from rastro.domain.lifecycle import LifecycleAction, LifecycleTransitionError, RecipeState
 from rastro.domain.lifecycle_history import LifecycleHistory
 from rastro.domain.memory import RecipeKey, RecipeNotFoundError, RecipeStorageError
@@ -60,7 +61,7 @@ def test_new_versions_become_active_and_supersede_the_serving_one(repo, key, rec
 
 def test_candidate_never_replaces_the_active_recipe(repo, key, recipe, source, schema, html):
     repo.save_success(key, recipe, selected_index=0, at=NOW)
-    candidate = repo.save_success(key, v(recipe, 2), selected_index=0, at=NOW, candidate=True)
+    candidate = repo.save_candidate(key, v(recipe, 2), selected_index=0, at=NOW)
     assert candidate.metadata.state is C
     assert states(repo, key) == {1: A, 2: C}
     result = Rastro(repository=repo).extract_html(html, source=source, schema=schema)
@@ -84,7 +85,7 @@ def test_late_lower_version_success_does_not_replace_a_newer_one(repo, key, reci
 
 
 def test_candidate_without_serving_version_is_not_reused(repo, key, recipe):
-    repo.save_success(key, recipe, selected_index=0, at=NOW, candidate=True)
+    repo.save_candidate(key, recipe, selected_index=0, at=NOW)
     assert repo.get(key) is None
     assert repo.get(key, version=1).metadata.state is C
     assert repo.history(key).serving is None
@@ -92,7 +93,7 @@ def test_candidate_without_serving_version_is_not_reused(repo, key, recipe):
 
 def test_promotion_and_rollback_record_reason_and_timestamp(repo, key, recipe):
     repo.save_success(key, recipe, selected_index=0, at=NOW)
-    repo.save_success(key, v(recipe, 2), selected_index=0, at=NOW, candidate=True)
+    repo.save_candidate(key, v(recipe, 2), selected_index=0, at=NOW)
     promoted_at, rolled_at = NOW + timedelta(days=1), NOW + timedelta(days=2)
     repo.transition(key, 2, A, reason="Passed all thresholds", at=promoted_at)
     assert states(repo, key) == {1: R, 2: A}
@@ -101,9 +102,9 @@ def test_promotion_and_rollback_record_reason_and_timestamp(repo, key, recipe):
     assert states(repo, key) == {1: A, 2: R}
     events = repo.history(key).events[-4:]
     assert [(e.version, e.action, e.reason, e.at) for e in events] == [
-        (1, LifecycleAction.SUPERSEDED, "Passed all thresholds", promoted_at),
+        (1, LifecycleAction.SUPERSEDED, SUPERSEDED_REASON, promoted_at),
         (2, LifecycleAction.PROMOTED, "Passed all thresholds", promoted_at),
-        (2, LifecycleAction.SUPERSEDED, "Regression reported by operator", rolled_at),
+        (2, LifecycleAction.SUPERSEDED, SUPERSEDED_REASON, rolled_at),
         (1, LifecycleAction.ROLLED_BACK, "Regression reported by operator", rolled_at),
     ]
     # Version 2 served once, so it is a valid rollback target; validation time is kept.
@@ -164,7 +165,7 @@ def test_invalid_lifecycle_requests_fail_explicitly(
 
 def test_history_is_machine_readable_and_round_trips(repo, key, recipe):
     repo.save_success(key, recipe, selected_index=0, at=NOW)
-    repo.save_success(key, v(recipe, 2), selected_index=0, at=NOW, candidate=True)
+    repo.save_candidate(key, v(recipe, 2), selected_index=0, at=NOW)
     history = repo.history(key)
     payload = json.loads(history.model_dump_json())
     assert payload["versions"] == [

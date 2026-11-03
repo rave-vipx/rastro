@@ -39,6 +39,16 @@ _LOG = structlog.wrap_logger(
 )
 
 
+def with_version(recipe: Recipe, version: int) -> Recipe:
+    """Relabel a proposal and its fallbacks with the version learning will store."""
+    if recipe.version == version:
+        return recipe
+    data = recipe.model_dump()
+    data["version"] = version
+    data["fallbacks"] = [{**item, "version": version} for item in data["fallbacks"]]
+    return Recipe.model_validate(data)
+
+
 @dataclass
 class _LearningSession[T: BaseModel]:
     html: str
@@ -48,6 +58,7 @@ class _LearningSession[T: BaseModel]:
     limits: Limits
     representation: Representation
     required: set[str]
+    version: int = 1
     attempts: list[RecipeAttempt] = field(default_factory=list)
     results: list[ExtractionResult[T]] = field(default_factory=list)
     selected: Recipe | None = None
@@ -55,9 +66,9 @@ class _LearningSession[T: BaseModel]:
     async def evaluate(
         self, candidate: Recipe, origin: Literal["discovery", "model"]
     ) -> tuple[bool, str]:
-        validated = validate_recipe(self.schema, candidate, self.representation).model_copy(
-            update={"require_evidence": True}
-        )
+        validated = validate_recipe(
+            self.schema, with_version(candidate, self.version), self.representation
+        ).model_copy(update={"require_evidence": True})
         if not self.required.issubset(validated.fields):
             self.attempts.append(
                 RecipeAttempt(
@@ -126,6 +137,7 @@ class RecipeLearner:
             limits=limits,
             representation=representation,
             required=required,
+            version=prepared.learn_version,
         )
         complete, failure = False, "no_valid_recipe"
         for candidate in candidates:

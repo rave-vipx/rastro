@@ -43,6 +43,9 @@ class PreparedRecipe:
     storage_seconds: float
     started: float
     started_at: datetime
+    # Learning stores new recipes at this version: above every stored version, so a
+    # retired or candidate row never collides with or blocks a learned recipe.
+    learn_version: int = 1
 
 
 class RecipeMemory:
@@ -81,7 +84,12 @@ class RecipeMemory:
         storage_seconds = perf_counter() - storage_start
         if stored is None:
             if allow_discovery and recipe_version is None:
-                return PreparedRecipe(None, key, None, storage_seconds, started, started_at)
+                storage_start = perf_counter()
+                learn_version = self._repository.next_version(key)
+                storage_seconds += perf_counter() - storage_start
+                return PreparedRecipe(
+                    None, key, None, storage_seconds, started, started_at, learn_version
+                )
             raise RecipeNotFoundError("No validated recipe for this context and version")
         if stored.key != key or (
             recipe_version is not None and stored.recipe.version != recipe_version

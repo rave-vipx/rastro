@@ -53,12 +53,19 @@ the SQLite adapter applies the planned changes in a single transaction.
 - A **new** version becomes `active` and the previously serving version becomes
   `retired` with action `superseded`. An explicit recipe that passes validation is
   therefore still adopted, as before.
-- With `candidate=True`, a new version is stored as `candidate` and the serving
-  version is not touched.
-- A new version lower than the serving version is also stored as `candidate`, so a
+- A new version lower than the serving version is stored as `candidate`, so a
   request that completes late cannot replace a newer recipe.
 - Repeated success on an **existing** version only updates its success history. It
   never changes the state, so re-running an old version does not reactivate it.
+
+`save_candidate` (on the `RecipeLifecycle` port) stores an evaluated proposal as a
+new `candidate` version. It never touches the serving version, and any version
+number that already exists raises `RecipeConflictError`, so a candidate cannot
+change the history or selected alternative of a stored version.
+
+Cold-context learning (`discover_recipes=True` or `model=`) stores learned recipes
+at `repository.next_version(key)`: one above every stored version in any state. A
+rejected or retired version 1 therefore never blocks learning or collides with it.
 
 With `source` and `Product` from the [memory example](memory.md#remember-and-reuse),
 version 1 serving, and a proposed `repaired` recipe with version 2:
@@ -73,7 +80,7 @@ repository = SQLiteRecipeRepository("rastro-recipes.db")
 key = RecipeKey.for_source(source, Product)
 now = datetime.now(UTC)
 
-repository.save_success(key, repaired, selected_index=0, at=now, candidate=True)
+repository.save_candidate(key, repaired, selected_index=0, at=now)
 
 if passed_evaluation:
     # Version 2 becomes active; version 1 is retired as superseded.
@@ -116,7 +123,11 @@ new state, action, reason and UTC timestamp. Serialize it with `model_dump_json(
 }
 ```
 
-`delete` and `prune` remove a version's events together with its definition.
+`delete` and `prune` remove a version's events together with its definition. Caller
+reasons are stored only on the event of the version they describe; the version a
+promotion or rollback displaces records the fixed reason
+`Superseded by another version`. Sequence numbers are never reissued while the key
+keeps any stored version.
 
 ## Upgrading existing databases
 

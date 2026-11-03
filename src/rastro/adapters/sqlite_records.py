@@ -27,7 +27,9 @@ _ROW = (
 )
 
 
-def find(db: sqlite3.Connection, key: RecipeKey, identity: str, version: int) -> StoredRecipe | None:
+def find(
+    db: sqlite3.Connection, key: RecipeKey, identity: str, version: int
+) -> StoredRecipe | None:
     """Decode one version, validating its definition, history and lifecycle position."""
     row = db.execute(f"{_ROW} AND version = ?", (identity, version)).fetchone()
     return None if row is None else _decode(key, row)
@@ -59,9 +61,9 @@ def _decode(key: RecipeKey, row: tuple[object, ...]) -> StoredRecipe:
     return stored
 
 
-def encode(key: RecipeKey, recipe: Recipe, *, selected_index: int, at: datetime) -> tuple[
-    Recipe, str
-]:
+def encode(
+    key: RecipeKey, recipe: Recipe, *, selected_index: int, at: datetime
+) -> tuple[Recipe, str]:
     """Validate a definition and its selection; return it with its canonical payload."""
     recipe = Recipe.model_validate(recipe.model_dump())
     StoredRecipe(
