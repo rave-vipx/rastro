@@ -71,7 +71,7 @@ def test_json_bundle_replays_and_labels_the_response(tmp_path):
     assert verify_fixture(loaded, ApiProduct).metrics.accepted == 2
     body = json.loads((tmp_path / "body.json").read_text())
     assert read_json_label(body).seed == 3
-    assert isinstance(body["meta"]["page"], int) and "private" not in json.dumps(body)
+    assert "meta" not in body and "private" not in json.dumps(body)
     assert body["data"]["products"][1]["name"] == "Pen"
     assert len(loaded.records.records) == 2
 

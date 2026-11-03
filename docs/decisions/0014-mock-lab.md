@@ -69,21 +69,32 @@ Everything else is replaced:
   copy, and confidential paragraphs.
 - **Comments, processing instructions, `<style>` and non-JSON-LD `<script>` contents** are
   removed. JSON-LD blocks are kept only when a recipe reads JSON-LD. They are scrubbed like JSON
-  bodies but keep `@context` and `@type`, and an invalid block stays invalid at the same index.
-- **Attributes:** event handlers, `style`, `srcdoc`, `nonce` and `integrity` are dropped. The
-  `value` of `password` and `hidden` inputs is always dropped. Structural attributes (`class`,
-  `id`, `name`, `type`, `itemprop` and similar) and attribute values quoted in the recipe's own
-  selectors survive. URL attributes keep scheme, host and path only: no credentials, query or
-  fragment, non-HTTP schemes become `#`, and token-like path segments are replaced. Every other
-  value becomes a placeholder.
-- **JSON** keys survive so pointers resolve, unless a key looks like a secret. Unretained strings
-  become placeholders, numbers become small deterministic integers, and booleans and null stay.
+  bodies; `@graph` and `@type` keys stay, but an `@type` value stays only when it equals a token
+  of the recipe (its `item_type`), at any depth. `@context` is scrubbed. An invalid block stays
+  invalid, and blocks are indexed as the parser enumerates them (empty blocks take no index).
+- **Attributes:** event handlers, `style`, `srcdoc`, `srcset`, `nonce` and `integrity` are
+  dropped. The `value` of `password` and `hidden` inputs is always dropped. Every other value,
+  including `class`, `id`, `name`, `for`, `lang` and `rel`, survives token by token only when an
+  identifier token of the recipe's selectors names it (`.product` keeps class `product`,
+  `[data-kind=card]` keeps `card`); other tokens become placeholders. Extracted values survive
+  whole. URL attributes (`href`, `src`, `action`, `itemtype`, `itemid`...) keep scheme and host;
+  credentials, query and fragment are removed, non-HTTP schemes become `#`, and each path segment
+  survives only when the recipe names it and it does not look sensitive.
+- **JSON** keys survive only on the path to a retained value or a JSON recipe's `record_path`;
+  every other key becomes a unique placeholder. Unretained strings become placeholders, numbers
+  become small deterministic integers, and booleans and null stay. Nesting deeper than 256 levels
+  raises `SanitizationError`.
 - **Response headers** keep only `content-type` and `content-language`. `Set-Cookie`,
   `Authorization` and API-key headers never qualify.
 - **Source URL** is stored without its query string or fragment, which is also what evidence uses.
+  Evidence records this URL, so it cannot be rewritten: when a path segment looks like a token,
+  opaque identifier or personal data, generation fails with `SanitizationError`.
 
-Pattern detectors (JWT, bearer/basic tokens, common API-key formats, credential assignments,
-emails, phone numbers) are a second line of defense. If an extracted value, a retained structural
+Pattern detectors are a second line of defense: JWTs, bearer/basic tokens, common API-key
+formats, credential assignments, secret-looking URL parameters, emails, phone numbers, US social
+security numbers, Luhn-valid card numbers, mod-97-valid IBANs, padded base64, long hex strings and
+long letter-digit tokens. Text is checked as written and after percent-decoding and NFKC
+normalization. If an extracted value, a retained structural
 value or allowlisted header matches one, or any finished file still does, generation raises
 `SanitizationError`. Diagnostics name the file or field and the category, never the matched value.
 
@@ -113,14 +124,20 @@ explicitly.
   replay check and must be rewritten to use structure. This is reported, never hidden.
 - Extracted values that look like personal data (an email field, say) block generation. Synthetic
   substitution of extracted values is future work.
-- Hostnames and JSON keys are kept. A confidential hostname or key name would survive unless it
-  matches a detector.
+- Hostnames are kept. A confidential hostname would survive unless it matches a detector.
+- Extracted values that look like long identifiers (UUIDs, opaque SKUs of 20+ mixed characters)
+  block generation, a deliberate fail-closed false positive.
+- Source URLs whose paths carry identifiers (`/orders/<id>`) cannot become fixtures until
+  evidence URLs can be rewritten consistently.
 - Mock Lab composes adapters itself (`ScraplingParser`, `JsonParser`, `Rastro`) at the edge, as the
   public facade does. Domain code remains free of I/O and Scrapling.
 - Bundles with JSON array roots are refused until a label convention for them is agreed.
 
 ## Alternatives considered
 
+- **Keep structural attributes (`class`, `id`, `name`...) verbatim.** Rejected after review:
+  values such as `id="sess-<hex>"` or `class="user-jane-doe"` leak; replay needs only the tokens the
+  recipe names.
 - **Detect and redact secrets, keep everything else.** Rejected: no pattern set covers
   confidential prose or new token formats, and a miss leaks silently.
 - **Placeholders derived from hashes of the original text.** Rejected: short secrets such as PINs

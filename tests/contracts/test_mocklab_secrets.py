@@ -117,5 +117,5 @@ def test_sanitized_fixture_still_replays_and_keeps_allowlisted_headers(written):
     replayed = verify_fixture(bundle, Product)
     assert [record.data.name for record in replayed.records] == ["Notebook", "Pen"]
     body = (written / "body.html").read_text()
-    assert 'type="password"' in body and "<!--" in body.split("\n", 1)[0]
+    assert '<input type="' in body and "<!--" in body.split("\n", 1)[0]
     assert body.count("<!--") == 1

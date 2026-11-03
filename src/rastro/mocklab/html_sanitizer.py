@@ -1,8 +1,10 @@
 """Rewrite HTML so only structure and the recipe's extracted values survive (MOCK-005).
 
 The rewriter keeps tags and attribute names so selectors replay unchanged. Text,
-attribute values, comments, scripts and styles are replaced, dropped or scrubbed
-unless the retention plan names them. It is stdlib-only and never executes markup.
+comments, scripts and styles are replaced or dropped unless the retention plan
+names them. Attribute values survive token by token only when a recipe selector
+names the token (``.product``, ``[data-kind=card]``) or the value was extracted;
+every other token becomes a placeholder. It is stdlib-only and never executes markup.
 """
 
 from __future__ import annotations
@@ -12,39 +14,16 @@ from html import escape
 from html.parser import HTMLParser
 
 from rastro.domain.json import strict_json
-from rastro.mocklab.detectors import contains_secret, scrub_url
-from rastro.mocklab.retention import RetentionPlan, scrub_json
+from rastro.mocklab.detectors import scrub_url
+from rastro.mocklab.json_scrubber import scrub_json
+from rastro.mocklab.retention import RetentionPlan
 from rastro.mocklab.seeds import DeterministicStream
 
 _JSONLD = "application/ld+json"
-_STRUCTURAL = frozenset(
-    {
-        "charset",
-        "checked",
-        "class",
-        "colspan",
-        "dir",
-        "disabled",
-        "for",
-        "hidden",
-        "id",
-        "itemprop",
-        "itemscope",
-        "itemtype",
-        "lang",
-        "method",
-        "name",
-        "rel",
-        "role",
-        "rowspan",
-        "selected",
-        "type",
-    }
-)
 _URL_ATTRIBUTES = frozenset(
-    {"action", "background", "cite", "formaction", "href", "poster", "src", "srcset"}
+    {"action", "background", "cite", "formaction", "href", "itemid", "itemtype", "poster", "src"}
 )
-_DROPPED = frozenset({"integrity", "nonce", "srcdoc", "style"})
+_DROPPED = frozenset({"integrity", "nonce", "srcdoc", "srcset", "style"})
 _SECRET_INPUTS = frozenset({"hidden", "password"})
 # A JSON-LD block that failed to parse must still fail to parse, at the same index.
 _INVALID_JSONLD = "{"
@@ -57,6 +36,7 @@ class _Rewriter(HTMLParser):
         self._stream = stream
         self._out: list[str] = []
         self._raw: str | None = None
+        self._script: list[str] = []
         self._jsonld_index = 0
 
     def result(self) -> str:
@@ -71,22 +51,33 @@ class _Rewriter(HTMLParser):
         if tag in {"script", "style"}:
             kind = dict(attrs).get("type") if tag == "script" else None
             self._raw = kind if kind == _JSONLD else "drop"
+            self._script = []
 
     def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         self._out.append(f"<{tag}{self._attributes(tag, attrs)} />")
 
     def handle_endtag(self, tag: str) -> None:
         if tag in {"script", "style"}:
-            if self._raw == _JSONLD:
-                self._jsonld_index += 1
-            self._raw = None
+            self._close_raw()
         self._out.append(f"</{tag}>")
+
+    def close(self) -> None:
+        super().close()
+        self._close_raw()
 
     def handle_data(self, data: str) -> None:
         if self._raw == _JSONLD:
-            self._out.append(self._jsonld(data))
+            self._script.append(data)
         elif self._raw is None:
             self._out.append(escape(self._text(data), quote=False))
+
+    def _close_raw(self) -> None:
+        # The parser enumerates only JSON-LD blocks with text; empty ones take no index.
+        if self._raw == _JSONLD and self._script:
+            self._out.append(self._jsonld("".join(self._script)))
+            self._jsonld_index += 1
+        self._raw = None
+        self._script = []
 
     def _text(self, data: str) -> str:
         stripped = data.strip()
@@ -103,7 +94,9 @@ class _Rewriter(HTMLParser):
         except (ValueError, RecursionError):
             return _INVALID_JSONLD
         pointers = retained.get(self._jsonld_index, frozenset())
-        scrubbed = scrub_json(payload, pointers, self._stream, keep_keys=_LINKED_DATA_KEYS)
+        scrubbed = scrub_json(
+            payload, pointers, self._stream, keep_types=self._plan.tokens, linked_data=True
+        )
         # Escaping "</" keeps the block from closing its script element early.
         return json.dumps(scrubbed, ensure_ascii=False).replace("</", "<\\/")
 
@@ -116,29 +109,36 @@ class _Rewriter(HTMLParser):
             if value is None:
                 rendered.append(f" {name}")
             else:
-                rendered.append(f' {name}="{escape(self._attribute(name, value))}"')
+                kept = self._attribute(tag, name, value)
+                rendered.append(f' {name}="{escape(kept)}"')
         return "".join(rendered)
 
-    def _quoted_in_selectors(self, value: str) -> bool:
-        """True when a recipe selector compares an attribute with exactly this value."""
-        text = self._plan.selector_text
-        return bool(value) and any(
-            form in text for form in (f'"{value}"', f"'{value}'", f"={value}]")
-        )
-
-    def _attribute(self, name: str, value: str) -> str:
-        if contains_secret(value):
-            return scrub_url(value, self._stream) if name in _URL_ATTRIBUTES else ""
+    def _attribute(self, tag: str, name: str, value: str) -> str:
+        # Extracted values were already checked by the retention plan.
         if value.strip() in self._plan.texts:
             return value
-        if name in _STRUCTURAL or self._quoted_in_selectors(value):
+        if tag == "script" and name == "type" and value == _JSONLD:
             return value
         if name in _URL_ATTRIBUTES:
-            return scrub_url(value, self._stream)
-        return self._stream.placeholder(value)
+            return scrub_url(value, self._stream, self._plan.tokens)
+        return "".join(
+            part if part.isspace() or part in self._plan.tokens else self._stream.placeholder(part)
+            for part in _split_tokens(value)
+        )
 
 
-_LINKED_DATA_KEYS = frozenset({"@context", "@type"})
+def _split_tokens(value: str) -> list[str]:
+    """Split on whitespace, keeping the whitespace runs so layout is preserved."""
+    parts: list[str] = []
+    current = ""
+    for char in value:
+        if current and char.isspace() != current[-1].isspace():
+            parts.append(current)
+            current = ""
+        current += char
+    if current:
+        parts.append(current)
+    return parts
 
 
 def sanitize_html(body: str, plan: RetentionPlan, stream: DeterministicStream) -> str:

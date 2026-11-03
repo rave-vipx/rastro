@@ -16,7 +16,8 @@ from rastro.domain.models import Representation
 from rastro.mocklab.detectors import contains_secret, secret_categories
 from rastro.mocklab.errors import SanitizationError
 from rastro.mocklab.html_sanitizer import sanitize_html
-from rastro.mocklab.retention import RetentionPlan, scrub_json
+from rastro.mocklab.json_scrubber import scrub_json
+from rastro.mocklab.retention import RetentionPlan
 from rastro.mocklab.seeds import DeterministicStream
 
 ALLOWED_HEADERS = frozenset({"content-language", "content-type"})
@@ -32,7 +33,7 @@ def sanitize_body(body: str, representation: Representation, plan: RetentionPlan
         payload = strict_json(body)
     except (ValueError, RecursionError):
         raise SanitizationError("JSON fixtures require a valid JSON body") from None
-    scrubbed = scrub_json(payload, plan.json_pointers, stream)
+    scrubbed = scrub_json(payload, plan.json_pointers, stream, structure=plan.json_structure)
     return json.dumps(scrubbed, ensure_ascii=False, indent=2) + "\n"
 
 

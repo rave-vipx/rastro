@@ -32,17 +32,41 @@ def test_ordinary_values_are_not_secrets(text):
     ("url", "expected"),
     [
         ("https://u:p@shop.example.com:8443/a/b?token=x#frag", "https://shop.example.com:8443/a/b"),
-        ("/relative/path?q=1", "/relative/path"),
+        ("/a/b?q=1", "/a/b"),
         ("javascript:alert(1)", "#"),
         ("mailto:a@example.org", "#"),
         ("http://[::1", "#"),
     ],
 )
-def test_scrub_url_keeps_only_scheme_host_and_path(url, expected):
-    assert scrub_url(url, DeterministicStream(0, "u")) == expected
+def test_scrub_url_keeps_only_scheme_host_and_recipe_named_segments(url, expected):
+    assert scrub_url(url, DeterministicStream(0, "u"), frozenset({"a", "b"})) == expected
 
 
-def test_scrub_url_replaces_token_like_path_segments():
-    scrubbed = scrub_url("/reset/abcdefghijklmnopqrstuvwxyz012345/x", DeterministicStream(0, "u"))
-    assert scrubbed.startswith("/reset/") and scrubbed.endswith("/x")
-    assert "abcdefghijklmnopqrstuvwxyz012345" not in scrubbed
+def test_scrub_url_replaces_unnamed_and_token_like_path_segments():
+    token = "abcdefghijklmnopqrstuvwxyz012345"
+    scrubbed = scrub_url(f"/reset/{token}/x", DeterministicStream(0, "u"), frozenset({token}))
+    assert scrubbed.count("/") == 3 and token not in scrubbed and "reset" not in scrubbed
+
+
+@pytest.mark.parametrize(
+    ("text", "category"),
+    [
+        ("123-45-6789", "ssn"),
+        ("4111-1111-1111-1111", "card"),
+        ("GB82WEST12345698765432", "iban"),
+        ("dXNlcjpwYXNzd29yZA==", "base64_credential"),
+        ("9f8a7b6c5d4e3f2a1b0c9d8e", "hex_token"),
+        ("Kx9QpL2vN8rT4wZ1aB3cD5", "opaque_token"),
+        ("/p?sessionid=abc", "url_secret_param"),
+        ("jane.doe%40corp.example", "email"),
+    ],
+)
+def test_detects_review_categories(text, category):
+    assert category in secret_categories(text)
+
+
+@pytest.mark.parametrize(
+    "text", ["4111 1111 1111 1112", "GB00 WEST 1234 5698 7654 32", "order 12345", "product-card"]
+)
+def test_checksum_detectors_reject_invalid_numbers(text):
+    assert not contains_secret(text)

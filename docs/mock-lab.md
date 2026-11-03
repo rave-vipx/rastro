@@ -69,24 +69,28 @@ Sanitization is always on, and nothing can turn it off. A fixture keeps page str
 values the recipe extracts. Everything else is replaced or dropped:
 
 - Text outside extracted values becomes placeholder text of the same length.
-- Comments, scripts and styles are removed. JSON-LD is kept, scrubbed, only when a recipe reads it.
-- `password` and `hidden` input values, event handlers and inline styles are dropped. Other
-  attribute values become placeholders unless they are structural (`class`, `id`, `name`,
-  `type`...) or quoted in the recipe's selectors.
-- URLs lose credentials, query strings and fragments. `javascript:`, `mailto:` and `data:` become
-  `#`.
-- JSON values outside extracted pointers become placeholders or small integers.
+- Comments, scripts and styles are removed. JSON-LD is kept, scrubbed, only when a recipe reads it;
+  an `@type` survives only when it is the recipe's `item_type`.
+- `password` and `hidden` input values, event handlers, inline styles and `srcset` are dropped.
+  Every other attribute value, including `class`, `id` and `name`, keeps only the tokens the
+  recipe's selectors name; the rest become placeholders.
+- URLs keep scheme and host, lose credentials, query strings and fragments, and keep only path
+  segments the recipe names. `javascript:`, `mailto:` and `data:` become `#`.
+- JSON values outside extracted pointers become placeholders or small integers, and keys off the
+  path to an extracted value or `record_path` become placeholders.
 - Response headers other than `content-type` and `content-language` are discarded.
 
 Fixture generation fails with `SanitizationError` when an extracted value, a retained attribute or
-an allowlisted header looks like a credential, token, email address or phone number, and when any
-finished file still matches one of those patterns. The error names the field or file and the
-category, never the value.
+an allowlisted header looks like a credential, token, email address, phone number, social security
+number, card number, IBAN or opaque identifier; when the source URL path contains such a segment;
+and when any finished file still matches one of those patterns. The error names the field or file
+and the category, never the value.
 
 ## Limitations
 
 - Selectors that depend on removed attribute values, such as query strings, fail the replay check.
   Use structural selectors.
-- Hostnames and JSON key names are kept.
+- Hostnames are kept.
+- Extracted values that look like long opaque identifiers (UUIDs, for example) block generation.
 - Synthetic records fall back to the fixture's own expected values for fields with patterns,
   nested types or model validators, and list them in `resampled_fields`.

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from pathlib import Path
 from typing import Any, Literal
 
@@ -119,11 +120,26 @@ class FixtureBundle(Contract):
         encoded[MANIFEST] = _dumps(manifest.model_dump(mode="json")).encode()
         return encoded
 
+    def scan_view(self) -> dict[str, bytes]:
+        """Rendered files with hashes removed from the manifest, for sensitive-data scans.
+
+        Digests and the schema fingerprint are generated hex strings, not source data,
+        and would otherwise match the opaque-token detectors.
+        """
+        files = self.render()
+        manifest = self.manifest.model_dump(mode="json", exclude={"digests", "schema_fingerprint"})
+        files[MANIFEST] = _dumps(manifest).encode()
+        return files
+
     def write(self, directory: str | Path) -> Path:
+        """Write every file atomically; existing symlinks at bundle paths are refused."""
         target = Path(directory)
         target.mkdir(parents=True, exist_ok=True)
-        for name, data in self.render().items():
-            (target / name).write_bytes(data)
+        files = self.render()
+        if any((target / name).is_symlink() for name in files):
+            raise MockLabError("Refusing to write a fixture file through a symbolic link")
+        for name, data in files.items():
+            _write_atomic(target / name, data)
         return target
 
 
@@ -142,13 +158,16 @@ def load_fixture(directory: str | Path) -> FixtureBundle:
     for name, text in texts.items():
         if hashlib.sha256(text.encode()).hexdigest() != manifest.digests[name]:
             raise MockLabError(f"Fixture file {name} does not match its digest")
-    expected, records = (_payload(texts[name], manifest.label) for name in (EXPECTED, RECORDS))
-    return FixtureBundle(
-        manifest=manifest.model_copy(update={"digests": {}}),
-        body=_unlabeled_body(texts[body_name], manifest),
-        expected=ExpectedExtraction.model_validate(expected),
-        records=SyntheticRecords.model_validate(records),
-    )
+    try:
+        expected, records = (_payload(texts[name], manifest.label) for name in (EXPECTED, RECORDS))
+        return FixtureBundle(
+            manifest=manifest.model_copy(update={"digests": {}}),
+            body=_unlabeled_body(texts[body_name], manifest),
+            expected=ExpectedExtraction.model_validate(expected),
+            records=SyntheticRecords.model_validate(records),
+        )
+    except (ValidationError, RecursionError):
+        raise MockLabError("Fixture file contents are invalid") from None
 
 
 def _unlabeled_body(text: str, manifest: FixtureManifest) -> str:
@@ -185,6 +204,24 @@ def _read(path: Path) -> str:
         return data.decode()
     except UnicodeDecodeError:
         raise MockLabError(f"Fixture file {path.name} is not UTF-8") from None
+
+
+def _write_atomic(path: Path, data: bytes) -> None:
+    # A fresh temporary file (O_EXCL, O_NOFOLLOW) is renamed over the destination, so a
+    # symlink planted at either path is never followed.
+    temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
+    try:
+        descriptor = os.open(temporary, flags, 0o644)
+    except OSError:
+        raise MockLabError(f"Fixture file {path.name} cannot be written") from None
+    try:
+        with os.fdopen(descriptor, "wb") as handle:
+            handle.write(data)
+        os.replace(temporary, path)
+    except OSError:
+        temporary.unlink(missing_ok=True)
+        raise MockLabError(f"Fixture file {path.name} cannot be written") from None
 
 
 def _dumps(value: object) -> str:
