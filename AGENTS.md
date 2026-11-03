@@ -15,3 +15,20 @@ not published. `docs/roadmap.md` tracks milestone scope and unfinished requireme
 - Never open, read, search or summarize `benchmarks/recovery/sealed/`, and never edit the frozen recovery corpus or manifest. The sealed half exists only for the final v0.2 evaluation (ADR 0011).
 - Parallel work uses one worktree per slice and independent pull requests against `dev`; do not stack pull requests that will be squash-merged.
 - Follow docs/development/clean-code.md; split modules before they exceed its size budget.
+
+## Agent skills
+
+When your agent offers these skills (in Claude Code, Codex, OpenCode and Antigravity they live in the user's skill folder, `~/.agents/skills`), apply the matching one before you start, and list the ones you applied in your final report. Subagents follow the same rule.
+
+| Task | Skill |
+| --- | --- |
+| Any code change | `incremental-implementation`, `test-driven-development`, `git-workflow-and-versioning` |
+| Untrusted input, secrets, sanitization, network or egress | `security-and-hardening` |
+| Domain terms, ADRs, public API or module design | `domain-modeling`, `codebase-design`, `documentation-and-adrs` |
+| Removing or changing a public name, a protocol or a persisted format | `deprecation-and-migration` |
+| Failing tests or broken builds | `debugging-and-error-recovery` |
+| Latency or throughput work | `performance-optimization` |
+| Reviewing a PR, or a self-review before opening one | `code-review-and-quality` |
+| Coordinating Orca workers, writing specs, merging or promoting | `rastro-slice` (its `references/checklist.md` is the definition of done) |
+
+If a skill conflicts with this file, this file wins.
