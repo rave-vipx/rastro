@@ -159,12 +159,14 @@ credentials in selectors, mappings or identifiers.
 ## Storage and asynchronous guarantees
 
 The adapter initializes lazily and closes a connection after every operation.
-Migration 0 → 1 creates the schema transactionally and records SQLite application
-and schema versions. Unknown versions, foreign databases and corrupt rows fail
-explicitly; they are never silently reset. Recipe payloads written by earlier
+Forward-only migrations run transactionally and record SQLite application and
+schema versions: 0 → 1 creates the recipe table and 1 → 2 adds
+[lifecycle states and history](recipe-lifecycle.md). Unknown or newer versions,
+foreign databases and corrupt rows fail explicitly; they are never silently reset,
+and a failed migration leaves the file unchanged. Recipe payloads written by earlier
 releases, including M3 payloads without `require_evidence` and 0.1.0 payloads with
 `null` selectors for other strategies, load as the matching recipe variant and are
-left as written; the table layout is unchanged, so no migration runs. Writes serialize with a bounded lock
+left as written. Writes serialize with a bounded lock
 timeout (default 5 seconds, configurable above 0 and at most 30 seconds).
 Use a local filesystem; this is not a shared network-filesystem database service.
 
