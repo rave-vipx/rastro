@@ -3,21 +3,24 @@
 from __future__ import annotations
 
 import asyncio
-import os
-import re
-import sys
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
-from email.message import Message
-from email.utils import parsedate_to_datetime
 from time import perf_counter
-from urllib.parse import urljoin, urlsplit, urlunsplit
-
-from protego import Protego
+from typing import TYPE_CHECKING
+from urllib.parse import urlsplit, urlunsplit
 
 from rastro.application.destinations import permitted_url, pin_destination
-from rastro.application.robots import parse_robots
+from rastro.application.http_policy import (
+    REDIRECT_STATUSES,
+    TRANSIENT_STATUSES,
+    check_status,
+    decode_body,
+    redirect_target,
+    request_headers,
+    resolve_proxy,
+    retry_after,
+)
+from rastro.application.robots import parse_robots_response
 from rastro.domain.acquisition import (
     AcquisitionError,
     AcquisitionPolicy,
@@ -25,12 +28,13 @@ from rastro.domain.acquisition import (
     HttpResponse,
     ProxyRoute,
 )
-from rastro.domain.models import LANGUAGE_TAG, Outcome, Representation, Source
+from rastro.domain.models import Outcome, Representation, Source
 from rastro.ports.acquisition import HttpTransport, Resolver
 
-_USER_AGENT = "Rastro/0.1 (+https://github.com/rave-vipx/rastro)"
-_REDIRECTS = {301, 302, 303, 307, 308}
-_TRANSIENT = {408, 425, 500, 502, 503, 504}
+if TYPE_CHECKING:
+    from protego import Protego
+
+__all__ = ["WebAcquirer", "retry_after"]
 
 
 @dataclass
@@ -45,7 +49,7 @@ class _Host:
 @dataclass
 class _Operation:
     url: str
-    headers: dict[str, str]
+    headers: dict[str, str] = field(default_factory=dict)
     requests: int = 0
     retries: int = 0
     redirects: int = 0
@@ -55,41 +59,6 @@ class _Operation:
     retry_after_seconds: float | None = None
     robots: dict[str, Protego | None] = field(default_factory=dict)
     proxy: ProxyRoute | None = None
-
-
-def retry_after(value: str | None) -> float | None:
-    """Parse delta seconds or an HTTP date without shortening a server's delay."""
-    if value is None:
-        return None
-    if re.fullmatch(r"[0-9]+", value.strip()):
-        return min(float(value), sys.float_info.max)
-    try:
-        date = parsedate_to_datetime(value)
-        if date.tzinfo is None:
-            return None
-        return max(0, (date - datetime.now(UTC)).total_seconds())
-    except (ValueError, TypeError, OverflowError):
-        return None
-
-
-def _decode(response: HttpResponse, representation: Representation = "html") -> str:
-    media = Message()
-    media["content-type"] = response.headers.get("content-type", "")
-    content_type = media.get_content_type()
-    if representation == "json":
-        # RFC 8259: JSON exchanged between systems is UTF-8; other charsets are invalid.
-        if content_type != "application/json" and not (
-            content_type.startswith("application/") and content_type.endswith("+json")
-        ):
-            raise AcquisitionError("unsupported_content_type", Outcome.PERMANENT_FAILURE)
-        if (media.get_content_charset() or "utf-8") not in {"utf-8", "utf8"}:
-            raise AcquisitionError("invalid_encoding", Outcome.INVALID_DATA)
-    elif content_type not in {"text/html", "application/xhtml+xml"}:
-        raise AcquisitionError("unsupported_content_type", Outcome.PERMANENT_FAILURE)
-    try:
-        return response.body.decode(media.get_content_charset() or "utf-8", errors="strict")
-    except (LookupError, UnicodeError):
-        raise AcquisitionError("invalid_encoding", Outcome.INVALID_DATA) from None
 
 
 class WebAcquirer:
@@ -116,23 +85,13 @@ class WebAcquirer:
         self, source: Source, *, max_bytes: int, representation: Representation = "html"
     ) -> AcquisitionResult:
         started = perf_counter()
-        accept = "application/json" if representation == "json" else "text/html"
-        operation = _Operation(source.url, {"User-Agent": _USER_AGENT, "Accept": accept})
+        operation = _Operation(source.url)
         body: str | None = None
         issue: str | None = None
         status = Outcome.SUCCESS
         try:
-            operation.proxy = self._proxy(source.egress)
-            languages = source.languages or (() if source.locale == "und" else (source.locale,))
-            if len(languages) > 20 or any(
-                re.fullmatch(LANGUAGE_TAG, language) is None for language in languages
-            ):
-                raise AcquisitionError("invalid_locale", Outcome.PERMANENT_FAILURE)
-            if languages:
-                operation.headers["Accept-Language"] = ", ".join(
-                    language if index == 0 else f"{language};q={(20 - index) / 20:g}"
-                    for index, language in enumerate(languages)
-                )
+            operation.proxy = resolve_proxy(source.egress, self.policy, self._environ)
+            operation.headers = request_headers(source, representation)
             async with asyncio.timeout(self.policy.operation_timeout_seconds):
                 url = source.url
                 for hop in range(self.policy.max_redirects + 1):
@@ -140,13 +99,13 @@ class WebAcquirer:
                     operation.url = url
                     await self._robots(url, operation)
                     response = await self._request(url, operation, max_bytes=max_bytes)
-                    if response.status not in _REDIRECTS:
-                        self._check_status(response.status)
-                        body = _decode(response, representation)
+                    if response.status not in REDIRECT_STATUSES:
+                        check_status(response.status)
+                        body = decode_body(response, representation)
                         break
                     if hop == self.policy.max_redirects:
                         raise AcquisitionError("redirect_limit", Outcome.PERMANENT_FAILURE)
-                    url = self._redirect(url, response)
+                    url = redirect_target(url, response, self.policy)
                     operation.redirects += 1
         except TimeoutError:
             status, issue = Outcome.TRANSIENT_FAILURE, "operation_timeout"
@@ -168,48 +127,6 @@ class WebAcquirer:
             egress=source.egress,
         )
 
-    def _proxy(self, egress: str) -> ProxyRoute | None:
-        """Resolve one named profile before DNS. There is no fallback to another egress."""
-        if egress == "direct":
-            return None
-        profile = self.policy.egress_profiles.get(egress)
-        if profile is None:
-            raise AcquisitionError("unsupported_egress", Outcome.PERMANENT_FAILURE)
-        environ = os.environ if self._environ is None else self._environ
-        credentials: list[str | None] = []
-        for name in (profile.username_env, profile.password_env):
-            value = None if name is None else environ.get(name)
-            if name is not None and (
-                not value
-                or any(ord(character) < 32 or ord(character) == 127 for character in value)
-            ):
-                raise AcquisitionError("egress_credentials_unavailable", Outcome.PERMANENT_FAILURE)
-            credentials.append(value)
-        return ProxyRoute(egress, profile.proxy_url, *credentials)
-
-    def _redirect(self, url: str, response: HttpResponse) -> str:
-        location = response.headers.get("location")
-        if not location:
-            raise AcquisitionError("invalid_redirect", Outcome.PERMANENT_FAILURE)
-        try:
-            joined = urljoin(url, location)
-        except ValueError:
-            raise AcquisitionError("invalid_redirect", Outcome.PERMANENT_FAILURE) from None
-        target, _, _ = permitted_url(joined, self.policy)
-        if urlsplit(url).scheme == "https" and urlsplit(target).scheme != "https":
-            raise AcquisitionError("https_downgrade", Outcome.ACCESS_RESTRICTION)
-        return target
-
-    @staticmethod
-    def _check_status(status: int) -> None:
-        if status == 200:
-            return
-        if status in {401, 403, 429, 451}:
-            raise AcquisitionError("access_restricted", Outcome.ACCESS_RESTRICTION)
-        if status in _TRANSIENT or status >= 500:
-            raise AcquisitionError("http_transient_failure", Outcome.TRANSIENT_FAILURE)
-        raise AcquisitionError("http_permanent_failure", Outcome.PERMANENT_FAILURE)
-
     async def _robots(self, url: str, operation: _Operation) -> None:
         parsed = urlsplit(url)
         origin = urlunsplit((parsed.scheme, parsed.netloc, "", "", ""))
@@ -217,25 +134,20 @@ class WebAcquirer:
             robots_url = origin + "/robots.txt"
             for hop in range(self.policy.max_redirects + 1):
                 response = await self._request(robots_url, operation, max_bytes=512_000)
-                if response.status in _REDIRECTS:
+                if response.status in REDIRECT_STATUSES:
                     if hop == self.policy.max_redirects:
                         raise AcquisitionError("robots_redirect_limit", Outcome.ACCESS_RESTRICTION)
-                    robots_url = self._redirect(robots_url, response)
+                    robots_url = redirect_target(robots_url, response, self.policy)
                     operation.redirects += 1
                     continue
                 if response.status in {404, 410}:
                     operation.robots[origin] = None
                     break
-                self._check_status(response.status)
-                if "html" in response.headers.get("content-type", "").lower():
-                    raise AcquisitionError("invalid_robots", Outcome.ACCESS_RESTRICTION)
-                rules = parse_robots(response.body)
+                check_status(response.status)
+                rules, min_interval = parse_robots_response(response)
                 operation.robots[origin] = rules
                 host = self._hosts[parsed.hostname or ""]
-                delay = rules.crawl_delay("Rastro") or 0
-                rate = rules.request_rate("Rastro")
-                # Conservatively space requests by the whole window, avoiding bursts.
-                host.interval = max(host.interval, delay, rate.seconds if rate else 0)
+                host.interval = max(host.interval, min_interval)
                 host.next_request = max(host.next_request, perf_counter() + host.interval)
                 break
         cached_rules = operation.robots[origin]
@@ -247,58 +159,9 @@ class WebAcquirer:
         host = self._hosts[hostname]
         for attempt in range(self.policy.max_retries + 1):
             try:
-                # Waiting jobs for one host cannot occupy all global transfer slots.
-                async with host.lock:
-                    if host.denied:
-                        raise AcquisitionError("host_access_restricted", Outcome.ACCESS_RESTRICTION)
-                    remaining = host.cooldown - perf_counter()
-                    if remaining > 0:
-                        operation.retry_after_seconds = remaining
-                        raise AcquisitionError("retry_after_pending", Outcome.ACCESS_RESTRICTION)
-                    await asyncio.sleep(max(0, host.next_request - perf_counter()))
-                    if operation.requests >= self.policy.max_requests:
-                        raise AcquisitionError("request_limit", Outcome.PERMANENT_FAILURE)
-                    async with self._slots:
-                        operation.requests += 1
-                        try:
-                            async with asyncio.timeout(self.policy.request_timeout_seconds):
-                                target = await pin_destination(url, self.policy, self._resolver)
-                                network_start = perf_counter()
-                                try:
-                                    response = await self._transport.get(
-                                        target,
-                                        headers=operation.headers,
-                                        timeout=self.policy.request_timeout_seconds,
-                                        max_bytes=max_bytes,
-                                        proxy=operation.proxy,
-                                    )
-                                finally:
-                                    operation.network_seconds += perf_counter() - network_start
-                        finally:
-                            host.next_request = perf_counter() + host.interval
-                    operation.bytes_received += response.bytes_received
-                    operation.http_status = response.status
-                    if response.status in {401, 403, 451}:
-                        host.denied = True
-                    if response.status == 429:
-                        delay = retry_after(response.headers.get("retry-after"))
-                        if delay is None:
-                            delay = self.policy.max_retry_delay_seconds
-                        host.cooldown = perf_counter() + delay
-                        operation.retry_after_seconds = delay
-                        raise AcquisitionError("rate_limited", Outcome.ACCESS_RESTRICTION)
-                    if response.status not in _TRANSIENT:
-                        return response
-                    delay = retry_after(response.headers.get("retry-after"))
-                    if "retry-after" in response.headers and delay is None:
-                        delay = self.policy.max_retry_delay_seconds
-                    if delay is not None:
-                        host.cooldown = perf_counter() + delay
-                        operation.retry_after_seconds = delay
-                        # Defer to the caller; never retry before a server's deadline.
-                        raise AcquisitionError("retry_after_pending", Outcome.TRANSIENT_FAILURE)
-                    if attempt == self.policy.max_retries:
-                        return response
+                response = await self._attempt_request(url, host, operation, max_bytes=max_bytes)
+                if response.status not in TRANSIENT_STATUSES or attempt == self.policy.max_retries:
+                    return response
             except (TimeoutError, AcquisitionError) as error:
                 if isinstance(error, TimeoutError):
                     error = AcquisitionError("request_timeout", Outcome.TRANSIENT_FAILURE)
@@ -313,3 +176,62 @@ class WebAcquirer:
                 min(self.policy.backoff_seconds * 2**attempt, self.policy.max_retry_delay_seconds)
             )
         raise AssertionError("Retry loop must return or raise")  # pragma: no cover
+
+    async def _attempt_request(
+        self, url: str, host: _Host, operation: _Operation, *, max_bytes: int
+    ) -> HttpResponse:
+        # Waiting jobs for one host cannot occupy all global transfer slots.
+        async with host.lock:
+            if host.denied:
+                raise AcquisitionError("host_access_restricted", Outcome.ACCESS_RESTRICTION)
+            remaining = host.cooldown - perf_counter()
+            if remaining > 0:
+                operation.retry_after_seconds = remaining
+                raise AcquisitionError("retry_after_pending", Outcome.ACCESS_RESTRICTION)
+            await asyncio.sleep(max(0, host.next_request - perf_counter()))
+            if operation.requests >= self.policy.max_requests:
+                raise AcquisitionError("request_limit", Outcome.PERMANENT_FAILURE)
+            response = await self._pinned_get(url, host, operation, max_bytes=max_bytes)
+            operation.bytes_received += response.bytes_received
+            operation.http_status = response.status
+            if response.status in {401, 403, 451}:
+                host.denied = True
+            if response.status == 429:
+                delay = retry_after(response.headers.get("retry-after"))
+                if delay is None:
+                    delay = self.policy.max_retry_delay_seconds
+                host.cooldown = perf_counter() + delay
+                operation.retry_after_seconds = delay
+                raise AcquisitionError("rate_limited", Outcome.ACCESS_RESTRICTION)
+            if response.status in TRANSIENT_STATUSES:
+                delay = retry_after(response.headers.get("retry-after"))
+                if "retry-after" in response.headers and delay is None:
+                    delay = self.policy.max_retry_delay_seconds
+                if delay is not None:
+                    host.cooldown = perf_counter() + delay
+                    operation.retry_after_seconds = delay
+                    # Defer to the caller; never retry before a server's deadline.
+                    raise AcquisitionError("retry_after_pending", Outcome.TRANSIENT_FAILURE)
+            return response
+
+    async def _pinned_get(
+        self, url: str, host: _Host, operation: _Operation, *, max_bytes: int
+    ) -> HttpResponse:
+        async with self._slots:
+            operation.requests += 1
+            try:
+                async with asyncio.timeout(self.policy.request_timeout_seconds):
+                    target = await pin_destination(url, self.policy, self._resolver)
+                    network_start = perf_counter()
+                    try:
+                        return await self._transport.get(
+                            target,
+                            headers=operation.headers,
+                            timeout=self.policy.request_timeout_seconds,
+                            max_bytes=max_bytes,
+                            proxy=operation.proxy,
+                        )
+                    finally:
+                        operation.network_seconds += perf_counter() - network_start
+            finally:
+                host.next_request = perf_counter() + host.interval
