@@ -11,3 +11,4 @@ Read `RASTRO_MASTER_SPEC.md` before implementation. The active release is **v0.1
 - Run the checks in `CONTRIBUTING.md` before committing. Report actual results and known limitations.
 - For a new milestone or architectural boundary, update `docs/roadmap.md` and add an ADR under `docs/decisions/` when a tradeoff needs explanation.
 - Each meaningful change identifies the relevant requirement IDs from the master spec.
+- Follow docs/development/clean-code.md; split modules before they exceed its size budget.
