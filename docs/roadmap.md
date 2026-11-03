@@ -1,6 +1,6 @@
 # Roadmap and requirement coverage
 
-**Active release: v0.1 — Rastro Engine.** `0.1.0` is a release candidate: M1–M4 and the M5 technical evidence are complete, every section 18 acceptance criterion has recorded evidence, and DIFF-001 is partially demonstrated. Publication (namespace ownership, legal/trademark review, tag and Trusted Publishing) awaits maintainer approval; nothing has been published.
+**Active milestone: v0.2 — Quality.** v0.1 is complete: `0.1.0rc1` is its release candidate, with M1–M4 implemented, the M5 technical evidence recorded, every section 18 acceptance criterion evidenced, and DIFF-001 partially demonstrated. Publication (namespace ownership, legal/trademark review, tag and Trusted Publishing) awaits maintainer approval through the release gates in issue #5; nothing has been published.
 
 ## v0.1 milestones
 
@@ -14,7 +14,7 @@
 
 M1–M4 are implemented with offline regression tests and quality checks. M5 technical work is complete: regression and held-out comparisons, live HTTP/reuse evidence, two-model live Ollama evidence, structured JSON responses (INT-002) and explicit egress profiles (GEO-001) are recorded. Remaining gates are human decisions: accepting partial DIFF-001 evidence for v0.1, namespace ownership, legal/trademark review and protected publishing. No release dates are promised.
 
-## Pre-v0.2 hardening (active)
+## Pre-v0.2 hardening
 
 Owner decisions after the 0.1.0 release candidate ([ADR 0012](decisions/0012-product-direction.md), specification 1.1). Slices are independent pull requests against `dev`; none is stacked on another.
 
@@ -36,13 +36,13 @@ Owner decisions after the 0.1.0 release candidate ([ADR 0012](decisions/0012-pro
 | Recovery benchmark protocol (#23) | Merged | None until the v0.2 evaluation |
 | Latency profile (#24) | Merged: measured hotspots and ranked hypotheses | Re-run the profile after further optimizations |
 | Recipe model refactor (#25) | Merged | None |
-| Clean-code and module size guidelines (#28) | Merged | Split the modules still over the ≈250-line soft budget: `domain/models.py`, `application/acquisition.py`, `application/intelligence.py`, `application/service.py`, `application/engine.py` — in progress |
+| Clean-code and module size guidelines (#28) | Merged; the module splits in #34 bring every module within the ≈250-line soft budget | None |
 | Development tool updates (#29) | Merged; Dependabot now targets `dev` | None; superseded Dependabot #26/#27 closed |
 | Docs use typed recipe variants (#30) | Merged | None |
 | Field aliases in deterministic discovery (#31) | Merged | None |
 | Latency wins: fingerprint cache and hoisted provenance (#32) | Merged; small-page gap −57 to −62%, large-page gap −48% | Re-profile as further optimizations land |
-| Declarative jobs and machine-readable CLI (JOB-001/002, AGENT-001) | In progress | Run a TOML/JSON job without Python and publish the job JSON Schemas |
-| Repository hygiene | Pending maintainer | Close issues #2–#4 (implemented), decide on promoting `dev` to `main`, and satisfy the publication gates in issue #5 |
+| Declarative jobs and machine-readable CLI (#35: JOB-001/002, AGENT-001) | Merged; `rastro job validate`, `rastro job run` and `rastro job schema`, with the job JSON Schemas published in `docs/schemas/` | None |
+| Repository hygiene | `dev` promoted to `main` as release candidate `0.1.0rc1` on 2026-11-03 (PR #39, tag `v0.1.0rc1`); nothing published | Close issues #2–#4 (implemented) and satisfy the release gates in issue #5 |
 
 ## v0.2 order of work
 
@@ -53,6 +53,10 @@ Owner decisions after the 0.1.0 release candidate ([ADR 0012](decisions/0012-pro
 5. Semantic consistency (QUAL-005/006).
 6. MCP agent interface (AGENT-002).
 7. Final evaluation against the frozen recovery benchmark (DIFF-001).
+
+### Wave 1 (in progress)
+
+Mock Lab core (MOCK-001, MOCK-004, MOCK-005, MOCK-006), controlled structural mutations (MOCK-002), representative failure scenarios (MOCK-003), and recipe lifecycle and rollback (REC-005/006, REPAIR-006). Each part lands as its own pull request against `dev`.
 
 ## Current requirement mapping
 
