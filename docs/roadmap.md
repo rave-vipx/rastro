@@ -31,18 +31,18 @@ Owner decisions after the 0.1.0 release candidate ([ADR 0012](decisions/0012-pro
 
 | Item | State | Next step |
 | --- | --- | --- |
-| Recovery benchmark protocol (#23) | Merged | None until the v0.2 evaluation |
-| Latency profile (#24) | Merged | Implement the measured wins: cache `schema_fingerprint` per schema class (41–45% of the small-page gap) and cheaper per-field provenance (54% of the large-page gap); re-run the profile |
-| Recipe model refactor (#25) | Merged | Update README, getting-started and acquisition examples to the strategy variants |
+| Product direction, specification 1.1 (#21) | Merged | None; the v0.2 order of work below follows it |
 | Model provider strategy (#22) | Merged, including `max_completion_tokens`/`temperature=None` for OpenAI reasoning models | Live-test against a hosted provider when a key is available |
-| Clean-code guidelines (#28) | Merged | Split the modules already over the soft budget: `domain/models.py`, `application/acquisition.py`, `application/intelligence.py`, `application/service.py`, `application/engine.py` |
-| Development tool updates (#29) | Merged; Dependabot now targets `dev` | Close Dependabot #26/#27, which target `main` |
-| Docs use typed recipe variants (#30) | Open | Merge |
-| Latency wins (schema fingerprint cache, cheaper provenance) | In progress (Gemini via Orca) | Review and merge |
-| Product direction, specification 1.1 (#21) | This change | — |
-| Field aliases in discovery | In progress (OpenCode via Orca) | Review and merge |
-| Declarative jobs and JSON CLI (JOB-001/002, AGENT-001) | Not started | After aliases; the job schema is public API from day one |
-| Repository hygiene | Pending maintainer | Close issues #2–#4 (implemented), promote `dev` to `main`, publication gates in issue #5 |
+| Recovery benchmark protocol (#23) | Merged | None until the v0.2 evaluation |
+| Latency profile (#24) | Merged: measured hotspots and ranked hypotheses | Re-run the profile after further optimizations |
+| Recipe model refactor (#25) | Merged | None |
+| Clean-code and module size guidelines (#28) | Merged | Split the modules still over the ≈250-line soft budget: `domain/models.py`, `application/acquisition.py`, `application/intelligence.py`, `application/service.py`, `application/engine.py` — in progress |
+| Development tool updates (#29) | Merged; Dependabot now targets `dev` | None; superseded Dependabot #26/#27 closed |
+| Docs use typed recipe variants (#30) | Merged | None |
+| Field aliases in deterministic discovery (#31) | Merged | None |
+| Latency wins: fingerprint cache and hoisted provenance (#32) | Merged; small-page gap −57 to −62%, large-page gap −48% | Re-profile as further optimizations land |
+| Declarative jobs and machine-readable CLI (JOB-001/002, AGENT-001) | In progress | Run a TOML/JSON job without Python and publish the job JSON Schemas |
+| Repository hygiene | Pending maintainer | Close issues #2–#4 (implemented), decide on promoting `dev` to `main`, and satisfy the publication gates in issue #5 |
 
 ## v0.2 order of work
 
