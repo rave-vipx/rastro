@@ -2,6 +2,7 @@
 
 import math
 import re
+from urllib.parse import urlsplit
 
 from protego import Protego
 
@@ -45,6 +46,12 @@ def parse_robots(body: bytes) -> Protego:
             rate = re.fullmatch(r"([0-9]{1,16})/([0-9]{1,16})([smhd]?)", value.lower())
             if rate is None or int(rate[1]) == 0 or int(rate[2]) == 0:
                 raise AcquisitionError("invalid_robots", Outcome.ACCESS_RESTRICTION)
+        elif key in {"allow", "disallow"}:
+            # Protego 0.7 tolerates unparsable rule URLs; Rastro must not ignore a rule.
+            try:
+                urlsplit(value)
+            except ValueError:
+                raise AcquisitionError("invalid_robots", Outcome.ACCESS_RESTRICTION) from None
         elif key == "visit-time":
             # Time-window scheduling is outside this milestone; never ignore a restriction.
             raise AcquisitionError("unsupported_robots_rule", Outcome.ACCESS_RESTRICTION)
