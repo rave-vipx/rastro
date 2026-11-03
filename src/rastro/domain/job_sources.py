@@ -10,7 +10,7 @@ from urllib.parse import quote
 
 from pydantic import BeforeValidator, Field, field_validator, model_validator
 
-from rastro.domain.job_fields import RedactedContract
+from rastro.domain.job_contract import RedactedContract
 from rastro.domain.models import EGRESS_NAME, Recipe, Representation, Source
 
 

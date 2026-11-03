@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import keyword
 import math
-import re
 from collections.abc import Sequence
 from datetime import date, datetime
 from decimal import Decimal
@@ -13,19 +12,18 @@ from typing import Annotated, Any, Literal, Self
 from pydantic import (
     AnyHttpUrl,
     BaseModel,
-    ConfigDict,
     Field,
-    ModelWrapValidatorHandler,
     StrictBool,
     StrictInt,
-    ValidationError,
+    TypeAdapter,
     create_model,
     field_validator,
     model_validator,
 )
-from pydantic_core import PydanticCustomError
+from pydantic_core import SchemaError
 
-from rastro.domain.models import ConfigurationError, Contract
+from rastro.domain.job_contract import RedactedContract
+from rastro.domain.models import ConfigurationError
 
 type JobFieldType = Literal[
     "string",
@@ -38,33 +36,6 @@ type JobFieldType = Literal[
     "url",
 ]
 _FIELD_NAME = r"^[A-Za-z][A-Za-z0-9_]{0,63}$"
-
-
-class RedactedContract(Contract):
-    """Forbid unknown keys and strip input values from validation errors."""
-
-    model_config = ConfigDict(extra="forbid", frozen=True, hide_input_in_errors=True)
-
-    @model_validator(mode="wrap")
-    @classmethod
-    def redact_errors(cls, data: Any, handler: ModelWrapValidatorHandler[Self]) -> Self:
-        try:
-            return handler(data)
-        except ValidationError as error:
-            raise ValidationError.from_exception_data(
-                cls.__name__,
-                [
-                    {
-                        "type": PydanticCustomError(item["type"], item["msg"]),
-                        "loc": item["loc"],
-                        "input": None,
-                    }
-                    for item in error.errors(
-                        include_url=False, include_input=False, include_context=False
-                    )
-                ],
-                hide_input=True,
-            ) from None
 
 
 def _reject_bool_bound(value: Any) -> Any:
@@ -100,10 +71,15 @@ class StringField(_FieldBase):
     @classmethod
     def check_pattern(cls, value: str | None) -> str | None:
         if value is not None:
+            # Compile with Pydantic's own regex engine (no look-around or backreferences),
+            # so a pattern accepted here can always build the dynamic record model.
             try:
-                re.compile(value)
-            except re.error:
-                raise ValueError("Invalid regular expression pattern") from None
+                TypeAdapter(Annotated[str, Field(pattern=value)])
+            except SchemaError:
+                raise ValueError(
+                    "Invalid or unsupported regular expression pattern "
+                    "(look-around and backreferences are not supported)"
+                ) from None
         return value
 
     @model_validator(mode="after")

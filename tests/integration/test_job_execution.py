@@ -92,14 +92,19 @@ type = "string"
     monkeypatch.setenv("RASTRO_MODEL_URL", "http://127.0.0.1:11434/v1")
     provider = _build_model_provider(
         OpenAICompatibleProvider(
-            model="local-m", base_url_env="RASTRO_MODEL_URL", api_key_env="RASTRO_SECRET_KEY"
+            model="local-m",
+            base_url_env="RASTRO_MODEL_URL",
+            api_key_env="RASTRO_SECRET_KEY",
+            allow_remote=True,
         )
     )
     assert secret not in repr(provider)
     assert _build_model_provider(OllamaProvider(model="qwen3:4b")) is not None
     monkeypatch.delenv("RASTRO_MODEL_URL")
     with pytest.raises(ConfigurationError):
-        _build_model_provider(OpenAICompatibleProvider(model="m", base_url_env="RASTRO_MODEL_URL"))
+        _build_model_provider(
+            OpenAICompatibleProvider(model="m", base_url_env="RASTRO_MODEL_URL", allow_remote=True)
+        )
 
     import rastro as rastro_pkg
 

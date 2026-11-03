@@ -8,9 +8,10 @@ import logging
 import sys
 from importlib.metadata import version
 from pathlib import Path
-from typing import TextIO
+from typing import NoReturn, TextIO
 
 from pydantic import BaseModel, Field, ValidationError
+from pydantic_core import SchemaError
 
 from rastro import (
     JobExitCode,
@@ -27,6 +28,7 @@ from rastro import (
     run_job_file,
     schema_fingerprint,
 )
+from rastro.cli_errors import UsageError, classify
 
 
 class _DemoProduct(BaseModel):
@@ -34,8 +36,17 @@ class _DemoProduct(BaseModel):
     price: float = Field(ge=0, allow_inf_nan=False)
 
 
+class _ArgumentParser(argparse.ArgumentParser):
+    """Raise usage errors so `rastro job` can report them as JSON instead of human text."""
+
+    def error(self, message: str) -> NoReturn:
+        raise UsageError(message)
+
+
 def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Rastro: verifiable, schema-first extraction")
+    parser = _ArgumentParser(
+        prog="rastro", description="Rastro: verifiable, schema-first extraction"
+    )
     parser.add_argument("--version", action="version", version=f"rastro {__version__}")
     parser.add_argument("--verbose", action="store_true", help="Write structured logs to stderr")
     subcommands = parser.add_subparsers(dest="command", required=True)
@@ -94,7 +105,7 @@ def _run_job_command(args: argparse.Namespace) -> int:
                     "schema_fingerprint": schema_fingerprint(job.build_schema()),
                     "source_count": len(job.sources),
                     "fields": [field.name for field in job.fields],
-                    "job": job.model_dump(mode="json"),
+                    "job": job.redacted_dump(),
                 },
                 indent=2,
             )
@@ -150,8 +161,25 @@ def _dispatch(args: argparse.Namespace) -> int:
     return int(JobExitCode.SUCCESS if result.status == Outcome.SUCCESS else JobExitCode.FAILED)
 
 
+def _report_job_error(error: BaseException) -> int:
+    print(json.dumps(classify(error)), file=sys.stderr)
+    return int(JobExitCode.CONFIG_ERROR)
+
+
+def _is_job_command(argv: list[str]) -> bool:
+    return next((item for item in argv if not item.startswith("-")), None) == "job"
+
+
 def main(argv: list[str] | None = None) -> int:
-    args = _build_parser().parse_args(argv)
+    arguments = sys.argv[1:] if argv is None else argv
+    parser = _build_parser()
+    try:
+        args = parser.parse_args(arguments)
+    except UsageError as error:
+        if _is_job_command(arguments):
+            return _report_job_error(error)
+        parser.print_usage(sys.stderr)
+        parser.exit(int(JobExitCode.CONFIG_ERROR), f"{parser.prog}: error: {error}\n")
     handler: logging.StreamHandler[TextIO] | None = None
     logger = logging.getLogger("rastro")
     previous_level = logger.level
@@ -161,15 +189,18 @@ def main(argv: list[str] | None = None) -> int:
         logger.setLevel(logging.INFO)
     try:
         return _dispatch(args)
-    except (OSError, ValueError, ValidationError, RastroError):
-        error = "configuration_error" if args.command == "job" else "invalid_input"
-        hint = (
-            "Check job syntax, schema fields, allowed hosts, paths, and resource limits"
-            if args.command == "job"
-            else "Check input, recipe, and resource limits"
-        )
-        print(json.dumps({"error": error, "hint": hint}), file=sys.stderr)
+    except (OSError, ValueError, ValidationError, SchemaError, RastroError) as error:
+        if args.command == "job":
+            return _report_job_error(error)
+        hint = "Check input, recipe, and resource limits"
+        print(json.dumps({"error": "invalid_input", "hint": hint}), file=sys.stderr)
         return int(JobExitCode.CONFIG_ERROR)
+    except Exception as error:
+        if args.command != "job":
+            raise
+        if handler is not None:
+            logger.exception("Unexpected error while handling a job command")
+        return _report_job_error(error)
     finally:
         if handler is not None:
             logger.removeHandler(handler)

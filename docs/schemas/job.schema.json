@@ -864,7 +864,7 @@
         "base_url_env": {
           "anyOf": [
             {
-              "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$",
+              "pattern": "^[A-Z_][A-Z0-9_]{0,127}$",
               "type": "string"
             },
             {
@@ -904,7 +904,7 @@
         "api_key_env": {
           "anyOf": [
             {
-              "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$",
+              "pattern": "^[A-Z_][A-Z0-9_]{0,127}$",
               "type": "string"
             },
             {
@@ -924,7 +924,7 @@
         "base_url_env": {
           "anyOf": [
             {
-              "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$",
+              "pattern": "^[A-Z_][A-Z0-9_]{0,127}$",
               "type": "string"
             },
             {

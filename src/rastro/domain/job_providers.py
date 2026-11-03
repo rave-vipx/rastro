@@ -9,9 +9,8 @@ from urllib.parse import urlsplit
 
 from pydantic import Field, StrictBool, field_validator, model_validator
 
-from rastro.domain.job_fields import RedactedContract
+from rastro.domain.job_contract import ENV_REFERENCE, RedactedContract
 
-_ENV_NAME = r"^[A-Za-z_][A-Za-z0-9_]{0,127}$"
 _OLLAMA_MODEL = r"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,199}$"
 _OPENAI_MODEL = r"^[A-Za-z0-9][A-Za-z0-9._:/@+-]{0,199}$"
 _API_PATH = re.compile(r"(?:/(?!\.\.?(?:/|$))[A-Za-z0-9._~-]+)*")
@@ -58,7 +57,7 @@ class OllamaProvider(RedactedContract):
     provider: Literal["ollama"] = "ollama"
     model: str = Field(pattern=_OLLAMA_MODEL)
     base_url: str = Field(default="http://127.0.0.1:11434", min_length=1, max_length=2048)
-    base_url_env: str | None = Field(default=None, pattern=_ENV_NAME)
+    base_url_env: str | None = Field(default=None, pattern=ENV_REFERENCE)
 
     @model_validator(mode="after")
     def check_endpoint(self) -> Self:
@@ -74,8 +73,8 @@ class OpenAICompatibleProvider(RedactedContract):
     provider: Literal["openai_compatible"] = "openai_compatible"
     model: str = Field(pattern=_OPENAI_MODEL)
     base_url: str = Field(default="http://127.0.0.1:11434/v1", min_length=1, max_length=2048)
-    base_url_env: str | None = Field(default=None, pattern=_ENV_NAME)
-    api_key_env: str | None = Field(default=None, pattern=_ENV_NAME)
+    base_url_env: str | None = Field(default=None, pattern=ENV_REFERENCE)
+    api_key_env: str | None = Field(default=None, pattern=ENV_REFERENCE)
     allow_remote: StrictBool = False
     response_format: Literal["json_schema", "json_object"] = "json_schema"
     token_limit: Literal["max_tokens", "max_completion_tokens"] = "max_tokens"
@@ -99,8 +98,9 @@ class OpenAICompatibleProvider(RedactedContract):
                 allow_remote=self.allow_remote,
                 model=self.model,
             )
-        elif not self.allow_remote and "cloud" in self.model.lower():
-            raise ValueError("Cloud-routed model names require allow_remote = true")
+        elif not self.allow_remote:
+            # The endpoint is only known at run time, so it cannot be proven loopback here.
+            raise ValueError("base_url_env requires allow_remote = true")
         return self
 
 

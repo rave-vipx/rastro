@@ -101,7 +101,11 @@ def test_cli_exit_codes_and_local_source_errors(tmp_path: Path, capsys):
     bad_job.write_text("format_version = 99\n")
     assert main(["job", "run", str(bad_job)]) == JobExitCode.CONFIG_ERROR
     captured = capsys.readouterr()
-    assert not captured.out and json.loads(captured.err)["error"] == "configuration_error"
+    assert not captured.out and json.loads(captured.err) == {
+        "error": "validation_error",
+        "message": "Input should be 1 (and 2 more validation errors)",
+        "location": "format_version",
+    }
 
     missing_src = tmp_path / "missing_src.toml"
     missing_src.write_text(base + '[[sources]]\npath = "gone.html"\n')

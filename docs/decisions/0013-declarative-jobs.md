@@ -53,7 +53,7 @@ orders, keeping SQLite recipe memory keys stable.
   when used, and whose `max_sources` covers the HTTP batch. Running a job never adds hosts or
   relaxes transport rules (SEC-001, AGENT-003).
 - **Secrets by environment name only.** Proxy credentials (`AcquisitionPolicy.egress_profiles`)
-  and model keys/endpoints (`api_key_env`, `base_url_env`) accept `[A-Z_][A-Z0-9_]*` variable
+  and model keys/endpoints (`api_key_env`, `base_url_env`) accept `[A-Z_][A-Z0-9_]{0,127}` variable
   names only. Validation uses `RedactedContract` (`hide_input_in_errors=True`) so accidental
   inline secrets are never echoed in Pydantic errors, stdout, stderr or logs (SEC-004, SEC-011).
 
@@ -82,6 +82,22 @@ representation and recipe configuration.
 Exit codes distinguish full success (`0`), extraction failure with zero accepted records (`1`),
 configuration/validation/usage errors (`2`), and partial success where records were accepted
 alongside issues or failed sources (`3`).
+
+Every `rastro job` configuration or usage failure, including argparse usage errors, writes one
+JSON object `{"error": <stable code>, "message": <safe text>, "location": <field path or null>}`
+to stderr. Messages come from Rastro or from redacted Pydantic errors and never echo job values,
+environment contents or page text. Unexpected exceptions map to `internal_error` with exit code
+`2` instead of a traceback, so they never collide with the extraction-failure code `1`.
+
+### Strict job input, lax extracted values
+
+Job files are parsed strictly: `RedactedContract` rejects string or number coercion into
+`bool`, `int` and `float` fields, and applies the same check recursively to embedded SDK
+contracts (`AcquisitionPolicy`, `Limits`, `InferencePolicy`), which stay lax for Python callers.
+Pydantic's global strict mode was not used because it also rejects JSON arrays for tuple
+fields. `string` patterns are compiled with Pydantic's Rust regex engine at validation time.
+Extracted record values keep Pydantic's lax mode because scraped text always arrives as strings
+([coercion table](../jobs.md#strict-job-definitions-lax-extracted-values)).
 
 ## Consequences
 

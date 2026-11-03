@@ -5,6 +5,7 @@ from __future__ import annotations
 import datetime as dt
 import ipaddress
 import math
+import re
 import tomllib
 from typing import Any, Literal, Self
 from urllib.parse import urlsplit
@@ -21,7 +22,8 @@ from pydantic import (
 
 from rastro.domain.acquisition import AcquisitionPolicy
 from rastro.domain.intelligence import InferencePolicy
-from rastro.domain.job_fields import JobField, RedactedContract, build_job_schema
+from rastro.domain.job_contract import ENV_REFERENCE, RedactedContract
+from rastro.domain.job_fields import JobField, build_job_schema
 from rastro.domain.job_providers import JobModelProvider
 from rastro.domain.job_sources import (
     FileJobSource,
@@ -99,9 +101,17 @@ class Job(RedactedContract):
             raise ValueError("context and recipe_version require recipe_memory")
         if self.recipe is not None:
             _check_recipe_fields(self.recipe, declared)
+        self._check_env_references()
         self._check_http_policy()
         self._check_source_recipes_and_egress(declared)
         return self
+
+    def _check_env_references(self) -> None:
+        profiles = self.acquisition.egress_profiles if self.acquisition else {}
+        for profile in profiles.values():
+            for name in (profile.username_env, profile.password_env):
+                if name is not None and not re.fullmatch(ENV_REFERENCE, name):
+                    raise ValueError("Egress credential references must be uppercase env names")
 
     def _check_http_policy(self) -> None:
         http_sources = [item for item in self.sources if isinstance(item, UrlJobSource)]
@@ -139,6 +149,22 @@ class Job(RedactedContract):
 
     def build_schema(self) -> type[BaseModel]:
         return build_job_schema(self.fields)
+
+    def redacted_dump(self) -> dict[str, Any]:
+        """JSON-mode dump with every ``*_env`` reference replaced by ``"<redacted>"``."""
+        redacted: dict[str, Any] = _redact_env(self.model_dump(mode="json"))
+        return redacted
+
+
+def _redact_env(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {
+            key: "<redacted>" if key.endswith("_env") and item is not None else _redact_env(item)
+            for key, item in value.items()
+        }
+    if isinstance(value, list):
+        return [_redact_env(item) for item in value]
+    return value
 
 
 def _check_toml_scalars(value: object) -> None:
