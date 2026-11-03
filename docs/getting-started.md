@@ -26,7 +26,7 @@ The distribution is currently called `rastro-engine`; import it as `rastro`. Reg
 
 ```python
 from pydantic import BaseModel, Field
-from rastro import Rastro, Recipe, Source
+from rastro import CssRecipe, Rastro, Source
 
 
 class Article(BaseModel):
@@ -35,8 +35,7 @@ class Article(BaseModel):
 
 
 html = '<article><h1>Local-first data</h1><span class="author">Alex</span></article>'
-recipe = Recipe(
-    strategy="css",
+recipe = CssRecipe(
     record_selector="article",
     fields={"title": "h1::text", "author": ".author::text"},
 )
@@ -56,8 +55,9 @@ Supply only HTML you are permitted to process. `Source.url` identifies the origi
 JSON-LD recipes select objects by `@type` and map fields with [JSON pointers](https://www.rfc-editor.org/rfc/rfc6901). The parser handles root objects, arrays, and `@graph` containers. It does not fetch contexts or implement JSON-LD expansion.
 
 ```python
-recipe = Recipe(
-    strategy="jsonld",
+from rastro import JsonLdRecipe
+
+recipe = JsonLdRecipe(
     item_type="Product",
     fields={"name": "/name", "price": "/offers/price"},
 )
