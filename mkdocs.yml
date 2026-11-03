@@ -40,8 +40,9 @@ nav:
   - Clean code and module size: development/clean-code.md
   - Development work log: development/work-log.md
   - Engineering decisions:
-      - Recipe model: decisions/0009-recipe-model.md
       - Recovery benchmark protocol: decisions/0011-recovery-benchmark.md
+      - Model providers: decisions/0010-model-providers.md
+      - Recipe model: decisions/0009-recipe-model.md
       - Structured JSON responses: decisions/0007-structured-responses.md
       - Explicit proxy egress: decisions/0008-explicit-egress.md
       - Explicit regional context: decisions/0006-explicit-regional-context.md

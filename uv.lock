@@ -1978,6 +1978,9 @@ http = [
 ollama = [
     { name = "httpx" },
 ]
+openai = [
+    { name = "httpx" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -2002,12 +2005,13 @@ docs = [
 requires-dist = [
     { name = "curl-cffi", marker = "extra == 'http'", specifier = ">=0.16.1,<0.17" },
     { name = "httpx", marker = "extra == 'ollama'", specifier = ">=0.28.1,<0.29" },
+    { name = "httpx", marker = "extra == 'openai'", specifier = ">=0.28.1,<0.29" },
     { name = "protego", marker = "extra == 'http'", specifier = ">=0.6.2,<0.7" },
     { name = "pydantic", specifier = ">=2.14.1,<3" },
     { name = "scrapling", specifier = ">=0.5,<0.6" },
     { name = "structlog", specifier = ">=26.1.0,<27" },
 ]
-provides-extras = ["http", "ollama"]
+provides-extras = ["http", "ollama", "openai"]
 
 [package.metadata.requires-dev]
 dev = [
