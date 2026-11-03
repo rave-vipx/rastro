@@ -48,3 +48,27 @@ async def test_synthetic_failures_have_explicit_outcomes(name: str, expected: Ou
     assert not result.records
     if name == "http_429":
         assert result.retry_after_seconds == 60
+
+
+def test_failure_scenarios_carry_versioned_labels() -> None:
+    for scenario in SCENARIOS:
+        assert scenario.label.kind == "failure"
+        assert scenario.label.seed == 0
+        assert scenario.label.synthetic is True
+
+
+def test_top_level_mocklab_exports_do_not_load_httpx() -> None:
+    import subprocess
+    import sys
+
+    subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import rastro, sys; assert 'httpx' not in sys.modules; "
+            "assert all(hasattr(rastro, name) for name in ('SyntheticLabel', 'FixtureBundle', "
+            "'build_fixture', 'load_fixture', 'verify_fixture', "
+            "'MockLabError', 'SanitizationError'))",
+        ],
+        check=True,
+    )

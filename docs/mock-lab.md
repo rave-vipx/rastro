@@ -82,7 +82,7 @@ values the recipe extracts. Everything else is replaced or dropped:
 
 Fixture generation fails with `SanitizationError` when an extracted value, a retained attribute or
 an allowlisted header looks like a credential, token, email address, phone number, social security
-number, card number, IBAN or opaque identifier; when the source URL path contains such a segment;
+number, card number or IBAN; when the source URL path contains such a segment;
 and when any finished file still matches one of those patterns. The error names the field or file
 and the category, never the value.
 
@@ -91,6 +91,6 @@ and the category, never the value.
 - Selectors that depend on removed attribute values, such as query strings, fail the replay check.
   Use structural selectors.
 - Hostnames are kept.
-- Extracted values that look like long opaque identifiers (UUIDs, for example) block generation.
+- Extracted values still block generation when they match other secret or personal-data detectors, including long hexadecimal tokens.
 - Synthetic records fall back to the fixture's own expected values for fields with patterns,
   nested types or model validators, and list them in `resampled_fields`.

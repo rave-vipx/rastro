@@ -1,9 +1,10 @@
 """Deterministic synthetic HTTP failures for MOCK-003 and MOCK-004."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from urllib.parse import urlsplit
 
 from rastro.domain.acquisition import HttpResponse, PinnedTarget, ProxyRoute
+from rastro.mocklab.labels import SyntheticLabel
 
 
 @dataclass(frozen=True)
@@ -15,7 +16,11 @@ class FailureScenario:
     body: bytes = b""
     headers: tuple[tuple[str, str], ...] = ()
     timeout: bool = False
-    synthetic: bool = True
+    label: SyntheticLabel = field(default_factory=lambda: SyntheticLabel(kind="failure", seed=0))
+
+    @property
+    def synthetic(self) -> bool:
+        return self.label.synthetic
 
     def build_transport(self) -> "FailureTransport":
         return FailureTransport(self)

@@ -188,3 +188,16 @@ def test_oversized_files_are_rejected(written, monkeypatch):
     monkeypatch.setattr("rastro.mocklab.bundle.MAX_FILE_BYTES", 10)
     with pytest.raises(MockLabError, match="exceeds"):
         load_fixture(written)
+
+
+@pytest.mark.parametrize("value", ["SKU-ABCD1234EFGH5678", "ProductNameWithLongCamelCase2024"])
+def test_opaque_product_values_survive_fixture_generation(value, source):
+    from pydantic import BaseModel
+
+    class Item(BaseModel):
+        name: str
+
+    recipe = CssRecipe(record_selector="article", fields={"name": "h2::text"})
+    html = f"<article><h2>{value}</h2></article>"
+    bundle = html_bundle(html, source, Item, recipe)
+    assert verify_fixture(bundle, Item).records[0].data.name == value
