@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import UTC, datetime
 from time import perf_counter
+from typing import Literal
 from uuid import uuid4
 
 from pydantic import BaseModel, ValidationError
@@ -61,6 +63,13 @@ def extract_document[T: BaseModel](
         raise ResourceLimitError("Parser returned more than max_records")
     extraction_seconds = perf_counter() - extraction_start
     validation_start = perf_counter()
+    evidence_url = source.evidence_url
+    build_evidence = _evidence_builder(
+        source_url=evidence_url,
+        observed_at=started_at,
+        method=recipe.strategy,
+        recipe_version=recipe.version,
+    )
     records: list[ExtractionRecord[T]] = []
     issues = list(parsed.issues)
     rejected = 0
@@ -105,13 +114,7 @@ def extract_document[T: BaseModel](
             rejected += 1
             continue
         evidence = {
-            name: Evidence(
-                source_url=source.evidence_url,
-                observed_at=started_at,
-                method=recipe.strategy,
-                locator=locator,
-                recipe_version=recipe.version,
-            )
+            name: build_evidence(locator)
             for name, locator in candidate.locators.items()
             if name in candidate.values
         }
@@ -128,7 +131,7 @@ def extract_document[T: BaseModel](
     result = ExtractionResult[T](
         job_id=job_id,
         status=status,
-        source_url=source.evidence_url,
+        source_url=evidence_url,
         locale=source.locale,
         timezone=source.timezone,
         schema_fingerprint=schema_fingerprint(schema),
@@ -164,3 +167,37 @@ def validate_recipe(
     ):
         raise ConfigurationError("Recipe mappings must reference declared schema fields")
     return recipe
+
+
+def _evidence_builder(
+    *,
+    source_url: str,
+    observed_at: datetime,
+    method: Literal["jsonld", "css", "json"],
+    recipe_version: int,
+) -> Callable[[str], Evidence]:
+    """Validate shared provenance once and clone per-field Evidence for each locator."""
+    # Clones bypass re-validation of the shared fields; tests/unit/test_evidence_builder.py
+    # pins equivalence with validated Evidence so a Pydantic upgrade cannot change it silently.
+    template = Evidence(
+        source_url=source_url,
+        observed_at=observed_at,
+        method=method,
+        locator="",
+        recipe_version=recipe_version,
+    )
+    base = template.__dict__
+    fields = template.__pydantic_fields_set__
+    new, setattr_ = object.__new__, object.__setattr__
+
+    def _clone_evidence(locator: str) -> Evidence:
+        if type(locator) is not str:
+            return Evidence(**{**base, "locator": locator})
+        item = new(Evidence)
+        setattr_(item, "__dict__", {**base, "locator": locator})
+        setattr_(item, "__pydantic_fields_set__", fields.copy())
+        setattr_(item, "__pydantic_extra__", None)
+        setattr_(item, "__pydantic_private__", None)
+        return item
+
+    return _clone_evidence

@@ -82,3 +82,11 @@ def test_html_parser_rejects_json_recipes():
 
     with pytest.raises(ConfigurationError):
         ScraplingParser().parse("<p></p>", JsonRecipe(fields={"x": "/x"}, record_path=""), Limits())
+
+
+def test_non_string_adapter_locator_still_fails_evidence_validation(source, schema, recipe):
+    from pydantic import ValidationError
+
+    parser = FakeParser([Candidate({"name": "A", "price": 1}, {"name": 123, "price": "p"})])
+    with pytest.raises(ValidationError):
+        Rastro(parser=parser).extract_html("provided", source=source, schema=schema, recipe=recipe)

@@ -9,6 +9,7 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Annotated, Any, ClassVar, Literal, Self, cast, get_args
 from urllib.parse import urlsplit, urlunsplit
+from weakref import ReferenceType, WeakKeyDictionary, ref
 
 from pydantic import (
     AnyHttpUrl,
@@ -318,7 +319,23 @@ class ResourceLimitError(RastroError):
     """The input exceeds a configured resource budget; no truncated success is returned."""
 
 
+_SCHEMA_FINGERPRINTS: WeakKeyDictionary[type[BaseModel], tuple[ReferenceType[Any], str]] = (
+    WeakKeyDictionary()
+)
+
+
 def schema_fingerprint(schema: type[BaseModel]) -> str:
     """Stable identity of the JSON Schema, not a hash of custom Python validator code."""
+    cached = _SCHEMA_FINGERPRINTS.get(schema)
+    token = schema.__dict__.get("__signature__")
+    if (
+        cached is not None
+        and token is not None
+        and schema.__pydantic_complete__
+        and cached[0]() is token
+    ):
+        return cached[1]
     canonical = json.dumps(schema.model_json_schema(), sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(canonical.encode()).hexdigest()
+    digest = hashlib.sha256(canonical.encode()).hexdigest()
+    _SCHEMA_FINGERPRINTS[schema] = (ref(schema.__dict__["__signature__"]), digest)
+    return digest
