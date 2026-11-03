@@ -156,8 +156,10 @@ def test_non_utf8_and_unreadable_job_files(tmp_path: Path, capsys):
     unreadable.write_text(BASE)
     unreadable.chmod(0)
     try:
-        if unreadable.open("rb"):  # pragma: no cover - running as root
-            pytest.skip("permissions are not enforced for this user")
+        # Windows and root ignore the mode bits; close the probe handle before skipping.
+        with unreadable.open("rb"):  # pragma: no cover - permissions not enforced
+            pass
+        pytest.skip("permissions are not enforced for this user")
     except PermissionError:
         assert main(["job", "validate", str(unreadable)]) == JobExitCode.CONFIG_ERROR
         assert _error(capsys)["error"] == "file_error"
