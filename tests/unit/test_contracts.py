@@ -5,7 +5,7 @@ from hypothesis import given
 from hypothesis import strategies as st
 from pydantic import BaseModel, ValidationError
 
-from rastro import Recipe, Source, schema_fingerprint
+from rastro import CssRecipe, JsonLdRecipe, JsonRecipe, Recipe, Source, schema_fingerprint
 from rastro.domain.json import resolve_pointer as _resolve
 
 
@@ -121,3 +121,97 @@ def test_recipe_serialization_is_declarative(fields):
     mapping = {name: "/" + name.replace("~", "~0").replace("/", "~1") for name in fields}
     recipe = Recipe(strategy="jsonld", fields=mapping)
     assert json.loads(recipe.model_dump_json())["fields"] == mapping
+
+
+@pytest.mark.parametrize(
+    ("data", "variant"),
+    [
+        ({"strategy": "css", "fields": {"x": "p::text"}, "record_selector": "a"}, CssRecipe),
+        ({"strategy": "jsonld", "fields": {"x": "/x"}, "item_type": "Product"}, JsonLdRecipe),
+        ({"strategy": "json", "fields": {"x": "/x"}, "record_path": ""}, JsonRecipe),
+    ],
+)
+def test_recipe_construction_and_loading_select_the_strategy_variant(data, variant):
+    for loaded in (
+        Recipe(**data),
+        Recipe.model_validate(data),
+        Recipe.model_validate_json(json.dumps(data)),
+        variant.model_validate(data),
+    ):
+        assert type(loaded) is variant and isinstance(loaded, Recipe)
+        assert loaded.representation == ("json" if variant is JsonRecipe else "html")
+    direct = variant(**{key: value for key, value in data.items() if key != "strategy"})
+    assert direct == Recipe(**data) and direct.strategy == data["strategy"]
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        {"strategy": "css", "fields": {"x": "p::text"}, "record_selector": "a", "item_type": "P"},
+        {"strategy": "css", "fields": {"x": "p::text"}, "record_selector": "a", "record_path": ""},
+        {"strategy": "jsonld", "fields": {"x": "/x"}, "record_selector": "a"},
+        {"strategy": "jsonld", "fields": {"x": "/x"}, "record_path": "/items"},
+        {"strategy": "json", "fields": {"x": "/x"}, "record_path": "", "item_type": "P"},
+        {"strategy": "json", "fields": {"x": "/x"}, "record_path": "", "record_selector": "a"},
+        {"strategy": "json", "fields": {"x": "/x"}},
+        {"strategy": "json", "fields": {"x": "/x"}, "record_path": None},
+        {"strategy": "json", "fields": {"x": "/x"}, "record_path": "items"},
+        {"strategy": "json", "fields": {"x": "x"}, "record_path": ""},
+        {"strategy": "css", "fields": {"x": "p::text"}, "record_selector": None},
+        {
+            "strategy": "jsonld",
+            "fields": {"x": "/x"},
+            "fallbacks": [{"strategy": "json", "fields": {"x": "/x"}, "record_path": ""}],
+        },
+        {
+            "strategy": "json",
+            "fields": {"x": "/x"},
+            "record_path": "",
+            "fallbacks": [{"strategy": "jsonld", "fields": {"x": "/x"}}],
+        },
+        {
+            "strategy": "jsonld",
+            "fields": {"x": "/x"},
+            "fallbacks": [{"strategy": "jsonld", "fields": {"x": "/x"}, "version": 2}],
+        },
+        {"fields": {"x": "/x"}},
+    ],
+)
+def test_each_variant_rejects_other_strategies_and_invalid_selectors(data):
+    with pytest.raises(ValidationError):
+        Recipe.model_validate(data)
+    with pytest.raises(ValidationError):
+        Recipe(**data)
+
+
+def test_variants_reject_a_different_strategy_tag():
+    with pytest.raises(ValidationError):
+        CssRecipe.model_validate({"strategy": "jsonld", "fields": {"x": "/x"}})
+    with pytest.raises(ValidationError):
+        JsonRecipe(strategy="css", fields={"x": "/x"}, record_path="")
+
+
+def test_null_selectors_of_other_strategies_mean_absent():
+    # Serializations before the union wrote every selector; null is not a foreign value.
+    recipe = Recipe(
+        strategy="css",
+        fields={"x": "p::text"},
+        record_selector="article",
+        item_type=None,
+        record_path=None,
+        fallbacks=[{"strategy": "jsonld", "fields": {"x": "/x"}, "record_selector": None}],
+    )
+    assert isinstance(recipe, CssRecipe) and isinstance(recipe.fallbacks[0], JsonLdRecipe)
+    assert "item_type" not in recipe.model_dump() and "record_path" not in recipe.model_dump()
+
+
+def test_fields_typed_recipe_validate_as_the_union():
+    class Holder(BaseModel):
+        recipe: Recipe
+
+    data = {"strategy": "json", "fields": {"x": "/x"}, "record_path": "/items"}
+    holder = Holder.model_validate({"recipe": data})
+    assert holder.recipe == JsonRecipe(fields={"x": "/x"}, record_path="/items")
+    assert "oneOf" in json.dumps(Holder.model_json_schema())
+    with pytest.raises(ValidationError):
+        Holder.model_validate({"recipe": {**data, "item_type": "Product"}})

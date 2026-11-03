@@ -9,10 +9,10 @@ from pydantic import BaseModel, Field, ValidationError, ValidationInfo, field_va
 
 from rastro import (
     AcquisitionPolicy,
+    CssRecipe,
     Outcome,
     Rastro,
     RastroError,
-    Recipe,
     RecipeContext,
     RecipeKey,
     Source,
@@ -28,8 +28,7 @@ SOURCE = Source(
     egress="direct",
 )
 CONTEXT = RecipeContext(template="books-demo-product-v1", region="gb", schema_revision="1")
-RECIPE = Recipe(
-    strategy="css",
+RECIPE = CssRecipe(
     record_selector=".product_main",
     fields={"name": "h1::text", "price_gbp": ".price_color::text"},
     require_evidence=True,

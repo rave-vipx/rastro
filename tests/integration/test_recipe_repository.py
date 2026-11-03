@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from rastro import ConfigurationError, Recipe
+from rastro import ConfigurationError, CssRecipe, JsonLdRecipe, JsonRecipe, Recipe
 from rastro.adapters.sqlite import SQLiteRecipeRepository
 from rastro.domain.memory import RecipeConflictError, RecipeKey, RecipeStorageError
 
@@ -19,16 +19,16 @@ def test_restart_immutable_versions_success_metadata_and_cleanup(tmp_path, sourc
     assert not path.exists()  # Initialization is lazy, including for async callers.
     assert repo.get(key) is None
     first = repo.save_success(key, recipe, selected_index=0, at=NOW)
-    assert first.successful_runs == 1
+    assert first.metadata.successful_runs == 1
     assert SQLiteRecipeRepository(path).get(key) == first
     v2 = recipe.model_copy(update={"version": 2})
     repo.save_success(key, v2, selected_index=0, at=NOW + timedelta(days=1))
     repo.save_success(key, recipe, selected_index=0, at=NOW - timedelta(days=1))
     assert repo.get(key).recipe.version == 2
     old = repo.get(key, version=1)
-    assert old.successful_runs == 2
-    assert old.created_at == NOW - timedelta(days=1)
-    assert old.last_success_at == NOW
+    assert old.metadata.successful_runs == 2
+    assert old.metadata.created_at == NOW - timedelta(days=1)
+    assert old.metadata.last_success_at == NOW
     with pytest.raises(RecipeConflictError):
         repo.save_success(
             key, Recipe(strategy="jsonld", fields={"name": "/different"}), selected_index=0, at=NOW
@@ -52,8 +52,8 @@ def test_concurrent_first_use_is_atomic(tmp_path, source, schema, recipe):
 
     with ThreadPoolExecutor(max_workers=8) as pool:
         results = list(pool.map(save, range(24)))
-    assert sorted(item.successful_runs for item in results) == list(range(1, 25))
-    assert SQLiteRecipeRepository(path).get(key).successful_runs == 24
+    assert sorted(item.metadata.successful_runs for item in results) == list(range(1, 25))
+    assert SQLiteRecipeRepository(path).get(key).metadata.successful_runs == 24
 
 
 @pytest.mark.parametrize("contents", ["foreign", "future", "corrupt", "missing_table", "payload"])
@@ -95,7 +95,7 @@ def test_lock_timeout_is_explicit_and_connections_close(tmp_path, source, schema
         with pytest.raises(RecipeStorageError):
             repo.save_success(key, recipe, selected_index=0, at=NOW)
         db.rollback()
-    assert repo.get(key).successful_runs == 1
+    assert repo.get(key).metadata.successful_runs == 1
     path.unlink()
 
 
@@ -180,7 +180,7 @@ def test_concurrent_conflicting_writes_preserve_one_definition(tmp_path, source,
         results = list(pool.map(save, (recipe, changed)))
     winner = next(item for item in results if item is not None)
     assert sum(item is None for item in results) == 1
-    assert repo.get(key) == winner and winner.successful_runs == 1
+    assert repo.get(key) == winner and winner.metadata.successful_runs == 1
 
 
 def test_delete_is_scoped_and_sql_values_are_parameters(tmp_path, source, schema, recipe):
@@ -201,26 +201,71 @@ def test_migration_records_application_and_schema_version(tmp_path, source, sche
         assert db.execute("PRAGMA application_id").fetchone()[0] == 0x52535452
 
 
-def test_m3_payload_without_new_evidence_default_remains_reusable(
-    tmp_path, source, schema, recipe, html
+def test_legacy_payloads_remain_reusable_and_immutable(
+    tmp_path, source, schema, recipe, html, legacy_payload
 ):
-    import json
-
-    from rastro import Outcome, Rastro
+    from rastro import JsonLdRecipe, Outcome, Rastro
 
     path = tmp_path / "m3.db"
     repo = SQLiteRecipeRepository(path)
     key = RecipeKey.for_source(source, schema)
     repo.save_success(key, recipe, selected_index=0, at=NOW)
-    old_payload = recipe.model_dump(mode="json")
-    old_payload.pop("require_evidence")
     with closing(sqlite3.connect(path)) as db:
-        db.execute("UPDATE recipes SET payload = ?", (json.dumps(old_payload),))
+        db.execute("UPDATE recipes SET payload = ?", (legacy_payload,))
         db.commit()
+    stored = repo.get(key)
+    assert isinstance(stored.recipe, JsonLdRecipe) and stored.recipe == recipe
     result = Rastro(repository=repo).extract_html(html, source=source, schema=schema)
     assert result.status == Outcome.SUCCESS and result.recipe_reused
-    assert repo.get(key).successful_runs == 2
+    assert repo.get(key).metadata.successful_runs == 2
     with pytest.raises(RecipeConflictError):
         repo.save_success(
             key, recipe.model_copy(update={"require_evidence": True}), selected_index=0, at=NOW
         )
+
+
+@pytest.mark.parametrize(
+    ("representation", "payload", "selected", "variants"),
+    [
+        (
+            "html",
+            '{"fallbacks":[{"fallbacks":[],"fields":{"name":"h1::text"},"item_type":null,'
+            '"record_path":null,"record_selector":"article","require_evidence":false,'
+            '"strategy":"css","version":3}],"fields":{"name":"/name"},"item_type":null,'
+            '"record_path":null,"record_selector":null,"require_evidence":true,'
+            '"strategy":"jsonld","version":3}',
+            1,
+            (JsonLdRecipe, CssRecipe),
+        ),
+        (
+            "json",
+            '{"fallbacks":[],"fields":{"name":"/name"},"item_type":null,'
+            '"record_path":"/data/items","record_selector":null,"require_evidence":false,'
+            '"strategy":"json","version":3}',
+            0,
+            (JsonRecipe,),
+        ),
+    ],
+)
+def test_v0_1_rows_with_fallbacks_and_json_load_as_variants(
+    tmp_path, source, schema, representation, payload, selected, variants
+):
+    path = tmp_path / "v0.1.db"
+    key = RecipeKey.for_source(source, schema, representation=representation)
+    assert SQLiteRecipeRepository(path).get(key) is None
+    with closing(sqlite3.connect(path)) as db:
+        db.execute(
+            "INSERT INTO recipes VALUES (?, 3, ?, ?, ?, ?, 4)",
+            (key.canonical(), payload, selected, NOW.isoformat(), NOW.isoformat()),
+        )
+        db.commit()
+    stored = SQLiteRecipeRepository(path).get(key)
+    loaded = (stored.recipe, *stored.recipe.fallbacks)
+    assert tuple(type(item) for item in loaded) == variants
+    assert type(stored.validated_recipe) is variants[selected]
+    assert stored.metadata.successful_runs == 4 and stored.metadata.selected_index == selected
+    # The legacy payload stays as written; saving the same definition only updates history.
+    again = SQLiteRecipeRepository(path).save_success(
+        key, stored.recipe, selected_index=selected, at=NOW
+    )
+    assert again.recipe == stored.recipe and again.metadata.successful_runs == 5

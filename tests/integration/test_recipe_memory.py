@@ -39,7 +39,7 @@ def test_repeat_extraction_reuses_exact_version_and_retains_evidence(
     assert repeated.records[0].data == first.records[0].data
     assert repeated.records[0].evidence["name"].recipe_version == 1
     assert repeated.metrics.storage_seconds > 0
-    assert repo.get(RecipeKey.for_source(source, schema)).successful_runs == 2
+    assert repo.get(RecipeKey.for_source(source, schema)).metadata.successful_runs == 2
     v2 = recipe.model_copy(update={"version": 2})
     engine = Rastro(repository=repo)
     engine.extract_html(html, source=source, schema=schema, recipe=v2)
@@ -52,7 +52,9 @@ def test_repeat_extraction_reuses_exact_version_and_retains_evidence(
         engine.extract_html(html, source=source, schema=schema, recipe_version=3)
 
 
-def test_pre_regional_sqlite_row_is_reused_after_restart(tmp_path, source, schema, recipe, html):
+def test_pre_regional_sqlite_row_is_reused_after_restart(
+    tmp_path, source, schema, html, legacy_payload
+):
     import json
     import sqlite3
     from contextlib import closing
@@ -62,15 +64,13 @@ def test_pre_regional_sqlite_row_is_reused_after_restart(tmp_path, source, schem
     legacy_key = key.model_dump(mode="json")
     for field in ("languages", "currency", "egress", "representation"):
         legacy_key.pop(field)
-    legacy_recipe = recipe.model_dump(mode="json")
-    legacy_recipe.pop("record_path")
     SQLiteRecipeRepository(path).get(key)
     with closing(sqlite3.connect(path)) as db:
         db.execute(
             "INSERT INTO recipes VALUES (?, 1, ?, 0, ?, ?, 1)",
             (
                 json.dumps(legacy_key, sort_keys=True, separators=(",", ":")),
-                json.dumps(legacy_recipe),
+                legacy_payload,
                 "2026-01-01T00:00:00.000000+00:00",
                 "2026-01-01T00:00:00.000000+00:00",
             ),
@@ -162,7 +162,7 @@ def test_custom_validator_revision_and_runtime_validation(tmp_path):
     # Even if a caller forgets to bump the revision, reuse still runs today's validators.
     result = engine.extract_html(html, source=source, schema=new)
     assert result.status == Outcome.INVALID_DATA
-    assert repo.get(RecipeKey.for_source(source, old)).successful_runs == 1
+    assert repo.get(RecipeKey.for_source(source, old)).metadata.successful_runs == 1
 
 
 def test_only_success_is_remembered_and_failed_versions_do_not_replace(
@@ -206,12 +206,12 @@ def test_fallback_candidates_preserved_but_only_successful_alternative_reused(
     assert [a.status for a in result.recipe_attempts] == [Outcome.MISSING_DATA, Outcome.SUCCESS]
     stored = repo.get(RecipeKey.for_source(source, schema))
     assert stored.recipe == primary and stored.validated_recipe == recipe
-    assert stored.selected_index == 1
+    assert stored.metadata.selected_index == 1
     repeated = engine.extract_html(html, source=source, schema=schema)
     assert len(repeated.recipe_attempts) == 1 and repeated.recipe_attempts[0].index == 1
     failed = engine.extract_html("", source=source, schema=schema)
     assert len(failed.recipe_attempts) == 1 and failed.status == Outcome.MISSING_DATA
-    assert repo.get(stored.key).successful_runs == 2
+    assert repo.get(stored.key).metadata.successful_runs == 2
 
 
 def test_partial_results_do_not_trigger_fallbacks(source, schema, recipe, html):
@@ -275,7 +275,7 @@ class Acquirer:
         self.html = html
         self.calls = 0
 
-    async def acquire(self, source, *, max_bytes):
+    async def acquire(self, source, *, max_bytes, representation):
         self.calls += 1
         await asyncio.sleep(0)
         return AcquisitionResult("https://example.com/final", self.html, Outcome.SUCCESS, None)
@@ -349,7 +349,7 @@ async def test_cancellation_keeps_loop_responsive_and_finishes_started_transacti
     stored = await asyncio.to_thread(
         SQLiteRecipeRepository(path).get, RecipeKey.for_source(source, schema)
     )
-    assert stored.successful_runs == 1
+    assert stored.metadata.successful_runs == 1
     path.unlink()
 
 

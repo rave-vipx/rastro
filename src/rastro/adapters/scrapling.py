@@ -8,7 +8,15 @@ from cssselect import SelectorError
 from scrapling.parser import Selector
 
 from rastro.domain.json import MISSING, resolve_pointer, strict_json
-from rastro.domain.models import ConfigurationError, Issue, Limits, Recipe, ResourceLimitError
+from rastro.domain.models import (
+    ConfigurationError,
+    CssRecipe,
+    Issue,
+    JsonLdRecipe,
+    Limits,
+    Recipe,
+    ResourceLimitError,
+)
 from rastro.ports.parser import Candidate, ParsedDocument
 
 
@@ -32,18 +40,19 @@ class ScraplingParser:
     """Translate parser output into bounded, declarative candidates."""
 
     def parse(self, html: str, recipe: Recipe, limits: Limits) -> ParsedDocument:
+        if not isinstance(recipe, CssRecipe | JsonLdRecipe):
+            raise ConfigurationError("HTML documents require a css or jsonld recipe")
         if not html.strip():
             return ParsedDocument(())
         page = Selector(html, adaptive=False, huge_tree=False)
         try:
-            if recipe.strategy == "css":
+            if isinstance(recipe, CssRecipe):
                 return self._css(page, recipe, limits)
             return self._jsonld(page, recipe, limits)
         except SelectorError:
             raise ConfigurationError("Recipe contains an invalid CSS selector") from None
 
-    def _css(self, page: Selector, recipe: Recipe, limits: Limits) -> ParsedDocument:
-        assert recipe.record_selector is not None
+    def _css(self, page: Selector, recipe: CssRecipe, limits: Limits) -> ParsedDocument:
         nodes = page.css(recipe.record_selector)
         if len(nodes) > limits.max_records:
             raise ResourceLimitError("Record count exceeds max_records")
@@ -62,7 +71,7 @@ class ScraplingParser:
             candidates.append(Candidate(values, locators, tuple(issues)))
         return ParsedDocument(tuple(candidates))
 
-    def _jsonld(self, page: Selector, recipe: Recipe, limits: Limits) -> ParsedDocument:
+    def _jsonld(self, page: Selector, recipe: JsonLdRecipe, limits: Limits) -> ParsedDocument:
         blocks = page.css('script[type="application/ld+json"]::text').getall()
         if len(blocks) > limits.max_jsonld_blocks:
             raise ResourceLimitError("JSON-LD block count exceeds max_jsonld_blocks")

@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel, Field
 
-from rastro import Outcome, Rastro, Recipe, Source
+from rastro import JsonLdRecipe, Outcome, Rastro, Source
 
 
 class Product(BaseModel):
@@ -23,8 +23,7 @@ html = """
 }
 </script>
 """
-recipe = Recipe(
-    strategy="jsonld",
+recipe = JsonLdRecipe(
     item_type="Product",
     fields={"name": "/name", "price": "/offers/price", "currency": "/offers/priceCurrency"},
 )

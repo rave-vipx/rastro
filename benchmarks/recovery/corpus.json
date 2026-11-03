@@ -1,0 +1,1407 @@
+{
+ "schema_version": 1,
+ "benchmark": "rastro-recovery",
+ "corpus_version": 1,
+ "split": "development",
+ "license": "Apache-2.0",
+ "synthetic": true,
+ "label": "SYNTHETIC FIXTURE. Authored for the Rastro recovery benchmark under Apache-2.0; no captured pages, credentials or private content. Reserved example domains only.",
+ "fields": [
+  "sku",
+  "name",
+  "price",
+  "priceCurrency"
+ ],
+ "scenarios": [
+  {
+   "id": "dev-class-rename",
+   "title": "Successive class renames of record, title and price",
+   "url": "https://kettle-shop.example/catalogue",
+   "initial_integration": {
+    "record_selector": ".product",
+    "fields": {
+     "sku": "::attr(data-sku)",
+     "name": ".title::text",
+     "price": ".price::text",
+     "priceCurrency": "::attr(data-currency)"
+    }
+   },
+   "epochs": [
+    {
+     "epoch": 0,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": false,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".product",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": ".title::text",
+       "price": ".price::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "K-1",
+       "name": "Kettle",
+       "price": "24.90",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "K-2",
+       "name": "Teapot",
+       "price": "18.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "K-3",
+       "name": "Whisk",
+       "price": "6.50",
+       "priceCurrency": "EUR"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main class=\"grid\"><article class=\"product\" data-sku=\"K-1\" data-currency=\"USD\"><h2 class=\"title\">Kettle</h2><b class=\"price\">24.90</b></article><article class=\"product\" data-sku=\"K-2\" data-currency=\"USD\"><h2 class=\"title\">Teapot</h2><b class=\"price\">18.00</b></article><article class=\"product\" data-sku=\"K-3\" data-currency=\"EUR\"><h2 class=\"title\">Whisk</h2><b class=\"price\">6.50</b></article></main></body></html>"
+    },
+    {
+     "epoch": 1,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": false,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".product",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": ".title::text",
+       "price": ".price::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "K-1",
+       "name": "Kettle",
+       "price": "25.40",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "K-2",
+       "name": "Teapot",
+       "price": "18.50",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "K-3",
+       "name": "Whisk",
+       "price": "7.00",
+       "priceCurrency": "EUR"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main class=\"grid\"><article class=\"product\" data-sku=\"K-1\" data-currency=\"USD\"><h2 class=\"title\">Kettle</h2><b class=\"price\">25.40</b></article><article class=\"product\" data-sku=\"K-2\" data-currency=\"USD\"><h2 class=\"title\">Teapot</h2><b class=\"price\">18.50</b></article><article class=\"product\" data-sku=\"K-3\" data-currency=\"EUR\"><h2 class=\"title\">Whisk</h2><b class=\"price\">7.00</b></article></main></body></html>"
+    },
+    {
+     "epoch": 2,
+     "change_kinds": [
+      "class_rename"
+     ],
+     "episode_start": true,
+     "breaks_integration": true,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".item-card",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": ".item-title::text",
+       "price": ".amount::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "K-1",
+       "name": "Kettle",
+       "price": "25.40",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "K-2",
+       "name": "Teapot",
+       "price": "18.50",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "K-3",
+       "name": "Whisk",
+       "price": "7.00",
+       "priceCurrency": "EUR"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main class=\"grid\"><article class=\"item-card\" data-sku=\"K-1\" data-currency=\"USD\"><h2 class=\"item-title\">Kettle</h2><b class=\"amount\">25.40</b></article><article class=\"item-card\" data-sku=\"K-2\" data-currency=\"USD\"><h2 class=\"item-title\">Teapot</h2><b class=\"amount\">18.50</b></article><article class=\"item-card\" data-sku=\"K-3\" data-currency=\"EUR\"><h2 class=\"item-title\">Whisk</h2><b class=\"amount\">7.00</b></article></main></body></html>"
+    },
+    {
+     "epoch": 3,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": true,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".item-card",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": ".item-title::text",
+       "price": ".amount::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "K-1",
+       "name": "Kettle",
+       "price": "25.90",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "K-2",
+       "name": "Teapot",
+       "price": "19.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "K-3",
+       "name": "Whisk",
+       "price": "7.50",
+       "priceCurrency": "EUR"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main class=\"grid\"><article class=\"item-card\" data-sku=\"K-1\" data-currency=\"USD\"><h2 class=\"item-title\">Kettle</h2><b class=\"amount\">25.90</b></article><article class=\"item-card\" data-sku=\"K-2\" data-currency=\"USD\"><h2 class=\"item-title\">Teapot</h2><b class=\"amount\">19.00</b></article><article class=\"item-card\" data-sku=\"K-3\" data-currency=\"EUR\"><h2 class=\"item-title\">Whisk</h2><b class=\"amount\">7.50</b></article></main></body></html>"
+    },
+    {
+     "epoch": 4,
+     "change_kinds": [
+      "class_rename"
+     ],
+     "episode_start": true,
+     "breaks_integration": true,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".pdp-card",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": ".item-title::text",
+       "price": ".amount::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "K-1",
+       "name": "Kettle",
+       "price": "25.90",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "K-2",
+       "name": "Teapot",
+       "price": "19.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "K-3",
+       "name": "Whisk",
+       "price": "7.50",
+       "priceCurrency": "EUR"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main class=\"grid\"><article class=\"pdp-card\" data-sku=\"K-1\" data-currency=\"USD\"><h2 class=\"item-title\">Kettle</h2><b class=\"amount\">25.90</b></article><article class=\"pdp-card\" data-sku=\"K-2\" data-currency=\"USD\"><h2 class=\"item-title\">Teapot</h2><b class=\"amount\">19.00</b></article><article class=\"pdp-card\" data-sku=\"K-3\" data-currency=\"EUR\"><h2 class=\"item-title\">Whisk</h2><b class=\"amount\">7.50</b></article></main></body></html>"
+    },
+    {
+     "epoch": 5,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": true,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".pdp-card",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": ".item-title::text",
+       "price": ".amount::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "K-1",
+       "name": "Kettle",
+       "price": "25.90",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "K-2",
+       "name": "Teapot",
+       "price": "19.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "K-3",
+       "name": "Whisk",
+       "price": "7.50",
+       "priceCurrency": "EUR"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main class=\"grid\"><article class=\"pdp-card\" data-sku=\"K-1\" data-currency=\"USD\"><h2 class=\"item-title\">Kettle</h2><b class=\"amount\">25.90</b></article><article class=\"pdp-card\" data-sku=\"K-2\" data-currency=\"USD\"><h2 class=\"item-title\">Teapot</h2><b class=\"amount\">19.00</b></article><article class=\"pdp-card\" data-sku=\"K-3\" data-currency=\"EUR\"><h2 class=\"item-title\">Whisk</h2><b class=\"amount\">7.50</b></article></main></body></html>"
+    }
+   ]
+  },
+  {
+   "id": "dev-wrapper-insertion",
+   "title": "Price wrapper insertion followed by harmless wrappers and reordering",
+   "url": "https://lantern-co.example/shop",
+   "initial_integration": {
+    "record_selector": ".product",
+    "fields": {
+     "sku": "::attr(data-sku)",
+     "name": "h2::text",
+     "price": "div.info > span.price::text",
+     "priceCurrency": "::attr(data-currency)"
+    }
+   },
+   "epochs": [
+    {
+     "epoch": 0,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": false,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".product",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h2::text",
+       "price": "div.info > span.price::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "W-1",
+       "name": "Lantern",
+       "price": "31.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "W-2",
+       "name": "Compass",
+       "price": "12.75",
+       "priceCurrency": "USD"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><ul class=\"grid\"><li class=\"product\" data-sku=\"W-1\" data-currency=\"USD\"><h2>Lantern</h2><div class=\"info\"><span class=\"price\">31.00</span></div></li><li class=\"product\" data-sku=\"W-2\" data-currency=\"USD\"><h2>Compass</h2><div class=\"info\"><span class=\"price\">12.75</span></div></li></ul></body></html>"
+    },
+    {
+     "epoch": 1,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": false,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".product",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h2::text",
+       "price": "div.info > span.price::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "W-1",
+       "name": "Lantern",
+       "price": "31.25",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "W-2",
+       "name": "Compass",
+       "price": "13.00",
+       "priceCurrency": "USD"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><ul class=\"grid\"><li class=\"product\" data-sku=\"W-1\" data-currency=\"USD\"><h2>Lantern</h2><div class=\"info\"><span class=\"price\">31.25</span></div></li><li class=\"product\" data-sku=\"W-2\" data-currency=\"USD\"><h2>Compass</h2><div class=\"info\"><span class=\"price\">13.00</span></div></li></ul></body></html>"
+    },
+    {
+     "epoch": 2,
+     "change_kinds": [
+      "wrapper_insertion"
+     ],
+     "episode_start": true,
+     "breaks_integration": true,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".product",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h2::text",
+       "price": ".price::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "W-1",
+       "name": "Lantern",
+       "price": "31.25",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "W-2",
+       "name": "Compass",
+       "price": "13.00",
+       "priceCurrency": "USD"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><ul class=\"grid\"><li class=\"product\" data-sku=\"W-1\" data-currency=\"USD\"><h2>Lantern</h2><div class=\"info\"><div class=\"price-box\"><span class=\"price\">31.25</span></div></div></li><li class=\"product\" data-sku=\"W-2\" data-currency=\"USD\"><h2>Compass</h2><div class=\"info\"><div class=\"price-box\"><span class=\"price\">13.00</span></div></div></li></ul></body></html>"
+    },
+    {
+     "epoch": 3,
+     "change_kinds": [
+      "wrapper_insertion"
+     ],
+     "episode_start": false,
+     "breaks_integration": true,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".product",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h2::text",
+       "price": ".price::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "W-1",
+       "name": "Lantern",
+       "price": "31.50",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "W-2",
+       "name": "Compass",
+       "price": "13.25",
+       "priceCurrency": "USD"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><ul class=\"grid\"><div class=\"card\"><li class=\"product\" data-sku=\"W-1\" data-currency=\"USD\"><h2>Lantern</h2><div class=\"info\"><div class=\"price-box\"><span class=\"price\">31.50</span></div></div></li></div><div class=\"card\"><li class=\"product\" data-sku=\"W-2\" data-currency=\"USD\"><h2>Compass</h2><div class=\"info\"><div class=\"price-box\"><span class=\"price\">13.25</span></div></div></li></div></ul></body></html>"
+    },
+    {
+     "epoch": 4,
+     "change_kinds": [
+      "reordering"
+     ],
+     "episode_start": false,
+     "breaks_integration": true,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".product",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h2::text",
+       "price": ".price::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "W-1",
+       "name": "Lantern",
+       "price": "31.50",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "W-2",
+       "name": "Compass",
+       "price": "13.25",
+       "priceCurrency": "USD"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><ul class=\"grid\"><div class=\"card\"><li class=\"product\" data-sku=\"W-1\" data-currency=\"USD\"><div class=\"info\"><div class=\"price-box\"><span class=\"price\">31.50</span></div></div><h2>Lantern</h2></li></div><div class=\"card\"><li class=\"product\" data-sku=\"W-2\" data-currency=\"USD\"><div class=\"info\"><div class=\"price-box\"><span class=\"price\">13.25</span></div></div><h2>Compass</h2></li></div></ul></body></html>"
+    },
+    {
+     "epoch": 5,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": true,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".product",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h2::text",
+       "price": ".price::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "W-1",
+       "name": "Lantern",
+       "price": "31.75",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "W-2",
+       "name": "Compass",
+       "price": "13.50",
+       "priceCurrency": "USD"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><ul class=\"grid\"><div class=\"card\"><li class=\"product\" data-sku=\"W-1\" data-currency=\"USD\"><div class=\"info\"><div class=\"price-box\"><span class=\"price\">31.75</span></div></div><h2>Lantern</h2></li></div><div class=\"card\"><li class=\"product\" data-sku=\"W-2\" data-currency=\"USD\"><div class=\"info\"><div class=\"price-box\"><span class=\"price\">13.50</span></div></div><h2>Compass</h2></li></div></ul></body></html>"
+    }
+   ]
+  },
+  {
+   "id": "dev-field-move",
+   "title": "SKU moves from attribute to element; price moves from text to metadata",
+   "url": "https://lamp-house.example/list",
+   "initial_integration": {
+    "record_selector": ".product",
+    "fields": {
+     "sku": "::attr(data-sku)",
+     "name": "h3::text",
+     "price": ".price::text",
+     "priceCurrency": "::attr(data-currency)"
+    }
+   },
+   "epochs": [
+    {
+     "epoch": 0,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": false,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".product",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h3::text",
+       "price": ".price::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "M-1",
+       "name": "Desk lamp",
+       "price": "45.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "M-2",
+       "name": "Bookend",
+       "price": "9.90",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "M-3",
+       "name": "Clock",
+       "price": "22.00",
+       "priceCurrency": "UYU"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><section id=\"list\"><div class=\"product\" data-currency=\"USD\" data-sku=\"M-1\"><h3>Desk lamp</h3><span class=\"price\">45.00</span></div><div class=\"product\" data-currency=\"USD\" data-sku=\"M-2\"><h3>Bookend</h3><span class=\"price\">9.90</span></div><div class=\"product\" data-currency=\"UYU\" data-sku=\"M-3\"><h3>Clock</h3><span class=\"price\">22.00</span></div></section></body></html>"
+    },
+    {
+     "epoch": 1,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": false,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".product",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h3::text",
+       "price": ".price::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "M-1",
+       "name": "Desk lamp",
+       "price": "45.10",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "M-2",
+       "name": "Bookend",
+       "price": "10.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "M-3",
+       "name": "Clock",
+       "price": "22.10",
+       "priceCurrency": "UYU"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><section id=\"list\"><div class=\"product\" data-currency=\"USD\" data-sku=\"M-1\"><h3>Desk lamp</h3><span class=\"price\">45.10</span></div><div class=\"product\" data-currency=\"USD\" data-sku=\"M-2\"><h3>Bookend</h3><span class=\"price\">10.00</span></div><div class=\"product\" data-currency=\"UYU\" data-sku=\"M-3\"><h3>Clock</h3><span class=\"price\">22.10</span></div></section></body></html>"
+    },
+    {
+     "epoch": 2,
+     "change_kinds": [
+      "field_move"
+     ],
+     "episode_start": true,
+     "breaks_integration": true,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".product",
+      "fields": {
+       "sku": ".sku::text",
+       "name": "h3::text",
+       "price": ".price::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "M-1",
+       "name": "Desk lamp",
+       "price": "45.10",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "M-2",
+       "name": "Bookend",
+       "price": "10.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "M-3",
+       "name": "Clock",
+       "price": "22.10",
+       "priceCurrency": "UYU"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><section id=\"list\"><div class=\"product\" data-currency=\"USD\"><h3>Desk lamp</h3><span class=\"sku\">M-1</span><span class=\"price\">45.10</span></div><div class=\"product\" data-currency=\"USD\"><h3>Bookend</h3><span class=\"sku\">M-2</span><span class=\"price\">10.00</span></div><div class=\"product\" data-currency=\"UYU\"><h3>Clock</h3><span class=\"sku\">M-3</span><span class=\"price\">22.10</span></div></section></body></html>"
+    },
+    {
+     "epoch": 3,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": true,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".product",
+      "fields": {
+       "sku": ".sku::text",
+       "name": "h3::text",
+       "price": ".price::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "M-1",
+       "name": "Desk lamp",
+       "price": "45.20",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "M-2",
+       "name": "Bookend",
+       "price": "10.10",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "M-3",
+       "name": "Clock",
+       "price": "22.20",
+       "priceCurrency": "UYU"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><section id=\"list\"><div class=\"product\" data-currency=\"USD\"><h3>Desk lamp</h3><span class=\"sku\">M-1</span><span class=\"price\">45.20</span></div><div class=\"product\" data-currency=\"USD\"><h3>Bookend</h3><span class=\"sku\">M-2</span><span class=\"price\">10.10</span></div><div class=\"product\" data-currency=\"UYU\"><h3>Clock</h3><span class=\"sku\">M-3</span><span class=\"price\">22.20</span></div></section></body></html>"
+    },
+    {
+     "epoch": 4,
+     "change_kinds": [
+      "field_move"
+     ],
+     "episode_start": true,
+     "breaks_integration": true,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".product",
+      "fields": {
+       "sku": ".sku::text",
+       "name": "h3::text",
+       "price": "meta[itemprop=\"price\"]::attr(content)",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "M-1",
+       "name": "Desk lamp",
+       "price": "45.20",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "M-2",
+       "name": "Bookend",
+       "price": "10.10",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "M-3",
+       "name": "Clock",
+       "price": "22.20",
+       "priceCurrency": "UYU"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><section id=\"list\"><div class=\"product\" data-currency=\"USD\"><h3>Desk lamp</h3><span class=\"sku\">M-1</span><meta itemprop=\"price\" content=\"45.20\"><span class=\"price-label\">see price in cart</span></div><div class=\"product\" data-currency=\"USD\"><h3>Bookend</h3><span class=\"sku\">M-2</span><meta itemprop=\"price\" content=\"10.10\"><span class=\"price-label\">see price in cart</span></div><div class=\"product\" data-currency=\"UYU\"><h3>Clock</h3><span class=\"sku\">M-3</span><meta itemprop=\"price\" content=\"22.20\"><span class=\"price-label\">see price in cart</span></div></section></body></html>"
+    },
+    {
+     "epoch": 5,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": true,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".product",
+      "fields": {
+       "sku": ".sku::text",
+       "name": "h3::text",
+       "price": "meta[itemprop=\"price\"]::attr(content)",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "M-1",
+       "name": "Desk lamp",
+       "price": "45.30",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "M-2",
+       "name": "Bookend",
+       "price": "10.20",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "M-3",
+       "name": "Clock",
+       "price": "22.30",
+       "priceCurrency": "UYU"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><section id=\"list\"><div class=\"product\" data-currency=\"USD\"><h3>Desk lamp</h3><span class=\"sku\">M-1</span><meta itemprop=\"price\" content=\"45.30\"><span class=\"price-label\">see price in cart</span></div><div class=\"product\" data-currency=\"USD\"><h3>Bookend</h3><span class=\"sku\">M-2</span><meta itemprop=\"price\" content=\"10.20\"><span class=\"price-label\">see price in cart</span></div><div class=\"product\" data-currency=\"UYU\"><h3>Clock</h3><span class=\"sku\">M-3</span><meta itemprop=\"price\" content=\"22.30\"><span class=\"price-label\">see price in cart</span></div></section></body></html>"
+    }
+   ]
+  },
+  {
+   "id": "dev-duplicated-candidates",
+   "title": "Related-products widget reuses the record class; struck price reuses the price class",
+   "url": "https://poster-wall.example/browse",
+   "initial_integration": {
+    "record_selector": ".product",
+    "fields": {
+     "sku": "::attr(data-sku)",
+     "name": "h2::text",
+     "price": ".price::text",
+     "priceCurrency": "::attr(data-currency)"
+    }
+   },
+   "epochs": [
+    {
+     "epoch": 0,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": false,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".product",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h2::text",
+       "price": ".price::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "P-1",
+       "name": "Poster",
+       "price": "14.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "P-2",
+       "name": "Frame",
+       "price": "27.50",
+       "priceCurrency": "USD"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main><div class=\"product\" data-sku=\"P-1\" data-currency=\"USD\"><h2>Poster</h2><b class=\"price\">14.00</b></div><div class=\"product\" data-sku=\"P-2\" data-currency=\"USD\"><h2>Frame</h2><b class=\"price\">27.50</b></div></main></body></html>"
+    },
+    {
+     "epoch": 1,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": false,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".product",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h2::text",
+       "price": ".price::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "P-1",
+       "name": "Poster",
+       "price": "14.50",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "P-2",
+       "name": "Frame",
+       "price": "28.00",
+       "priceCurrency": "USD"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main><div class=\"product\" data-sku=\"P-1\" data-currency=\"USD\"><h2>Poster</h2><b class=\"price\">14.50</b></div><div class=\"product\" data-sku=\"P-2\" data-currency=\"USD\"><h2>Frame</h2><b class=\"price\">28.00</b></div></main></body></html>"
+    },
+    {
+     "epoch": 2,
+     "change_kinds": [
+      "duplicated_candidate"
+     ],
+     "episode_start": true,
+     "breaks_integration": true,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": "main .product",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h2::text",
+       "price": ".price::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "P-1",
+       "name": "Poster",
+       "price": "14.50",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "P-2",
+       "name": "Frame",
+       "price": "28.00",
+       "priceCurrency": "USD"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main><div class=\"product\" data-sku=\"P-1\" data-currency=\"USD\"><h2>Poster</h2><b class=\"price\">14.50</b></div><div class=\"product\" data-sku=\"P-2\" data-currency=\"USD\"><h2>Frame</h2><b class=\"price\">28.00</b></div></main><aside class=\"related\"><h4>Related</h4><div class=\"product\" data-sku=\"P-9\" data-currency=\"USD\"><h2>Sticker pack</h2><b class=\"price\">3.00</b></div></aside></body></html>"
+    },
+    {
+     "epoch": 3,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": true,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": "main .product",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h2::text",
+       "price": ".price::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "P-1",
+       "name": "Poster",
+       "price": "15.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "P-2",
+       "name": "Frame",
+       "price": "28.50",
+       "priceCurrency": "USD"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main><div class=\"product\" data-sku=\"P-1\" data-currency=\"USD\"><h2>Poster</h2><b class=\"price\">15.00</b></div><div class=\"product\" data-sku=\"P-2\" data-currency=\"USD\"><h2>Frame</h2><b class=\"price\">28.50</b></div></main><aside class=\"related\"><h4>Related</h4><div class=\"product\" data-sku=\"P-9\" data-currency=\"USD\"><h2>Sticker pack</h2><b class=\"price\">3.00</b></div></aside></body></html>"
+    },
+    {
+     "epoch": 4,
+     "change_kinds": [
+      "duplicated_candidate"
+     ],
+     "episode_start": true,
+     "breaks_integration": true,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": "main .product",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h2::text",
+       "price": "b.price::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "P-1",
+       "name": "Poster",
+       "price": "15.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "P-2",
+       "name": "Frame",
+       "price": "28.50",
+       "priceCurrency": "USD"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main><div class=\"product\" data-sku=\"P-1\" data-currency=\"USD\"><h2>Poster</h2><del class=\"price\">20.00</del><b class=\"price\">15.00</b></div><div class=\"product\" data-sku=\"P-2\" data-currency=\"USD\"><h2>Frame</h2><del class=\"price\">33.50</del><b class=\"price\">28.50</b></div></main><aside class=\"related\"><h4>Related</h4><div class=\"product\" data-sku=\"P-9\" data-currency=\"USD\"><h2>Sticker pack</h2><b class=\"price\">3.00</b></div></aside></body></html>"
+    },
+    {
+     "epoch": 5,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": true,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": "main .product",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h2::text",
+       "price": "b.price::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "P-1",
+       "name": "Poster",
+       "price": "15.50",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "P-2",
+       "name": "Frame",
+       "price": "29.00",
+       "priceCurrency": "USD"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main><div class=\"product\" data-sku=\"P-1\" data-currency=\"USD\"><h2>Poster</h2><del class=\"price\">20.50</del><b class=\"price\">15.50</b></div><div class=\"product\" data-sku=\"P-2\" data-currency=\"USD\"><h2>Frame</h2><del class=\"price\">34.00</del><b class=\"price\">29.00</b></div></main><aside class=\"related\"><h4>Related</h4><div class=\"product\" data-sku=\"P-9\" data-currency=\"USD\"><h2>Sticker pack</h2><b class=\"price\">3.00</b></div></aside></body></html>"
+    }
+   ]
+  },
+  {
+   "id": "dev-removed-and-empty",
+   "title": "Transient empty container, recovery by the source, then a permanently removed currency",
+   "url": "https://rug-store.example/products",
+   "initial_integration": {
+    "record_selector": ".product",
+    "fields": {
+     "sku": "::attr(data-sku)",
+     "name": "h2::text",
+     "price": ".price::text",
+     "priceCurrency": "::attr(data-currency)"
+    }
+   },
+   "epochs": [
+    {
+     "epoch": 0,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": false,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".product",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h2::text",
+       "price": ".price::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "R-1",
+       "name": "Rug",
+       "price": "80.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "R-2",
+       "name": "Cushion",
+       "price": "15.00",
+       "priceCurrency": "USD"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main class=\"grid\"><article class=\"product\" data-sku=\"R-1\" data-currency=\"USD\"><h2>Rug</h2><b class=\"price\">80.00</b></article><article class=\"product\" data-sku=\"R-2\" data-currency=\"USD\"><h2>Cushion</h2><b class=\"price\">15.00</b></article></main></body></html>"
+    },
+    {
+     "epoch": 1,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": false,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".product",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h2::text",
+       "price": ".price::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "R-1",
+       "name": "Rug",
+       "price": "81.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "R-2",
+       "name": "Cushion",
+       "price": "16.00",
+       "priceCurrency": "USD"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main class=\"grid\"><article class=\"product\" data-sku=\"R-1\" data-currency=\"USD\"><h2>Rug</h2><b class=\"price\">81.00</b></article><article class=\"product\" data-sku=\"R-2\" data-currency=\"USD\"><h2>Cushion</h2><b class=\"price\">16.00</b></article></main></body></html>"
+    },
+    {
+     "epoch": 2,
+     "change_kinds": [
+      "empty_container"
+     ],
+     "episode_start": true,
+     "breaks_integration": true,
+     "state": "must_not_succeed",
+     "requires_warning": true,
+     "trap": false,
+     "repair_possible": false,
+     "oracle_integration": null,
+     "expected": [],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main class=\"grid\" data-count=\"0\"><p class=\"hint\">Loading products…</p></main></body></html>"
+    },
+    {
+     "epoch": 3,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": false,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".product",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h2::text",
+       "price": ".price::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "R-1",
+       "name": "Rug",
+       "price": "82.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "R-2",
+       "name": "Cushion",
+       "price": "17.00",
+       "priceCurrency": "USD"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main class=\"grid\"><article class=\"product\" data-sku=\"R-1\" data-currency=\"USD\"><h2>Rug</h2><b class=\"price\">82.00</b></article><article class=\"product\" data-sku=\"R-2\" data-currency=\"USD\"><h2>Cushion</h2><b class=\"price\">17.00</b></article></main></body></html>"
+    },
+    {
+     "epoch": 4,
+     "change_kinds": [
+      "removed_field"
+     ],
+     "episode_start": true,
+     "breaks_integration": true,
+     "state": "must_not_succeed",
+     "requires_warning": true,
+     "trap": false,
+     "repair_possible": false,
+     "oracle_integration": null,
+     "expected": [],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main class=\"grid\"><article class=\"product\" data-sku=\"R-1\"><h2>Rug</h2><b class=\"price\">82.00</b></article><article class=\"product\" data-sku=\"R-2\"><h2>Cushion</h2><b class=\"price\">17.00</b></article></main></body></html>"
+    },
+    {
+     "epoch": 5,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": true,
+     "state": "must_not_succeed",
+     "requires_warning": true,
+     "trap": false,
+     "repair_possible": false,
+     "oracle_integration": null,
+     "expected": [],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main class=\"grid\"><article class=\"product\" data-sku=\"R-1\"><h2>Rug</h2><b class=\"price\">83.00</b></article><article class=\"product\" data-sku=\"R-2\"><h2>Cushion</h2><b class=\"price\">18.00</b></article></main></body></html>"
+    }
+   ]
+  },
+  {
+   "id": "dev-stale-price-trap",
+   "title": "Selector silently moves to a struck-through list price (stale but valid)",
+   "url": "https://pack-outfit.example/gear",
+   "initial_integration": {
+    "record_selector": ".product",
+    "fields": {
+     "sku": "::attr(data-sku)",
+     "name": "h2::text",
+     "price": ".price::text",
+     "priceCurrency": "::attr(data-currency)"
+    }
+   },
+   "epochs": [
+    {
+     "epoch": 0,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": false,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".product",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h2::text",
+       "price": ".price::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "T-1",
+       "name": "Backpack",
+       "price": "59.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "T-2",
+       "name": "Bottle",
+       "price": "12.00",
+       "priceCurrency": "USD"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main><div class=\"product\" data-sku=\"T-1\" data-currency=\"USD\"><h2>Backpack</h2><b class=\"price\">59.00</b></div><div class=\"product\" data-sku=\"T-2\" data-currency=\"USD\"><h2>Bottle</h2><b class=\"price\">12.00</b></div></main></body></html>"
+    },
+    {
+     "epoch": 1,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": false,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".product",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h2::text",
+       "price": ".price::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "T-1",
+       "name": "Backpack",
+       "price": "57.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "T-2",
+       "name": "Bottle",
+       "price": "10.00",
+       "priceCurrency": "USD"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main><div class=\"product\" data-sku=\"T-1\" data-currency=\"USD\"><h2>Backpack</h2><b class=\"price\">57.00</b></div><div class=\"product\" data-sku=\"T-2\" data-currency=\"USD\"><h2>Bottle</h2><b class=\"price\">10.00</b></div></main></body></html>"
+    },
+    {
+     "epoch": 2,
+     "change_kinds": [
+      "semantic_trap",
+      "class_rename"
+     ],
+     "episode_start": true,
+     "breaks_integration": true,
+     "state": "correct",
+     "requires_warning": true,
+     "trap": true,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".product",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h2::text",
+       "price": ".price-now::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "T-1",
+       "name": "Backpack",
+       "price": "57.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "T-2",
+       "name": "Bottle",
+       "price": "10.00",
+       "priceCurrency": "USD"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main><div class=\"product\" data-sku=\"T-1\" data-currency=\"USD\"><h2>Backpack</h2><s class=\"price\">67.00</s><b class=\"price-now\">57.00</b></div><div class=\"product\" data-sku=\"T-2\" data-currency=\"USD\"><h2>Bottle</h2><s class=\"price\">20.00</s><b class=\"price-now\">10.00</b></div></main></body></html>"
+    },
+    {
+     "epoch": 3,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": true,
+     "state": "correct",
+     "requires_warning": true,
+     "trap": true,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".product",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h2::text",
+       "price": ".price-now::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "T-1",
+       "name": "Backpack",
+       "price": "56.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "T-2",
+       "name": "Bottle",
+       "price": "9.00",
+       "priceCurrency": "USD"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main><div class=\"product\" data-sku=\"T-1\" data-currency=\"USD\"><h2>Backpack</h2><s class=\"price\">66.00</s><b class=\"price-now\">56.00</b></div><div class=\"product\" data-sku=\"T-2\" data-currency=\"USD\"><h2>Bottle</h2><s class=\"price\">19.00</s><b class=\"price-now\">9.00</b></div></main></body></html>"
+    },
+    {
+     "epoch": 4,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": true,
+     "state": "correct",
+     "requires_warning": true,
+     "trap": true,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".product",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h2::text",
+       "price": ".price-now::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "T-1",
+       "name": "Backpack",
+       "price": "56.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "T-2",
+       "name": "Bottle",
+       "price": "9.00",
+       "priceCurrency": "USD"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main><div class=\"product\" data-sku=\"T-1\" data-currency=\"USD\"><h2>Backpack</h2><s class=\"price\">66.00</s><b class=\"price-now\">56.00</b></div><div class=\"product\" data-sku=\"T-2\" data-currency=\"USD\"><h2>Bottle</h2><s class=\"price\">19.00</s><b class=\"price-now\">9.00</b></div></main></body></html>"
+    },
+    {
+     "epoch": 5,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": true,
+     "state": "correct",
+     "requires_warning": true,
+     "trap": true,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".product",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h2::text",
+       "price": ".price-now::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "T-1",
+       "name": "Backpack",
+       "price": "55.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "T-2",
+       "name": "Bottle",
+       "price": "8.00",
+       "priceCurrency": "USD"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main><div class=\"product\" data-sku=\"T-1\" data-currency=\"USD\"><h2>Backpack</h2><s class=\"price\">65.00</s><b class=\"price-now\">55.00</b></div><div class=\"product\" data-sku=\"T-2\" data-currency=\"USD\"><h2>Bottle</h2><s class=\"price\">18.00</s><b class=\"price-now\">8.00</b></div></main></body></html>"
+    }
+   ]
+  }
+ ]
+}

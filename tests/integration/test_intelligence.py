@@ -360,7 +360,7 @@ async def test_learning_after_redirect_acquires_once_and_uses_requested_memory_k
     class Acquisition:
         calls = 0
 
-        async def acquire(self, source, *, max_bytes):
+        async def acquire(self, source, *, max_bytes, representation):
             self.calls += 1
             return AcquisitionResult("https://example.com/final", PAGE, Outcome.SUCCESS, None)
 
@@ -404,7 +404,7 @@ async def test_learned_evidence_policy_survives_restart(tmp_path, source):
         '<article class="product"><h2>Book</h2></article>', source=source, schema=Product
     )
     assert restarted.status == Outcome.INSUFFICIENT_EVIDENCE and not restarted.records
-    assert repo.get(RecipeKey.for_source(source, Product)).successful_runs == 1
+    assert repo.get(RecipeKey.for_source(source, Product)).metadata.successful_runs == 1
 
 
 @pytest.mark.asyncio
@@ -441,7 +441,7 @@ async def test_concurrent_different_candidates_cannot_replace_active_version(
     assert sum(isinstance(result, RecipeConflictError) for result in results) == 1
     successes = [result for result in results if not isinstance(result, Exception)]
     stored = repo.get(RecipeKey.for_source(source, schema))
-    assert stored.recipe == successes[0].learned_recipe and stored.successful_runs == 1
+    assert stored.recipe == successes[0].learned_recipe and stored.metadata.successful_runs == 1
 
 
 @pytest.mark.asyncio

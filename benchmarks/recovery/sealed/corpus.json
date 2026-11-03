@@ -1,0 +1,1390 @@
+{
+ "schema_version": 1,
+ "benchmark": "rastro-recovery",
+ "corpus_version": 1,
+ "split": "sealed",
+ "license": "Apache-2.0",
+ "synthetic": true,
+ "label": "SYNTHETIC FIXTURE. Authored for the Rastro recovery benchmark under Apache-2.0; no captured pages, credentials or private content. Reserved example domains only.",
+ "fields": [
+  "sku",
+  "name",
+  "price",
+  "priceCurrency"
+ ],
+ "scenarios": [
+  {
+   "id": "sealed-bem-rename",
+   "title": "BEM-style rename, harmless reorder, then identifier attribute rename",
+   "url": "https://timber-yard.example/catalog",
+   "initial_integration": {
+    "record_selector": ".product-card",
+    "fields": {
+     "sku": "::attr(data-sku)",
+     "name": ".product-card__name::text",
+     "price": ".product-card__price::text",
+     "priceCurrency": "::attr(data-curr)"
+    }
+   },
+   "epochs": [
+    {
+     "epoch": 0,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": false,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".product-card",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": ".product-card__name::text",
+       "price": ".product-card__price::text",
+       "priceCurrency": "::attr(data-curr)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "B-1",
+       "name": "Oak shelf",
+       "price": "120.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "B-2",
+       "name": "Pine stool",
+       "price": "35.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "B-3",
+       "name": "Wall hook",
+       "price": "4.20",
+       "priceCurrency": "EUR"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><ul class=\"catalog\"><li class=\"product-card\" data-sku=\"B-1\" data-curr=\"USD\"><span class=\"product-card__name\">Oak shelf</span><span class=\"product-card__price\">120.00</span></li><li class=\"product-card\" data-sku=\"B-2\" data-curr=\"USD\"><span class=\"product-card__name\">Pine stool</span><span class=\"product-card__price\">35.00</span></li><li class=\"product-card\" data-sku=\"B-3\" data-curr=\"EUR\"><span class=\"product-card__name\">Wall hook</span><span class=\"product-card__price\">4.20</span></li></ul></body></html>"
+    },
+    {
+     "epoch": 1,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": false,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".product-card",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": ".product-card__name::text",
+       "price": ".product-card__price::text",
+       "priceCurrency": "::attr(data-curr)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "B-1",
+       "name": "Oak shelf",
+       "price": "122.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "B-2",
+       "name": "Pine stool",
+       "price": "37.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "B-3",
+       "name": "Wall hook",
+       "price": "6.20",
+       "priceCurrency": "EUR"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><ul class=\"catalog\"><li class=\"product-card\" data-sku=\"B-1\" data-curr=\"USD\"><span class=\"product-card__name\">Oak shelf</span><span class=\"product-card__price\">122.00</span></li><li class=\"product-card\" data-sku=\"B-2\" data-curr=\"USD\"><span class=\"product-card__name\">Pine stool</span><span class=\"product-card__price\">37.00</span></li><li class=\"product-card\" data-sku=\"B-3\" data-curr=\"EUR\"><span class=\"product-card__name\">Wall hook</span><span class=\"product-card__price\">6.20</span></li></ul></body></html>"
+    },
+    {
+     "epoch": 2,
+     "change_kinds": [
+      "class_rename"
+     ],
+     "episode_start": true,
+     "breaks_integration": true,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".c-item",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": ".c-item__label::text",
+       "price": ".c-item__cost::text",
+       "priceCurrency": "::attr(data-curr)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "B-1",
+       "name": "Oak shelf",
+       "price": "122.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "B-2",
+       "name": "Pine stool",
+       "price": "37.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "B-3",
+       "name": "Wall hook",
+       "price": "6.20",
+       "priceCurrency": "EUR"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><ul class=\"catalog\"><li class=\"c-item\" data-sku=\"B-1\" data-curr=\"USD\"><span class=\"c-item__label\">Oak shelf</span><span class=\"c-item__cost\">122.00</span></li><li class=\"c-item\" data-sku=\"B-2\" data-curr=\"USD\"><span class=\"c-item__label\">Pine stool</span><span class=\"c-item__cost\">37.00</span></li><li class=\"c-item\" data-sku=\"B-3\" data-curr=\"EUR\"><span class=\"c-item__label\">Wall hook</span><span class=\"c-item__cost\">6.20</span></li></ul></body></html>"
+    },
+    {
+     "epoch": 3,
+     "change_kinds": [
+      "reordering"
+     ],
+     "episode_start": false,
+     "breaks_integration": true,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".c-item",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": ".c-item__label::text",
+       "price": ".c-item__cost::text",
+       "priceCurrency": "::attr(data-curr)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "B-1",
+       "name": "Oak shelf",
+       "price": "123.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "B-2",
+       "name": "Pine stool",
+       "price": "38.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "B-3",
+       "name": "Wall hook",
+       "price": "7.20",
+       "priceCurrency": "EUR"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><ul class=\"catalog\"><li class=\"c-item\" data-sku=\"B-1\" data-curr=\"USD\"><span class=\"c-item__cost\">123.00</span><span class=\"c-item__label\">Oak shelf</span></li><li class=\"c-item\" data-sku=\"B-2\" data-curr=\"USD\"><span class=\"c-item__cost\">38.00</span><span class=\"c-item__label\">Pine stool</span></li><li class=\"c-item\" data-sku=\"B-3\" data-curr=\"EUR\"><span class=\"c-item__cost\">7.20</span><span class=\"c-item__label\">Wall hook</span></li></ul></body></html>"
+    },
+    {
+     "epoch": 4,
+     "change_kinds": [
+      "field_move"
+     ],
+     "episode_start": true,
+     "breaks_integration": true,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".c-item",
+      "fields": {
+       "sku": "::attr(data-ref)",
+       "name": ".c-item__label::text",
+       "price": ".c-item__cost::text",
+       "priceCurrency": "::attr(data-curr)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "B-1",
+       "name": "Oak shelf",
+       "price": "123.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "B-2",
+       "name": "Pine stool",
+       "price": "38.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "B-3",
+       "name": "Wall hook",
+       "price": "7.20",
+       "priceCurrency": "EUR"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><ul class=\"catalog\"><li class=\"c-item\" data-ref=\"B-1\" data-curr=\"USD\"><span class=\"c-item__cost\">123.00</span><span class=\"c-item__label\">Oak shelf</span></li><li class=\"c-item\" data-ref=\"B-2\" data-curr=\"USD\"><span class=\"c-item__cost\">38.00</span><span class=\"c-item__label\">Pine stool</span></li><li class=\"c-item\" data-ref=\"B-3\" data-curr=\"EUR\"><span class=\"c-item__cost\">7.20</span><span class=\"c-item__label\">Wall hook</span></li></ul></body></html>"
+    },
+    {
+     "epoch": 5,
+     "change_kinds": [
+      "reordering"
+     ],
+     "episode_start": false,
+     "breaks_integration": true,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".c-item",
+      "fields": {
+       "sku": "::attr(data-ref)",
+       "name": ".c-item__label::text",
+       "price": ".c-item__cost::text",
+       "priceCurrency": "::attr(data-curr)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "B-1",
+       "name": "Oak shelf",
+       "price": "124.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "B-2",
+       "name": "Pine stool",
+       "price": "39.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "B-3",
+       "name": "Wall hook",
+       "price": "8.20",
+       "priceCurrency": "EUR"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><ul class=\"catalog\"><li class=\"c-item\" data-ref=\"B-1\" data-curr=\"USD\"><span class=\"c-item__label\">Oak shelf</span><span class=\"c-item__cost\">124.00</span></li><li class=\"c-item\" data-ref=\"B-2\" data-curr=\"USD\"><span class=\"c-item__label\">Pine stool</span><span class=\"c-item__cost\">39.00</span></li><li class=\"c-item\" data-ref=\"B-3\" data-curr=\"EUR\"><span class=\"c-item__label\">Wall hook</span><span class=\"c-item__cost\">8.20</span></li></ul></body></html>"
+    }
+   ]
+  },
+  {
+   "id": "sealed-positional-table",
+   "title": "Positional table selectors break on an inserted column; later harmless table changes",
+   "url": "https://paper-works.example/items",
+   "initial_integration": {
+    "record_selector": "tr.row",
+    "fields": {
+     "sku": "::attr(data-sku)",
+     "name": "td:nth-child(1)::text",
+     "price": "td:nth-child(2)::text",
+     "priceCurrency": "::attr(data-cur)"
+    }
+   },
+   "epochs": [
+    {
+     "epoch": 0,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": false,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": "tr.row",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "td:nth-child(1)::text",
+       "price": "td:nth-child(2)::text",
+       "priceCurrency": "::attr(data-cur)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "N-1",
+       "name": "Notebook A5",
+       "price": "5.50",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "N-2",
+       "name": "Fountain pen",
+       "price": "19.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "N-3",
+       "name": "Ink bottle",
+       "price": "7.25",
+       "priceCurrency": "UYU"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><table class=\"items\"><tr class=\"row\" data-sku=\"N-1\" data-cur=\"USD\"><td>Notebook A5</td><td>5.50</td></tr><tr class=\"row\" data-sku=\"N-2\" data-cur=\"USD\"><td>Fountain pen</td><td>19.00</td></tr><tr class=\"row\" data-sku=\"N-3\" data-cur=\"UYU\"><td>Ink bottle</td><td>7.25</td></tr></table></body></html>"
+    },
+    {
+     "epoch": 1,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": false,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": "tr.row",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "td:nth-child(1)::text",
+       "price": "td:nth-child(2)::text",
+       "priceCurrency": "::attr(data-cur)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "N-1",
+       "name": "Notebook A5",
+       "price": "6.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "N-2",
+       "name": "Fountain pen",
+       "price": "19.50",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "N-3",
+       "name": "Ink bottle",
+       "price": "7.75",
+       "priceCurrency": "UYU"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><table class=\"items\"><tr class=\"row\" data-sku=\"N-1\" data-cur=\"USD\"><td>Notebook A5</td><td>6.00</td></tr><tr class=\"row\" data-sku=\"N-2\" data-cur=\"USD\"><td>Fountain pen</td><td>19.50</td></tr><tr class=\"row\" data-sku=\"N-3\" data-cur=\"UYU\"><td>Ink bottle</td><td>7.75</td></tr></table></body></html>"
+    },
+    {
+     "epoch": 2,
+     "change_kinds": [
+      "field_move",
+      "wrapper_insertion"
+     ],
+     "episode_start": true,
+     "breaks_integration": true,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": "tr.row",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "td.name::text",
+       "price": "td.sale::text",
+       "priceCurrency": "::attr(data-cur)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "N-1",
+       "name": "Notebook A5",
+       "price": "6.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "N-2",
+       "name": "Fountain pen",
+       "price": "19.50",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "N-3",
+       "name": "Ink bottle",
+       "price": "7.75",
+       "priceCurrency": "UYU"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><table class=\"items\"><tr class=\"row\" data-sku=\"N-1\" data-cur=\"USD\"><td class=\"sel\"><input type=\"checkbox\"></td><td class=name>Notebook A5</td><td class=sale>6.00</td></tr><tr class=\"row\" data-sku=\"N-2\" data-cur=\"USD\"><td class=\"sel\"><input type=\"checkbox\"></td><td class=name>Fountain pen</td><td class=sale>19.50</td></tr><tr class=\"row\" data-sku=\"N-3\" data-cur=\"UYU\"><td class=\"sel\"><input type=\"checkbox\"></td><td class=name>Ink bottle</td><td class=sale>7.75</td></tr></table></body></html>"
+    },
+    {
+     "epoch": 3,
+     "change_kinds": [
+      "wrapper_insertion"
+     ],
+     "episode_start": false,
+     "breaks_integration": true,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": "tr.row",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "td.name::text",
+       "price": "td.sale::text",
+       "priceCurrency": "::attr(data-cur)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "N-1",
+       "name": "Notebook A5",
+       "price": "6.50",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "N-2",
+       "name": "Fountain pen",
+       "price": "20.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "N-3",
+       "name": "Ink bottle",
+       "price": "8.25",
+       "priceCurrency": "UYU"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><table class=\"items\"><tbody><tr class=\"row\" data-sku=\"N-1\" data-cur=\"USD\"><td class=\"sel\"><input type=\"checkbox\"></td><td class=name>Notebook A5</td><td class=sale>6.50</td></tr><tr class=\"row\" data-sku=\"N-2\" data-cur=\"USD\"><td class=\"sel\"><input type=\"checkbox\"></td><td class=name>Fountain pen</td><td class=sale>20.00</td></tr><tr class=\"row\" data-sku=\"N-3\" data-cur=\"UYU\"><td class=\"sel\"><input type=\"checkbox\"></td><td class=name>Ink bottle</td><td class=sale>8.25</td></tr></tbody></table></body></html>"
+    },
+    {
+     "epoch": 4,
+     "change_kinds": [
+      "duplicated_candidate"
+     ],
+     "episode_start": false,
+     "breaks_integration": true,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": "tr.row",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "td.name::text",
+       "price": "td.sale::text",
+       "priceCurrency": "::attr(data-cur)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "N-1",
+       "name": "Notebook A5",
+       "price": "6.50",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "N-2",
+       "name": "Fountain pen",
+       "price": "20.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "N-3",
+       "name": "Ink bottle",
+       "price": "8.25",
+       "priceCurrency": "UYU"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><table class=\"items\"><tbody><tr class=\"row\" data-sku=\"N-1\" data-cur=\"USD\"><td class=\"sel\"><input type=\"checkbox\"></td><td class=name>Notebook A5</td><td class=\"list\">9.50</td><td class=sale>6.50</td></tr><tr class=\"row\" data-sku=\"N-2\" data-cur=\"USD\"><td class=\"sel\"><input type=\"checkbox\"></td><td class=name>Fountain pen</td><td class=\"list\">23.00</td><td class=sale>20.00</td></tr><tr class=\"row\" data-sku=\"N-3\" data-cur=\"UYU\"><td class=\"sel\"><input type=\"checkbox\"></td><td class=name>Ink bottle</td><td class=\"list\">11.25</td><td class=sale>8.25</td></tr></tbody></table></body></html>"
+    },
+    {
+     "epoch": 5,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": true,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": "tr.row",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "td.name::text",
+       "price": "td.sale::text",
+       "priceCurrency": "::attr(data-cur)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "N-1",
+       "name": "Notebook A5",
+       "price": "7.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "N-2",
+       "name": "Fountain pen",
+       "price": "20.50",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "N-3",
+       "name": "Ink bottle",
+       "price": "8.75",
+       "priceCurrency": "UYU"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><table class=\"items\"><tbody><tr class=\"row\" data-sku=\"N-1\" data-cur=\"USD\"><td class=\"sel\"><input type=\"checkbox\"></td><td class=name>Notebook A5</td><td class=\"list\">10.00</td><td class=sale>7.00</td></tr><tr class=\"row\" data-sku=\"N-2\" data-cur=\"USD\"><td class=\"sel\"><input type=\"checkbox\"></td><td class=name>Fountain pen</td><td class=\"list\">23.50</td><td class=sale>20.50</td></tr><tr class=\"row\" data-sku=\"N-3\" data-cur=\"UYU\"><td class=\"sel\"><input type=\"checkbox\"></td><td class=name>Ink bottle</td><td class=\"list\">11.75</td><td class=sale>8.75</td></tr></tbody></table></body></html>"
+    }
+   ]
+  },
+  {
+   "id": "sealed-cents-trap",
+   "title": "Price rendered in cents (valid but 100x), then a removed name",
+   "url": "https://sound-box.example/audio",
+   "initial_integration": {
+    "record_selector": ".tile",
+    "fields": {
+     "sku": "::attr(data-sku)",
+     "name": "h3::text",
+     "price": ".amt::text",
+     "priceCurrency": "::attr(data-cur)"
+    }
+   },
+   "epochs": [
+    {
+     "epoch": 0,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": false,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".tile",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h3::text",
+       "price": ".amt::text",
+       "priceCurrency": "::attr(data-cur)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "C-1",
+       "name": "Headphones",
+       "price": "89.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "C-2",
+       "name": "Cable",
+       "price": "9.00",
+       "priceCurrency": "USD"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main><div class=\"tile\" data-sku=\"C-1\" data-cur=\"USD\"><h3>Headphones</h3><span class=\"amt\">89.00</span></div><div class=\"tile\" data-sku=\"C-2\" data-cur=\"USD\"><h3>Cable</h3><span class=\"amt\">9.00</span></div></main></body></html>"
+    },
+    {
+     "epoch": 1,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": false,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".tile",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h3::text",
+       "price": ".amt::text",
+       "priceCurrency": "::attr(data-cur)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "C-1",
+       "name": "Headphones",
+       "price": "90.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "C-2",
+       "name": "Cable",
+       "price": "10.00",
+       "priceCurrency": "USD"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main><div class=\"tile\" data-sku=\"C-1\" data-cur=\"USD\"><h3>Headphones</h3><span class=\"amt\">90.00</span></div><div class=\"tile\" data-sku=\"C-2\" data-cur=\"USD\"><h3>Cable</h3><span class=\"amt\">10.00</span></div></main></body></html>"
+    },
+    {
+     "epoch": 2,
+     "change_kinds": [
+      "semantic_trap",
+      "field_move"
+     ],
+     "episode_start": true,
+     "breaks_integration": true,
+     "state": "correct",
+     "requires_warning": true,
+     "trap": true,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".tile",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h3::text",
+       "price": "meta[itemprop=\"price\"]::attr(content)",
+       "priceCurrency": "::attr(data-cur)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "C-1",
+       "name": "Headphones",
+       "price": "90.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "C-2",
+       "name": "Cable",
+       "price": "10.00",
+       "priceCurrency": "USD"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main><div class=\"tile\" data-sku=\"C-1\" data-cur=\"USD\"><h3>Headphones</h3><span class=\"amt\" data-unit=\"cents\">9000</span><meta itemprop=\"price\" content=\"90.00\"></div><div class=\"tile\" data-sku=\"C-2\" data-cur=\"USD\"><h3>Cable</h3><span class=\"amt\" data-unit=\"cents\">1000</span><meta itemprop=\"price\" content=\"10.00\"></div></main></body></html>"
+    },
+    {
+     "epoch": 3,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": true,
+     "state": "correct",
+     "requires_warning": true,
+     "trap": true,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".tile",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h3::text",
+       "price": "meta[itemprop=\"price\"]::attr(content)",
+       "priceCurrency": "::attr(data-cur)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "C-1",
+       "name": "Headphones",
+       "price": "91.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "C-2",
+       "name": "Cable",
+       "price": "11.00",
+       "priceCurrency": "USD"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main><div class=\"tile\" data-sku=\"C-1\" data-cur=\"USD\"><h3>Headphones</h3><span class=\"amt\" data-unit=\"cents\">9100</span><meta itemprop=\"price\" content=\"91.00\"></div><div class=\"tile\" data-sku=\"C-2\" data-cur=\"USD\"><h3>Cable</h3><span class=\"amt\" data-unit=\"cents\">1100</span><meta itemprop=\"price\" content=\"11.00\"></div></main></body></html>"
+    },
+    {
+     "epoch": 4,
+     "change_kinds": [
+      "removed_field"
+     ],
+     "episode_start": true,
+     "breaks_integration": true,
+     "state": "must_not_succeed",
+     "requires_warning": true,
+     "trap": false,
+     "repair_possible": false,
+     "oracle_integration": null,
+     "expected": [],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main><div class=\"tile\" data-sku=\"C-1\" data-cur=\"USD\"><h3></h3><span class=\"amt\" data-unit=\"cents\">9100</span><meta itemprop=\"price\" content=\"91.00\"></div><div class=\"tile\" data-sku=\"C-2\" data-cur=\"USD\"><h3></h3><span class=\"amt\" data-unit=\"cents\">1100</span><meta itemprop=\"price\" content=\"11.00\"></div></main></body></html>"
+    },
+    {
+     "epoch": 5,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": true,
+     "state": "must_not_succeed",
+     "requires_warning": true,
+     "trap": false,
+     "repair_possible": false,
+     "oracle_integration": null,
+     "expected": [],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main><div class=\"tile\" data-sku=\"C-1\" data-cur=\"USD\"><h3></h3><span class=\"amt\" data-unit=\"cents\">9100</span><meta itemprop=\"price\" content=\"91.00\"></div><div class=\"tile\" data-sku=\"C-2\" data-cur=\"USD\"><h3></h3><span class=\"amt\" data-unit=\"cents\">1100</span><meta itemprop=\"price\" content=\"11.00\"></div></main></body></html>"
+    }
+   ]
+  },
+  {
+   "id": "sealed-sponsored-duplicate",
+   "title": "Sponsored duplicate record, then name wrapped in link and span",
+   "url": "https://fit-depot.example/gear",
+   "initial_integration": {
+    "record_selector": ".product",
+    "fields": {
+     "sku": "::attr(data-sku)",
+     "name": "h2::text",
+     "price": ".price::text",
+     "priceCurrency": "::attr(data-currency)"
+    }
+   },
+   "epochs": [
+    {
+     "epoch": 0,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": false,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".product",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h2::text",
+       "price": ".price::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "S-1",
+       "name": "Yoga mat",
+       "price": "28.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "S-2",
+       "name": "Dumbbell",
+       "price": "16.00",
+       "priceCurrency": "USD"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main><div class=\"product\" data-sku=\"S-1\" data-currency=\"USD\"><h2>Yoga mat</h2><i class=\"price\">28.00</i></div><div class=\"product\" data-sku=\"S-2\" data-currency=\"USD\"><h2>Dumbbell</h2><i class=\"price\">16.00</i></div></main></body></html>"
+    },
+    {
+     "epoch": 1,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": false,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".product",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h2::text",
+       "price": ".price::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "S-1",
+       "name": "Yoga mat",
+       "price": "29.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "S-2",
+       "name": "Dumbbell",
+       "price": "17.00",
+       "priceCurrency": "USD"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main><div class=\"product\" data-sku=\"S-1\" data-currency=\"USD\"><h2>Yoga mat</h2><i class=\"price\">29.00</i></div><div class=\"product\" data-sku=\"S-2\" data-currency=\"USD\"><h2>Dumbbell</h2><i class=\"price\">17.00</i></div></main></body></html>"
+    },
+    {
+     "epoch": 2,
+     "change_kinds": [
+      "duplicated_candidate"
+     ],
+     "episode_start": true,
+     "breaks_integration": true,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".product:not(.sponsored)",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h2::text",
+       "price": ".price::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "S-1",
+       "name": "Yoga mat",
+       "price": "29.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "S-2",
+       "name": "Dumbbell",
+       "price": "17.00",
+       "priceCurrency": "USD"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main><div class=\"product\" data-sku=\"S-1\" data-currency=\"USD\"><h2>Yoga mat</h2><i class=\"price\">29.00</i></div><div class=\"product sponsored\" data-sku=\"S-1\" data-currency=\"USD\"><h2>Yoga mat</h2><i class=\"price\">29.00</i></div><div class=\"product\" data-sku=\"S-2\" data-currency=\"USD\"><h2>Dumbbell</h2><i class=\"price\">17.00</i></div></main></body></html>"
+    },
+    {
+     "epoch": 3,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": true,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".product:not(.sponsored)",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h2::text",
+       "price": ".price::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "S-1",
+       "name": "Yoga mat",
+       "price": "30.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "S-2",
+       "name": "Dumbbell",
+       "price": "18.00",
+       "priceCurrency": "USD"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main><div class=\"product\" data-sku=\"S-1\" data-currency=\"USD\"><h2>Yoga mat</h2><i class=\"price\">30.00</i></div><div class=\"product sponsored\" data-sku=\"S-1\" data-currency=\"USD\"><h2>Yoga mat</h2><i class=\"price\">30.00</i></div><div class=\"product\" data-sku=\"S-2\" data-currency=\"USD\"><h2>Dumbbell</h2><i class=\"price\">18.00</i></div></main></body></html>"
+    },
+    {
+     "epoch": 4,
+     "change_kinds": [
+      "wrapper_insertion"
+     ],
+     "episode_start": true,
+     "breaks_integration": true,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".product:not(.sponsored)",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h2 span::text",
+       "price": ".price::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "S-1",
+       "name": "Yoga mat",
+       "price": "30.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "S-2",
+       "name": "Dumbbell",
+       "price": "18.00",
+       "priceCurrency": "USD"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main><div class=\"product\" data-sku=\"S-1\" data-currency=\"USD\"><h2><a href=\"#\"><span>Yoga mat</span></a></h2><i class=\"price\">30.00</i></div><div class=\"product sponsored\" data-sku=\"S-1\" data-currency=\"USD\"><h2><a href=#><span>Yoga mat</span></a></h2><i class=\"price\">30.00</i></div><div class=\"product\" data-sku=\"S-2\" data-currency=\"USD\"><h2><a href=\"#\"><span>Dumbbell</span></a></h2><i class=\"price\">18.00</i></div></main></body></html>"
+    },
+    {
+     "epoch": 5,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": true,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".product:not(.sponsored)",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h2 span::text",
+       "price": ".price::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "S-1",
+       "name": "Yoga mat",
+       "price": "31.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "S-2",
+       "name": "Dumbbell",
+       "price": "19.00",
+       "priceCurrency": "USD"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main><div class=\"product\" data-sku=\"S-1\" data-currency=\"USD\"><h2><a href=\"#\"><span>Yoga mat</span></a></h2><i class=\"price\">31.00</i></div><div class=\"product sponsored\" data-sku=\"S-1\" data-currency=\"USD\"><h2><a href=#><span>Yoga mat</span></a></h2><i class=\"price\">31.00</i></div><div class=\"product\" data-sku=\"S-2\" data-currency=\"USD\"><h2><a href=\"#\"><span>Dumbbell</span></a></h2><i class=\"price\">19.00</i></div></main></body></html>"
+    }
+   ]
+  },
+  {
+   "id": "sealed-outage-then-rename",
+   "title": "One record loses its price, a soft-error shell, source restoration, then a rename",
+   "url": "https://bath-corner.example/all",
+   "initial_integration": {
+    "record_selector": ".product",
+    "fields": {
+     "sku": "::attr(data-sku)",
+     "name": "h2::text",
+     "price": ".price::text",
+     "priceCurrency": "::attr(data-currency)"
+    }
+   },
+   "epochs": [
+    {
+     "epoch": 0,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": false,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".product",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h2::text",
+       "price": ".price::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "O-1",
+       "name": "Soap",
+       "price": "3.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "O-2",
+       "name": "Towel",
+       "price": "11.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "O-3",
+       "name": "Brush",
+       "price": "6.40",
+       "priceCurrency": "USD"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main><div class=\"product\" data-sku=\"O-1\" data-currency=\"USD\"><h2>Soap</h2><b class=\"price\">3.00</b></div><div class=\"product\" data-sku=\"O-2\" data-currency=\"USD\"><h2>Towel</h2><b class=\"price\">11.00</b></div><div class=\"product\" data-sku=\"O-3\" data-currency=\"USD\"><h2>Brush</h2><b class=\"price\">6.40</b></div></main></body></html>"
+    },
+    {
+     "epoch": 1,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": false,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".product",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h2::text",
+       "price": ".price::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "O-1",
+       "name": "Soap",
+       "price": "4.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "O-2",
+       "name": "Towel",
+       "price": "12.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "O-3",
+       "name": "Brush",
+       "price": "7.40",
+       "priceCurrency": "USD"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main><div class=\"product\" data-sku=\"O-1\" data-currency=\"USD\"><h2>Soap</h2><b class=\"price\">4.00</b></div><div class=\"product\" data-sku=\"O-2\" data-currency=\"USD\"><h2>Towel</h2><b class=\"price\">12.00</b></div><div class=\"product\" data-sku=\"O-3\" data-currency=\"USD\"><h2>Brush</h2><b class=\"price\">7.40</b></div></main></body></html>"
+    },
+    {
+     "epoch": 2,
+     "change_kinds": [
+      "removed_field"
+     ],
+     "episode_start": true,
+     "breaks_integration": true,
+     "state": "partial_expected",
+     "requires_warning": true,
+     "trap": false,
+     "repair_possible": false,
+     "oracle_integration": null,
+     "expected": [
+      {
+       "sku": "O-1",
+       "name": "Soap",
+       "price": "4.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "O-3",
+       "name": "Brush",
+       "price": "7.40",
+       "priceCurrency": "USD"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main><div class=\"product\" data-sku=\"O-1\" data-currency=\"USD\"><h2>Soap</h2><b class=\"price\">4.00</b></div><div class=\"product\" data-sku=\"O-2\" data-currency=\"USD\"><h2>Towel</h2></div><div class=\"product\" data-sku=\"O-3\" data-currency=\"USD\"><h2>Brush</h2><b class=\"price\">7.40</b></div></main></body></html>"
+    },
+    {
+     "epoch": 3,
+     "change_kinds": [
+      "empty_container"
+     ],
+     "episode_start": true,
+     "breaks_integration": true,
+     "state": "must_not_succeed",
+     "requires_warning": true,
+     "trap": false,
+     "repair_possible": false,
+     "oracle_integration": null,
+     "expected": [],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main><p class=\"msg\">Please try again later.</p></main></body></html>"
+    },
+    {
+     "epoch": 4,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": false,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".product",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h2::text",
+       "price": ".price::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "O-1",
+       "name": "Soap",
+       "price": "5.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "O-2",
+       "name": "Towel",
+       "price": "13.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "O-3",
+       "name": "Brush",
+       "price": "8.40",
+       "priceCurrency": "USD"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main><div class=\"product\" data-sku=\"O-1\" data-currency=\"USD\"><h2>Soap</h2><b class=\"price\">5.00</b></div><div class=\"product\" data-sku=\"O-2\" data-currency=\"USD\"><h2>Towel</h2><b class=\"price\">13.00</b></div><div class=\"product\" data-sku=\"O-3\" data-currency=\"USD\"><h2>Brush</h2><b class=\"price\">8.40</b></div></main></body></html>"
+    },
+    {
+     "epoch": 5,
+     "change_kinds": [
+      "class_rename"
+     ],
+     "episode_start": true,
+     "breaks_integration": true,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".entry",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h2::text",
+       "price": ".price::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "O-1",
+       "name": "Soap",
+       "price": "5.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "O-2",
+       "name": "Towel",
+       "price": "13.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "O-3",
+       "name": "Brush",
+       "price": "8.40",
+       "priceCurrency": "USD"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main><div class=\"entry\" data-sku=\"O-1\" data-currency=\"USD\"><h2>Soap</h2><b class=\"price\">5.00</b></div><div class=\"entry\" data-sku=\"O-2\" data-currency=\"USD\"><h2>Towel</h2><b class=\"price\">13.00</b></div><div class=\"entry\" data-sku=\"O-3\" data-currency=\"USD\"><h2>Brush</h2><b class=\"price\">8.40</b></div></main></body></html>"
+    }
+   ]
+  },
+  {
+   "id": "sealed-stale-attribute",
+   "title": "Cached attribute goes stale while the visible price updates; then a no-results page",
+   "url": "https://rain-shop.example/jackets",
+   "initial_integration": {
+    "record_selector": ".product",
+    "fields": {
+     "sku": "::attr(data-sku)",
+     "name": "h2::text",
+     "price": "::attr(data-price)",
+     "priceCurrency": "::attr(data-currency)"
+    }
+   },
+   "epochs": [
+    {
+     "epoch": 0,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": false,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".product",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h2::text",
+       "price": "::attr(data-price)",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "L-1",
+       "name": "Rain jacket",
+       "price": "75.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "L-2",
+       "name": "Gloves",
+       "price": "14.00",
+       "priceCurrency": "USD"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main><div class=\"product\" data-sku=\"L-1\" data-currency=\"USD\" data-price=\"75.00\"><h2>Rain jacket</h2><span class=\"live-price\">75.00</span></div><div class=\"product\" data-sku=\"L-2\" data-currency=\"USD\" data-price=\"14.00\"><h2>Gloves</h2><span class=\"live-price\">14.00</span></div></main></body></html>"
+    },
+    {
+     "epoch": 1,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": false,
+     "state": "correct",
+     "requires_warning": false,
+     "trap": false,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".product",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h2::text",
+       "price": "::attr(data-price)",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "L-1",
+       "name": "Rain jacket",
+       "price": "74.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "L-2",
+       "name": "Gloves",
+       "price": "13.00",
+       "priceCurrency": "USD"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main><div class=\"product\" data-sku=\"L-1\" data-currency=\"USD\" data-price=\"74.00\"><h2>Rain jacket</h2><span class=\"live-price\">74.00</span></div><div class=\"product\" data-sku=\"L-2\" data-currency=\"USD\" data-price=\"13.00\"><h2>Gloves</h2><span class=\"live-price\">13.00</span></div></main></body></html>"
+    },
+    {
+     "epoch": 2,
+     "change_kinds": [
+      "semantic_trap"
+     ],
+     "episode_start": true,
+     "breaks_integration": true,
+     "state": "correct",
+     "requires_warning": true,
+     "trap": true,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".product",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h2::text",
+       "price": ".live-price::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "L-1",
+       "name": "Rain jacket",
+       "price": "74.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "L-2",
+       "name": "Gloves",
+       "price": "13.00",
+       "priceCurrency": "USD"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main><div class=\"product\" data-sku=\"L-1\" data-currency=\"USD\" data-price=\"82.00\" data-price-updated=\"false\"><h2>Rain jacket</h2><span class=\"live-price\">74.00</span></div><div class=\"product\" data-sku=\"L-2\" data-currency=\"USD\" data-price=\"21.00\" data-price-updated=\"false\"><h2>Gloves</h2><span class=\"live-price\">13.00</span></div></main></body></html>"
+    },
+    {
+     "epoch": 3,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": true,
+     "state": "correct",
+     "requires_warning": true,
+     "trap": true,
+     "repair_possible": true,
+     "oracle_integration": {
+      "record_selector": ".product",
+      "fields": {
+       "sku": "::attr(data-sku)",
+       "name": "h2::text",
+       "price": ".live-price::text",
+       "priceCurrency": "::attr(data-currency)"
+      }
+     },
+     "expected": [
+      {
+       "sku": "L-1",
+       "name": "Rain jacket",
+       "price": "73.00",
+       "priceCurrency": "USD"
+      },
+      {
+       "sku": "L-2",
+       "name": "Gloves",
+       "price": "12.00",
+       "priceCurrency": "USD"
+      }
+     ],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main><div class=\"product\" data-sku=\"L-1\" data-currency=\"USD\" data-price=\"81.00\" data-price-updated=\"false\"><h2>Rain jacket</h2><span class=\"live-price\">73.00</span></div><div class=\"product\" data-sku=\"L-2\" data-currency=\"USD\" data-price=\"20.00\" data-price-updated=\"false\"><h2>Gloves</h2><span class=\"live-price\">12.00</span></div></main></body></html>"
+    },
+    {
+     "epoch": 4,
+     "change_kinds": [
+      "empty_container"
+     ],
+     "episode_start": true,
+     "breaks_integration": true,
+     "state": "must_not_succeed",
+     "requires_warning": true,
+     "trap": false,
+     "repair_possible": false,
+     "oracle_integration": null,
+     "expected": [],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main><p class=\"none\">No products match your filters.</p></main></body></html>"
+    },
+    {
+     "epoch": 5,
+     "change_kinds": [],
+     "episode_start": false,
+     "breaks_integration": true,
+     "state": "must_not_succeed",
+     "requires_warning": true,
+     "trap": false,
+     "repair_possible": false,
+     "oracle_integration": null,
+     "expected": [],
+     "note": "",
+     "html": "<html><head><title>Catalogue</title></head><body><main><p class=\"none\">No products match your filters.</p></main></body></html>"
+    }
+   ]
+  }
+ ]
+}
