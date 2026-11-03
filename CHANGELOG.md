@@ -7,6 +7,7 @@ All notable user-facing changes will be recorded here. No public release has bee
 ### Added
 
 - Recipe lifecycle states (`candidate`, `active`, `degraded`, `retired`), the `RecipeLifecycle` port (`save_candidate`, `transition`, `rollback`, `history`, `next_version`), and machine-readable lifecycle history. Candidates do not displace the serving version; rollback restores a previously served version (REC-005, REC-006, REPAIR-006; #46; ADR 0015).
+- Mock Lab structural mutations: seeded, reproducible HTML and JSON operators for every MOCK-002 category (reordering, class changes, wrapping, missing fields, duplicates, empty containers, changed labels, pagination), each reporting machine-readable changes or an explicit no-target reason, composed by a versioned `MutationPlan` whose outputs carry the synthetic label. `lxml` and `cssselect`, already installed with Scrapling, are now declared dependencies (MOCK-002, MOCK-006; #48; ADR 0014).
 - Synthetic failure scenarios with explicit outcomes and versioned labels (MOCK-003, MOCK-004; #40).
 - Instant Mock Lab fixture bundles: labeled, sanitized, reproducible and replayable offline (MOCK-001, MOCK-004, MOCK-005, MOCK-006; #45; ADR 0014).
 - Top-level Mock Lab fixture exports and support for extracted opaque product values while scrubbing structural attributes and URL paths (MOCK-001, MOCK-004, MOCK-005).
