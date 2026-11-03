@@ -1,5 +1,7 @@
 import asyncio
 import socket
+import sqlite3
+from contextlib import closing
 from decimal import Decimal
 from pathlib import Path
 
@@ -55,6 +57,40 @@ def legacy_payload(request) -> str:
 @pytest.fixture
 def html() -> str:
     return (Path(__file__).parent / "fixtures" / "products.html").read_text()
+
+
+# Exact DDL and markers of recipe schema 1 (M3 and 0.1.0), for migration tests.
+SCHEMA_V1 = """CREATE TABLE recipes (
+    key TEXT NOT NULL,
+    version INTEGER NOT NULL CHECK (version > 0),
+    payload TEXT NOT NULL,
+    selected_index INTEGER NOT NULL,
+    created_at TEXT NOT NULL,
+    last_success_at TEXT NOT NULL,
+    successful_runs INTEGER NOT NULL CHECK (successful_runs > 0),
+    PRIMARY KEY (key, version)
+) WITHOUT ROWID;
+CREATE INDEX recipe_retention ON recipes(last_success_at);
+PRAGMA application_id = 1381192786;
+PRAGMA user_version = 1;
+"""
+
+
+@pytest.fixture
+def schema_v1_database():
+    """Create a synthetic schema 1 file; rows are (key, version, payload, index, at, runs)."""
+
+    def create(path: Path, rows=()) -> Path:
+        with closing(sqlite3.connect(path)) as db:
+            db.executescript(SCHEMA_V1)
+            db.executemany(
+                "INSERT INTO recipes VALUES (?, ?, ?, ?, ?, ?, ?)",
+                [(key, ver, body, index, at, at, runs) for key, ver, body, index, at, runs in rows],
+            )
+            db.commit()
+        return path
+
+    return create
 
 
 # Build asyncio's private wake-up socket before running any task, then restore

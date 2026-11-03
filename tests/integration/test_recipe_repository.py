@@ -197,7 +197,7 @@ def test_migration_records_application_and_schema_version(tmp_path, source, sche
     path = tmp_path / "db"
     assert SQLiteRecipeRepository(path).get(RecipeKey.for_source(source, schema)) is None
     with closing(sqlite3.connect(path)) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 1
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 2
         assert db.execute("PRAGMA application_id").fetchone()[0] == 0x52535452
 
 
@@ -248,17 +248,12 @@ def test_legacy_payloads_remain_reusable_and_immutable(
     ],
 )
 def test_v0_1_rows_with_fallbacks_and_json_load_as_variants(
-    tmp_path, source, schema, representation, payload, selected, variants
+    tmp_path, source, schema, representation, payload, selected, variants, schema_v1_database
 ):
-    path = tmp_path / "v0.1.db"
     key = RecipeKey.for_source(source, schema, representation=representation)
-    assert SQLiteRecipeRepository(path).get(key) is None
-    with closing(sqlite3.connect(path)) as db:
-        db.execute(
-            "INSERT INTO recipes VALUES (?, 3, ?, ?, ?, ?, 4)",
-            (key.canonical(), payload, selected, NOW.isoformat(), NOW.isoformat()),
-        )
-        db.commit()
+    path = schema_v1_database(
+        tmp_path / "v0.1.db", [(key.canonical(), 3, payload, selected, NOW.isoformat(), 4)]
+    )
     stored = SQLiteRecipeRepository(path).get(key)
     loaded = (stored.recipe, *stored.recipe.fallbacks)
     assert tuple(type(item) for item in loaded) == variants
