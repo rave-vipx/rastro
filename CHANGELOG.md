@@ -4,6 +4,17 @@ All notable user-facing changes will be recorded here. No public release has bee
 
 ## Unreleased
 
+### Added
+
+- Recipe lifecycle states (`candidate`, `active`, `degraded`, `retired`), the `RecipeLifecycle` port (`save_candidate`, `transition`, `rollback`, `history`, `next_version`), and machine-readable lifecycle history. Candidates do not displace the serving version; rollback restores a previously served version (REC-005, REC-006, REPAIR-006; #46; ADR 0015).
+- Synthetic failure scenarios with explicit outcomes and versioned labels (MOCK-003, MOCK-004; #40).
+- Instant Mock Lab fixture bundles: labeled, sanitized, reproducible and replayable offline (MOCK-001, MOCK-004, MOCK-005, MOCK-006; #45; ADR 0014).
+- Top-level Mock Lab fixture exports and support for extracted opaque product values while scrubbing structural attributes and URL paths (MOCK-001, MOCK-004, MOCK-005).
+
+### Changed
+
+- SQLite recipe memory migrates to schema 2 on first open through a forward-only transaction. Existing 0.1.0 payloads keep loading: the highest version per key remains active and older versions become retired rollback targets. Version 0.1.0 cannot read migrated files; back up before upgrading. `RecipeRepository` remains unchanged from 0.1.0 (REC-005, REC-006, REPAIR-006; #46; ADR 0015).
+
 ## 0.1.0rc1 — 2026-11-03
 
 Release candidate tagged on `main`; not published to any package registry. Final `0.1.0` waits on the release gates in issue #5.

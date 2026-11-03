@@ -10,6 +10,7 @@ from urllib.parse import urlsplit, urlunsplit
 
 from pydantic import AwareDatetime, BaseModel, Field, model_validator
 
+from rastro.domain.lifecycle import RecipeState
 from rastro.domain.models import (
     EGRESS_NAME,
     Contract,
@@ -84,6 +85,8 @@ class RecipeMetadata(Contract):
     created_at: AwareDatetime
     last_success_at: AwareDatetime
     successful_runs: int = Field(ge=1)
+    # Metadata built without lifecycle data describes the version that serves reuse.
+    state: RecipeState = RecipeState.ACTIVE
 
     @model_validator(mode="after")
     def valid_history(self) -> Self:

@@ -44,6 +44,13 @@ from rastro.domain.jobs import (
     job_json_schema,
     parse_job,
 )
+from rastro.domain.lifecycle import (
+    LifecycleAction,
+    LifecycleTransitionError,
+    RecipeState,
+    VersionStatus,
+)
+from rastro.domain.lifecycle_history import LifecycleEvent, LifecycleHistory
 from rastro.domain.memory import (
     RecipeConflictError,
     RecipeContext,
@@ -73,8 +80,17 @@ from rastro.domain.models import (
     Source,
     schema_fingerprint,
 )
+from rastro.mocklab import (
+    FixtureBundle,
+    MockLabError,
+    SanitizationError,
+    SyntheticLabel,
+    build_fixture,
+    load_fixture,
+    verify_fixture,
+)
 from rastro.ports.model import ModelPort
-from rastro.ports.recipes import RecipeRepository
+from rastro.ports.recipes import RecipeLifecycle, RecipeRepository
 
 if TYPE_CHECKING:
     from rastro.adapters.ollama import OllamaModel as OllamaModel
@@ -115,6 +131,7 @@ __all__ = [
     "ExtractionRecord",
     "ExtractionResult",
     "FileJobSource",
+    "FixtureBundle",
     "InferencePolicy",
     "IntegerField",
     "Issue",
@@ -130,8 +147,13 @@ __all__ = [
     "JobSummary",
     "JsonLdRecipe",
     "JsonRecipe",
+    "LifecycleAction",
+    "LifecycleEvent",
+    "LifecycleHistory",
+    "LifecycleTransitionError",
     "Limits",
     "Metrics",
+    "MockLabError",
     "ModelError",
     "ModelPort",
     "ModelRequest",
@@ -146,28 +168,36 @@ __all__ = [
     "RecipeConflictError",
     "RecipeContext",
     "RecipeKey",
+    "RecipeLifecycle",
     "RecipeMetadata",
     "RecipeNotFoundError",
     "RecipeProposal",
     "RecipeRepository",
+    "RecipeState",
     "RecipeStorageError",
     "RegionalContext",
     "Representation",
     "ResourceLimitError",
     "SQLiteRecipeRepository",
+    "SanitizationError",
     "Source",
     "StoredRecipe",
     "StringField",
+    "SyntheticLabel",
     "UrlField",
     "UrlJobSource",
+    "VersionStatus",
     "__version__",
+    "build_fixture",
     "build_job_schema",
     "job_json_schema",
     "job_run_json_schema",
+    "load_fixture",
     "load_job",
     "parse_job",
     "run_job",
     "run_job_async",
     "run_job_file",
     "schema_fingerprint",
+    "verify_fixture",
 ]
