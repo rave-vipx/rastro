@@ -28,7 +28,7 @@ from rastro.domain.models import (
     Source,
 )
 from rastro.ports.parser import DocumentParser
-from rastro.ports.recipes import RecipeRepository
+from rastro.ports.recipes import RecipeLifecycle, RecipeRepository
 
 _LOG = structlog.wrap_logger(
     logging.getLogger("rastro"), processors=[structlog.processors.JSONRenderer()]
@@ -46,6 +46,17 @@ class PreparedRecipe:
     # Learning stores new recipes at this version: above every stored version, so a
     # retired or candidate row never collides with or blocks a learned recipe.
     learn_version: int = 1
+
+
+def _learn_version(repository: RecipeRepository, key: RecipeKey) -> int:
+    """Version for a learned recipe: above every stored row of a lifecycle store.
+
+    A store without lifecycle control never holds non-serving rows, so a miss there
+    means the key has no rows and version 1 is exact (the 0.1.0 invariant).
+    """
+    if isinstance(repository, RecipeLifecycle):
+        return repository.next_version(key)
+    return 1
 
 
 class RecipeMemory:
@@ -79,18 +90,36 @@ class RecipeMemory:
             return PreparedRecipe(
                 validate_recipe(schema, recipe, representation), key, None, 0, started, started_at
             )
+        return self._stored(
+            self._repository,
+            key,
+            schema,
+            recipe_version,
+            allow_discovery=allow_discovery,
+            representation=representation,
+            timing=(started, started_at),
+        )
+
+    @staticmethod
+    def _stored(
+        repository: RecipeRepository,
+        key: RecipeKey,
+        schema: type[BaseModel],
+        recipe_version: int | None,
+        *,
+        allow_discovery: bool,
+        representation: Representation,
+        timing: tuple[float, datetime],
+    ) -> PreparedRecipe:
         storage_start = perf_counter()
-        stored = self._repository.get(key, version=recipe_version)
-        storage_seconds = perf_counter() - storage_start
+        stored = repository.get(key, version=recipe_version)
         if stored is None:
             if allow_discovery and recipe_version is None:
-                storage_start = perf_counter()
-                learn_version = self._repository.next_version(key)
-                storage_seconds += perf_counter() - storage_start
-                return PreparedRecipe(
-                    None, key, None, storage_seconds, started, started_at, learn_version
-                )
+                learn_version = _learn_version(repository, key)
+                storage_seconds = perf_counter() - storage_start
+                return PreparedRecipe(None, key, None, storage_seconds, *timing, learn_version)
             raise RecipeNotFoundError("No validated recipe for this context and version")
+        storage_seconds = perf_counter() - storage_start
         if stored.key != key or (
             recipe_version is not None and stored.recipe.version != recipe_version
         ):
@@ -100,8 +129,7 @@ class RecipeMemory:
             key,
             stored.metadata.selected_index,
             storage_seconds,
-            started,
-            started_at,
+            *timing,
         )
 
     def extract[T: BaseModel](

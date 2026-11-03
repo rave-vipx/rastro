@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import unicodedata
 from typing import Annotated, Self
 
 from pydantic import AfterValidator, AwareDatetime, Field, TypeAdapter, model_validator
@@ -10,11 +11,20 @@ from rastro.domain.lifecycle import LifecycleAction, RecipeState, VersionStatus
 from rastro.domain.memory import RecipeKey
 from rastro.domain.sources import Contract
 
+# Controls (C0, C1 and so ANSI escape introducers), surrogates, line and paragraph
+# separators could spoof terminal or log output. Other format characters stay allowed
+# so emoji ZWJ sequences work; bidi controls are rejected explicitly.
+_FORBIDDEN_CATEGORIES = frozenset({"Cc", "Cs", "Zl", "Zp"})
+_BIDI_CONTROLS = frozenset(
+    "\u061c\u200e\u200f\u202a\u202b\u202c\u202d\u202e\u2066\u2067\u2068\u2069"
+)
+
 
 def _printable(reason: str) -> str:
-    # isprintable() rejects C0/C1 controls, ANSI escape introducers, bidi overrides and
-    # line or paragraph separators, so a reason cannot spoof terminal or log output.
-    if not reason.isprintable() or not reason.strip():
+    if not reason.strip() or any(
+        character in _BIDI_CONTROLS or unicodedata.category(character) in _FORBIDDEN_CATEGORIES
+        for character in reason
+    ):
         raise ValueError("Reasons must be non-blank printable text")
     return reason
 

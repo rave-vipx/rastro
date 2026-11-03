@@ -73,10 +73,16 @@ callers that need candidates must hold a store that implements lifecycle control
 ### Learning never reuses a stored version number
 
 Before 0.2, an unpinned miss meant the key had no rows, so learning stored version 1.
-Now a miss only means no version serves. `RecipeRepository.next_version` returns one
+Now a miss only means no version serves. `RecipeLifecycle.next_version` returns one
 above every stored version, and learning stamps that number on proposals before
 evaluating them, so evidence and storage agree. A rejected version 1 can neither
 make learning fail with a conflict nor leave a relearned recipe inactive.
+
+`next_version` is on the runtime-checkable `RecipeLifecycle` port, not on
+`RecipeRepository`, so a third-party store written against the four-method 0.1.0
+port keeps working and stays type-correct. For such a store, learning uses version
+1. That is exact rather than a fallback guess: only lifecycle stores can hold
+candidate or retired rows, so a miss on a plain store means the key has no rows.
 
 ### Append-only history per key
 
@@ -129,8 +135,8 @@ retired but remain rollback targets, so no capability is lost.
 - Databases opened by this version cannot be opened by 0.1.0, which rejects unknown
   schema versions explicitly rather than misreading them. Users who might downgrade
   should copy the file first.
-- `RecipeRepository` gains `next_version`; `save_success` keeps its 0.1.0 signature.
-  The new `RecipeLifecycle` port (`save_candidate`, `transition`, `rollback`,
+- `RecipeRepository` is unchanged from 0.1.0. The new runtime-checkable
+  `RecipeLifecycle` port (`next_version`, `save_candidate`, `transition`, `rollback`,
   `history`) is separate, so repositories without lifecycle control remain valid
   recipe stores but cannot hold candidates.
 - No facade or CLI surface is added yet. Repair, drift and agent slices will decide

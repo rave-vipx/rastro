@@ -131,6 +131,8 @@ def test_finding_5_candidates_live_only_on_the_lifecycle_port():
     assert "candidate" not in inspect.signature(RecipeRepository.save_success).parameters
     assert hasattr(RecipeLifecycle, "save_candidate")
     assert not hasattr(RecipeRepository, "save_candidate")
+    assert not hasattr(RecipeRepository, "next_version")
+    assert hasattr(RecipeLifecycle, "next_version")
 
 
 def test_finding_6_deleting_the_serving_version_leaves_no_serving_version(repo, key, recipe):

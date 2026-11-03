@@ -64,8 +64,11 @@ number that already exists raises `RecipeConflictError`, so a candidate cannot
 change the history or selected alternative of a stored version.
 
 Cold-context learning (`discover_recipes=True` or `model=`) stores learned recipes
-at `repository.next_version(key)`: one above every stored version in any state. A
-rejected or retired version 1 therefore never blocks learning or collides with it.
+at `next_version(key)` from the `RecipeLifecycle` port: one above every stored
+version in any state. A rejected or retired version 1 therefore never blocks learning
+or collides with it. A store that implements only the four-method 0.1.0
+`RecipeRepository` port cannot hold candidate or retired rows, so learning on it
+stores version 1, as before.
 
 With `source` and `Product` from the [memory example](memory.md#remember-and-reuse),
 version 1 serving, and a proposed `repaired` recipe with version 2:
@@ -95,7 +98,9 @@ repository.rollback(key, 1, reason="Regression reported", at=now)
 
 Rollback accepts only a `retired` version that served at some point: it has a
 `validated_at` timestamp. A rejected candidate never served, so rolling back to it
-raises `LifecycleTransitionError`. Reasons are required: 1–500 printable characters.
+raises `LifecycleTransitionError`. Reasons are required: 1–500 characters, not blank. Control characters (including
+ANSI escapes), bidi controls and line or paragraph separators are rejected;
+non-breaking spaces and emoji sequences are accepted.
 They are stored as written, so never include credentials, URLs or extracted data.
 
 ## History

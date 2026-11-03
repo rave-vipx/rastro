@@ -59,6 +59,13 @@ def test_history_events_are_strictly_ordered(sequences):
         "bidi\u202etext",
         "sep\u2028x",
         "   ",
+        "\u00a0\u00a0",  # Blank once non-breaking spaces are stripped.
+        "esc\x1b[31m",
+        "c1\x85next",
+        "pop\u202cx",
+        "isolate\u2066x",
+        "mark\u200fx",
+        "para\u2029x",
     ],
 )
 def test_reasons_are_bounded_printable_text(reason):
@@ -68,5 +75,14 @@ def test_reasons_are_bounded_printable_text(reason):
         LifecycleEvent.model_validate({**event(1).model_dump(), "reason": reason})
 
 
-def test_reasons_accept_unicode_operator_notes():
-    assert check_reason("Reparación aprobada ✓") == "Reparación aprobada ✓"
+@pytest.mark.parametrize(
+    "reason",
+    [
+        "Reparación aprobada ✓",
+        "Approved\u00a0by ops",  # Non-breaking space.
+        "Fixed by emoji \U0001f469\u200d\U0001f4bb",  # ZWJ sequence.
+        "Flag \u2764\ufe0f",  # Variation selector.
+    ],
+)
+def test_reasons_accept_unicode_operator_notes(reason):
+    assert check_reason(reason) == reason
