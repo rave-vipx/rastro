@@ -2,9 +2,11 @@ import json
 import logging
 import subprocess
 import sys
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
+from pydantic import AliasChoices, BaseModel, Field
 
 from rastro import (
     AcquisitionPolicy,
@@ -201,6 +203,83 @@ async def test_memory_precedes_discovery(tmp_path, source, schema):
         API, source=source, schema=schema
     )
     assert result.recipe_reused and result.learned_recipe is None
+
+
+@pytest.mark.asyncio
+async def test_json_discovery_maps_declared_aliases_to_model_fields(source):
+    body = json.dumps(
+        {
+            "data": {
+                "items": [
+                    {"name": "Notebook", "pricing": {"price": "12.50", "priceCurrency": "USD"}},
+                    {"name": "Pen", "pricing": {"price": "1.20", "priceCurrency": "UYU"}},
+                ]
+            }
+        }
+    )
+
+    class Aliased(BaseModel):
+        name: str
+        price: Decimal
+        currency: str = Field(alias="priceCurrency")
+
+    class Choices(BaseModel):
+        name: str
+        price: Decimal
+        currency: str = Field(validation_alias=AliasChoices("currency", "priceCurrency"))
+
+    aliased = await Rastro(discover_recipes=True).extract_json_async(
+        body, source=source, schema=Aliased
+    )
+    chosen = await Rastro(discover_recipes=True).extract_json_async(
+        body, source=source, schema=Choices
+    )
+
+    assert aliased.status == chosen.status == Outcome.SUCCESS
+    recipe = aliased.learned_recipe
+    assert recipe is not None and recipe.record_path == "/data/items"
+    assert recipe.fields["currency"] == "/pricing/priceCurrency"
+    assert aliased.records[1].evidence["currency"].locator == (
+        "json#/data/items/1/pricing/priceCurrency"
+    )
+    assert aliased.records[1].data.currency == "UYU"
+    assert chosen.learned_recipe.fields["currency"] == "/pricing/priceCurrency"
+
+
+@pytest.mark.asyncio
+async def test_json_discovery_uses_an_explicit_alias_map(source):
+    class Mapped(BaseModel):
+        name: str
+        currency: str = "USD"
+
+    body = json.dumps({"items": [{"name": "Notebook", "pricing": {"priceCurrency": "UYU"}}]})
+    result = await Rastro(
+        discover_recipes=True, discovery_aliases={"currency": ("priceCurrency",)}
+    ).extract_json_async(body, source=source, schema=Mapped)
+
+    assert result.status == Outcome.SUCCESS
+    assert result.learned_recipe.fields == {
+        "name": "/name",
+        "currency": "/pricing/priceCurrency",
+    }
+    assert result.records[0].data.currency == "UYU"
+
+
+@pytest.mark.asyncio
+async def test_json_discovery_treats_multiple_alias_matches_as_ambiguous(source):
+    class Required(BaseModel):
+        name: str
+        currency: str
+
+    body = json.dumps(
+        {"items": [{"name": "Notebook", "currency": "USD", "pricing": {"priceCurrency": "EUR"}}]}
+    )
+    result = await Rastro(
+        discover_recipes=True, discovery_aliases={"currency": ("priceCurrency",)}
+    ).extract_json_async(body, source=source, schema=Required)
+
+    assert result.status == Outcome.INSUFFICIENT_EVIDENCE
+    assert result.learned_recipe is None
 
 
 @pytest.mark.asyncio
