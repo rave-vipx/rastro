@@ -36,9 +36,11 @@ Owner decisions after the 0.1.0 release candidate ([ADR 0012](decisions/0012-pro
 | Recipe model refactor (#25) | Merged | Update README, getting-started and acquisition examples to the strategy variants |
 | Model provider strategy (#22) | Merged, including `max_completion_tokens`/`temperature=None` for OpenAI reasoning models | Live-test against a hosted provider when a key is available |
 | Clean-code guidelines (#28) | Merged | Split the modules already over the soft budget: `domain/models.py`, `application/acquisition.py`, `application/intelligence.py`, `application/service.py`, `application/engine.py` |
-| Development tool updates (#29) | Open | Merge; close Dependabot #26/#27, which target `main` |
+| Development tool updates (#29) | Merged; Dependabot now targets `dev` | Close Dependabot #26/#27, which target `main` |
+| Docs use typed recipe variants (#30) | Open | Merge |
+| Latency wins (schema fingerprint cache, cheaper provenance) | In progress (Gemini via Orca) | Review and merge |
 | Product direction, specification 1.1 (#21) | This change | — |
-| Field aliases in discovery | Not started | Next slice |
+| Field aliases in discovery | In progress (OpenCode via Orca) | Review and merge |
 | Declarative jobs and JSON CLI (JOB-001/002, AGENT-001) | Not started | After aliases; the job schema is public API from day one |
 | Repository hygiene | Pending maintainer | Close issues #2–#4 (implemented), promote `dev` to `main`, publication gates in issue #5 |
 
