@@ -1,4 +1,7 @@
-"""Instant Mock Lab: labeled, sanitized, reproducible test artifacts (MOCK-001, MOCK-004-006)."""
+"""Instant Mock Lab: labeled, sanitized, reproducible test artifacts (MOCK-001 to MOCK-006).
+
+Operators for structural mutations live in ``rastro.mocklab.mutations``.
+"""
 
 from rastro.mocklab.bundle import (
     ExpectedEvidence,
@@ -19,6 +22,13 @@ from rastro.mocklab.labels import (
     read_html_label,
     read_json_label,
 )
+from rastro.mocklab.mutations import (
+    MutationChange,
+    MutationPlan,
+    MutationPlanResult,
+    MutationResult,
+    MutationStatus,
+)
 from rastro.mocklab.records import SyntheticRecords
 from rastro.mocklab.sanitize import ALLOWED_HEADERS
 from rastro.mocklab.seeds import DeterministicStream
@@ -35,6 +45,11 @@ __all__ = [
     "FixtureManifest",
     "FixtureMismatchError",
     "MockLabError",
+    "MutationChange",
+    "MutationPlan",
+    "MutationPlanResult",
+    "MutationResult",
+    "MutationStatus",
     "SanitizationError",
     "SyntheticLabel",
     "SyntheticRecords",

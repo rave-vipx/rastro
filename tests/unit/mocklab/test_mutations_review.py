@@ -90,6 +90,12 @@ def test_xhtml_xml_declaration_is_accepted():
     assert HtmlEmptyContainer(selector="p").apply(document, stream()).changes
 
 
+def test_unparsable_encoding_declarations_raise_mock_lab_error():
+    document = '<?xml version="1.0"?><?xml version="1.0" encoding="utf-8"?><p>a</p>'
+    with pytest.raises(MockLabError):
+        HtmlEmptyContainer(selector="p").apply(document, stream())
+
+
 @pytest.mark.parametrize(
     ("operator", "document"),
     [
@@ -165,3 +171,12 @@ def test_no_label_when_nothing_applied():
     result = MutationPlan(seed=1, operators=(HtmlEmptyContainer(selector="table"),)).apply(LIST)
     assert result.status is MutationStatus.NO_APPLICABLE_TARGET
     assert (result.label, result.document) == (None, LIST)
+
+
+def test_plan_contracts_are_exported_from_mocklab():
+    import rastro.mocklab
+    import rastro.mocklab.mutations
+
+    for name in ("MutationChange", "MutationPlan", "MutationPlanResult", "MutationResult"):
+        assert getattr(rastro.mocklab, name) is getattr(rastro.mocklab.mutations, name)
+        assert name in rastro.mocklab.__all__
