@@ -21,7 +21,7 @@ SQLite is in Python's standard library; this requires no additional dependencies
 
 ```python
 from pydantic import BaseModel
-from rastro import Rastro, Recipe, RecipeContext, Source, SQLiteRecipeRepository
+from rastro import JsonLdRecipe, Rastro, RecipeContext, Source, SQLiteRecipeRepository
 
 
 class Product(BaseModel):
@@ -39,7 +39,7 @@ first = engine.extract_html(
     source=source,
     schema=Product,
     context=context,
-    recipe=Recipe(strategy="jsonld", fields={"name": "/name"}),
+    recipe=JsonLdRecipe(fields={"name": "/name"}),
 )
 second = engine.extract_html(html, source=source, schema=Product, context=context)
 assert second.recipe_reused
@@ -126,13 +126,20 @@ from rastro import RecipeKey
 
 key = RecipeKey.for_source(source, Product, context)
 stored = repository.get(key)  # StoredRecipe or None; optional version=...
-# stored.recipe, stored.validated_recipe, stored.created_at,
-# stored.last_success_at, stored.successful_runs
+# Definition: stored.recipe (a Recipe variant) and stored.validated_recipe.
+# Operational metadata: stored.metadata.selected_index, .created_at,
+# .last_success_at and .successful_runs.
 
 repository.delete(key, version=1)  # Delete exactly one version; returns row count.
 repository.delete(key)  # Delete all versions for this exact context.
 repository.prune(before=datetime.now(UTC) - timedelta(days=30))
 ```
+
+A `StoredRecipe` keeps the **definition** (`recipe`: what to extract) apart from
+its **operational metadata** (`metadata`: a `RecipeMetadata` with the validated
+alternative, creation time, last success and successful run count). Definitions are
+immutable per version; metadata changes with every successful run. Future lifecycle
+state belongs to the metadata, so it can evolve without changing definitions.
 
 Here `repository` is your `SQLiteRecipeRepository` instance. `prune` deletes every
 version whose last successful execution is strictly older than the aware timestamp.
@@ -154,7 +161,10 @@ credentials in selectors, mappings or identifiers.
 The adapter initializes lazily and closes a connection after every operation.
 Migration 0 → 1 creates the schema transactionally and records SQLite application
 and schema versions. Unknown versions, foreign databases and corrupt rows fail
-explicitly; they are never silently reset. Writes serialize with a bounded lock
+explicitly; they are never silently reset. Recipe payloads written by earlier
+releases, including M3 payloads without `require_evidence` and 0.1.0 payloads with
+`null` selectors for other strategies, load as the matching recipe variant and are
+left as written; the table layout is unchanged, so no migration runs. Writes serialize with a bounded lock
 timeout (default 5 seconds, configurable above 0 and at most 30 seconds).
 Use a local filesystem; this is not a shared network-filesystem database service.
 

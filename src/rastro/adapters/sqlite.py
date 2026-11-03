@@ -15,6 +15,7 @@ from pydantic import ValidationError
 from rastro.domain.memory import (
     RecipeConflictError,
     RecipeKey,
+    RecipeMetadata,
     RecipeStorageError,
     StoredRecipe,
     utc_timestamp,
@@ -108,10 +109,12 @@ class SQLiteRecipeRepository:
             dict(
                 key=key,
                 recipe=json.loads(str(payload)),
-                selected_index=index,
-                created_at=created,
-                last_success_at=success,
-                successful_runs=count,
+                metadata=dict(
+                    selected_index=index,
+                    created_at=created,
+                    last_success_at=success,
+                    successful_runs=count,
+                ),
             )
         )
         if stored.recipe.version != version:
@@ -137,10 +140,12 @@ class SQLiteRecipeRepository:
         snapshot = StoredRecipe(
             key=key,
             recipe=recipe,
-            selected_index=selected_index,
-            created_at=at,
-            last_success_at=at,
-            successful_runs=1,
+            metadata=RecipeMetadata(
+                selected_index=selected_index,
+                created_at=at,
+                last_success_at=at,
+                successful_runs=1,
+            ),
         )
         payload = json.dumps(recipe.model_dump(mode="json"), sort_keys=True, separators=(",", ":"))
         if len(payload.encode()) > _MAX_PAYLOAD:
@@ -162,7 +167,14 @@ class SQLiteRecipeRepository:
                 "created_at = MIN(created_at, excluded.created_at), "
                 "last_success_at = MAX(last_success_at, excluded.last_success_at), "
                 "successful_runs = successful_runs + 1",
-                (identity, recipe.version, payload, snapshot.selected_index, timestamp, timestamp),
+                (
+                    identity,
+                    recipe.version,
+                    payload,
+                    snapshot.metadata.selected_index,
+                    timestamp,
+                    timestamp,
+                ),
             )
             row = db.execute(
                 "SELECT version, payload, selected_index, created_at, last_success_at, "

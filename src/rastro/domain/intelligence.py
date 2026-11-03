@@ -5,9 +5,17 @@ from __future__ import annotations
 import json
 from typing import Any, Literal
 
-from pydantic import Field
+from pydantic import Field, create_model
 
-from rastro.domain.models import Contract, RastroError, Recipe
+from rastro.domain.models import (
+    Contract,
+    CssRecipe,
+    JsonLdRecipe,
+    RastroError,
+    Recipe,
+    StrategyUnion,
+    seal_union,
+)
 
 
 class InferencePolicy(Contract):
@@ -24,33 +32,43 @@ class InferencePolicy(Contract):
     max_discovery_candidates: int = Field(default=8, ge=1, le=32)
 
 
-class RecipeProposal(Contract):
-    """A model can describe a mapping, never records, tools, code, or stored versions."""
+class RecipeProposal(StrategyUnion):
+    """A model can describe a mapping, never records, tools, code, or stored versions.
+
+    Variants are derived from the HTML recipe variants without their version,
+    evidence and fallback settings; validation selects one by ``strategy``.
+    """
 
     strategy: Literal["jsonld", "css"]
     fields: dict[str, str] = Field(min_length=1, max_length=100)
-    item_type: str | None = Field(default=None, min_length=1, max_length=256)
-    record_selector: str | None = Field(default=None, min_length=1, max_length=1024)
 
     def recipe(self) -> Recipe:
         return Recipe.model_validate(self.model_dump())
 
 
-class _CssProposal(Contract):
-    strategy: Literal["css"]
-    fields: dict[str, str] = Field(min_length=1, max_length=100)
-    record_selector: str = Field(min_length=1, max_length=1024)
+_DEFINITION_ONLY = frozenset({"version", "require_evidence", "fallbacks"})
 
 
-class _JsonLdProposal(Contract):
-    strategy: Literal["jsonld"]
-    fields: dict[str, str] = Field(min_length=1, max_length=100)
-    item_type: str | None = Field(default=None, min_length=1, max_length=256)
+def _proposal(variant: type[Recipe]) -> type[RecipeProposal]:
+    fields: dict[str, Any] = {
+        name: (info.annotation, info)
+        for name, info in variant.model_fields.items()
+        if name not in _DEFINITION_ONLY
+    }
+    # A proposal names its strategy explicitly; the variant default only aids construction.
+    fields["strategy"] = (variant.model_fields["strategy"].annotation, ...)
+    name = variant.__name__.removesuffix("Recipe") + "Proposal"
+    return create_model(name, __base__=RecipeProposal, __module__=__name__, **fields)
+
+
+CssProposal = _proposal(CssRecipe)
+JsonLdProposal = _proposal(JsonLdRecipe)
+seal_union(RecipeProposal, CssProposal, JsonLdProposal)
 
 
 def proposal_schema() -> dict[str, Any]:
-    """Constrained-decoding schema with Recipe's per-strategy selector rules."""
-    return {"anyOf": [_CssProposal.model_json_schema(), _JsonLdProposal.model_json_schema()]}
+    """Constrained-decoding schema with each HTML recipe variant's selector rules."""
+    return {"anyOf": [CssProposal.model_json_schema(), JsonLdProposal.model_json_schema()]}
 
 
 class ModelRequest(Contract):

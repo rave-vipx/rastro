@@ -13,3 +13,4 @@ Read `RASTRO_MASTER_SPEC.md` before implementation. The active release is **v0.1
 - Each meaningful change identifies the relevant requirement IDs from the master spec.
 - Never open, read, search or summarize `benchmarks/recovery/sealed/`, and never edit the frozen recovery corpus or manifest. The sealed half exists only for the final v0.2 evaluation (ADR 0011).
 - Parallel work uses one worktree per slice and independent pull requests against `dev`; do not stack pull requests that will be squash-merged.
+- Follow docs/development/clean-code.md; split modules before they exceed its size budget.

@@ -74,3 +74,11 @@ def test_required_evidence_names_missing_required_fields(source, schema, recipe)
     assert [(i.code, i.record_index, i.field) for i in result.issues] == [
         ("missing_evidence", index, "price") for index in range(3)
     ]
+
+
+def test_html_parser_rejects_json_recipes():
+    from rastro import ConfigurationError, JsonRecipe
+    from rastro.adapters.scrapling import ScraplingParser
+
+    with pytest.raises(ConfigurationError):
+        ScraplingParser().parse("<p></p>", JsonRecipe(fields={"x": "/x"}, record_path=""), Limits())

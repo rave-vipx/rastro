@@ -1,0 +1,742 @@
+{
+  "format_version": 1,
+  "scope": "offline supplied-HTML extraction with explicit recipes, reconstructed per call",
+  "created_at": "2026-10-30T19:06:18.782821+00:00",
+  "calls": 30,
+  "warmup": 5,
+  "environment": {
+    "python": "3.12.16",
+    "os": "Darwin",
+    "os_release": "25.6.0",
+    "machine": "arm64",
+    "packages": {
+      "rastro-engine": "0.1.0",
+      "scrapling": "0.5",
+      "pydantic": "2.14.1",
+      "lxml": "6.1.3"
+    }
+  },
+  "git_revision": "e70a642bd94054a1d2846a71a62923315f668bec",
+  "unmeasured": [
+    "cold process start",
+    "network",
+    "JavaScript rendering",
+    "live inference"
+  ],
+  "fixed_costs": {
+    "schema_fingerprint": 0.10275,
+    "validate_recipe_roundtrip": 0.00575,
+    "source_evidence_url": 0.00067,
+    "evidence_model": 0.00112
+  },
+  "cases": [
+    {
+      "case": "static",
+      "category": "static",
+      "executor": "scrapling_pydantic",
+      "status": "success",
+      "records": 2,
+      "calls": 30,
+      "warmup": 5,
+      "per_call_ms": 0.1304,
+      "unprofiled_ms_per_call": 0.0752,
+      "top": [
+        {
+          "function": "benchmarks.baseline:run",
+          "cumulative_ms_per_call": 0.1273,
+          "self_ms_per_call": 0.0125,
+          "share": 0.9765,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "scrapling.parser:css",
+          "cumulative_ms_per_call": 0.0811,
+          "self_ms_per_call": 0.0039,
+          "share": 0.6218,
+          "calls_per_call": 9.0
+        },
+        {
+          "function": "scrapling.parser:xpath",
+          "cumulative_ms_per_call": 0.0753,
+          "self_ms_per_call": 0.0494,
+          "share": 0.5775,
+          "calls_per_call": 9.0
+        },
+        {
+          "function": "scrapling.parser:__handle_elements",
+          "cumulative_ms_per_call": 0.0206,
+          "self_ms_per_call": 0.0025,
+          "share": 0.1579,
+          "calls_per_call": 9.0
+        },
+        {
+          "function": "scrapling.parser:__init__",
+          "cumulative_ms_per_call": 0.0191,
+          "self_ms_per_call": 0.0131,
+          "share": 0.1467,
+          "calls_per_call": 11.0
+        },
+        {
+          "function": "scrapling.parser:__elements_convertor",
+          "cumulative_ms_per_call": 0.0181,
+          "self_ms_per_call": 0.0048,
+          "share": 0.1387,
+          "calls_per_call": 9.0
+        },
+        {
+          "function": "scrapling.parser:<genexpr>",
+          "cumulative_ms_per_call": 0.0133,
+          "self_ms_per_call": 0.0055,
+          "share": 0.1017,
+          "calls_per_call": 19.0
+        },
+        {
+          "function": "scrapling.parser:_is_text_node",
+          "cumulative_ms_per_call": 0.0074,
+          "self_ms_per_call": 0.0053,
+          "share": 0.0566,
+          "calls_per_call": 36.0
+        },
+        {
+          "function": "scrapling.parser:getall",
+          "cumulative_ms_per_call": 0.0071,
+          "self_ms_per_call": 0.0026,
+          "share": 0.0542,
+          "calls_per_call": 8.0
+        },
+        {
+          "function": "scrapling.core.custom_types:__getitem__",
+          "cumulative_ms_per_call": 0.0067,
+          "self_ms_per_call": 0.0049,
+          "share": 0.0514,
+          "calls_per_call": 8.0
+        },
+        {
+          "function": "scrapling.parser:get",
+          "cumulative_ms_per_call": 0.0045,
+          "self_ms_per_call": 0.0029,
+          "share": 0.0345,
+          "calls_per_call": 8.0
+        },
+        {
+          "function": "lxml.html.__init__:lookup",
+          "cumulative_ms_per_call": 0.0041,
+          "self_ms_per_call": 0.0025,
+          "share": 0.0317,
+          "calls_per_call": 7.0
+        },
+        {
+          "function": "pydantic.main:model_validate",
+          "cumulative_ms_per_call": 0.0036,
+          "self_ms_per_call": 0.0012,
+          "share": 0.0275,
+          "calls_per_call": 2.0
+        },
+        {
+          "function": "lxml.html.__init__:__init__",
+          "cumulative_ms_per_call": 0.0027,
+          "self_ms_per_call": 0.0019,
+          "share": 0.0205,
+          "calls_per_call": 2.0
+        },
+        {
+          "function": "builtins:<method 'validate_python' of 'pydantic_core._pydantic_core.SchemaValidator' objects>",
+          "cumulative_ms_per_call": 0.0024,
+          "self_ms_per_call": 0.0024,
+          "share": 0.0186,
+          "calls_per_call": 2.0
+        }
+      ]
+    },
+    {
+      "case": "static",
+      "category": "static",
+      "executor": "rastro",
+      "status": "success",
+      "records": 2,
+      "calls": 30,
+      "warmup": 5,
+      "per_call_ms": 0.8637,
+      "unprofiled_ms_per_call": 0.3258,
+      "top": [
+        {
+          "function": "rastro.application.engine:extract_html",
+          "cumulative_ms_per_call": 0.7914,
+          "self_ms_per_call": 0.0019,
+          "share": 0.9163,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "rastro.application.memory:extract",
+          "cumulative_ms_per_call": 0.7544,
+          "self_ms_per_call": 0.0104,
+          "share": 0.8734,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "rastro.application.extraction:extract_document",
+          "cumulative_ms_per_call": 0.7071,
+          "self_ms_per_call": 0.0277,
+          "share": 0.8186,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "rastro.domain.models:schema_fingerprint",
+          "cumulative_ms_per_call": 0.4455,
+          "self_ms_per_call": 0.0037,
+          "share": 0.5158,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "pydantic.main:model_json_schema",
+          "cumulative_ms_per_call": 0.4281,
+          "self_ms_per_call": 0.0006,
+          "share": 0.4956,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "pydantic.json_schema:model_json_schema",
+          "cumulative_ms_per_call": 0.4275,
+          "self_ms_per_call": 0.0045,
+          "share": 0.495,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "pydantic.json_schema:generate",
+          "cumulative_ms_per_call": 0.2885,
+          "self_ms_per_call": 0.0049,
+          "share": 0.334,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "pydantic.json_schema:generate_inner",
+          "cumulative_ms_per_call": 0.1762,
+          "self_ms_per_call": 0.0211,
+          "share": 0.204,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "rastro.adapters.scrapling:parse",
+          "cumulative_ms_per_call": 0.1665,
+          "self_ms_per_call": 0.0022,
+          "share": 0.1927,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "pydantic._internal._schema_generation_shared:__call__",
+          "cumulative_ms_per_call": 0.1641,
+          "self_ms_per_call": 0.0028,
+          "share": 0.19,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "pydantic.json_schema:new_handler_func",
+          "cumulative_ms_per_call": 0.1637,
+          "self_ms_per_call": 0.0013,
+          "share": 0.1895,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "rastro.adapters.scrapling:_css",
+          "cumulative_ms_per_call": 0.141,
+          "self_ms_per_call": 0.0183,
+          "share": 0.1632,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "pydantic.main:__get_pydantic_json_schema__",
+          "cumulative_ms_per_call": 0.1389,
+          "self_ms_per_call": 0.0004,
+          "share": 0.1609,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "pydantic.json_schema:handler_func",
+          "cumulative_ms_per_call": 0.1382,
+          "self_ms_per_call": 0.008,
+          "share": 0.16,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "pydantic.json_schema:model_schema",
+          "cumulative_ms_per_call": 0.1363,
+          "self_ms_per_call": 0.0032,
+          "share": 0.1577,
+          "calls_per_call": 1.0
+        }
+      ]
+    },
+    {
+      "case": "metadata",
+      "category": "jsonld",
+      "executor": "scrapling_pydantic",
+      "status": "success",
+      "records": 1,
+      "calls": 30,
+      "warmup": 5,
+      "per_call_ms": 0.0434,
+      "unprofiled_ms_per_call": 0.0203,
+      "top": [
+        {
+          "function": "benchmarks.baseline:run",
+          "cumulative_ms_per_call": 0.0412,
+          "self_ms_per_call": 0.0022,
+          "share": 0.9498,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "benchmarks.baseline:_json_rows",
+          "cumulative_ms_per_call": 0.0286,
+          "self_ms_per_call": 0.005,
+          "share": 0.6598,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "benchmarks.baseline:_json_items",
+          "cumulative_ms_per_call": 0.017,
+          "self_ms_per_call": 0.0012,
+          "share": 0.3925,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "scrapling.parser:css",
+          "cumulative_ms_per_call": 0.0094,
+          "self_ms_per_call": 0.0006,
+          "share": 0.2159,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "scrapling.parser:__init__",
+          "cumulative_ms_per_call": 0.0086,
+          "self_ms_per_call": 0.0053,
+          "share": 0.1975,
+          "calls_per_call": 2.0
+        },
+        {
+          "function": "scrapling.parser:xpath",
+          "cumulative_ms_per_call": 0.0084,
+          "self_ms_per_call": 0.0052,
+          "share": 0.1945,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "benchmarks.baseline:_pointer",
+          "cumulative_ms_per_call": 0.0049,
+          "self_ms_per_call": 0.0029,
+          "share": 0.1141,
+          "calls_per_call": 4.0
+        },
+        {
+          "function": "__init__:loads",
+          "cumulative_ms_per_call": 0.0032,
+          "self_ms_per_call": 0.0005,
+          "share": 0.0744,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "decoder:decode",
+          "cumulative_ms_per_call": 0.0024,
+          "self_ms_per_call": 0.0009,
+          "share": 0.0563,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "scrapling.parser:__handle_elements",
+          "cumulative_ms_per_call": 0.0024,
+          "self_ms_per_call": 0.0004,
+          "share": 0.0562,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "lxml.html.__init__:__init__",
+          "cumulative_ms_per_call": 0.0023,
+          "self_ms_per_call": 0.0016,
+          "share": 0.0537,
+          "calls_per_call": 2.0
+        },
+        {
+          "function": "builtins:<method 'extend' of 'list' objects>",
+          "cumulative_ms_per_call": 0.0021,
+          "self_ms_per_call": 0.0004,
+          "share": 0.0495,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "scrapling.parser:__elements_convertor",
+          "cumulative_ms_per_call": 0.0021,
+          "self_ms_per_call": 0.0007,
+          "share": 0.0476,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "benchmarks.baseline:_objects",
+          "cumulative_ms_per_call": 0.0017,
+          "self_ms_per_call": 0.0014,
+          "share": 0.0403,
+          "calls_per_call": 2.0
+        },
+        {
+          "function": "pydantic.main:model_validate",
+          "cumulative_ms_per_call": 0.0015,
+          "self_ms_per_call": 0.0003,
+          "share": 0.0352,
+          "calls_per_call": 1.0
+        }
+      ]
+    },
+    {
+      "case": "metadata",
+      "category": "jsonld",
+      "executor": "rastro",
+      "status": "success",
+      "records": 1,
+      "calls": 30,
+      "warmup": 5,
+      "per_call_ms": 0.7322,
+      "unprofiled_ms_per_call": 0.2506,
+      "top": [
+        {
+          "function": "rastro.application.engine:extract_html",
+          "cumulative_ms_per_call": 0.659,
+          "self_ms_per_call": 0.002,
+          "share": 0.9,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "rastro.application.memory:extract",
+          "cumulative_ms_per_call": 0.6213,
+          "self_ms_per_call": 0.0095,
+          "share": 0.8486,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "rastro.application.extraction:extract_document",
+          "cumulative_ms_per_call": 0.5748,
+          "self_ms_per_call": 0.0221,
+          "share": 0.785,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "rastro.domain.models:schema_fingerprint",
+          "cumulative_ms_per_call": 0.4294,
+          "self_ms_per_call": 0.0026,
+          "share": 0.5864,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "pydantic.main:model_json_schema",
+          "cumulative_ms_per_call": 0.4133,
+          "self_ms_per_call": 0.0006,
+          "share": 0.5644,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "pydantic.json_schema:model_json_schema",
+          "cumulative_ms_per_call": 0.4127,
+          "self_ms_per_call": 0.0043,
+          "share": 0.5637,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "pydantic.json_schema:generate",
+          "cumulative_ms_per_call": 0.2959,
+          "self_ms_per_call": 0.0047,
+          "share": 0.4041,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "pydantic.json_schema:generate_inner",
+          "cumulative_ms_per_call": 0.1872,
+          "self_ms_per_call": 0.0261,
+          "share": 0.2557,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "pydantic._internal._schema_generation_shared:__call__",
+          "cumulative_ms_per_call": 0.1746,
+          "self_ms_per_call": 0.0027,
+          "share": 0.2384,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "pydantic.json_schema:new_handler_func",
+          "cumulative_ms_per_call": 0.1742,
+          "self_ms_per_call": 0.0013,
+          "share": 0.2379,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "pydantic.main:__get_pydantic_json_schema__",
+          "cumulative_ms_per_call": 0.1508,
+          "self_ms_per_call": 0.0004,
+          "share": 0.2059,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "pydantic.json_schema:handler_func",
+          "cumulative_ms_per_call": 0.1501,
+          "self_ms_per_call": 0.0085,
+          "share": 0.205,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "pydantic.json_schema:model_schema",
+          "cumulative_ms_per_call": 0.1482,
+          "self_ms_per_call": 0.0032,
+          "share": 0.2024,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "pydantic.json_schema:model_fields_schema",
+          "cumulative_ms_per_call": 0.1142,
+          "self_ms_per_call": 0.0109,
+          "share": 0.156,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "pydantic.json_schema:__init__",
+          "cumulative_ms_per_call": 0.1079,
+          "self_ms_per_call": 0.0027,
+          "share": 0.1474,
+          "calls_per_call": 1.0
+        }
+      ]
+    },
+    {
+      "case": "large",
+      "category": "large_single_page",
+      "executor": "scrapling_pydantic",
+      "status": "success",
+      "records": 250,
+      "calls": 30,
+      "warmup": 5,
+      "per_call_ms": 13.4423,
+      "unprofiled_ms_per_call": 8.5028,
+      "top": [
+        {
+          "function": "benchmarks.baseline:run",
+          "cumulative_ms_per_call": 13.3515,
+          "self_ms_per_call": 1.3462,
+          "share": 0.9932,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "scrapling.parser:css",
+          "cumulative_ms_per_call": 9.1686,
+          "self_ms_per_call": 0.4298,
+          "share": 0.6821,
+          "calls_per_call": 1001.0
+        },
+        {
+          "function": "scrapling.parser:xpath",
+          "cumulative_ms_per_call": 8.5309,
+          "self_ms_per_call": 5.6377,
+          "share": 0.6346,
+          "calls_per_call": 1001.0
+        },
+        {
+          "function": "scrapling.parser:__handle_elements",
+          "cumulative_ms_per_call": 2.2904,
+          "self_ms_per_call": 0.2676,
+          "share": 0.1704,
+          "calls_per_call": 1001.0
+        },
+        {
+          "function": "scrapling.parser:__elements_convertor",
+          "cumulative_ms_per_call": 2.0229,
+          "self_ms_per_call": 0.544,
+          "share": 0.1505,
+          "calls_per_call": 1001.0
+        },
+        {
+          "function": "scrapling.parser:<genexpr>",
+          "cumulative_ms_per_call": 1.4789,
+          "self_ms_per_call": 0.6704,
+          "share": 0.11,
+          "calls_per_call": 2251.0
+        },
+        {
+          "function": "scrapling.parser:__init__",
+          "cumulative_ms_per_call": 1.2104,
+          "self_ms_per_call": 0.879,
+          "share": 0.09,
+          "calls_per_call": 1251.0
+        },
+        {
+          "function": "scrapling.parser:getall",
+          "cumulative_ms_per_call": 0.8673,
+          "self_ms_per_call": 0.3113,
+          "share": 0.0645,
+          "calls_per_call": 1000.0
+        },
+        {
+          "function": "scrapling.parser:_is_text_node",
+          "cumulative_ms_per_call": 0.8536,
+          "self_ms_per_call": 0.6124,
+          "share": 0.0635,
+          "calls_per_call": 4252.0
+        },
+        {
+          "function": "scrapling.core.custom_types:__getitem__",
+          "cumulative_ms_per_call": 0.8185,
+          "self_ms_per_call": 0.6085,
+          "share": 0.0609,
+          "calls_per_call": 1000.0
+        },
+        {
+          "function": "scrapling.parser:get",
+          "cumulative_ms_per_call": 0.556,
+          "self_ms_per_call": 0.3555,
+          "share": 0.0414,
+          "calls_per_call": 1000.0
+        },
+        {
+          "function": "lxml.html.__init__:lookup",
+          "cumulative_ms_per_call": 0.4061,
+          "self_ms_per_call": 0.242,
+          "share": 0.0302,
+          "calls_per_call": 751.0
+        },
+        {
+          "function": "pydantic.main:model_validate",
+          "cumulative_ms_per_call": 0.2781,
+          "self_ms_per_call": 0.0528,
+          "share": 0.0207,
+          "calls_per_call": 250.0
+        },
+        {
+          "function": "builtins:<built-in method builtins.issubclass>",
+          "cumulative_ms_per_call": 0.2412,
+          "self_ms_per_call": 0.2412,
+          "share": 0.0179,
+          "calls_per_call": 4252.0
+        },
+        {
+          "function": "builtins:<method 'validate_python' of 'pydantic_core._pydantic_core.SchemaValidator' objects>",
+          "cumulative_ms_per_call": 0.2253,
+          "self_ms_per_call": 0.2253,
+          "share": 0.0168,
+          "calls_per_call": 250.0
+        }
+      ]
+    },
+    {
+      "case": "large",
+      "category": "large_single_page",
+      "executor": "rastro",
+      "status": "success",
+      "records": 250,
+      "calls": 30,
+      "warmup": 5,
+      "per_call_ms": 20.0925,
+      "unprofiled_ms_per_call": 12.0328,
+      "top": [
+        {
+          "function": "rastro.application.engine:extract_html",
+          "cumulative_ms_per_call": 19.9507,
+          "self_ms_per_call": 0.003,
+          "share": 0.9929,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "rastro.application.memory:extract",
+          "cumulative_ms_per_call": 19.9073,
+          "self_ms_per_call": 0.0904,
+          "share": 0.9908,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "rastro.application.extraction:extract_document",
+          "cumulative_ms_per_call": 19.7609,
+          "self_ms_per_call": 1.2136,
+          "share": 0.9835,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "rastro.adapters.scrapling:parse",
+          "cumulative_ms_per_call": 13.2779,
+          "self_ms_per_call": 0.026,
+          "share": 0.6608,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "rastro.adapters.scrapling:_css",
+          "cumulative_ms_per_call": 12.8296,
+          "self_ms_per_call": 1.3477,
+          "share": 0.6385,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "scrapling.parser:css",
+          "cumulative_ms_per_call": 9.4539,
+          "self_ms_per_call": 0.4318,
+          "share": 0.4705,
+          "calls_per_call": 1001.0
+        },
+        {
+          "function": "scrapling.parser:xpath",
+          "cumulative_ms_per_call": 8.8145,
+          "self_ms_per_call": 5.8745,
+          "share": 0.4387,
+          "calls_per_call": 1001.0
+        },
+        {
+          "function": "scrapling.parser:__handle_elements",
+          "cumulative_ms_per_call": 2.3323,
+          "self_ms_per_call": 0.2815,
+          "share": 0.1161,
+          "calls_per_call": 1001.0
+        },
+        {
+          "function": "pydantic.main:__init__",
+          "cumulative_ms_per_call": 2.0709,
+          "self_ms_per_call": 0.6556,
+          "share": 0.1031,
+          "calls_per_call": 1258.0
+        },
+        {
+          "function": "scrapling.parser:__elements_convertor",
+          "cumulative_ms_per_call": 2.0507,
+          "self_ms_per_call": 0.5502,
+          "share": 0.1021,
+          "calls_per_call": 1001.0
+        },
+        {
+          "function": "builtins:<method 'validate_python' of 'pydantic_core._pydantic_core.SchemaValidator' objects>",
+          "cumulative_ms_per_call": 1.6776,
+          "self_ms_per_call": 1.627,
+          "share": 0.0835,
+          "calls_per_call": 1510.0
+        },
+        {
+          "function": "scrapling.parser:<genexpr>",
+          "cumulative_ms_per_call": 1.5006,
+          "self_ms_per_call": 0.6755,
+          "share": 0.0747,
+          "calls_per_call": 2251.0
+        },
+        {
+          "function": "rastro.domain.models:evidence_url",
+          "cumulative_ms_per_call": 1.469,
+          "self_ms_per_call": 0.3753,
+          "share": 0.0731,
+          "calls_per_call": 1001.0
+        },
+        {
+          "function": "scrapling.parser:__init__",
+          "cumulative_ms_per_call": 1.2471,
+          "self_ms_per_call": 0.9097,
+          "share": 0.0621,
+          "calls_per_call": 1251.0
+        },
+        {
+          "function": "parse:urlunsplit",
+          "cumulative_ms_per_call": 1.0938,
+          "self_ms_per_call": 0.4907,
+          "share": 0.0544,
+          "calls_per_call": 1001.0
+        }
+      ]
+    }
+  ]
+}
