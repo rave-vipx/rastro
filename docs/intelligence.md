@@ -86,8 +86,9 @@ limits across its bounded workers.
 
 1. An explicit recipe or exact-context stored recipe is executed first. Neither a
    failure nor a missing pinned version triggers model repair.
-2. With no recipe, discovery tries JSON-LD mappings using exact schema field names.
-   Nested names must be unique within each object; paths use JSON Pointer escaping.
+2. With no recipe, discovery tries JSON-LD mappings using exact schema field names,
+   plus any declared Pydantic field alias or `discovery_aliases` name. Nested names
+   must be unique within each object; paths use JSON Pointer escaping.
 3. It then tries simple `itemscope` / `itemprop` mappings, preferring `content`,
    `href`, `src`, or `datetime` attributes when present, otherwise direct text.
 4. Only after deterministic candidates fail does the optional model propose a

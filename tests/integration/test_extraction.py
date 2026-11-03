@@ -250,17 +250,18 @@ def test_custom_validator_messages_are_private(source):
     assert "PRIVATE" not in result.model_dump_json()
 
 
-def test_schema_aliases_require_explicit_future_support(source, html):
+def test_schema_aliases_accept_recipes_mapped_by_field_name(source):
     class Aliased(BaseModel):
         name: str = Field(alias="title")
 
-    with pytest.raises(ConfigurationError, match="aliases"):
-        Rastro().extract_html(
-            html,
-            source=source,
-            schema=Aliased,
-            recipe=Recipe(strategy="jsonld", fields={"name": "/name"}),
-        )
+    result = Rastro().extract_html(
+        ld({"name": "Book"}),
+        source=source,
+        schema=Aliased,
+        recipe=Recipe(strategy="jsonld", fields={"name": "/name"}),
+    )
+    assert result.status == Outcome.SUCCESS
+    assert result.records[0].data.name == "Book"
 
 
 def test_unknown_recipe_fields_are_configuration_error(source, schema, html):

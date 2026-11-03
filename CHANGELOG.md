@@ -16,6 +16,7 @@ All notable user-facing changes will be recorded here. No public release has bee
 
 ### Added
 
+- Deterministic discovery also matches exact declared Pydantic field aliases (`Field(alias=...)`, string `validation_alias` and `AliasChoices`) and an opt-in typed `discovery_aliases` per-field map for JSON-LD, microdata and JSON responses; recipes still map the model field name, so provenance shows the matched source key, and an aliased schema no longer raises `ConfigurationError` (INT-002).
 - Frozen v0.2 recovery benchmark protocol (`docs/recovery-benchmark.md`, ADR 0011) with exact detection, restoration, false-promotion, silent-error, model-call and human-approval metrics, pass criteria for a DIFF-001 recovery claim and anti-tuning rules, plus hashed synthetic development and sealed corpora of epoch sequences (`benchmarks/recovery/`) and an offline integrity test. No executor or repair code, no measured result, and no public SDK change (DIFF-001, REPAIR-001–006, DRIFT-001–005, QUAL-005/006, MOCK-002/003).
 
 ## 0.1.0 — release candidate (not yet tagged or published)
