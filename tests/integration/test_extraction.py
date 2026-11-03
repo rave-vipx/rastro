@@ -271,3 +271,82 @@ def test_unknown_recipe_fields_are_configuration_error(source, schema, html):
             schema=schema,
             recipe=Recipe(strategy="jsonld", fields={"typo": "/name"}),
         )
+
+
+CORPUS_RESULT_JSON_SHA256 = {
+    "static": "c0e85865d51a70f7e9409dbf770192593c3403c814d67e6c4572d3f853e50723",
+    "metadata": "aa73d30733771e023a423cc67b63bbcad974125b944ee9422a73702be90bbc6f",
+    "reordered": "3b4002a9d7589a0d64eebced30cebbfae1562b94f2b5bc99ea9598ed2e0feb2f",
+    "renamed": "7f29cdc9e186f9bf9693dc9fe827dba4a15ef52b6e2c70c88493c8ff170583b9",
+    "missing": "2adc96b51ae255611cf200851430a19ec633c591684c873834b16cd9b95fd12c",
+    "invalid": "9f91b37a9a279a7f5d47eb3dea89d59142c3905fc53ecac87a49aac315ff8e7f",
+    "partial": "e4bfe87f74481f34875268b5028e8ef854fef36282c0ceb01df79a05b958422f",
+    "ambiguous": "413da29fa1be09d59825815f3d1c630754e3856fb2c220adf06d8a58997f7e4b",
+    "broken": "11402f9c9a4fdfa16da6e52b57d5fbe69a8f13f22c59d0b643f6b6d9f85e6cf1",
+    "regional": "381c6aee54cf8a36cd6c39dc44516308422fc4213a8332d4a8a71b8d8f3f83d2",
+    "rendered": "2966232ec8f8ad2003165a2724106ee960554d49d67d099d545c528146603feb",
+    "js_shell": "6f3051e120f8564babf4bddfbad2107738a142648cee8f887397a47090e6e065",
+    "semantic_trap": "7da074358f229e879bbc037605108a628d28f9d3765a5ff67265d27429d63ff3",
+    "large": "516de062e4de0989e8cd505393a36f2f3fb01748db5322ff317ebb5d392ed130",
+}
+
+
+def _zero_timings(result):
+    metrics = result.metrics.model_copy(
+        update={
+            "extraction_seconds": 0.0,
+            "validation_seconds": 0.0,
+            "total_seconds": 0.0,
+            "storage_seconds": 0.0,
+        }
+    )
+    return result.model_copy(update={"metrics": metrics})
+
+
+def _rebuild_provenance(result):
+    from rastro import Evidence, ExtractionRecord
+
+    records = tuple(
+        ExtractionRecord(
+            data=record.data,
+            evidence={field: Evidence(**ev.model_dump()) for field, ev in record.evidence.items()},
+        )
+        for record in result.records
+    )
+    return result.model_copy(update={"records": records})
+
+
+def test_corpus_serialized_results_issues_and_provenance_are_unchanged(monkeypatch):
+    import hashlib
+    from datetime import UTC, datetime
+    from uuid import UUID
+
+    import rastro.application.extraction as extraction_module
+    import rastro.application.memory as memory_module
+    from benchmarks.run import load_cases
+
+    fixed_time = datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)
+    fixed_uuid = UUID("00000000-0000-0000-0000-000000000000")
+    frozen = type("FrozenDateTime", (), {"now": staticmethod(lambda tz=None: fixed_time)})
+    monkeypatch.setattr(extraction_module, "datetime", frozen)
+    monkeypatch.setattr(extraction_module, "uuid4", lambda: fixed_uuid)
+    monkeypatch.setattr(memory_module, "datetime", frozen)
+
+    cases = load_cases()
+    assert {case.name for case in cases} == set(CORPUS_RESULT_JSON_SHA256)
+    for case in cases:
+        mappings = [
+            Recipe(**mapping.model_dump(), require_evidence=True)
+            for mapping in case.document.mappings
+        ]
+        recipe = mappings[0].model_copy(update={"fallbacks": tuple(mappings[1:])})
+        result = Rastro().extract_html(
+            case.document.html,
+            source=Source(url="https://example.com/benchmark?token=omit#frag"),
+            schema=case.document.record_schema,
+            recipe=recipe,
+        )
+        zeroed = _zero_timings(result)
+        dumped = zeroed.model_dump_json()
+        assert hashlib.sha256(dumped.encode()).hexdigest() == CORPUS_RESULT_JSON_SHA256[case.name]
+        assert dumped == _rebuild_provenance(zeroed).model_dump_json()

@@ -100,6 +100,126 @@ def test_schema_fingerprint_is_deterministic_and_sensitive():
     assert len(schema_fingerprint(A)) == 64
 
 
+def _uncached_schema_fingerprint(cls: type[BaseModel]) -> str:
+    import hashlib
+
+    canonical = json.dumps(cls.model_json_schema(), sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode()).hexdigest()
+
+
+def test_schema_fingerprint_cache_matches_uncached_for_existing_schemas(monkeypatch):
+    from pydantic import ConfigDict
+
+    from benchmarks import heldout
+    from benchmarks.run import load_cases
+    from rastro import (
+        AcquisitionPolicy,
+        Evidence,
+        ExtractionRecord,
+        ExtractionResult,
+        InferencePolicy,
+        Issue,
+        Limits,
+        Metrics,
+        RecipeContext,
+        RecipeKey,
+        StoredRecipe,
+    )
+
+    listing = load_cases()[0].document.record_schema
+
+    class Deferred(BaseModel):
+        model_config = ConfigDict(defer_build=True)
+        title: str
+
+    for cls in (
+        Source,
+        Limits,
+        Issue,
+        Evidence,
+        Metrics,
+        CssRecipe,
+        JsonLdRecipe,
+        JsonRecipe,
+        Recipe,
+        RecipeContext,
+        RecipeKey,
+        StoredRecipe,
+        AcquisitionPolicy,
+        InferencePolicy,
+        listing,
+        heldout.Product,
+        ExtractionRecord[listing],
+        ExtractionResult[listing],
+        Deferred,
+    ):
+        expected = _uncached_schema_fingerprint(cls)
+        assert schema_fingerprint(cls) == expected
+        assert schema_fingerprint(cls) == expected
+
+    calls = 0
+
+    class Counted(BaseModel):
+        sku: str
+
+    real_json_schema = Counted.model_json_schema
+
+    def counted_json_schema(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        return real_json_schema(*args, **kwargs)
+
+    monkeypatch.setattr(Counted, "model_json_schema", counted_json_schema)
+    expected = _uncached_schema_fingerprint(Counted)
+    calls = 0
+    assert schema_fingerprint(Counted) == expected
+    assert schema_fingerprint(Counted) == expected
+    assert calls == 1
+
+
+def test_schema_fingerprint_rebuilds_after_forward_reference_and_collects_ephemeral():
+    import gc
+    import weakref
+
+    from pydantic import PydanticUserError
+
+    class Node(BaseModel):
+        id: int
+        child: "Child | None" = None  # noqa: F821
+
+    with pytest.raises(PydanticUserError):
+        schema_fingerprint(Node)
+
+    class ChildV1(BaseModel):
+        label: str
+
+    Node.model_rebuild(_types_namespace={"Child": ChildV1})
+    expected_v1 = _uncached_schema_fingerprint(Node)
+    assert schema_fingerprint(Node) == expected_v1
+    assert schema_fingerprint(Node) == expected_v1
+
+    class ChildV2(BaseModel):
+        label: str
+        weight: int
+
+    Node.model_fields["child"].annotation = ChildV2 | None
+    Node.model_rebuild(force=True)
+    expected_v2 = _uncached_schema_fingerprint(Node)
+    assert expected_v2 != expected_v1
+    assert schema_fingerprint(Node) == expected_v2
+
+    def make_ephemeral() -> weakref.ReferenceType[type[BaseModel]]:
+        class Ephemeral(BaseModel):
+            value: str
+
+        assert schema_fingerprint(Ephemeral) == _uncached_schema_fingerprint(Ephemeral)
+        return weakref.ref(Ephemeral)
+
+    ephemeral_ref = make_ephemeral()
+    gc.collect()
+    assert ephemeral_ref() is None
+
+
 @given(st.text(max_size=50), st.integers())
 def test_json_pointer_handles_arbitrary_keys(key, value):
     pointer = "/" + key.replace("~", "~0").replace("/", "~1")

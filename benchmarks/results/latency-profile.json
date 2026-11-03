@@ -1,7 +1,7 @@
 {
   "format_version": 1,
   "scope": "offline supplied-HTML extraction with explicit recipes, reconstructed per call",
-  "created_at": "2026-10-30T19:06:18.782821+00:00",
+  "created_at": "2026-11-03T15:18:41.925371+00:00",
   "calls": 30,
   "warmup": 5,
   "environment": {
@@ -16,7 +16,7 @@
       "lxml": "6.1.3"
     }
   },
-  "git_revision": "e70a642bd94054a1d2846a71a62923315f668bec",
+  "git_revision": "b8ada409e65d65353dea8728c13fa25b31132879",
   "unmeasured": [
     "cold process start",
     "network",
@@ -24,10 +24,10 @@
     "live inference"
   ],
   "fixed_costs": {
-    "schema_fingerprint": 0.10275,
-    "validate_recipe_roundtrip": 0.00575,
+    "schema_fingerprint": 0.00033,
+    "validate_recipe_roundtrip": 0.00613,
     "source_evidence_url": 0.00067,
-    "evidence_model": 0.00112
+    "evidence_model": 0.001
   },
   "cases": [
     {
@@ -38,112 +38,112 @@
       "records": 2,
       "calls": 30,
       "warmup": 5,
-      "per_call_ms": 0.1304,
-      "unprofiled_ms_per_call": 0.0752,
+      "per_call_ms": 0.1301,
+      "unprofiled_ms_per_call": 0.0759,
       "top": [
         {
           "function": "benchmarks.baseline:run",
-          "cumulative_ms_per_call": 0.1273,
-          "self_ms_per_call": 0.0125,
-          "share": 0.9765,
+          "cumulative_ms_per_call": 0.1271,
+          "self_ms_per_call": 0.0128,
+          "share": 0.9768,
           "calls_per_call": 1.0
         },
         {
           "function": "scrapling.parser:css",
-          "cumulative_ms_per_call": 0.0811,
+          "cumulative_ms_per_call": 0.0813,
           "self_ms_per_call": 0.0039,
-          "share": 0.6218,
+          "share": 0.6247,
           "calls_per_call": 9.0
         },
         {
           "function": "scrapling.parser:xpath",
-          "cumulative_ms_per_call": 0.0753,
-          "self_ms_per_call": 0.0494,
-          "share": 0.5775,
+          "cumulative_ms_per_call": 0.0754,
+          "self_ms_per_call": 0.0506,
+          "share": 0.5798,
           "calls_per_call": 9.0
         },
         {
           "function": "scrapling.parser:__handle_elements",
-          "cumulative_ms_per_call": 0.0206,
+          "cumulative_ms_per_call": 0.0194,
           "self_ms_per_call": 0.0025,
-          "share": 0.1579,
+          "share": 0.1494,
           "calls_per_call": 9.0
         },
         {
           "function": "scrapling.parser:__init__",
-          "cumulative_ms_per_call": 0.0191,
-          "self_ms_per_call": 0.0131,
-          "share": 0.1467,
+          "cumulative_ms_per_call": 0.0185,
+          "self_ms_per_call": 0.0126,
+          "share": 0.1424,
           "calls_per_call": 11.0
         },
         {
           "function": "scrapling.parser:__elements_convertor",
-          "cumulative_ms_per_call": 0.0181,
+          "cumulative_ms_per_call": 0.017,
           "self_ms_per_call": 0.0048,
-          "share": 0.1387,
+          "share": 0.1304,
           "calls_per_call": 9.0
         },
         {
           "function": "scrapling.parser:<genexpr>",
-          "cumulative_ms_per_call": 0.0133,
-          "self_ms_per_call": 0.0055,
-          "share": 0.1017,
+          "cumulative_ms_per_call": 0.0122,
+          "self_ms_per_call": 0.0056,
+          "share": 0.0935,
           "calls_per_call": 19.0
         },
         {
           "function": "scrapling.parser:_is_text_node",
-          "cumulative_ms_per_call": 0.0074,
+          "cumulative_ms_per_call": 0.0075,
           "self_ms_per_call": 0.0053,
-          "share": 0.0566,
+          "share": 0.058,
           "calls_per_call": 36.0
         },
         {
           "function": "scrapling.parser:getall",
-          "cumulative_ms_per_call": 0.0071,
-          "self_ms_per_call": 0.0026,
-          "share": 0.0542,
+          "cumulative_ms_per_call": 0.0069,
+          "self_ms_per_call": 0.0025,
+          "share": 0.0533,
           "calls_per_call": 8.0
         },
         {
           "function": "scrapling.core.custom_types:__getitem__",
-          "cumulative_ms_per_call": 0.0067,
-          "self_ms_per_call": 0.0049,
-          "share": 0.0514,
+          "cumulative_ms_per_call": 0.0068,
+          "self_ms_per_call": 0.005,
+          "share": 0.0523,
           "calls_per_call": 8.0
         },
         {
           "function": "scrapling.parser:get",
-          "cumulative_ms_per_call": 0.0045,
-          "self_ms_per_call": 0.0029,
-          "share": 0.0345,
+          "cumulative_ms_per_call": 0.0044,
+          "self_ms_per_call": 0.0028,
+          "share": 0.0341,
           "calls_per_call": 8.0
         },
         {
           "function": "lxml.html.__init__:lookup",
-          "cumulative_ms_per_call": 0.0041,
-          "self_ms_per_call": 0.0025,
-          "share": 0.0317,
+          "cumulative_ms_per_call": 0.0043,
+          "self_ms_per_call": 0.0026,
+          "share": 0.0328,
           "calls_per_call": 7.0
         },
         {
           "function": "pydantic.main:model_validate",
-          "cumulative_ms_per_call": 0.0036,
-          "self_ms_per_call": 0.0012,
-          "share": 0.0275,
+          "cumulative_ms_per_call": 0.0029,
+          "self_ms_per_call": 0.0006,
+          "share": 0.0223,
           "calls_per_call": 2.0
         },
         {
           "function": "lxml.html.__init__:__init__",
-          "cumulative_ms_per_call": 0.0027,
+          "cumulative_ms_per_call": 0.0028,
           "self_ms_per_call": 0.0019,
-          "share": 0.0205,
+          "share": 0.0214,
           "calls_per_call": 2.0
         },
         {
           "function": "builtins:<method 'validate_python' of 'pydantic_core._pydantic_core.SchemaValidator' objects>",
-          "cumulative_ms_per_call": 0.0024,
-          "self_ms_per_call": 0.0024,
-          "share": 0.0186,
+          "cumulative_ms_per_call": 0.0023,
+          "self_ms_per_call": 0.0023,
+          "share": 0.0178,
           "calls_per_call": 2.0
         }
       ]
@@ -156,113 +156,113 @@
       "records": 2,
       "calls": 30,
       "warmup": 5,
-      "per_call_ms": 0.8637,
-      "unprofiled_ms_per_call": 0.3258,
+      "per_call_ms": 0.339,
+      "unprofiled_ms_per_call": 0.1721,
       "top": [
         {
           "function": "rastro.application.engine:extract_html",
-          "cumulative_ms_per_call": 0.7914,
-          "self_ms_per_call": 0.0019,
-          "share": 0.9163,
+          "cumulative_ms_per_call": 0.2743,
+          "self_ms_per_call": 0.001,
+          "share": 0.8093,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "rastro.application.service:extract_provided",
+          "cumulative_ms_per_call": 0.2733,
+          "self_ms_per_call": 0.0016,
+          "share": 0.8064,
           "calls_per_call": 1.0
         },
         {
           "function": "rastro.application.memory:extract",
-          "cumulative_ms_per_call": 0.7544,
-          "self_ms_per_call": 0.0104,
-          "share": 0.8734,
+          "cumulative_ms_per_call": 0.227,
+          "self_ms_per_call": 0.0073,
+          "share": 0.6697,
           "calls_per_call": 1.0
         },
         {
           "function": "rastro.application.extraction:extract_document",
-          "cumulative_ms_per_call": 0.7071,
-          "self_ms_per_call": 0.0277,
-          "share": 0.8186,
-          "calls_per_call": 1.0
-        },
-        {
-          "function": "rastro.domain.models:schema_fingerprint",
-          "cumulative_ms_per_call": 0.4455,
-          "self_ms_per_call": 0.0037,
-          "share": 0.5158,
-          "calls_per_call": 1.0
-        },
-        {
-          "function": "pydantic.main:model_json_schema",
-          "cumulative_ms_per_call": 0.4281,
-          "self_ms_per_call": 0.0006,
-          "share": 0.4956,
-          "calls_per_call": 1.0
-        },
-        {
-          "function": "pydantic.json_schema:model_json_schema",
-          "cumulative_ms_per_call": 0.4275,
-          "self_ms_per_call": 0.0045,
-          "share": 0.495,
-          "calls_per_call": 1.0
-        },
-        {
-          "function": "pydantic.json_schema:generate",
-          "cumulative_ms_per_call": 0.2885,
-          "self_ms_per_call": 0.0049,
-          "share": 0.334,
-          "calls_per_call": 1.0
-        },
-        {
-          "function": "pydantic.json_schema:generate_inner",
-          "cumulative_ms_per_call": 0.1762,
-          "self_ms_per_call": 0.0211,
-          "share": 0.204,
+          "cumulative_ms_per_call": 0.1907,
+          "self_ms_per_call": 0.0177,
+          "share": 0.5625,
           "calls_per_call": 1.0
         },
         {
           "function": "rastro.adapters.scrapling:parse",
-          "cumulative_ms_per_call": 0.1665,
-          "self_ms_per_call": 0.0022,
-          "share": 0.1927,
-          "calls_per_call": 1.0
-        },
-        {
-          "function": "pydantic._internal._schema_generation_shared:__call__",
-          "cumulative_ms_per_call": 0.1641,
-          "self_ms_per_call": 0.0028,
-          "share": 0.19,
-          "calls_per_call": 1.0
-        },
-        {
-          "function": "pydantic.json_schema:new_handler_func",
-          "cumulative_ms_per_call": 0.1637,
-          "self_ms_per_call": 0.0013,
-          "share": 0.1895,
+          "cumulative_ms_per_call": 0.1312,
+          "self_ms_per_call": 0.0019,
+          "share": 0.3871,
           "calls_per_call": 1.0
         },
         {
           "function": "rastro.adapters.scrapling:_css",
-          "cumulative_ms_per_call": 0.141,
-          "self_ms_per_call": 0.0183,
-          "share": 0.1632,
+          "cumulative_ms_per_call": 0.1156,
+          "self_ms_per_call": 0.0126,
+          "share": 0.341,
           "calls_per_call": 1.0
         },
         {
-          "function": "pydantic.main:__get_pydantic_json_schema__",
-          "cumulative_ms_per_call": 0.1389,
-          "self_ms_per_call": 0.0004,
-          "share": 0.1609,
+          "function": "scrapling.parser:css",
+          "cumulative_ms_per_call": 0.0848,
+          "self_ms_per_call": 0.0043,
+          "share": 0.2503,
+          "calls_per_call": 9.0
+        },
+        {
+          "function": "scrapling.parser:xpath",
+          "cumulative_ms_per_call": 0.0779,
+          "self_ms_per_call": 0.0512,
+          "share": 0.2299,
+          "calls_per_call": 9.0
+        },
+        {
+          "function": "builtins:<method 'validate_python' of 'pydantic_core._pydantic_core.SchemaValidator' objects>",
+          "cumulative_ms_per_call": 0.0671,
+          "self_ms_per_call": 0.0254,
+          "share": 0.1979,
+          "calls_per_call": 15.0
+        },
+        {
+          "function": "pydantic.main:__init__",
+          "cumulative_ms_per_call": 0.0439,
+          "self_ms_per_call": 0.0028,
+          "share": 0.1295,
+          "calls_per_call": 11.0
+        },
+        {
+          "function": "rastro.application.memory:prepare",
+          "cumulative_ms_per_call": 0.0337,
+          "self_ms_per_call": 0.0012,
+          "share": 0.0994,
           "calls_per_call": 1.0
         },
         {
-          "function": "pydantic.json_schema:handler_func",
-          "cumulative_ms_per_call": 0.1382,
-          "self_ms_per_call": 0.008,
-          "share": 0.16,
+          "function": "rastro.application.extraction:validate_recipe",
+          "cumulative_ms_per_call": 0.0311,
+          "self_ms_per_call": 0.0023,
+          "share": 0.0918,
           "calls_per_call": 1.0
         },
         {
-          "function": "pydantic.json_schema:model_schema",
-          "cumulative_ms_per_call": 0.1363,
-          "self_ms_per_call": 0.0032,
-          "share": 0.1577,
-          "calls_per_call": 1.0
+          "function": "rastro.domain.models:check_mapping",
+          "cumulative_ms_per_call": 0.0302,
+          "self_ms_per_call": 0.0084,
+          "share": 0.0892,
+          "calls_per_call": 4.0
+        },
+        {
+          "function": "pydantic.main:model_copy",
+          "cumulative_ms_per_call": 0.0282,
+          "self_ms_per_call": 0.0056,
+          "share": 0.0831,
+          "calls_per_call": 5.0
+        },
+        {
+          "function": "pydantic.main:model_validate",
+          "cumulative_ms_per_call": 0.0272,
+          "self_ms_per_call": 0.0012,
+          "share": 0.0802,
+          "calls_per_call": 4.0
         }
       ]
     },
@@ -274,112 +274,112 @@
       "records": 1,
       "calls": 30,
       "warmup": 5,
-      "per_call_ms": 0.0434,
-      "unprofiled_ms_per_call": 0.0203,
+      "per_call_ms": 0.0422,
+      "unprofiled_ms_per_call": 0.0195,
       "top": [
         {
           "function": "benchmarks.baseline:run",
-          "cumulative_ms_per_call": 0.0412,
+          "cumulative_ms_per_call": 0.0401,
           "self_ms_per_call": 0.0022,
-          "share": 0.9498,
+          "share": 0.9501,
           "calls_per_call": 1.0
         },
         {
           "function": "benchmarks.baseline:_json_rows",
-          "cumulative_ms_per_call": 0.0286,
-          "self_ms_per_call": 0.005,
-          "share": 0.6598,
+          "cumulative_ms_per_call": 0.0278,
+          "self_ms_per_call": 0.0046,
+          "share": 0.6595,
           "calls_per_call": 1.0
         },
         {
           "function": "benchmarks.baseline:_json_items",
-          "cumulative_ms_per_call": 0.017,
+          "cumulative_ms_per_call": 0.0167,
           "self_ms_per_call": 0.0012,
-          "share": 0.3925,
+          "share": 0.396,
           "calls_per_call": 1.0
         },
         {
           "function": "scrapling.parser:css",
-          "cumulative_ms_per_call": 0.0094,
+          "cumulative_ms_per_call": 0.0091,
           "self_ms_per_call": 0.0006,
-          "share": 0.2159,
+          "share": 0.2155,
           "calls_per_call": 1.0
         },
         {
           "function": "scrapling.parser:__init__",
-          "cumulative_ms_per_call": 0.0086,
+          "cumulative_ms_per_call": 0.0084,
           "self_ms_per_call": 0.0053,
-          "share": 0.1975,
+          "share": 0.198,
           "calls_per_call": 2.0
         },
         {
           "function": "scrapling.parser:xpath",
-          "cumulative_ms_per_call": 0.0084,
-          "self_ms_per_call": 0.0052,
-          "share": 0.1945,
+          "cumulative_ms_per_call": 0.0082,
+          "self_ms_per_call": 0.005,
+          "share": 0.1944,
           "calls_per_call": 1.0
         },
         {
           "function": "benchmarks.baseline:_pointer",
-          "cumulative_ms_per_call": 0.0049,
+          "cumulative_ms_per_call": 0.0048,
           "self_ms_per_call": 0.0029,
-          "share": 0.1141,
+          "share": 0.1147,
           "calls_per_call": 4.0
         },
         {
           "function": "__init__:loads",
-          "cumulative_ms_per_call": 0.0032,
-          "self_ms_per_call": 0.0005,
-          "share": 0.0744,
+          "cumulative_ms_per_call": 0.0033,
+          "self_ms_per_call": 0.0006,
+          "share": 0.0776,
           "calls_per_call": 1.0
         },
         {
           "function": "decoder:decode",
-          "cumulative_ms_per_call": 0.0024,
+          "cumulative_ms_per_call": 0.0025,
           "self_ms_per_call": 0.0009,
-          "share": 0.0563,
+          "share": 0.0585,
           "calls_per_call": 1.0
         },
         {
           "function": "scrapling.parser:__handle_elements",
           "cumulative_ms_per_call": 0.0024,
           "self_ms_per_call": 0.0004,
-          "share": 0.0562,
+          "share": 0.0573,
           "calls_per_call": 1.0
         },
         {
           "function": "lxml.html.__init__:__init__",
-          "cumulative_ms_per_call": 0.0023,
+          "cumulative_ms_per_call": 0.0022,
           "self_ms_per_call": 0.0016,
-          "share": 0.0537,
+          "share": 0.0528,
           "calls_per_call": 2.0
         },
         {
           "function": "builtins:<method 'extend' of 'list' objects>",
           "cumulative_ms_per_call": 0.0021,
           "self_ms_per_call": 0.0004,
-          "share": 0.0495,
+          "share": 0.0504,
           "calls_per_call": 1.0
         },
         {
           "function": "scrapling.parser:__elements_convertor",
           "cumulative_ms_per_call": 0.0021,
           "self_ms_per_call": 0.0007,
-          "share": 0.0476,
+          "share": 0.049,
           "calls_per_call": 1.0
         },
         {
           "function": "benchmarks.baseline:_objects",
           "cumulative_ms_per_call": 0.0017,
           "self_ms_per_call": 0.0014,
-          "share": 0.0403,
+          "share": 0.0412,
           "calls_per_call": 2.0
         },
         {
           "function": "pydantic.main:model_validate",
           "cumulative_ms_per_call": 0.0015,
           "self_ms_per_call": 0.0003,
-          "share": 0.0352,
+          "share": 0.0349,
           "calls_per_call": 1.0
         }
       ]
@@ -392,112 +392,112 @@
       "records": 1,
       "calls": 30,
       "warmup": 5,
-      "per_call_ms": 0.7322,
-      "unprofiled_ms_per_call": 0.2506,
+      "per_call_ms": 0.2445,
+      "unprofiled_ms_per_call": 0.1177,
       "top": [
         {
           "function": "rastro.application.engine:extract_html",
-          "cumulative_ms_per_call": 0.659,
-          "self_ms_per_call": 0.002,
-          "share": 0.9,
+          "cumulative_ms_per_call": 0.1823,
+          "self_ms_per_call": 0.001,
+          "share": 0.7457,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "rastro.application.service:extract_provided",
+          "cumulative_ms_per_call": 0.1813,
+          "self_ms_per_call": 0.0016,
+          "share": 0.7416,
           "calls_per_call": 1.0
         },
         {
           "function": "rastro.application.memory:extract",
-          "cumulative_ms_per_call": 0.6213,
-          "self_ms_per_call": 0.0095,
-          "share": 0.8486,
+          "cumulative_ms_per_call": 0.1355,
+          "self_ms_per_call": 0.0069,
+          "share": 0.5542,
           "calls_per_call": 1.0
         },
         {
           "function": "rastro.application.extraction:extract_document",
-          "cumulative_ms_per_call": 0.5748,
-          "self_ms_per_call": 0.0221,
-          "share": 0.785,
+          "cumulative_ms_per_call": 0.1006,
+          "self_ms_per_call": 0.0145,
+          "share": 0.4113,
           "calls_per_call": 1.0
         },
         {
-          "function": "rastro.domain.models:schema_fingerprint",
-          "cumulative_ms_per_call": 0.4294,
-          "self_ms_per_call": 0.0026,
-          "share": 0.5864,
+          "function": "builtins:<method 'validate_python' of 'pydantic_core._pydantic_core.SchemaValidator' objects>",
+          "cumulative_ms_per_call": 0.064,
+          "self_ms_per_call": 0.022,
+          "share": 0.2616,
+          "calls_per_call": 13.0
+        },
+        {
+          "function": "rastro.adapters.scrapling:parse",
+          "cumulative_ms_per_call": 0.0527,
+          "self_ms_per_call": 0.0019,
+          "share": 0.2156,
           "calls_per_call": 1.0
         },
         {
-          "function": "pydantic.main:model_json_schema",
-          "cumulative_ms_per_call": 0.4133,
-          "self_ms_per_call": 0.0006,
-          "share": 0.5644,
+          "function": "pydantic.main:__init__",
+          "cumulative_ms_per_call": 0.0412,
+          "self_ms_per_call": 0.0024,
+          "share": 0.1684,
+          "calls_per_call": 10.0
+        },
+        {
+          "function": "rastro.adapters.scrapling:_jsonld",
+          "cumulative_ms_per_call": 0.0398,
+          "self_ms_per_call": 0.0059,
+          "share": 0.1629,
           "calls_per_call": 1.0
         },
         {
-          "function": "pydantic.json_schema:model_json_schema",
-          "cumulative_ms_per_call": 0.4127,
-          "self_ms_per_call": 0.0043,
-          "share": 0.5637,
-          "calls_per_call": 1.0
-        },
-        {
-          "function": "pydantic.json_schema:generate",
-          "cumulative_ms_per_call": 0.2959,
-          "self_ms_per_call": 0.0047,
-          "share": 0.4041,
-          "calls_per_call": 1.0
-        },
-        {
-          "function": "pydantic.json_schema:generate_inner",
-          "cumulative_ms_per_call": 0.1872,
-          "self_ms_per_call": 0.0261,
-          "share": 0.2557,
-          "calls_per_call": 1.0
-        },
-        {
-          "function": "pydantic._internal._schema_generation_shared:__call__",
-          "cumulative_ms_per_call": 0.1746,
-          "self_ms_per_call": 0.0027,
-          "share": 0.2384,
-          "calls_per_call": 1.0
-        },
-        {
-          "function": "pydantic.json_schema:new_handler_func",
-          "cumulative_ms_per_call": 0.1742,
+          "function": "rastro.application.memory:prepare",
+          "cumulative_ms_per_call": 0.0338,
           "self_ms_per_call": 0.0013,
-          "share": 0.2379,
+          "share": 0.1383,
           "calls_per_call": 1.0
         },
         {
-          "function": "pydantic.main:__get_pydantic_json_schema__",
-          "cumulative_ms_per_call": 0.1508,
-          "self_ms_per_call": 0.0004,
-          "share": 0.2059,
+          "function": "rastro.application.extraction:validate_recipe",
+          "cumulative_ms_per_call": 0.0311,
+          "self_ms_per_call": 0.0022,
+          "share": 0.1271,
           "calls_per_call": 1.0
         },
         {
-          "function": "pydantic.json_schema:handler_func",
-          "cumulative_ms_per_call": 0.1501,
-          "self_ms_per_call": 0.0085,
-          "share": 0.205,
-          "calls_per_call": 1.0
+          "function": "rastro.domain.models:check_mapping",
+          "cumulative_ms_per_call": 0.0307,
+          "self_ms_per_call": 0.0089,
+          "share": 0.1256,
+          "calls_per_call": 4.0
         },
         {
-          "function": "pydantic.json_schema:model_schema",
-          "cumulative_ms_per_call": 0.1482,
-          "self_ms_per_call": 0.0032,
-          "share": 0.2024,
-          "calls_per_call": 1.0
+          "function": "pydantic.main:model_copy",
+          "cumulative_ms_per_call": 0.0267,
+          "self_ms_per_call": 0.0053,
+          "share": 0.1091,
+          "calls_per_call": 5.0
         },
         {
-          "function": "pydantic.json_schema:model_fields_schema",
-          "cumulative_ms_per_call": 0.1142,
-          "self_ms_per_call": 0.0109,
-          "share": 0.156,
-          "calls_per_call": 1.0
+          "function": "pydantic.main:model_validate",
+          "cumulative_ms_per_call": 0.026,
+          "self_ms_per_call": 0.0009,
+          "share": 0.1064,
+          "calls_per_call": 3.0
         },
         {
-          "function": "pydantic.json_schema:__init__",
-          "cumulative_ms_per_call": 0.1079,
-          "self_ms_per_call": 0.0027,
-          "share": 0.1474,
+          "function": "pydantic.main:__copy__",
+          "cumulative_ms_per_call": 0.0182,
+          "self_ms_per_call": 0.0074,
+          "share": 0.0746,
+          "calls_per_call": 5.0
+        },
+        {
+          "function": "scrapling.parser:css",
+          "cumulative_ms_per_call": 0.0116,
+          "self_ms_per_call": 0.0009,
+          "share": 0.0475,
           "calls_per_call": 1.0
         }
       ]
@@ -510,112 +510,112 @@
       "records": 250,
       "calls": 30,
       "warmup": 5,
-      "per_call_ms": 13.4423,
-      "unprofiled_ms_per_call": 8.5028,
+      "per_call_ms": 12.1172,
+      "unprofiled_ms_per_call": 7.3129,
       "top": [
         {
           "function": "benchmarks.baseline:run",
-          "cumulative_ms_per_call": 13.3515,
-          "self_ms_per_call": 1.3462,
-          "share": 0.9932,
+          "cumulative_ms_per_call": 12.0376,
+          "self_ms_per_call": 1.2359,
+          "share": 0.9934,
           "calls_per_call": 1.0
         },
         {
           "function": "scrapling.parser:css",
-          "cumulative_ms_per_call": 9.1686,
-          "self_ms_per_call": 0.4298,
-          "share": 0.6821,
+          "cumulative_ms_per_call": 8.1522,
+          "self_ms_per_call": 0.3968,
+          "share": 0.6728,
           "calls_per_call": 1001.0
         },
         {
           "function": "scrapling.parser:xpath",
-          "cumulative_ms_per_call": 8.5309,
-          "self_ms_per_call": 5.6377,
-          "share": 0.6346,
+          "cumulative_ms_per_call": 7.556,
+          "self_ms_per_call": 4.804,
+          "share": 0.6236,
           "calls_per_call": 1001.0
         },
         {
           "function": "scrapling.parser:__handle_elements",
-          "cumulative_ms_per_call": 2.2904,
-          "self_ms_per_call": 0.2676,
-          "share": 0.1704,
+          "cumulative_ms_per_call": 2.1781,
+          "self_ms_per_call": 0.2577,
+          "share": 0.1797,
           "calls_per_call": 1001.0
         },
         {
           "function": "scrapling.parser:__elements_convertor",
-          "cumulative_ms_per_call": 2.0229,
-          "self_ms_per_call": 0.544,
-          "share": 0.1505,
+          "cumulative_ms_per_call": 1.9204,
+          "self_ms_per_call": 0.5072,
+          "share": 0.1585,
           "calls_per_call": 1001.0
         },
         {
           "function": "scrapling.parser:<genexpr>",
-          "cumulative_ms_per_call": 1.4789,
-          "self_ms_per_call": 0.6704,
-          "share": 0.11,
+          "cumulative_ms_per_call": 1.4132,
+          "self_ms_per_call": 0.6462,
+          "share": 0.1166,
           "calls_per_call": 2251.0
         },
         {
           "function": "scrapling.parser:__init__",
-          "cumulative_ms_per_call": 1.2104,
-          "self_ms_per_call": 0.879,
-          "share": 0.09,
+          "cumulative_ms_per_call": 1.1205,
+          "self_ms_per_call": 0.8049,
+          "share": 0.0925,
           "calls_per_call": 1251.0
         },
         {
           "function": "scrapling.parser:getall",
-          "cumulative_ms_per_call": 0.8673,
-          "self_ms_per_call": 0.3113,
-          "share": 0.0645,
+          "cumulative_ms_per_call": 0.828,
+          "self_ms_per_call": 0.2967,
+          "share": 0.0683,
           "calls_per_call": 1000.0
         },
         {
           "function": "scrapling.parser:_is_text_node",
-          "cumulative_ms_per_call": 0.8536,
-          "self_ms_per_call": 0.6124,
-          "share": 0.0635,
+          "cumulative_ms_per_call": 0.8274,
+          "self_ms_per_call": 0.592,
+          "share": 0.0683,
           "calls_per_call": 4252.0
         },
         {
           "function": "scrapling.core.custom_types:__getitem__",
-          "cumulative_ms_per_call": 0.8185,
-          "self_ms_per_call": 0.6085,
-          "share": 0.0609,
+          "cumulative_ms_per_call": 0.7844,
+          "self_ms_per_call": 0.5774,
+          "share": 0.0647,
           "calls_per_call": 1000.0
         },
         {
           "function": "scrapling.parser:get",
-          "cumulative_ms_per_call": 0.556,
-          "self_ms_per_call": 0.3555,
-          "share": 0.0414,
+          "cumulative_ms_per_call": 0.5313,
+          "self_ms_per_call": 0.3362,
+          "share": 0.0438,
           "calls_per_call": 1000.0
         },
         {
           "function": "lxml.html.__init__:lookup",
-          "cumulative_ms_per_call": 0.4061,
-          "self_ms_per_call": 0.242,
-          "share": 0.0302,
+          "cumulative_ms_per_call": 0.3817,
+          "self_ms_per_call": 0.2349,
+          "share": 0.0315,
           "calls_per_call": 751.0
         },
         {
           "function": "pydantic.main:model_validate",
-          "cumulative_ms_per_call": 0.2781,
-          "self_ms_per_call": 0.0528,
-          "share": 0.0207,
+          "cumulative_ms_per_call": 0.2472,
+          "self_ms_per_call": 0.0506,
+          "share": 0.0204,
           "calls_per_call": 250.0
         },
         {
           "function": "builtins:<built-in method builtins.issubclass>",
-          "cumulative_ms_per_call": 0.2412,
-          "self_ms_per_call": 0.2412,
-          "share": 0.0179,
+          "cumulative_ms_per_call": 0.2355,
+          "self_ms_per_call": 0.2355,
+          "share": 0.0194,
           "calls_per_call": 4252.0
         },
         {
           "function": "builtins:<method 'validate_python' of 'pydantic_core._pydantic_core.SchemaValidator' objects>",
-          "cumulative_ms_per_call": 0.2253,
-          "self_ms_per_call": 0.2253,
-          "share": 0.0168,
+          "cumulative_ms_per_call": 0.1965,
+          "self_ms_per_call": 0.1965,
+          "share": 0.0162,
           "calls_per_call": 250.0
         }
       ]
@@ -628,113 +628,113 @@
       "records": 250,
       "calls": 30,
       "warmup": 5,
-      "per_call_ms": 20.0925,
-      "unprofiled_ms_per_call": 12.0328,
+      "per_call_ms": 16.0313,
+      "unprofiled_ms_per_call": 9.135,
       "top": [
         {
           "function": "rastro.application.engine:extract_html",
-          "cumulative_ms_per_call": 19.9507,
-          "self_ms_per_call": 0.003,
+          "cumulative_ms_per_call": 15.9198,
+          "self_ms_per_call": 0.0021,
+          "share": 0.993,
+          "calls_per_call": 1.0
+        },
+        {
+          "function": "rastro.application.service:extract_provided",
+          "cumulative_ms_per_call": 15.9177,
+          "self_ms_per_call": 0.0024,
           "share": 0.9929,
           "calls_per_call": 1.0
         },
         {
           "function": "rastro.application.memory:extract",
-          "cumulative_ms_per_call": 19.9073,
-          "self_ms_per_call": 0.0904,
-          "share": 0.9908,
+          "cumulative_ms_per_call": 15.8632,
+          "self_ms_per_call": 0.055,
+          "share": 0.9895,
           "calls_per_call": 1.0
         },
         {
           "function": "rastro.application.extraction:extract_document",
-          "cumulative_ms_per_call": 19.7609,
-          "self_ms_per_call": 1.2136,
+          "cumulative_ms_per_call": 15.7664,
+          "self_ms_per_call": 0.6449,
           "share": 0.9835,
           "calls_per_call": 1.0
         },
         {
           "function": "rastro.adapters.scrapling:parse",
-          "cumulative_ms_per_call": 13.2779,
-          "self_ms_per_call": 0.026,
-          "share": 0.6608,
+          "cumulative_ms_per_call": 12.2236,
+          "self_ms_per_call": 0.0174,
+          "share": 0.7625,
           "calls_per_call": 1.0
         },
         {
           "function": "rastro.adapters.scrapling:_css",
-          "cumulative_ms_per_call": 12.8296,
-          "self_ms_per_call": 1.3477,
-          "share": 0.6385,
+          "cumulative_ms_per_call": 11.8426,
+          "self_ms_per_call": 1.2546,
+          "share": 0.7387,
           "calls_per_call": 1.0
         },
         {
           "function": "scrapling.parser:css",
-          "cumulative_ms_per_call": 9.4539,
-          "self_ms_per_call": 0.4318,
-          "share": 0.4705,
+          "cumulative_ms_per_call": 8.6408,
+          "self_ms_per_call": 0.4062,
+          "share": 0.539,
           "calls_per_call": 1001.0
         },
         {
           "function": "scrapling.parser:xpath",
-          "cumulative_ms_per_call": 8.8145,
-          "self_ms_per_call": 5.8745,
-          "share": 0.4387,
+          "cumulative_ms_per_call": 8.0344,
+          "self_ms_per_call": 5.2437,
+          "share": 0.5012,
           "calls_per_call": 1001.0
         },
         {
           "function": "scrapling.parser:__handle_elements",
-          "cumulative_ms_per_call": 2.3323,
-          "self_ms_per_call": 0.2815,
-          "share": 0.1161,
+          "cumulative_ms_per_call": 2.209,
+          "self_ms_per_call": 0.259,
+          "share": 0.1378,
           "calls_per_call": 1001.0
-        },
-        {
-          "function": "pydantic.main:__init__",
-          "cumulative_ms_per_call": 2.0709,
-          "self_ms_per_call": 0.6556,
-          "share": 0.1031,
-          "calls_per_call": 1258.0
         },
         {
           "function": "scrapling.parser:__elements_convertor",
-          "cumulative_ms_per_call": 2.0507,
-          "self_ms_per_call": 0.5502,
-          "share": 0.1021,
+          "cumulative_ms_per_call": 1.95,
+          "self_ms_per_call": 0.5206,
+          "share": 0.1216,
           "calls_per_call": 1001.0
-        },
-        {
-          "function": "builtins:<method 'validate_python' of 'pydantic_core._pydantic_core.SchemaValidator' objects>",
-          "cumulative_ms_per_call": 1.6776,
-          "self_ms_per_call": 1.627,
-          "share": 0.0835,
-          "calls_per_call": 1510.0
         },
         {
           "function": "scrapling.parser:<genexpr>",
-          "cumulative_ms_per_call": 1.5006,
-          "self_ms_per_call": 0.6755,
-          "share": 0.0747,
+          "cumulative_ms_per_call": 1.4294,
+          "self_ms_per_call": 0.6428,
+          "share": 0.0892,
           "calls_per_call": 2251.0
         },
         {
-          "function": "rastro.domain.models:evidence_url",
-          "cumulative_ms_per_call": 1.469,
-          "self_ms_per_call": 0.3753,
-          "share": 0.0731,
-          "calls_per_call": 1001.0
-        },
-        {
           "function": "scrapling.parser:__init__",
-          "cumulative_ms_per_call": 1.2471,
-          "self_ms_per_call": 0.9097,
-          "share": 0.0621,
+          "cumulative_ms_per_call": 1.1499,
+          "self_ms_per_call": 0.8301,
+          "share": 0.0717,
           "calls_per_call": 1251.0
         },
         {
-          "function": "parse:urlunsplit",
-          "cumulative_ms_per_call": 1.0938,
-          "self_ms_per_call": 0.4907,
-          "share": 0.0544,
-          "calls_per_call": 1001.0
+          "function": "rastro.application.extraction:_clone_evidence",
+          "cumulative_ms_per_call": 1.1374,
+          "self_ms_per_call": 0.898,
+          "share": 0.071,
+          "calls_per_call": 1000.0
+        },
+        {
+          "function": "scrapling.parser:getall",
+          "cumulative_ms_per_call": 0.8341,
+          "self_ms_per_call": 0.3049,
+          "share": 0.052,
+          "calls_per_call": 1000.0
+        },
+        {
+          "function": "scrapling.parser:_is_text_node",
+          "cumulative_ms_per_call": 0.8319,
+          "self_ms_per_call": 0.5962,
+          "share": 0.0519,
+          "calls_per_call": 4252.0
         }
       ]
     }
