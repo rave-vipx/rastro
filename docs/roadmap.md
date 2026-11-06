@@ -1,6 +1,8 @@
 # Roadmap and requirement coverage
 
-**Active milestone: v0.2 — Quality.** v0.1 is complete: `0.1.0rc1` is its release candidate, with M1–M4 implemented, the M5 technical evidence recorded, every section 18 acceptance criterion evidenced, and DIFF-001 partially demonstrated. Publication (namespace ownership, legal/trademark review, tag and Trusted Publishing) awaits maintainer approval through the release gates in issue #5; nothing has been published.
+**Active milestone: v0.2 — from known sources to a usable database** (specification 1.2, [ADR 0016](decisions/0016-dataset-outcome.md)). The product outcome: describe the data you need, name the sources you know, and get an updatable database for your application. First public case: an agenda of dance events in Uruguay (an example job; the engine stays domain-neutral).
+
+v0.1 remains the reference release. It is complete: `0.1.0rc1` is its release candidate, with M1–M4 implemented, the M5 technical evidence recorded, every section 18 acceptance criterion evidenced, and DIFF-001 partially demonstrated. Publication (namespace ownership, legal/trademark review, tag and Trusted Publishing) awaits maintainer approval through the release gates in issue #5; nothing has been published.
 
 ## v0.1 milestones
 
@@ -44,19 +46,34 @@ Owner decisions after the 0.1.0 release candidate ([ADR 0012](decisions/0012-pro
 | Declarative jobs and machine-readable CLI (#35: JOB-001/002, AGENT-001) | Merged; `rastro job validate`, `rastro job run` and `rastro job schema`, with the job JSON Schemas published in `docs/schemas/` | None |
 | Repository hygiene | `dev` promoted to `main` as release candidate `0.1.0rc1` on 2026-11-03 (PR #39, tag `v0.1.0rc1`); nothing published | Close issues #2–#4 (implemented) and satisfy the release gates in issue #5 |
 
+## Re-plan of 2026-11-06 (specification 1.2)
+
+Base for integration: `dev` (`31cbcde`). `staging` (`8f96d41`) is an ancestor of `dev` with no commits of its own; `dev` adds only #51, #52 and #43. CI is green on `main` (`3ab9dd2`, tag `v0.1.0rc1`), `staging` and `dev`. Locations of the delivered work:
+
+| Work | Commit on `dev` | Tests | On `staging` | On `main` |
+| --- | --- | --- | --- | --- |
+| Declarative jobs and job CLI (JOB-001/002, AGENT-001) | `dd60825` (#35) | `tests/unit/test_jobs.py`, `test_job_fields.py`, `test_job_strict.py`; `tests/integration/test_job_*.py` | Yes | Yes |
+| Recipe lifecycle and rollback (REC-005/006, REPAIR-006) | `0636610` (#46), `a66196d` (#49) | `tests/unit/test_lifecycle*.py`, `tests/integration/test_recipe_lifecycle*.py` | Yes | No |
+| Mock Lab (MOCK-001–006) | `e9a01fc` (#40), `fda1103` (#45), `eb499bd` (#47), `8f96d41` (#48) | `tests/unit/mocklab/` | Yes | No |
+
+| Status | Work |
+| --- | --- |
+| **Finished, kept** | v0.1 (reference); pre-v0.2 hardening; Mock Lab (MOCK-001–006); recipe lifecycle (REC-005/006, REPAIR-006); declarative jobs (JOB-001/002, AGENT-001) |
+| **Brought forward v0.3 → v0.2** | Record lifecycle changes, identity and deduplication, last observation time, no deletion on failure (SYNC-002/003/005 partial/006) |
+| **New in v0.2** | Dataset store separate from recipe memory, preview, approved fields, JSONL export and application query, uncertain matches, observed/inferred/unknown values (DATA-001–005); stale-source report (SYNC-008); zero-external-spend mode (COST-001); field-level drift effect (DRIFT-006); product-task comparison (DIFF-002) |
+| **Stays in v0.2** | Drift (DRIFT-001–005), controlled repair (REPAIR-001–005, SCR-002), semantic consistency (QUAL-005/006), sealed-corpus evaluation (DIFF-001, ADR 0011) |
+| **Moved v0.2 → v0.4** | MCP adapter (AGENT-002), once a concrete integration will consume it |
+| **Reframed v0.3** | Three entry modes and observed field proposals (DISC-003); pagination, JavaScript, sessions, per-domain concurrency and run recovery chosen by pilot obstacles; scheduling with the same job (SCHED-007); paid-service limits (COST-002) |
+| **Reframed v0.5** | Hub starts with Git export/import of recipe, schema, redistributable sample, test and last-verified date |
+
 ## v0.2 order of work
 
-1. Mock Lab (MOCK-001–006): the measurement instrument for everything after it.
-2. Structural drift signals (DRIFT-001–005): observe before acting.
-3. Recipe lifecycle and rollback (REC-005/006, REPAIR-006).
-4. Controlled repair (REPAIR-001–005): deterministic candidates first, including Scrapling adaptive relocation (SCR-002); a model only as a last resort.
-5. Semantic consistency (QUAL-005/006).
-6. MCP agent interface (AGENT-002).
-7. Final evaluation against the frozen recovery benchmark (DIFF-001).
+1. **Pilot:** two real sources for the dance agenda (a venue's listings, a ticket seller's event page); record the obstacles found.
+2. **First cut — known sources to a database:** the user's job, preview, SQLite load of approved fields, JSONL export and the "upcoming dances" query, with no Python; a reproducible local sample and a dated live run. Closes when a second run keeps the event count, updates a rescheduled performance, keeps distinct performances distinct, keeps a failed source's records with their last observation time, and flags uncertain cross-source matches.
+3. **Second cut — drift and repair on that path:** field-level drift signals with their effect on the table; Mock Lab reproduction; candidate, activation and rollback through the existing lifecycle; the sale-date-versus-event-date trap; repair reports.
+4. **Evaluation:** product-task comparison against Scrapling + Pydantic (DIFF-002), with human effort measured separately, and the single opening of the sealed corpus (DIFF-001, ADR 0011).
 
-### Wave 1 (in progress)
-
-Merged into `dev`: representative failure scenarios (MOCK-003; #40), Mock Lab core (MOCK-001, MOCK-004, MOCK-005, MOCK-006; #45) and follow-ups (#47), and recipe lifecycle and rollback (REC-005/006, REPAIR-006; #46). Controlled structural mutations (MOCK-002; PR #48) remain in review.
+Wave 1 is complete: failure scenarios (#40), Mock Lab core (#45) and follow-ups (#47), recipe lifecycle (#46, #49) and structural mutations (#48). Follow-ups for the first-cut integration slice: the golden-digest docstring (the Windows lxml wheel bundles libxml2 2.11.9) and `HtmlDuplicateElement` performance on large targets.
 
 ## Current requirement mapping
 
@@ -109,10 +126,9 @@ Merged into `dev`: representative failure scenarios (MOCK-003; #40), Mock Lab co
 
 ## Later releases
 
-- **v0.2 — Quality:** synthetic mutation fixtures, controlled repair (including Scrapling adaptive relocation), recipe CI, rollback, explainable structural drift and an MCP agent interface.
-- **v0.3 — Sync:** term-based source discovery with approval, recurring sources, record identity, incremental synchronization, historical changes, monitoring, and alerts.
-- **v0.4 — Studio:** local visual operations built on the same application services, including a job editor for sites, research terms and wanted data.
-- **v0.5 — Hub:** safe declarative recipe exchange with reproducible tests and explicit privacy boundaries.
+- **v0.3 — from an intent to reusable sources and recipes:** start from known sites and fields, sites only, or only a goal; source and field proposals backed by real records; pagination, JavaScript, sessions, per-domain concurrency and run recovery as the pilot requires; scheduling with the same job; freshness, coverage and cost per source; alerts.
+- **v0.4 — Studio:** the proven path done visually (describe, review samples, correct a match, accept a recipe, connect the application), starting with the screen pilot users needed most; MCP once a concrete integration consumes it.
+- **v0.5 — Hub:** reuse a recipe with its schema, redistributable sample, test and last-verified date, starting with Git export/import; first proof: a third party publishes a recipe and another application uses it without the author's help.
 
 See the [master specification](https://github.com/rave-vipx/rastro/blob/main/RASTRO_MASTER_SPEC.md) for the authoritative requirements and acceptance criteria.
 
