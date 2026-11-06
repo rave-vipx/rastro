@@ -64,6 +64,12 @@ def resolve_job_path(
     return resolved
 
 
+def _same_file(left: Path, right: Path) -> bool:
+    if left == right:
+        return True
+    return left.exists() and right.exists() and left.samefile(right)
+
+
 def validate_job_paths(
     job: Job, *, base_dir: Path | None, allow_absolute_paths: bool = False
 ) -> tuple[dict[int, Path], Path | None]:
@@ -74,6 +80,12 @@ def validate_job_paths(
         if job.recipe_memory is not None
         else None
     )
+    if job.dataset is not None:
+        dataset_path = resolve_job_path(
+            job.dataset.path, base_dir=base_dir, allow_absolute_paths=allow_absolute_paths
+        )
+        if memory_path is not None and _same_file(dataset_path, memory_path):
+            raise ConfigurationError("The dataset must be a separate file from recipe_memory")
     file_paths = {
         index: resolve_job_path(
             source.path, base_dir=base_dir, allow_absolute_paths=allow_absolute_paths

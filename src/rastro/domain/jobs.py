@@ -23,6 +23,7 @@ from pydantic import (
 from rastro.domain.acquisition import AcquisitionPolicy
 from rastro.domain.intelligence import InferencePolicy
 from rastro.domain.job_contract import ENV_REFERENCE, RedactedContract
+from rastro.domain.job_dataset import DatasetSpec
 from rastro.domain.job_fields import JobField, build_job_schema
 from rastro.domain.job_providers import JobModelProvider
 from rastro.domain.job_sources import (
@@ -72,6 +73,7 @@ class Job(RedactedContract):
     recipe_memory: str | None = Field(default=None, min_length=1, max_length=1024)
     model: JobModelProvider | None = None
     inference_policy: InferencePolicy | None = None
+    dataset: DatasetSpec | None = None
 
     @field_validator("format_version", mode="before")
     @classmethod
@@ -101,6 +103,8 @@ class Job(RedactedContract):
             raise ValueError("context and recipe_version require recipe_memory")
         if self.recipe is not None:
             _check_recipe_fields(self.recipe, declared)
+        if self.dataset is not None:
+            self.dataset.check_against([item.name for item in self.fields])
         self._check_env_references()
         self._check_http_policy()
         self._check_source_recipes_and_egress(declared)
@@ -152,7 +156,10 @@ class Job(RedactedContract):
 
     def redacted_dump(self) -> dict[str, Any]:
         """JSON-mode dump with every ``*_env`` reference replaced by ``"<redacted>"``."""
-        redacted: dict[str, Any] = _redact_env(self.model_dump(mode="json"))
+        dump = self.model_dump(mode="json", exclude_none=False)
+        if self.dataset is None:
+            dump.pop("dataset")
+        redacted: dict[str, Any] = _redact_env(dump)
         return redacted
 
 

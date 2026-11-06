@@ -28,7 +28,9 @@ from rastro import (
     run_job_file,
     schema_fingerprint,
 )
+from rastro.application.job_preview import preview_job_file, render_preview_table
 from rastro.cli_errors import UsageError, classify
+from rastro.domain.job_dataset import job_preview_json_schema
 
 
 class _DemoProduct(BaseModel):
@@ -80,19 +82,39 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Allow absolute paths for local source files and recipe memory",
     )
 
+    job_preview = job_commands.add_parser(
+        "preview", help="Preview what a job would load into its [dataset]; writes nothing"
+    )
+    job_preview.add_argument("file", type=Path)
+    job_preview.add_argument(
+        "--output",
+        choices=("table", "json"),
+        default="table",
+        help="Human table (default) or machine-readable JSON",
+    )
+    job_preview.add_argument(
+        "--allow-absolute-paths",
+        action="store_true",
+        help="Allow absolute paths for local source files, recipe memory and the dataset",
+    )
+
     job_schema = job_commands.add_parser("schema", help="Print JSON Schema for declarative jobs")
     job_schema.add_argument(
         "--target",
-        choices=("job", "run"),
+        choices=("job", "run", "preview"),
         default="job",
-        help="Schema to print: 'job' input format (default) or 'run' output format",
+        help="Schema to print: 'job' input (default), 'run' or 'preview' output",
     )
     return parser
 
 
 def _run_job_command(args: argparse.Namespace) -> int:
     if args.job_command == "schema":
-        payload = job_json_schema() if args.target == "job" else job_run_json_schema()
+        payload = {
+            "job": job_json_schema,
+            "run": job_run_json_schema,
+            "preview": job_preview_json_schema,
+        }[args.target]()
         print(json.dumps(payload, indent=2, sort_keys=True))
         return int(JobExitCode.SUCCESS)
     if args.job_command == "validate":
@@ -111,6 +133,14 @@ def _run_job_command(args: argparse.Namespace) -> int:
             )
         )
         return int(JobExitCode.SUCCESS)
+    if args.job_command == "preview":
+        preview = preview_job_file(args.file, allow_absolute_paths=args.allow_absolute_paths)
+        print(
+            preview.model_dump_json(indent=2)
+            if args.output == "json"
+            else render_preview_table(preview)
+        )
+        return int(preview.exit_code)
     report = run_job_file(args.file, allow_absolute_paths=args.allow_absolute_paths)
     print(report.model_dump_json(indent=2))
     return int(report.exit_code)

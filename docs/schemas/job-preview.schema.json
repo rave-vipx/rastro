@@ -1,0 +1,372 @@
+{
+  "$defs": {
+    "JobRunStatus": {
+      "enum": [
+        "success",
+        "partial_success",
+        "failed"
+      ],
+      "type": "string"
+    },
+    "JobSummary": {
+      "additionalProperties": false,
+      "description": "Aggregate execution metadata across all sources in one job run.",
+      "properties": {
+        "failed": {
+          "minimum": 0,
+          "title": "Failed",
+          "type": "integer"
+        },
+        "format_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Format Version",
+          "type": "integer"
+        },
+        "partial": {
+          "minimum": 0,
+          "title": "Partial",
+          "type": "integer"
+        },
+        "records_accepted": {
+          "minimum": 0,
+          "title": "Records Accepted",
+          "type": "integer"
+        },
+        "records_rejected": {
+          "minimum": 0,
+          "title": "Records Rejected",
+          "type": "integer"
+        },
+        "schema_fingerprint": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Schema Fingerprint",
+          "type": "string"
+        },
+        "source_count": {
+          "minimum": 1,
+          "title": "Source Count",
+          "type": "integer"
+        },
+        "status": {
+          "$ref": "#/$defs/JobRunStatus"
+        },
+        "succeeded": {
+          "minimum": 0,
+          "title": "Succeeded",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema_fingerprint",
+        "source_count",
+        "succeeded",
+        "partial",
+        "failed",
+        "records_accepted",
+        "records_rejected",
+        "status"
+      ],
+      "title": "JobSummary",
+      "type": "object"
+    },
+    "JsonValue": {},
+    "Outcome": {
+      "enum": [
+        "success",
+        "partial_success",
+        "missing_data",
+        "invalid_data",
+        "access_restriction",
+        "transient_failure",
+        "permanent_failure",
+        "insufficient_evidence"
+      ],
+      "title": "Outcome",
+      "type": "string"
+    },
+    "PreviewDataset": {
+      "additionalProperties": false,
+      "properties": {
+        "approve": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Approve",
+          "type": "array"
+        },
+        "identity": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Identity",
+          "type": "array"
+        },
+        "match_tolerance_minutes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Match Tolerance Minutes"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "path",
+        "identity",
+        "approve"
+      ],
+      "title": "PreviewDataset",
+      "type": "object"
+    },
+    "PreviewField": {
+      "additionalProperties": false,
+      "description": "One field of an accepted record: value, provenance, validation and load decision.\n\n``not_observed`` marks a field with no source evidence (an optional default); never loaded.",
+      "properties": {
+        "identity": {
+          "title": "Identity",
+          "type": "boolean"
+        },
+        "loaded": {
+          "title": "Loaded",
+          "type": "boolean"
+        },
+        "locator": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Locator"
+        },
+        "method": {
+          "anyOf": [
+            {
+              "enum": [
+                "jsonld",
+                "css",
+                "json"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Method"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "recipe_version": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Recipe Version"
+        },
+        "source_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Url"
+        },
+        "validation": {
+          "enum": [
+            "valid",
+            "not_observed"
+          ],
+          "title": "Validation",
+          "type": "string"
+        },
+        "value": {
+          "$ref": "#/$defs/JsonValue"
+        }
+      },
+      "required": [
+        "name",
+        "value",
+        "validation",
+        "identity",
+        "loaded"
+      ],
+      "title": "PreviewField",
+      "type": "object"
+    },
+    "PreviewReason": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "field": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Field"
+        }
+      },
+      "required": [
+        "code"
+      ],
+      "title": "PreviewReason",
+      "type": "object"
+    },
+    "PreviewRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "fields": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/PreviewField"
+          },
+          "title": "Fields",
+          "type": "array"
+        },
+        "index": {
+          "minimum": 0,
+          "title": "Index",
+          "type": "integer"
+        },
+        "reasons": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/PreviewReason"
+          },
+          "title": "Reasons",
+          "type": "array"
+        },
+        "status": {
+          "enum": [
+            "accepted",
+            "rejected"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "index",
+        "status"
+      ],
+      "title": "PreviewRecord",
+      "type": "object"
+    },
+    "PreviewSource": {
+      "additionalProperties": false,
+      "properties": {
+        "issues": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/PreviewReason"
+          },
+          "title": "Issues",
+          "type": "array"
+        },
+        "records": {
+          "items": {
+            "$ref": "#/$defs/PreviewRecord"
+          },
+          "title": "Records",
+          "type": "array"
+        },
+        "source_url": {
+          "title": "Source Url",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/Outcome"
+        }
+      },
+      "required": [
+        "source_url",
+        "status",
+        "records"
+      ],
+      "title": "PreviewSource",
+      "type": "object"
+    }
+  },
+  "$id": "https://rave-vipx.github.io/rastro/schemas/job-preview.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Read-only report of what a run would load into the dataset. Nothing is written.",
+  "properties": {
+    "data_trust": {
+      "const": "untrusted_source_data",
+      "default": "untrusted_source_data",
+      "title": "Data Trust",
+      "type": "string"
+    },
+    "dataset": {
+      "$ref": "#/$defs/PreviewDataset"
+    },
+    "job": {
+      "$ref": "#/$defs/JobSummary"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "sources": {
+      "items": {
+        "$ref": "#/$defs/PreviewSource"
+      },
+      "minItems": 1,
+      "title": "Sources",
+      "type": "array"
+    },
+    "written": {
+      "const": false,
+      "default": false,
+      "title": "Written",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "dataset",
+    "job",
+    "sources"
+  ],
+  "title": "JobPreview",
+  "type": "object"
+}
