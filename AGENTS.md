@@ -22,7 +22,7 @@ When your agent offers these skills (in Claude Code, Codex, OpenCode and Antigra
 
 | Task | Skill |
 | --- | --- |
-| Any code change | `incremental-implementation`, `test-driven-development`, `git-workflow-and-versioning` |
+| Any code change | `incremental-implementation`, `test-driven-development`, `git-workflow-and-versioning`, `ponytail` (level lite or full; never ultra on persistence or security) |
 | Untrusted input, secrets, sanitization, network or egress | `security-and-hardening` |
 | Domain terms, ADRs, public API or module design | `domain-modeling`, `codebase-design`, `documentation-and-adrs` |
 | Removing or changing a public name, a protocol or a persisted format | `deprecation-and-migration` |
