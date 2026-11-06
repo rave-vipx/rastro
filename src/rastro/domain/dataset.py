@@ -39,11 +39,12 @@ def identity_value(value: object) -> IdentityValue:
         raise DatasetStorageError(
             "Identity requires bounded nonblank strings, finite scalars or aware datetimes"
         )
+    value = " ".join(value.split())
     try:
-        parsed = datetime.fromisoformat(value.strip())
+        parsed = datetime.fromisoformat(value)
     except ValueError:
-        return normalize("NFC", value.strip().casefold())
-    return utc_timestamp(parsed) if parsed.tzinfo is not None else value.strip().casefold()
+        return normalize("NFC", value.casefold())
+    return utc_timestamp(parsed) if parsed.tzinfo is not None else value.casefold()
 
 
 class DatasetRecordKey(Contract):

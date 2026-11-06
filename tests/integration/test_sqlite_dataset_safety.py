@@ -1,6 +1,7 @@
 """DATA-001/005, SYNC-005/006: bounded, atomic writes and safe schema ownership."""
 
 import sqlite3
+from contextlib import closing
 from datetime import timedelta
 
 import pytest
@@ -70,7 +71,7 @@ def test_late_run_cannot_regress_fields_or_source_health(tmp_path):
 @pytest.mark.parametrize("version,app", [(99, APPLICATION_ID), (0, 0), (1, 123)])
 def test_foreign_and_future_schema_is_unchanged(tmp_path, version, app):
     path = tmp_path / "foreign.sqlite"
-    with sqlite3.connect(path) as db:
+    with closing(sqlite3.connect(path)) as db:
         db.execute("CREATE TABLE untouched(value TEXT)")
         db.execute(f"PRAGMA user_version = {version}")
         db.execute(f"PRAGMA application_id = {app}")
@@ -87,12 +88,14 @@ def test_migration_failure_rolls_back_and_retry_is_idempotent():
                 raise sqlite3.OperationalError("simulated")
             return super().execute(sql, *args)
 
-    with sqlite3.connect(":memory:", factory=BrokenConnection) as db:
-        with pytest.raises(sqlite3.OperationalError):
+    with closing(sqlite3.connect(":memory:", factory=BrokenConnection)) as db:
+        with pytest.raises(sqlite3.OperationalError), db:
+            db.execute("BEGIN IMMEDIATE")
             migrate(db)
         assert db.execute("SELECT name FROM sqlite_master").fetchall() == []
         assert db.execute("PRAGMA user_version").fetchone()[0] == 0
-    with sqlite3.connect(":memory:") as db:
+    with closing(sqlite3.connect(":memory:")) as db:
+        db.execute("BEGIN IMMEDIATE")
         migrate(db)
         migrate(db)
         assert db.execute("PRAGMA user_version").fetchone()[0] == 1
@@ -138,7 +141,7 @@ def test_invalid_failure_reason_does_not_create_file(tmp_path, reason):
     assert not path.exists()
 
 
-def test_custom_match_mapping_and_tolerance(tmp_path):
+def test_near_match_tolerance(tmp_path):
     store = SQLiteDatasetStore(tmp_path / "data.sqlite", near_match_tolerance=timedelta(minutes=5))
     apply(store, record(timed=True))
     apply(store, record(timed=True, source=OTHER, start="2026-11-07T20:10:00+00:00"), source=OTHER)

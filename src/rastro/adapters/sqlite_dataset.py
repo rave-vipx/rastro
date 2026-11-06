@@ -2,13 +2,12 @@
 
 import json
 import sqlite3
-from collections.abc import Iterator, Sequence
-from contextlib import closing, contextmanager
+from collections.abc import Sequence
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import TextIO
 
-from rastro.adapters.sqlite_dataset_schema import migrate, safe, update_status
+from rastro.adapters.sqlite_dataset_schema import connection, safe, update_status
 from rastro.adapters.structured import load_json
 from rastro.domain.dataset import (
     ChangeKind,
@@ -47,23 +46,6 @@ class SQLiteDatasetStore:
             limits or Limits(),
         )
 
-    @contextmanager
-    def _connection(self, *, write: bool = False) -> Iterator[sqlite3.Connection]:
-        if any(p.is_symlink() for p in (self._path, *self._path.parents)):
-            raise DatasetStorageError("Dataset paths must not contain symlinks")
-        with closing(sqlite3.connect(self._path, timeout=5, isolation_level=None)) as db:
-            db.setlimit(sqlite3.SQLITE_LIMIT_LENGTH, self._limits.max_json_bytes)
-            db.execute("PRAGMA trusted_schema = OFF")
-            db.execute("PRAGMA secure_delete = ON")
-            migrate(db)
-            db.execute("BEGIN IMMEDIATE" if write else "BEGIN")
-            try:
-                yield db
-                db.commit()
-            except BaseException:
-                db.rollback()
-                raise
-
     def _read(self, db: sqlite3.Connection, dataset: str) -> dict[str, StoredRecord]:
         rows: dict[str, StoredRecord] = {}
         size = 0
@@ -99,8 +81,7 @@ class SQLiteDatasetStore:
         if type(complete) is not bool or len(records) > self._limits.max_records:
             raise DatasetStorageError("Invalid snapshot completeness or record count")
         incoming = self._prepare(dataset, source_url, records, observed_at)
-        changes: dict[ChangeKind, list[DatasetRecordKey]] = {kind: [] for kind in ChangeKind}
-        with self._connection(write=True) as db:
+        with connection(self._path, self._limits, write=True) as db:
             rows = self._read(db, dataset)
             update_status(
                 db,
@@ -110,22 +91,7 @@ class SQLiteDatasetStore:
                 complete,
                 None if complete else "partial_snapshot",
             )
-            for key, row in rows.items():
-                if source_url in row.origins and key not in incoming:
-                    changes[ChangeKind.MISSING if complete else ChangeKind.UNCERTAIN].append(
-                        row.key
-                    )
-            for key, record in incoming.items():
-                old = rows.get(key)
-                kind = (
-                    ChangeKind.CREATED
-                    if old is None
-                    else ChangeKind.UNCHANGED
-                    if old.origins.get(source_url, old).fields == record.fields
-                    else ChangeKind.UPDATED
-                )
-                changes[kind].append(record.key)
-                rows[key] = self._observe(old, record)
+            report = self._classify(rows, incoming, source_url, complete=complete)
             self._link_matches(rows, incoming)
             payloads = [(dataset, key, row.model_dump_json()) for key, row in sorted(rows.items())]
             if (
@@ -136,6 +102,32 @@ class SQLiteDatasetStore:
             for _, _, payload in payloads:
                 load_json(payload, self._limits)
             db.executemany("INSERT OR REPLACE INTO dataset_records VALUES (?, ?, ?)", payloads)
+        return report
+
+    def _classify(
+        self,
+        rows: dict[str, StoredRecord],
+        incoming: dict[str, ObservedRecord],
+        source: str,
+        *,
+        complete: bool,
+    ) -> SnapshotReport:
+        changes: dict[ChangeKind, list[DatasetRecordKey]] = {kind: [] for kind in ChangeKind}
+        for key, row in rows.items():
+            if source in row.origins and key not in incoming:
+                changes[ChangeKind.MISSING if complete else ChangeKind.UNCERTAIN].append(row.key)
+        for key, record in incoming.items():
+            old = rows.get(key)
+            observed = self._observe(old, record, complete=complete)
+            kind = (
+                ChangeKind.CREATED
+                if old is None
+                else ChangeKind.UNCHANGED
+                if old.origins.get(source, old).fields == observed.origins[source].fields
+                else ChangeKind.UPDATED
+            )
+            changes[kind].append(record.key)
+            rows[key] = observed
         return SnapshotReport(keys={kind: tuple(keys) for kind, keys in changes.items()})
 
     def _prepare(
@@ -165,11 +157,17 @@ class SQLiteDatasetStore:
         return incoming
 
     @staticmethod
-    def _observe(old: StoredRecord | None, record: ObservedRecord) -> StoredRecord:
+    def _observe(
+        old: StoredRecord | None, record: ObservedRecord, *, complete: bool
+    ) -> StoredRecord:
         origins = dict(old.origins) if old else {}
         prior = origins.get(record.source_url)
+        values = record.model_dump()
+        if prior is not None and not complete:
+            values["fields"] = {**prior.fields, **record.fields}
+            values["provenance"] = {**prior.provenance, **record.provenance}
         origin = RecordOrigin(
-            **record.model_dump(),
+            **values,
             first_observed_at=prior.first_observed_at if prior else record.observed_at,
             last_observed_at=record.observed_at,
         )
@@ -211,13 +209,13 @@ class SQLiteDatasetStore:
     ) -> None:
         self._validate(dataset, source_url, observed_at)
         reason = check_reason(reason)
-        with self._connection(write=True) as db:
+        with connection(self._path, self._limits, write=True) as db:
             update_status(db, dataset, source_url, observed_at, False, reason)
 
     @safe
     def records(self, dataset: str) -> tuple[StoredRecord, ...]:
         DatasetRecordKey(dataset=dataset, identity=("validation",))
-        with self._connection() as db:
+        with connection(self._path, self._limits) as db:
             return tuple(self._read(db, dataset).values())
 
     @safe
@@ -228,7 +226,7 @@ class SQLiteDatasetStore:
     @safe
     def source_status(self, dataset: str) -> tuple[SourceStatus, ...]:
         DatasetRecordKey(dataset=dataset, identity=("validation",))
-        with self._connection() as db:
+        with connection(self._path, self._limits) as db:
             return tuple(
                 SourceStatus.model_validate_json(row[0])
                 for row in db.execute(

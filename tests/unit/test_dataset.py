@@ -53,3 +53,14 @@ def test_datetime_text_offsets_normalize_idempotently():
 def test_identity_string_is_not_silently_split_into_characters():
     with pytest.raises(DatasetStorageError):
         DatasetRecordKey.model_validate({"dataset": "d", "identity": "abc"})
+
+
+def test_identity_collapses_nbsp_and_internal_whitespace():
+    a = DatasetRecordKey.from_fields(
+        "agenda", {"title": "Gran\u00a0Show", "venue": "Sala  Uno"}, ("title", "venue")
+    )
+    b = DatasetRecordKey.from_fields(
+        "agenda", {"title": "Gran Show", "venue": "Sala Uno"}, ("title", "venue")
+    )
+    assert a == b
+    assert DatasetRecordKey.model_validate_json(a.model_dump_json()) == a

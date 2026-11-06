@@ -41,8 +41,9 @@ fragment or userinfo). Every observation in a snapshot uses its `observed_at`.
 limits and out-of-order source attempts without including payloads or paths.
 
 `DatasetRecordKey.from_fields(dataset, fields, identity_fields)` constructs an
-ordered identity. Strings normalize Unicode, whitespace and case; aware datetime
-values and aware ISO datetime text normalize to UTC. Finite numbers and booleans
+ordered identity. Strings normalize Unicode and case and collapse whitespace runs
+(including NBSP) to one space; aware datetime values and aware ISO datetime text
+normalize to UTC. Finite numbers and booleans
 retain their types. Identity fields must exist and cannot be null or blank. Keep
 the identity field order stable for a dataset. Include a start time to keep two
 performances distinct; exclude it when a stable external identifier should survive
@@ -53,6 +54,11 @@ all five kinds. Supplied valid observations report `created`, `updated` or
 `unchanged`. Absent earlier origins report `missing` only with `complete=True`,
 and `uncertain` with `complete=False`. An empty complete snapshot is an explicit
 successful assertion by the caller, never a substitute for an extraction failure.
+On partial runs, fields omitted from an existing source origin retain their earlier
+values and provenance. Supplied fields replace their earlier values and evidence;
+classification compares this merged result. The origin's observation time advances,
+but retained fields keep their original evidence timestamps so their age is visible.
+Complete snapshots replace the origin's field set.
 
 ```python
 store.mark_source_unavailable("catalog", source, at, "access_restriction")
@@ -96,8 +102,15 @@ WHERE dataset = 'catalog';
 
 Use a trusted private directory and a regular filesystem path; URI paths, parent
 traversal and symlink components are refused. Resolve job-relative paths and their
-containment before constructing the adapter. The default `Limits()` allows 1,000
-retained records and 2 MB of serialized record payloads per dataset, plus bounded
+containment before constructing the adapter. Reads require an existing initialized
+dataset and never create or migrate a file. They use read-only connections and can
+read the last committed snapshot while a writer holds a reserved lock. Initial
+creation and its first observation commit together in a private staging directory;
+the file is published atomically without replacing an existing dataset. Failed
+first writes clean up their staging files. A simultaneous creator retries once
+against the published database. The filesystem must support hard links.
+
+The default `Limits()` allows 1,000 retained records and 2 MB of serialized record payloads per dataset, plus bounded
 input depth/nodes. Limits include origins and markers. A limit failure rolls back
 the snapshot. Matching scans retained origins; this is a small local store, not a
 large-dataset throughput guarantee. See [ADR 0017](decisions/0017-dataset-store.md).
