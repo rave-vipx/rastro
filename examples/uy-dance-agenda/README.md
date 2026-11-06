@@ -7,11 +7,11 @@ Full pilot findings, live run counts, field coverage, and ranked v0.3 obstacles 
 ## Files
 
 - [`job.toml`](job.toml) — Declarative job targeting the two live Uruguayan sources:
-  1. **Venue listings page (`sodre.gub.uy`)**: `https://sodre.gub.uy/espectaculos/` (CSS recipe over `.item .cyg--info.espectaculo` cards with a visible-text fallback).
-  2. **Ticket seller event page (`tickantel.com.uy`)**: `https://tickantel.com.uy/ng/espectaculo/40021938/muestra-final-2026-area-tango-y-area-candombe` (JSON-LD `Event` recipe with a fallback for Tickantel's partial `PostalAddress`/`description` shape).
+  1. **Venue listings page (`sodre.gub.uy`)**: `https://sodre.gub.uy/espectaculos/` (CSS recipe over `.item .cyg--info.espectaculo` cards with a visible-text fallback). On the live site, `<time class="cyg--dia">` omits the HTML5 `datetime` attribute and renders localized Spanish prose/ranges (`"12 al 14 NOV 2026 - 20 H"`), so the live run yields `0` accepted records (`status = "insufficient_evidence"`) from the venue source.
+  2. **Ticket seller event page (`tickantel.com.uy`)**: `https://tickantel.com.uy/ng/espectaculo/40021938/muestra-final-2026-area-tango-y-area-candombe` (JSON-LD `Event` recipe with a fallback for Tickantel's partial `PostalAddress`/`description` shape). Produces all `3` accepted records in the live run (`status = "success"`).
 - [`sample/job.toml`](sample/job.toml) — Reproducible offline version of the same job pointing at synthetic local HTML files:
-  - [`sample/sodre-cartelera.html`](sample/sodre-cartelera.html) — Synthetic venue listings page mimicking SODRE's `.item .cyg--info.espectaculo` DOM structure with invented dance events.
-  - [`sample/tickantel-evento.html`](sample/tickantel-evento.html) — Synthetic ticket seller page mimicking Tickantel's `<script type="application/ld+json">` `@type = "Event"` array structure with invented dance events.
+  - [`sample/sodre-cartelera.html`](sample/sodre-cartelera.html) — Synthetic venue listings page mimicking SODRE's `.item .cyg--info.espectaculo` DOM structure with invented dance events, adding ISO 8601 `datetime="..."` attributes and `<span class="cyg--ciudad">` nodes that the live site lacks so the venue recipe passes offline (`4` accepted records).
+  - [`sample/tickantel-evento.html`](sample/tickantel-evento.html) — Synthetic ticket seller page mimicking Tickantel's `<script type="application/ld+json">` `@type = "Event"` array structure with invented dance events (`3` accepted records).
 - [`sample/v2/`](sample/v2/) — Second offline snapshot ([`sample/v2/job.toml`](sample/v2/job.toml), [`sample/v2/sodre-cartelera.html`](sample/v2/sodre-cartelera.html), [`sample/v2/tickantel-evento.html`](sample/v2/tickantel-evento.html)) where one performance (`Suite del Río de la Plata`) is rescheduled from `20:00`/`20:30` to `21:00`.
 
 ## Target Schema Notes
