@@ -185,6 +185,70 @@
       "title": "CssRecipe",
       "type": "object"
     },
+    "DatasetSpec": {
+      "additionalProperties": false,
+      "description": "Where approved records of a job would be stored and which fields identify a record.",
+      "properties": {
+        "approve": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 100,
+              "minItems": 1,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Approve"
+        },
+        "identity": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 8,
+          "minItems": 1,
+          "title": "Identity",
+          "type": "array"
+        },
+        "match_tolerance_minutes": {
+          "anyOf": [
+            {
+              "maximum": 10080,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Match Tolerance Minutes"
+        },
+        "name": {
+          "pattern": "^[a-z][a-z0-9_]{0,63}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "path": {
+          "maxLength": 1024,
+          "minLength": 1,
+          "title": "Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "path",
+        "identity"
+      ],
+      "title": "DatasetSpec",
+      "type": "object"
+    },
     "DateField": {
       "additionalProperties": false,
       "properties": {
@@ -1254,6 +1318,17 @@
       "anyOf": [
         {
           "$ref": "#/$defs/RecipeContext"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "dataset": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/DatasetSpec"
         },
         {
           "type": "null"

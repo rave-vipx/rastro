@@ -204,19 +204,54 @@ with the Python SDK.
 - **Recipe memory (`recipe_memory`, `context`, `recipe_version`).** `recipe_memory` points to a SQLite database file (`:memory:` is rejected). `context` (`RecipeContext`) and `recipe_version` require `recipe_memory`, and `recipe_version` cannot be combined with an explicit `recipe`.
 - **Model providers (`model`, `inference_policy`).** Optional `provider = "ollama"` (`model`, `base_url` or `base_url_env`) or `provider = "openai_compatible"` (`model`, `base_url` or `base_url_env`, `api_key_env`, `allow_remote`, `response_format`, `token_limit`, `temperature`). Non-loopback endpoints and `*cloud*` model names require `allow_remote = true` and HTTPS (on `openai_compatible`). Because an endpoint read from `base_url_env` is only known at run time, `openai_compatible` with `base_url_env` also requires `allow_remote = true`. Ollama endpoints, including `base_url_env` values, must be loopback, which the adapter checks at run time.
 
+## Dataset block and preview
+
+An optional `[dataset]` block declares where approved records would be stored and how a record
+is identified (DATA-002). It is additive: `format_version` stays `1`, and a job without the block
+validates, runs and prints exactly as before.
+
+```toml
+[dataset]
+name = "uy_dance_agenda"                    # [a-z][a-z0-9_]{0,63}
+path = "agenda.sqlite"                      # relative to the job file; same rules as other job paths
+identity = ["title", "venue", "starts_at"]  # declared field names, 1 to 8
+approve = ["title", "venue", "city", "starts_at", "ticket_url", "price"]  # optional
+match_tolerance_minutes = 90                # optional
+```
+
+- `identity` and `approve` must name declared `fields`; `identity` must be a subset of `approve`.
+  `approve` defaults to every declared field. Unknown keys are rejected.
+- `path` is never `:memory:`, `~`, a `file:` URI or a parent traversal, and absolute paths need
+  `--allow-absolute-paths`. The dataset is a different file from `recipe_memory`.
+- The block only declares the dataset. `rastro job validate` and `rastro job run` ignore it;
+  loading records into the file is not part of this command.
+
+`rastro job preview job.toml [--output table|json]` runs the same pipeline as `job run` (same
+acquisition policy, live or file sources) and shows, per source and per record, each field's
+value, method and locator provenance, validation outcome and `loaded` flag (`true` when the
+record was accepted and the field is in `approve`). Rejected records appear with their reason
+codes; the pipeline never keeps rejected values, so none are shown. It writes nothing: no dataset
+file, and no recipe memory unless the job already enables `recipe_memory`, exactly like `job run`.
+It requires a `[dataset]` block (exit code `2` otherwise) and shares the exit codes below.
+Table cells escape control characters. JSON output carries `data_trust = "untrusted_source_data"`
+and follows [`docs/schemas/job-preview.schema.json`](schemas/job-preview.schema.json)
+(`rastro job schema --target preview`).
+
 ## CLI commands and exit codes
 
 ```bash
 uv run rastro job validate job.toml
 uv run rastro job run job.toml --output json
 uv run rastro job run /etc/rastro/job.json --allow-absolute-paths
+uv run rastro job preview job.toml --output table
 uv run rastro job schema --target job
 uv run rastro job schema --target run
+uv run rastro job schema --target preview
 ```
 
 | Exit code | Constant | Meaning |
 | --- | --- | --- |
-| `0` | `JobExitCode.SUCCESS` | `validate` or `schema` succeeded, or every source of `run` succeeded (`status = "success"`). |
+| `0` | `JobExitCode.SUCCESS` | `validate` or `schema` succeeded, or every source of `run` or `preview` succeeded (`status = "success"`). |
 | `1` | `JobExitCode.FAILED` | The job ran, no source succeeded or partially succeeded, and zero records were accepted (`status = "failed"`). |
 | `2` | `JobExitCode.CONFIG_ERROR` | The job did not run: usage error, missing or unreadable file, TOML/JSON syntax error, schema validation error, path escape, missing extra or environment variable, or resource limit on supplied files. |
 | `3` | `JobExitCode.PARTIAL_SUCCESS` | At least one source succeeded or partially succeeded, but not all of them succeeded (`status = "partial_success"`). |
@@ -262,7 +297,8 @@ Commands other than `rastro job` keep their existing output.
 - `results`: ordered list of [`ExtractionResult`](api.md#results) dumps preserving records, field-level `evidence`, `issues`, `metrics`, `recipe_attempts` and `learned_recipe`.
 
 Committed JSON Schemas live at [`docs/schemas/job.schema.json`](schemas/job.schema.json) and
-[`docs/schemas/job-run.schema.json`](schemas/job-run.schema.json) and match `rastro job schema`.
+[`docs/schemas/job-run.schema.json`](schemas/job-run.schema.json) and
+[`docs/schemas/job-preview.schema.json`](schemas/job-preview.schema.json) and match `rastro job schema`.
 
 ## Security boundaries
 
