@@ -2,7 +2,7 @@
 
 **Document:** `RASTRO_MASTER_SPEC.md`  
 **Status:** Foundational Specification  
-**Version:** 1.1 (2026-10-30 amendments: see Amendment Log)  
+**Version:** 1.2 (2026-11-06 amendments: see Amendment Log)  
 **Project:** Rastro  
 **Category:** Open Source Web Data Intelligence Platform  
 **Primary Language:** English  
@@ -29,7 +29,7 @@ It establishes:
 
 Rastro must be developed as a real, reusable, production-oriented open source project.
 
-It must not contain domain-specific business assumptions or depend on any private application.
+It must not contain domain-specific business assumptions or depend on any private application. Domain fields and rules belong to examples and user jobs, never to the engine; the first public example (an agenda of dance events in Uruguay, section 01) is one such job.
 
 ## Requirement Vocabulary
 
@@ -56,6 +56,7 @@ Release priorities take precedence over speculative features.
 
 | Date | Version | Change | Decision record |
 |---|---|---|---|
+| 2026-11-06 | 1.2 | Product outcome rewritten around "describe the data, name the sources you know, get an updatable database"; first public case: a dance-event agenda for Uruguay (example only). v0.2 becomes "from known sources to a usable database" (dataset store, record identity and update semantics brought forward from v0.3, then drift and repair on that path); v0.3 becomes "from an intent to reusable sources and recipes"; MCP (AGENT-002) moves to v0.4 behind a concrete consumer; Hub starts with Git export/import; DATA-*, COST-*, DISC-003 and DIFF-002 added; work assignment decided per slice | [ADR 0016](docs/decisions/0016-dataset-outcome.md) |
 | 2026-10-30 | 1.1 | Owner decisions after the 0.1.0 release candidate: AI-005 becomes a pre-v0.2 MUST with a documented provider strategy (AI-007); declarative jobs (JOB-*), agent interface (AGENT-*), term-based source discovery (DISC-*) and Scrapling capability parity (SCR-*) are added; v0.2 scope gains the agent interface | [ADR 0012](docs/decisions/0012-product-direction.md) |
 
 ---
@@ -82,9 +83,17 @@ Its objective is to significantly reduce the engineering effort required to buil
 
 ## Core Promise
 
-Define the data you need, identify its sources, and configure its freshness requirements.
+**Describe the data you need, name the sources you know, and get an updatable database for your application.**
 
-Rastro learns how to obtain that data, validates its quality, remembers successful extraction strategies, detects degradation, and maintains synchronization over time.
+Rastro learns how to obtain that data, shows real records before anything is saved, loads only approved and validated fields with their provenance, remembers successful extraction strategies, detects degradation, and keeps the database current over time without deleting valid records when a source fails.
+
+The recipe memory (how to extract) and the dataset (what was extracted, with identity and history) are separate stores with separate purposes.
+
+## First Public Case
+
+*"I want to feed an agenda of dance events in Uruguay."*
+
+The first public example uses known sources (for example a venue's listings page and a ticket seller's event page) to build an agenda that an application queries for "upcoming dances". Its fields (event, performers, venue, city, date and time, ticket URL, price) and its rules (identity of a performance, rescheduling, sale date versus event date) live in the example job and schema, not in the engine, so anyone can reuse the engine for another project by changing the job.
 
 Rastro must remain fully usable without mandatory cloud services or paid AI providers.
 
@@ -298,6 +307,10 @@ Evaluation dimensions include:
 - Operational visibility.
 
 Unsupported claims of superior performance must not appear in documentation.
+
+**DIFF-002 — MUST — v0.2**
+
+Compare Rastro with a competent Scrapling + Pydantic implementation on the same product task: load two sources into a database, add a third source, and recover a broken extraction. Measure minutes to a correct database, site-specific code, silent errors, repair time, and initial and recurring cost. Human effort is measured separately from machine time. The example, the application query and reproducible results are published. The sealed recovery corpus (ADR 0011) is opened once, for the final v0.2 evaluation.
 
 ---
 
@@ -655,6 +668,10 @@ Generate early warnings when degradation thresholds are exceeded.
 
 Risk scoring must be deterministic and explainable initially.
 
+### DRIFT-006 — MUST — v0.2
+
+A drift signal names the field that lost evidence and its effect on the dataset (records not updated, values kept from an earlier observation, records flagged stale).
+
 ### DRIFT-006 — FUTURE
 
 Evaluate predictive models trained on sufficient historical failure data.
@@ -669,7 +686,7 @@ Do not claim that structural changes can always be predicted before they occur.
 
 Support persistent source configurations and recurring synchronization jobs.
 
-### SYNC-002 — MUST — v0.3
+### SYNC-002 — MUST — v0.2
 
 Detect record lifecycle changes:
 
@@ -679,7 +696,7 @@ Detect record lifecycle changes:
 - Missing from a successful complete snapshot.
 - Uncertain due to incomplete acquisition.
 
-### SYNC-003 — MUST — v0.3
+### SYNC-003 — MUST — v0.2
 
 Maintain configurable record identity and deduplication rules.
 
@@ -687,17 +704,43 @@ Maintain configurable record identity and deduplication rules.
 
 Support incremental updates where the source makes them possible.
 
-### SYNC-005 — MUST — v0.3
+### SYNC-005 — MUST — v0.2 (last observation), v0.3 (history and retention)
 
-Persist historical versions or change events according to the configured retention policy.
+Persist historical versions or change events according to the configured retention policy. In v0.2 every record keeps its first and last observation time per source.
 
-### SYNC-006 — MUST — v0.3
+### SYNC-006 — MUST — v0.2
 
 A failed or incomplete crawl must not automatically delete records that were previously present.
 
 ### SYNC-007 — SHOULD — v0.3
 
 Support adaptive freshness policies based on observed change frequency and configured minimum/maximum intervals.
+
+### SYNC-008 — MUST — v0.2
+
+When acquisition is interrupted or a source is down, the last valid records are kept and the run report states which sources and which part of the dataset are stale, with their last observation time.
+
+## 7.8.1 Dataset Store
+
+### DATA-001 — MUST — v0.2
+
+A dataset store, separate from recipe memory, holds the records a job produces: approved fields, field provenance, source identity, record identity, and first/last observation times. SQLite is the default; it is created and updated by the same declarative job (JOB-001) without Python.
+
+### DATA-002 — MUST — v0.2
+
+A preview shows the records a job would load, field by field with provenance and validation outcome, before anything is written. Only fields the job approves are loaded.
+
+### DATA-003 — MUST — v0.2
+
+The dataset can be exported as JSONL and queried by the consuming application; the documentation ships the query that feeds the example's "upcoming dances" view.
+
+### DATA-004 — MUST — v0.2
+
+When records from different sources may describe the same real-world entity and the match is uncertain, both origins are kept and the record is flagged as an uncertain match instead of being merged silently.
+
+### DATA-005 — MUST — v0.2
+
+Values written to the dataset must have been observed in a source during the run that wrote them and keep their provenance. Observed, inferred and unknown values are distinct; AI may suggest a source, category or recipe but cannot write a value on its own authority.
 
 ---
 
@@ -718,6 +761,10 @@ Prevent unintended overlapping executions of the same source.
 ### SCHED-004 — MUST — v0.3
 
 Support checkpoints and job recovery.
+
+### SCHED-007 — MUST — v0.3
+
+Scheduled updates run the same declarative job the user created; there is no second configuration format for recurring execution.
 
 ### SCHED-005 — SHOULD — v0.3
 
@@ -904,15 +951,29 @@ A search-provider strategy can turn research terms into candidate source URLs. P
 
 Discovered hosts are proposals only. They require explicit user approval before entering an acquisition allowlist, and acquisition of approved hosts follows every existing policy (robots, pacing, destination checks). Discovery never crawls beyond approved hosts.
 
+### DISC-003 — MUST — v0.3
+
+A job can start from three inputs: known sites and fields, known sites only, or only a goal. Rastro completes what is missing by proposing sources (DISC-001/002) and fields observed in those sources, and shows real records (DATA-002) before the job is saved.
+
+## 7.14.1 Cost Control
+
+### COST-001 — MUST — v0.2
+
+Every documented workflow, including the first public case, has a zero-external-spend mode. The cost of learning a source (browser, model) is reported separately from the cost of repeating it (request plus stored recipe).
+
+### COST-002 — MUST — v0.3
+
+Before a paid service is used, Rastro states which operation needs it, its estimated cost and the limit the user chose, and it enforces that limit during execution. Freshness, coverage and cost are reported per source.
+
 ## 7.15 Agent Interface
 
 ### AGENT-001 — MUST — pre-v0.2
 
 Machine-readable interfaces: JSON input and output for jobs and results, with published JSON Schemas, so AI agents and scripts can use Rastro without parsing human text.
 
-### AGENT-002 — SHOULD — v0.2
+### AGENT-002 — SHOULD — v0.4
 
-Provide a Model Context Protocol (MCP) server adapter exposing job validation, job execution and result/recipe inspection over the same application services and policies.
+Once a concrete integration will consume it, provide a Model Context Protocol (MCP) server adapter exposing job validation, job execution and result/recipe inspection over the same application services and policies.
 
 ### AGENT-003 — MUST
 
@@ -1794,68 +1855,71 @@ Deliver a usable open source Python package for verifiable, schema-first web ext
 
 ---
 
-## Release v0.2 — Rastro Quality
+## Release v0.2 — From Known Sources to a Usable Database
 
 ### Objective
 
-Make extraction maintenance measurable, testable, and safer.
+A person describes the data they need and the sources they know, and obtains an updatable database their application can query, without writing Python. Then that path is kept working when a source changes.
 
-### Scope
+### Already delivered toward v0.2
 
-- MCP agent interface (AGENT-002).
-- Scrapling adaptive relocation as a repair-candidate source (SCR-002).
-- Instant Mock Lab.
-- Structural mutation fixtures.
-- Recipe CI.
-- Recipe lifecycle and versioning.
-- Candidate repair workflow.
-- Rollback.
-- Structural drift metrics.
-- Explainable degradation risk.
-- Semantic consistency checks.
-- Repair reports.
+Instant Mock Lab and structural mutation fixtures (MOCK-001–006), recipe lifecycle, candidate storage and rollback (REC-005/006, REPAIR-006), declarative jobs and machine-readable CLI (JOB-001/002, AGENT-001).
+
+### First cut — known sources to a database
+
+- Two real sources for the first public case (for example a venue's listings and a ticket seller's event page), run by the same job a user would write.
+- Preview, then load approved fields into SQLite (DATA-001/002), export JSONL and run the "upcoming dances" query (DATA-003).
+- Record identity and update semantics (SYNC-002/003/005/006/008, DATA-004/005).
+- A reproducible local sample and a live run stamped with its query date (COST-001: zero external spend).
+
+**First-cut acceptance** — a second run demonstrates:
+
+- Repeating the load keeps the number of events.
+- A rescheduled performance updates the correct record.
+- Two distinct performances keep distinct identities.
+- A source that is down keeps its earlier records with their last observation time.
+- An uncertain cross-source match keeps both origins and is flagged.
+
+### Second cut — drift and repair on that path
+
+- Drift signals that explain which field lost evidence and the effect on the table (DRIFT-001–006).
+- Reproduce the failure with the Mock Lab; test a candidate recipe, activate it and roll it back with the existing lifecycle (REPAIR-001–005; Scrapling adaptive relocation as a candidate source, SCR-002).
+- Semantic consistency (QUAL-005/006), including the trap below.
+- Repair reports and recipe CI.
+- The product-task comparison against Scrapling + Pydantic (DIFF-002), with the sealed corpus opened once (ADR 0011) and human effort measured separately.
 
 ### Acceptance Criteria
 
-- A broken recipe produces an identifiable degraded state.
-- A candidate repair is tested before activation.
-- Failed candidates cannot silently replace active recipes.
-- Mock generation is reproducible.
-- Regression tests demonstrate recovery scenarios.
-- Drift indicators have documented calculation methods.
+- The first-cut behaviors above hold on a second run.
+- A broken recipe produces an identifiable degraded state, with the affected fields and records named.
+- A candidate repair is tested before activation; failed candidates cannot silently replace active recipes; rollback restores the previous version.
+- A recipe that confuses the ticket sale date with the event date fails, although both are valid dates.
+- A partial run or a failed repair never deletes valid records.
+- Mock generation is reproducible; drift indicators have documented calculation methods.
+- The README leads from a recognizable need to a queryable table in under five minutes with the local demo.
 
 ---
 
-## Release v0.3 — Rastro Sync
+## Release v0.3 — From an Intent to Reusable Sources and Recipes
 
 ### Objective
 
-Maintain datasets over time with operational control.
+Start from whatever the user has — known sites and fields, sites only, or only a goal — and complete the rest with observed evidence, then keep it updated on a schedule.
 
 ### Scope
 
-- Term-based source discovery with approval (DISC-001/002).
-- Recurring source configuration.
-- Scheduling.
-- Dataset synchronization.
-- Record identity and deduplication.
-- Historical changes.
-- Adaptive freshness rules.
-- Job recovery.
-- Webhooks.
-- Alerts.
-- Domain and URL performance aggregation.
-- Source-level health and freshness metrics.
-- Optional PostgreSQL adapter.
+- Three entry modes, source proposals with approval and field proposals from observed pages; real records shown before the job is saved (DISC-001–003).
+- Acquisition capabilities chosen by the obstacles the pilot found: pagination, JavaScript rendering through Scrapling's browser behind its adapter, sessions, per-domain concurrency, run recovery (SCHED-004). Each obstacle is resolved by its cause; access restrictions and bot challenges are reported, never evaded (SCR-003).
+- Scheduling with the same job (SCHED-001–007), incremental updates, history and retention (SYNC-001/004/005/007).
+- Freshness, coverage and cost per source; paid-service limits shown and enforced (COST-002, OBS-003–007).
+- Alerts and webhooks that distinguish failures from unchanged data (ALERT-*); optional PostgreSQL adapter.
 
 ### Acceptance Criteria
 
-- A configured source runs repeatedly.
-- Interrupted jobs can be recovered.
-- Partial failures do not cause false deletions.
-- Changes produce explicit events.
-- Alerts distinguish failures from unchanged data.
-- Performance metrics are queryable by source and domain.
+- Each entry mode produces a saved job whose preview shows real, observed records.
+- A paginated agenda loads both pages, stops when the cursor repeats and updates the table without duplicates.
+- A configured job runs repeatedly; interrupted runs recover; partial failures cause no false deletions.
+- Freshness, coverage and cost are queryable per source and domain.
 
 ---
 
@@ -1863,30 +1927,19 @@ Maintain datasets over time with operational control.
 
 ### Objective
 
-Make Rastro accessible through a visual operational interface.
+Let a person complete the proven path visually.
 
 ### Scope
 
-- Job editor for sites, research terms and wanted data (JOB-003).
-- FastAPI management API.
-- React application.
-- Source dashboard.
-- Sources & Performance.
-- Data Explorer.
-- Visual Selector.
-- Recipe Inspector.
-- Errors & Alerts.
-- Real-time execution updates.
-- Mock Lab interface.
-- Local deployment package.
+- Describe what they are looking for, review samples, correct a match, accept a recipe and connect their application to the result (JOB-003, section 08).
+- The same application services as the SDK and CLI.
+- The first screen built is the one where pilot users needed the most help.
+- MCP agent interface (AGENT-002) once a concrete integration will consume this path.
 
 ### Acceptance Criteria
 
-- Users can configure a source through the interface.
-- Users can inspect extraction performance per URL.
-- Users can review field provenance.
-- Users can see current source health and incidents.
-- Users can visually generate and validate a recipe candidate.
+- A user completes the first public case end to end through the interface.
+- Users can review field provenance, correct an uncertain match and see source health.
 - Studio uses the same application services as the SDK.
 
 ---
@@ -1895,25 +1948,18 @@ Make Rastro accessible through a visual operational interface.
 
 ### Objective
 
-Enable safe reuse and distribution of community extraction recipes.
+Let another person reuse a recipe without the author's help.
 
 ### Scope
 
-- Declarative recipe package format.
-- Recipe export/import.
-- Version compatibility.
-- Git-based public recipe registry.
-- Automated recipe validation.
-- Package metadata and trust indicators.
-- Studio integration.
+- A recipe package: recipe, schema, a redistributable sample, its test and the date it was last verified.
+- Export and import through Git first; a public registry, automated validation and trust indicators afterwards.
 
 ### Acceptance Criteria
 
-- Recipes can be shared without credentials.
-- Imported recipes cannot execute arbitrary code.
-- Packages contain reproducible tests.
-- Local execution does not require a hosted Hub.
-- Public and private recipes are explicitly separated.
+- A third party publishes a recipe and another application uses it without help from the author.
+- Recipes can be shared without credentials and cannot execute arbitrary code.
+- Local execution does not require a hosted Hub; public and private recipes are explicitly separated.
 
 ---
 
@@ -2162,6 +2208,8 @@ These invariants apply to every release.
 18. Dependencies must provide demonstrable value.
 19. The system must clearly distinguish verified, estimated, missing, and uncertain information.
 20. Every release must deliver usable functionality rather than architectural scaffolding alone.
+21. A capability is ready only when its result reaches the dataset correctly and survives the next update; a parser test alone demonstrates extraction, not the capability.
+22. Jobs, recipes and exported data remain independent of any model or tool provider.
 
 ---
 

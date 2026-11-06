@@ -44,6 +44,7 @@ nav:
   - Clean code and module size: development/clean-code.md
   - Development work log: development/work-log.md
   - Engineering decisions:
+      - Updatable database outcome: decisions/0016-dataset-outcome.md
       - Recipe lifecycle: decisions/0015-recipe-lifecycle.md
       - Mock Lab fixtures, labels and sanitization: decisions/0014-mock-lab.md
       - Declarative jobs and CLI contracts: decisions/0013-declarative-jobs.md
