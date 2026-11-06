@@ -111,6 +111,7 @@ def test_dataset_containment_is_enforced_by_load_validate_run_and_preview(
 
 def test_absolute_dataset_path_is_allowed_with_the_flag(tmp_path, capsys):
     target = tmp_path / "elsewhere" / "agenda.sqlite"
-    job = _job(tmp_path, dataset=f'path = "{target}"')
+    # json.dumps escapes Windows backslashes so the path is a valid TOML basic string
+    job = _job(tmp_path, dataset=f"path = {json.dumps(str(target))}")
     assert main(["job", "validate", str(job), "--allow-absolute-paths"]) == JobExitCode.SUCCESS
     assert not target.exists()
