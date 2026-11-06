@@ -6,7 +6,7 @@ import unicodedata
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from rastro.application.job_loader import load_job, resolve_job_path
+from rastro.application.job_loader import load_job
 from rastro.application.jobs import run_job
 from rastro.domain.job_dataset import (
     DatasetSpec,
@@ -67,8 +67,9 @@ def _accepted_records(
                     locator=evidence.locator if evidence else None,
                     source_url=evidence.source_url if evidence else None,
                     recipe_version=evidence.recipe_version if evidence else None,
+                    validation="valid" if evidence else "not_observed",
                     identity=name in spec.identity,
-                    loaded=name in approved,
+                    loaded=evidence is not None and name in approved,
                 )
             )
         records.append(PreviewRecord(index=index, status="accepted", fields=tuple(fields)))
@@ -102,9 +103,10 @@ def preview_job_file(
     job = load_job(file_path, allow_absolute_paths=allow_absolute_paths)
     if job.dataset is None:
         raise ConfigurationError("job preview requires a [dataset] block in the job file")
-    resolve_job_path(
-        job.dataset.path, base_dir=file_path.parent, allow_absolute_paths=allow_absolute_paths
-    )
+    if job.recipe_memory is not None:
+        raise ConfigurationError(
+            "job preview cannot run jobs with recipe_memory: recipe storage would be written"
+        )
     report = run_job(
         job,
         base_dir=file_path.parent,

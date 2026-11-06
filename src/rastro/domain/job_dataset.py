@@ -52,7 +52,10 @@ class DatasetSpec(RedactedContract):
 
 
 class PreviewField(Contract):
-    """One field of an accepted record: value, provenance, validation and load decision."""
+    """One field of an accepted record: value, provenance, validation and load decision.
+
+    ``not_observed`` marks a field with no source evidence (an optional default); never loaded.
+    """
 
     name: str
     value: JsonValue
@@ -60,7 +63,7 @@ class PreviewField(Contract):
     locator: str | None = None
     source_url: str | None = None
     recipe_version: int | None = None
-    validation: Literal["valid"] = "valid"
+    validation: Literal["valid", "not_observed"]
     identity: bool
     loaded: bool
 

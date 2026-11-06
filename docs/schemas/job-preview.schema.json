@@ -134,7 +134,7 @@
     },
     "PreviewField": {
       "additionalProperties": false,
-      "description": "One field of an accepted record: value, provenance, validation and load decision.",
+      "description": "One field of an accepted record: value, provenance, validation and load decision.\n\n``not_observed`` marks a field with no source evidence (an optional default); never loaded.",
       "properties": {
         "identity": {
           "title": "Identity",
@@ -202,8 +202,10 @@
           "title": "Source Url"
         },
         "validation": {
-          "const": "valid",
-          "default": "valid",
+          "enum": [
+            "valid",
+            "not_observed"
+          ],
           "title": "Validation",
           "type": "string"
         },
@@ -214,6 +216,7 @@
       "required": [
         "name",
         "value",
+        "validation",
         "identity",
         "loaded"
       ],

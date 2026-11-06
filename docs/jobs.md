@@ -222,17 +222,20 @@ match_tolerance_minutes = 90                # optional
 - `identity` and `approve` must name declared `fields`; `identity` must be a subset of `approve`.
   `approve` defaults to every declared field. Unknown keys are rejected.
 - `path` is never `:memory:`, `~`, a `file:` URI or a parent traversal, and absolute paths need
-  `--allow-absolute-paths`. The dataset is a different file from `recipe_memory`.
+  `--allow-absolute-paths`. Containment (symlinks included) is checked by every `rastro job`
+  command and `load_job`. The dataset must be a different file from `recipe_memory`, also through
+  symlinks and hard links.
 - The block only declares the dataset. `rastro job validate` and `rastro job run` ignore it;
   loading records into the file is not part of this command.
 
 `rastro job preview job.toml [--output table|json]` runs the same pipeline as `job run` (same
 acquisition policy, live or file sources) and shows, per source and per record, each field's
 value, method and locator provenance, validation outcome and `loaded` flag (`true` when the
-record was accepted and the field is in `approve`). Rejected records appear with their reason
+record was accepted, the field is in `approve` and the source actually supplied it; an optional
+field the recipe did not observe shows `validation = "not_observed"` and is never loaded). Rejected records appear with their reason
 codes; the pipeline never keeps rejected values, so none are shown. It writes nothing: no dataset
-file, and no recipe memory unless the job already enables `recipe_memory`, exactly like `job run`.
-It requires a `[dataset]` block (exit code `2` otherwise) and shares the exit codes below.
+file and no recipe memory, so a job that sets `recipe_memory` is refused (exit code `2`) until a
+read-only recipe lookup exists. It requires a `[dataset]` block (exit code `2` otherwise) and shares the exit codes below.
 Table cells escape control characters. JSON output carries `data_trust = "untrusted_source_data"`
 and follows [`docs/schemas/job-preview.schema.json`](schemas/job-preview.schema.json)
 (`rastro job schema --target preview`).
