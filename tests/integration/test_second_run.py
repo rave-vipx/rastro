@@ -4,6 +4,7 @@ import json
 import shutil
 import sqlite3
 from contextlib import closing
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -75,10 +76,18 @@ def test_source_down_keeps_previous_records_with_last_observation(sample, capsys
     after = records(sample)
     assert len(before) == len(after)
     stale = report["stale_sources"]
-    assert len(stale) == 1 and stale[0]["last_success"]
-    assert stale[0]["affected_keys"]
+    assert len(stale) == 1
     source = stale[0]["source_url"]
     old = {r.key: r.origins[source] for r in before if source in r.origins}
+    assert {tuple(k["identity"]) for k in stale[0]["affected_keys"]} == {
+        ("candombe-1",),
+        ("gala-tickantel",),
+        ("suite-tickantel",),
+    }
+    assert datetime.fromisoformat(stale[0]["last_success"]) == max(
+        origin.last_observed_at for origin in old.values()
+    )
+    assert stale[0]["last_success"] < stale[0]["last_attempt"]
     new = {r.key: r.origins[source] for r in after if source in r.origins}
     assert old == new
 
@@ -108,3 +117,14 @@ def test_upcoming_query_returns_future_events_in_order(sample, capsys):
         rows = db.execute(sql.replace("'now'", "'2026-11-07T00:00:00Z'")).fetchall()
     assert len(rows) == 6
     assert [r[0] for r in rows] == sorted(r[0] for r in rows)
+
+
+def test_job_load_honors_nondefault_match_tolerance(sample, capsys):
+    path = sample / "job.toml"
+    path.write_text(
+        path.read_text().replace("match_tolerance_minutes = 90", "match_tolerance_minutes = 15")
+    )
+    load(sample, capsys)
+    suites = [r for r in records(sample) if r.fields["title"] == "Suite del Río de la Plata"]
+    assert len(suites) == 2
+    assert all(not r.uncertain_match for r in suites)

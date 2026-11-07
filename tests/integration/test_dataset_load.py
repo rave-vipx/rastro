@@ -2,6 +2,7 @@
 
 import json
 import shutil
+from datetime import timedelta
 from pathlib import Path
 
 import pytest
@@ -63,7 +64,13 @@ def test_failed_or_blocked_source_retains_origins(sample, status):
     names = [f.name for f in job.fields]
     load_results(spec, names, report, store)
     before = store.records(spec.name)
-    failed = report.results[0].model_copy(update={"status": status, "records": ()})
+    failed = report.results[0].model_copy(
+        update={
+            "status": status,
+            "records": (),
+            "completed_at": report.results[0].completed_at + timedelta(seconds=1),
+        }
+    )
     result = load_results(
         spec,
         names,
@@ -74,7 +81,11 @@ def test_failed_or_blocked_source_retains_origins(sample, status):
     )
     assert result.exit_code == 1
     assert result.stale_sources[0].reason == status
-    assert result.stale_sources[0].last_success
+    assert result.stale_sources[0].last_success == report.results[0].completed_at
+    assert result.stale_sources[0].last_success < result.stale_sources[0].last_attempt
+    assert set(result.stale_sources[0].affected_keys) == {
+        r.key for r in before if report.results[0].source_url in r.origins
+    }
     assert store.records(spec.name) == before
     assert all(n == 0 for n in result.sources[0].counts.values())
 
@@ -86,7 +97,11 @@ def test_partial_snapshot_is_not_complete(sample):
     names = [f.name for f in job.fields]
     load_results(job.dataset, names, report, store)
     partial = report.results[0].model_copy(
-        update={"status": Outcome.PARTIAL_SUCCESS, "records": report.results[0].records[:1]}
+        update={
+            "status": Outcome.PARTIAL_SUCCESS,
+            "records": report.results[0].records[:1],
+            "completed_at": report.results[0].completed_at + timedelta(seconds=1),
+        }
     )
     loaded = load_results(
         job.dataset,
@@ -100,6 +115,14 @@ def test_partial_snapshot_is_not_complete(sample):
     assert loaded.sources[0].counts["missing"] == 0
     assert loaded.sources[0].counts["uncertain"] == 3
     assert loaded.stale_sources[0].reason == "partial_snapshot"
+    assert loaded.stale_sources[0].last_success == report.results[0].completed_at
+    assert loaded.stale_sources[0].last_success < loaded.stale_sources[0].last_attempt
+    assert {key.identity for key in loaded.stale_sources[0].affected_keys} == {
+        ("candombe-1",),
+        ("candombe-2",),
+        ("gala-sodre",),
+        ("suite-sodre",),
+    }
     assert len(store.records(job.dataset.name)) == 6
 
 
