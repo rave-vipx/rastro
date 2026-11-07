@@ -41,10 +41,11 @@ def setup_sample(tmp_path):
     shutil.copytree(SAMPLE, folder)
     job = folder / "job.toml"
     job.write_text(
-        job.read_text().replace(
+        job.read_text(encoding="utf-8").replace(
             "format_version = 1",
             'format_version = 1\nrecipe_memory = "recipes.sqlite"\n\n[repair]\nauto_promote = true',
-        )
+        ),
+        encoding="utf-8",
     )
     return folder, job
 
@@ -65,15 +66,16 @@ def mutate(folder):
                 ),
             ),
         )
-        .apply(path.read_text())
-        .document
+        .apply(path.read_text(encoding="utf-8"))
+        .document,
+        encoding="utf-8",
     )
 
 
 def test_rollback_restores_previous_version_and_next_load_uses_it(tmp_path, capsys):
     folder, job = setup_sample(tmp_path)
     assert main(["job", "load", str(job), "--drift"]) == 0
-    original = (folder / "sodre-cartelera.html").read_text()
+    original = (folder / "sodre-cartelera.html").read_text(encoding="utf-8")
     capsys.readouterr()
     mutate(folder)
     assert main(["job", "load", str(job), "--drift"]) == 3
@@ -89,7 +91,7 @@ def test_rollback_restores_previous_version_and_next_load_uses_it(tmp_path, caps
     assert loaded["sources"][0]["status"] == "success"
     assert main(["recipe", "rollback", str(job), "--source", "1", "--version", "1"]) == 0
     capsys.readouterr()
-    (folder / "sodre-cartelera.html").write_text(original)
+    (folder / "sodre-cartelera.html").write_text(original, encoding="utf-8")
     assert main(["job", "load", str(job)]) == 0
     capsys.readouterr()
     assert main(["recipe", "compare", str(job), "--from-version", "1", "--to-version", "2"]) == 0
@@ -133,7 +135,10 @@ def test_failed_candidate_never_replaces_active_and_deletes_no_records(tmp_path,
 
 def test_quarantine_can_only_promote_after_fresh_ci_and_leaves_records_intact(tmp_path, capsys):
     folder, job = setup_sample(tmp_path)
-    job.write_text(job.read_text().replace("auto_promote = true", "auto_promote = false"))
+    job.write_text(
+        job.read_text(encoding="utf-8").replace("auto_promote = true", "auto_promote = false"),
+        encoding="utf-8",
+    )
     assert main(["job", "load", str(job)]) == 0
     capsys.readouterr()
     mutate(folder)
@@ -151,14 +156,14 @@ def test_recipe_paths_refuse_symlinks_and_report_collisions(tmp_path, capsys):
     assert main(["job", "load", str(job)]) == 0
     capsys.readouterr()
     sentinel = folder / "keep.json"
-    sentinel.write_text("preserve")
+    sentinel.write_text("preserve", encoding="utf-8")
     link = folder / "link.json"
     link.symlink_to(sentinel)
     assert main(["recipe", "repair", str(job), "--report", "link.json"]) == 2
-    assert sentinel.read_text() == "preserve"
+    assert sentinel.read_text(encoding="utf-8") == "preserve"
     capsys.readouterr()
     assert main(["recipe", "repair", str(job), "--report", "keep.json"]) == 2
-    assert sentinel.read_text() == "preserve"
+    assert sentinel.read_text(encoding="utf-8") == "preserve"
     assert not list(folder.glob("repair-report-*.json"))
     capsys.readouterr()
     assert main(["recipe", "repair", str(job), "--source", "0"]) == 2
@@ -196,7 +201,7 @@ def test_ambiguous_candidate_is_quarantined_not_active(tmp_path, capsys):
         at=now,
         evaluate=lambda candidate: evaluate_candidate(
             candidate,
-            (folder / "sodre-cartelera.html").read_text(),
+            (folder / "sodre-cartelera.html").read_text(encoding="utf-8"),
             source=source,
             schema=context.schema,
             parser=ScraplingParser(),

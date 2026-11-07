@@ -1,6 +1,7 @@
 """ADR 0019: atomic additive retention, no recipe-memory migrations."""
 
 import sqlite3
+from contextlib import closing
 from datetime import UTC, datetime
 
 import pytest
@@ -46,10 +47,11 @@ def test_retention_is_idempotent_rejects_foreign_versions_and_is_read_only(tmp_p
     store.save("items", SOURCE, bundle, observed_at=NOW)
     assert store.latest("items", SOURCE, schema_fingerprint(Item), RECIPE)[1] == bundle
     assert SQLiteDatasetStore(path).records("items") == ()
-    with sqlite3.connect(path) as db:
+    with closing(sqlite3.connect(path)) as db:
         assert db.execute("SELECT count(*) FROM relocation_samples").fetchone() == (1,)
         assert db.execute("PRAGMA user_version").fetchone() == (1,)
         db.execute("UPDATE relocation_schema SET version=999")
+        db.commit()
     before = path.read_bytes()
     with pytest.raises(DatasetStorageError):
         store.save("items", SOURCE, bundle, observed_at=NOW)
