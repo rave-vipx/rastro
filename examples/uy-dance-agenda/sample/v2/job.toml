@@ -1,0 +1,127 @@
+# Reproducible offline sample (v2 snapshot with rescheduled performance)
+# of the Uruguay dance agenda pilot job.
+format_version = 1
+
+[region]
+locale = "es-UY"
+languages = ["es-UY", "es"]
+timezone = "America/Montevideo"
+currency = "UYU"
+
+# Uncomment to enable [dataset] configuration (or run `rastro job preview`):
+# [dataset]
+# name = "uy_dance_agenda"
+# path = "agenda.sqlite"
+# identity = ["title", "venue", "starts_at"]
+# match_tolerance_minutes = 90
+
+[[sources]]
+kind = "file"
+path = "sodre-cartelera.html"
+url = "https://sodre.gub.uy/espectaculos/"
+
+[sources.recipe]
+version = 1
+strategy = "css"
+record_selector = ".item .cyg--info.espectaculo"
+require_evidence = true
+
+[sources.recipe.fields]
+title = "h2.cyg--display-3::text"
+performers = "p::text"
+venue = "address img::attr(alt)"
+city = "address span.cyg--ciudad::text"
+starts_at = "time.cyg--dia::attr(datetime)"
+ticket_url = "a.cyg--btn::attr(href)"
+price = "span.cyg--precio::text"
+currency = "span.cyg--moneda::text"
+
+[[sources.recipe.fallbacks]]
+strategy = "css"
+record_selector = ".item .cyg--info.espectaculo"
+require_evidence = true
+
+[sources.recipe.fallbacks.fields]
+title = "h2.cyg--display-3::text"
+performers = "p::text"
+venue = "address img::attr(alt)"
+city = "address img::attr(alt)"
+starts_at = "time.cyg--dia::text"
+ticket_url = "a.cyg--btn::attr(href)"
+
+[[sources]]
+kind = "file"
+path = "tickantel-evento.html"
+url = "https://tickantel.com.uy/ng/espectaculo/9900102/gala-anual-2026-area-tango-y-milonga"
+
+[sources.recipe]
+version = 1
+strategy = "jsonld"
+item_type = "Event"
+require_evidence = true
+
+[sources.recipe.fields]
+title = "/name"
+performers = "/performer/name"
+venue = "/location/name"
+city = "/location/address/addressLocality"
+starts_at = "/startDate"
+ticket_url = "/offers/url"
+price = "/offers/price"
+currency = "/offers/priceCurrency"
+
+[[sources.recipe.fallbacks]]
+strategy = "jsonld"
+item_type = "Event"
+require_evidence = true
+
+[sources.recipe.fallbacks.fields]
+title = "/name"
+performers = "/description"
+venue = "/location/name"
+city = "/location/address/addressCountry"
+starts_at = "/startDate"
+ticket_url = "/offers/url"
+price = "/offers/price"
+currency = "/offers/priceCurrency"
+
+[[fields]]
+name = "title"
+type = "string"
+min_length = 1
+
+[[fields]]
+name = "performers"
+type = "string"
+min_length = 1
+
+[[fields]]
+name = "venue"
+type = "string"
+min_length = 1
+
+[[fields]]
+name = "city"
+type = "string"
+min_length = 1
+
+[[fields]]
+name = "starts_at"
+type = "datetime"
+
+[[fields]]
+name = "ticket_url"
+type = "url"
+
+[[fields]]
+name = "price"
+type = "decimal"
+required = false
+ge = 0
+
+[[fields]]
+name = "currency"
+type = "string"
+required = false
+min_length = 3
+max_length = 3
