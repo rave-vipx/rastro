@@ -1,8 +1,4 @@
-"""R2 acceptance with real parser/lifecycle and a small R3 gate fake (REPAIR-001/004).
-
-The fake establishes the handoff contract, not full recipe CI correctness; R3
-must run historical, schema and semantic evaluation in its own acceptance suite.
-"""
+"""Real relocation, historical replay and lifecycle gates (REPAIR-001/002/004)."""
 
 from datetime import UTC, datetime
 from pathlib import Path
@@ -16,11 +12,14 @@ from rastro.adapters.scrapling_relocation import ScraplingRelocation
 from rastro.adapters.sqlite import SQLiteRecipeRepository
 from rastro.application.extraction import extract_document
 from rastro.application.intelligence import with_version
+from rastro.application.recipe_ci import evaluate_candidate
 from rastro.application.repair_candidates import RepairCandidateGenerator
 from rastro.domain.job_fields import build_job_schema
 from rastro.domain.jobs import parse_job
 from rastro.domain.lifecycle import RecipeState
 from rastro.domain.memory import RecipeKey
+from rastro.domain.recipe_compare import RepairPolicy
+from rastro.mocklab.fixtures import build_fixture
 from rastro.mocklab.mutations.html_content import HtmlChangeClasses
 from rastro.mocklab.mutations.html_structure import HtmlWrapElement
 from rastro.mocklab.mutations.plan import MutationPlan
@@ -28,20 +27,10 @@ from rastro.mocklab.mutations.plan import MutationPlan
 SAMPLE = Path(__file__).parents[2] / "examples/uy-dance-agenda/sample"
 
 
-class ThresholdGateFake:
-    def __init__(self, threshold):
-        self.threshold = threshold
-
-    def evaluate(self, result, candidate):
-        # The real R3 evaluator supplies the measured confidence from its full CI suite.
-        confidence = 0.95 if result.status == Outcome.SUCCESS else 0.0
-        return not candidate.ambiguous and confidence >= self.threshold
-
-
 @pytest.mark.asyncio
-@pytest.mark.parametrize(("threshold", "serving_version"), [(0.90, 2), (0.99, 1)])
+@pytest.mark.parametrize(("minimum_records", "serving_version"), [(4, 2), (5, 1)])
 async def test_relocation_candidate_recovers_moved_node_and_is_promoted_only_above_threshold(
-    tmp_path, threshold, serving_version
+    tmp_path, minimum_records, serving_version
 ):
     job = parse_job((SAMPLE / "job.toml").read_text(), format="toml")
     schema = build_job_schema(job.fields)
@@ -91,6 +80,21 @@ async def test_relocation_candidate_recovers_moved_node_and_is_promoted_only_abo
     assert report.inference_calls == 0
     repository.save_candidate(key, repaired, selected_index=0, at=now)
     assert repository.get(key).recipe.version == 1
-    if ThresholdGateFake(threshold).evaluate(current, candidate):
+    fixture = build_fixture(
+        html, source=source, schema=schema, recipe=recipe, result=before, synthetic_count=0
+    )
+    evaluation = evaluate_candidate(
+        candidate,
+        changed,
+        source=source,
+        schema=schema,
+        parser=parser,
+        limits=limits,
+        observed_at=now,
+        fixtures=(fixture,),
+        policy=RepairPolicy(auto_promote=True, min_records=minimum_records),
+    )
+    assert evaluation.historical_passed == 1
+    if evaluation.decision == "promote":
         repository.transition(key, 2, RecipeState.ACTIVE, reason="Test gate passed", at=now)
     assert repository.get(key).recipe.version == serving_version

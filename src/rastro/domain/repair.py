@@ -5,6 +5,7 @@ an explicit lifecycle transition may activate it. Fingerprints are private local
 comparison data: hashes reduce disclosure, but are not anonymization.
 """
 
+import json
 from hashlib import sha256
 from typing import Annotated, Literal
 
@@ -19,7 +20,7 @@ def digest(value: str) -> str:
 
 
 def recipe_digest(recipe: Recipe) -> str:
-    return digest(recipe.model_dump_json())
+    return digest(json.dumps(recipe.model_dump(mode="json"), sort_keys=True, separators=(",", ":")))
 
 
 type FingerprintToken = Annotated[str, Field(pattern=r"^h[0-9a-f]{64}$")]

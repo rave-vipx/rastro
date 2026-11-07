@@ -8,7 +8,7 @@ declarative, generic and optional; a job without rules is unchanged.
 
 ## Rules
 
-Declared as `[[consistency]]` entries (the example is `examples/uy-dance-agenda/consistency.toml`).
+Declared as `[[consistency]]` entries (the example is `examples/uy-dance-agenda/sample/job.toml`).
 
 | `kind` | Fails when | Parameters |
 | --- | --- | --- |

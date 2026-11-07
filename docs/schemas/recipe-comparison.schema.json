@@ -1,0 +1,327 @@
+{
+  "$defs": {
+    "CandidateEvaluation": {
+      "additionalProperties": false,
+      "properties": {
+        "current_records": {
+          "minimum": 0,
+          "title": "Current Records",
+          "type": "integer"
+        },
+        "current_status": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "decision": {
+          "enum": [
+            "promote",
+            "quarantine",
+            "reject"
+          ],
+          "title": "Decision",
+          "type": "string"
+        },
+        "historical_fixtures": {
+          "minimum": 0,
+          "title": "Historical Fixtures",
+          "type": "integer"
+        },
+        "historical_passed": {
+          "minimum": 0,
+          "title": "Historical Passed",
+          "type": "integer"
+        },
+        "indicators": {
+          "$ref": "#/$defs/ConsistencyReport"
+        },
+        "reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Reasons",
+          "type": "array"
+        },
+        "regressions": {
+          "items": {
+            "$ref": "#/$defs/RegressionCheck"
+          },
+          "title": "Regressions",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "decision",
+        "reasons",
+        "current_status",
+        "current_records",
+        "historical_fixtures",
+        "historical_passed",
+        "indicators",
+        "regressions"
+      ],
+      "title": "CandidateEvaluation",
+      "type": "object"
+    },
+    "ConsistencyReport": {
+      "additionalProperties": false,
+      "description": "Three separate indicators (QUAL-006); ``None`` means \"not assessed\", never 1.0.\n\n- ``completeness``: share of declared fields that carry a value.\n- ``structural_validity``: share of candidate records that passed validation.\n- ``semantic_confidence``: lowest confidence among assessable rules.",
+      "properties": {
+        "completeness": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Completeness"
+        },
+        "records": {
+          "minimum": 0,
+          "title": "Records",
+          "type": "integer"
+        },
+        "results": {
+          "items": {
+            "$ref": "#/$defs/RuleResult"
+          },
+          "title": "Results",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "semantic_confidence": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Semantic Confidence"
+        },
+        "structural_validity": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Structural Validity"
+        },
+        "verdict": {
+          "enum": [
+            "consistent",
+            "inconsistent",
+            "not_assessed"
+          ],
+          "title": "Verdict",
+          "type": "string"
+        }
+      },
+      "required": [
+        "records",
+        "completeness",
+        "structural_validity",
+        "semantic_confidence",
+        "verdict",
+        "results"
+      ],
+      "title": "ConsistencyReport",
+      "type": "object"
+    },
+    "Outcome": {
+      "enum": [
+        "success",
+        "partial_success",
+        "missing_data",
+        "invalid_data",
+        "access_restriction",
+        "transient_failure",
+        "permanent_failure",
+        "insufficient_evidence"
+      ],
+      "title": "Outcome",
+      "type": "string"
+    },
+    "RegressionCheck": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "passed": {
+          "title": "Passed",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "passed"
+      ],
+      "title": "RegressionCheck",
+      "type": "object"
+    },
+    "RuleResult": {
+      "additionalProperties": false,
+      "description": "One rule's outcome. Explanations carry field names and numbers, never source values.",
+      "properties": {
+        "assessed": {
+          "minimum": 0,
+          "title": "Assessed",
+          "type": "integer"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confidence"
+        },
+        "explanation": {
+          "title": "Explanation",
+          "type": "string"
+        },
+        "field": {
+          "title": "Field",
+          "type": "string"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "observed": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Observed"
+        },
+        "status": {
+          "$ref": "#/$defs/RuleStatus"
+        },
+        "threshold": {
+          "title": "Threshold",
+          "type": "number"
+        },
+        "violating_indices": {
+          "default": [],
+          "items": {
+            "type": "integer"
+          },
+          "title": "Violating Indices",
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind",
+        "field",
+        "status",
+        "assessed",
+        "threshold",
+        "explanation"
+      ],
+      "title": "RuleResult",
+      "type": "object"
+    },
+    "RuleStatus": {
+      "enum": [
+        "passed",
+        "violated",
+        "not_assessable"
+      ],
+      "title": "RuleStatus",
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "candidate_digest": {
+      "title": "Candidate Digest",
+      "type": "string"
+    },
+    "candidate_version": {
+      "title": "Candidate Version",
+      "type": "integer"
+    },
+    "changed_fields": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Changed Fields",
+      "type": "array"
+    },
+    "evaluation": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CandidateEvaluation"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "previous_digest": {
+      "title": "Previous Digest",
+      "type": "string"
+    },
+    "previous_version": {
+      "title": "Previous Version",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "strategy_changed": {
+      "title": "Strategy Changed",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "previous_version",
+    "candidate_version",
+    "previous_digest",
+    "candidate_digest",
+    "changed_fields",
+    "strategy_changed"
+  ],
+  "title": "RecipeComparison",
+  "type": "object"
+}

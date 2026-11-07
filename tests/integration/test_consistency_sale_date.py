@@ -22,7 +22,7 @@ FIELDS = ["title", "performers", "venue", "city", "starts_at", "ticket_url"]
 
 
 def _rules() -> Any:
-    data = tomllib.loads((EXAMPLE / "consistency.toml").read_text(encoding="utf-8"))
+    data = tomllib.loads((EXAMPLE / "sample" / "job.toml").read_text(encoding="utf-8"))
     return parse_consistency_rules(data["consistency"])
 
 
