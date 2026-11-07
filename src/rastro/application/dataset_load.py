@@ -1,20 +1,31 @@
 """Load validated job results through the dataset port (DATA-001, SYNC-002/006/008)."""
 
+from collections.abc import Mapping
 from typing import Any
 
+from rastro.application.drift import snapshot_result
 from rastro.domain.dataset import ChangeKind, DatasetRecordKey, ObservedRecord
+from rastro.domain.drift import StructuralSnapshot
 from rastro.domain.job_dataset import DatasetSpec
 from rastro.domain.job_load import JobLoadResult, LoadedSource, StaleSource
 from rastro.domain.job_results import JobRunResult
 from rastro.domain.models import Outcome
 from rastro.ports.dataset import DatasetStore
+from rastro.ports.drift import DriftMonitor
 
 
 def load_results(
-    spec: DatasetSpec, names: list[str], report: JobRunResult[Any], store: DatasetStore
+    spec: DatasetSpec,
+    names: list[str],
+    report: JobRunResult[Any],
+    store: DatasetStore,
+    *,
+    monitor: DriftMonitor | None = None,
+    snapshots: Mapping[str, StructuralSnapshot] | None = None,
 ) -> JobLoadResult:
     """Only observed approved fields enter snapshots; failed sources retain their old origins."""
     sources = []
+    assessments = []
     approved = spec.approved_fields(names)
     for result in report.results:
         counts = dict.fromkeys(ChangeKind, 0)
@@ -43,6 +54,11 @@ def load_results(
             store.mark_source_unavailable(
                 spec.name, result.source_url, result.completed_at, result.status.value
             )
+        if monitor is not None:
+            snapshot = snapshot_result(
+                result, approved, captured=(snapshots or {}).get(result.job_id)
+            )
+            assessments.append(monitor.assess(spec.name, snapshot))
         sources.append(
             LoadedSource(source_url=result.source_url, status=result.status, counts=counts)
         )
@@ -51,6 +67,7 @@ def load_results(
         job=report.job,
         sources=tuple(sources),
         stale_sources=stale_sources(store, spec.name),
+        drift=tuple(assessments) if monitor is not None else None,
     )
 
 

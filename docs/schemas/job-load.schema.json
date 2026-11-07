@@ -38,6 +38,134 @@
       "title": "DatasetRecordKey",
       "type": "object"
     },
+    "DriftAssessment": {
+      "additionalProperties": false,
+      "properties": {
+        "risk": {
+          "enum": [
+            "low",
+            "elevated",
+            "high"
+          ],
+          "title": "Risk",
+          "type": "string"
+        },
+        "score": {
+          "$ref": "#/$defs/Rate"
+        },
+        "signals": {
+          "items": {
+            "$ref": "#/$defs/DriftSignal"
+          },
+          "title": "Signals",
+          "type": "array"
+        },
+        "thresholds": {
+          "$ref": "#/$defs/DriftThresholds"
+        },
+        "verdict": {
+          "enum": [
+            "structural_drift",
+            "extraction_failure",
+            "none"
+          ],
+          "title": "Verdict",
+          "type": "string"
+        }
+      },
+      "required": [
+        "score",
+        "risk",
+        "verdict",
+        "signals",
+        "thresholds"
+      ],
+      "title": "DriftAssessment",
+      "type": "object"
+    },
+    "DriftSignal": {
+      "additionalProperties": false,
+      "properties": {
+        "baseline": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Baseline"
+        },
+        "contribution": {
+          "$ref": "#/$defs/Rate"
+        },
+        "current": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Current"
+        },
+        "dataset_effect": {
+          "title": "Dataset Effect",
+          "type": "string"
+        },
+        "explanation": {
+          "title": "Explanation",
+          "type": "string"
+        },
+        "field": {
+          "title": "Field",
+          "type": "string"
+        },
+        "indicator": {
+          "$ref": "#/$defs/Indicator"
+        }
+      },
+      "required": [
+        "field",
+        "indicator",
+        "baseline",
+        "current",
+        "explanation",
+        "dataset_effect",
+        "contribution"
+      ],
+      "title": "DriftSignal",
+      "type": "object"
+    },
+    "DriftThresholds": {
+      "additionalProperties": false,
+      "properties": {
+        "elevated": {
+          "$ref": "#/$defs/Rate",
+          "default": 0.2
+        },
+        "high": {
+          "$ref": "#/$defs/Rate",
+          "default": 0.5
+        }
+      },
+      "title": "DriftThresholds",
+      "type": "object"
+    },
     "IdentityValue": {
       "anyOf": [
         {
@@ -53,6 +181,16 @@
           "type": "boolean"
         }
       ]
+    },
+    "Indicator": {
+      "enum": [
+        "selector_match_count",
+        "fallback_used",
+        "subtree_fingerprint",
+        "field_coverage",
+        "validation_failure_rate"
+      ],
+      "type": "string"
     },
     "JobRunStatus": {
       "enum": [
@@ -167,6 +305,11 @@
       "title": "Outcome",
       "type": "string"
     },
+    "Rate": {
+      "maximum": 1,
+      "minimum": 0,
+      "type": "number"
+    },
     "StaleSource": {
       "additionalProperties": false,
       "properties": {
@@ -239,6 +382,21 @@
     "dataset": {
       "title": "Dataset",
       "type": "string"
+    },
+    "drift": {
+      "anyOf": [
+        {
+          "items": {
+            "$ref": "#/$defs/DriftAssessment"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Drift"
     },
     "job": {
       "$ref": "#/$defs/JobSummary"
