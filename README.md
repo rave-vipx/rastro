@@ -43,7 +43,10 @@ QUAL-005/006). No model, browser or network is needed.
 UV_PYTHON=/opt/homebrew/bin/python3.12 uv run python examples/uy-dance-agenda/repair_demo.py
 ```
 
-Observed output on 2026-11-07 (the script prints CLI commands and selected JSON fields):
+The clock is pinned to 2026-11-07; lowering `repair.min_records` from 5 to 4 shows
+quarantine below the configured record threshold, then promotion once it is met.
+
+Reproducible output (the script prints CLI commands and selected JSON fields):
 
 ```text
 rastro job load job.json --drift
@@ -71,7 +74,7 @@ All assertions passed; temporary dataset retained 6 records; external spend=$0
 ```
 
 Each repair also writes its full versioned JSON report inside the temporary sample.
-The November sample is date-sensitive. See [repair configuration and limits](docs/repair.md).
+See [repair configuration and limits](docs/repair.md).
 
 ## Why Rastro?
 

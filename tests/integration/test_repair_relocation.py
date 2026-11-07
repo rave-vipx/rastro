@@ -1,6 +1,5 @@
 """Real relocation, historical replay and lifecycle gates (REPAIR-001/002/004)."""
 
-from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -62,7 +61,7 @@ async def test_relocation_candidate_recovers_moved_node_and_is_promoted_only_abo
     assert failed.status != Outcome.SUCCESS
     repository = SQLiteRecipeRepository(tmp_path / "recipes.sqlite")
     key = RecipeKey.for_source(source, schema)
-    now = datetime.now(UTC)
+    now = before.completed_at
     repository.save_success(key, recipe, selected_index=0, at=now)
     generator = RepairCandidateGenerator(discovery=ScraplingDiscovery(), relocation=adapter)
     report = await generator.generate(
