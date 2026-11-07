@@ -21,7 +21,10 @@ def sample(tmp_path):
 def test_omitted_performer_uses_fallback_and_loads(sample, capsys, version):
     root = sample / version
     tick = root / "tickantel-evento.html"
-    tick.write_text(tick.read_text().replace('"performer":', '"_omitted_performer":'))
+    tick.write_text(
+        tick.read_text(encoding="utf-8").replace('"performer":', '"_omitted_performer":'),
+        encoding="utf-8",
+    )
     job = load_job(root / "job.toml")
     for source in job.sources:
         assert "performance_id" in source.recipe.fallbacks[0].fields
