@@ -234,3 +234,14 @@ class SQLiteDatasetStore:
                     (dataset,),
                 )
             )
+
+    @safe
+    def dataset_names(self) -> tuple[str, ...]:
+        """Names in an existing dataset file; reading never creates a database."""
+        with connection(self._path, self._limits) as db:
+            return tuple(
+                row[0]
+                for row in db.execute(
+                    "SELECT DISTINCT dataset FROM dataset_sources ORDER BY dataset"
+                )
+            )

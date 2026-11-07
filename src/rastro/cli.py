@@ -29,8 +29,10 @@ from rastro import (
     schema_fingerprint,
 )
 from rastro.application.job_preview import preview_job_file, render_preview_table
+from rastro.cli_dataset import add_commands, dataset_command, load_job_command
 from rastro.cli_errors import UsageError, classify
 from rastro.domain.job_dataset import job_preview_json_schema
+from rastro.domain.job_load import job_load_json_schema
 
 
 class _DemoProduct(BaseModel):
@@ -101,10 +103,11 @@ def _build_parser() -> argparse.ArgumentParser:
     job_schema = job_commands.add_parser("schema", help="Print JSON Schema for declarative jobs")
     job_schema.add_argument(
         "--target",
-        choices=("job", "run", "preview"),
+        choices=("job", "run", "preview", "load"),
         default="job",
         help="Schema to print: 'job' input (default), 'run' or 'preview' output",
     )
+    add_commands(subcommands, job_commands)
     return parser
 
 
@@ -114,9 +117,12 @@ def _run_job_command(args: argparse.Namespace) -> int:
             "job": job_json_schema,
             "run": job_run_json_schema,
             "preview": job_preview_json_schema,
+            "load": job_load_json_schema,
         }[args.target]()
         print(json.dumps(payload, indent=2, sort_keys=True))
         return int(JobExitCode.SUCCESS)
+    if args.job_command == "load":
+        return load_job_command(args)
     if args.job_command == "validate":
         job = load_job(args.file, allow_absolute_paths=args.allow_absolute_paths)
         print(
@@ -147,6 +153,8 @@ def _run_job_command(args: argparse.Namespace) -> int:
 
 
 def _dispatch(args: argparse.Namespace) -> int:
+    if args.command == "dataset":
+        return dataset_command(args)
     if args.command == "doctor":
         print(
             json.dumps(

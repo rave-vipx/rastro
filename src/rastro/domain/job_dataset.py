@@ -27,6 +27,7 @@ class DatasetSpec(RedactedContract):
     path: StrictStr = Field(min_length=1, max_length=1024)
     identity: tuple[StrictStr, ...] = Field(min_length=1, max_length=8)
     approve: tuple[StrictStr, ...] | None = Field(default=None, min_length=1, max_length=100)
+    match_fields: tuple[StrictStr, StrictStr, StrictStr] = ("title", "venue", "start_time")
     match_tolerance_minutes: StrictInt | None = Field(default=None, ge=1, le=10_080)
 
     @field_validator("path")
