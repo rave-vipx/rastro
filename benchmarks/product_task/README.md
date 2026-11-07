@@ -123,6 +123,24 @@ recurring service spend is zero; local compute, electricity and development
 agent usage are unpriced, not free. Listed human steps and `human_minutes: null`
 keep human effort separate; agent build minutes/tokens were not instrumented.
 
+## Recorded baseline run
+
+One cold workflow run on 3.12.16 / macOS-26.6.2-arm64-arm-64bit;
+see `results.json` for versions, source hashes and seconds before rounding.
+
+| Phase | Machine milliseconds | Rows | Silent errors | Stale rows |
+| --- | ---: | ---: | ---: | ---: |
+| initial_two | 3.094 | 6 | 0 | 0 |
+| add_third | 0.819 | 7 | 0 | 0 |
+| repeat | 1.896 | 7 | 0 | 0 |
+| broken | 0.083 | 7 | 0 | 1 |
+| repaired | 0.543 | 7 | 0 | 0 |
+
+Site-specific code/config: 78 lines (schema 16, config 62); one-time loader: 58 lines.
+Shared extractor/contracts: 143/75 lines (whole reused modules, including unused helpers).
+Network requests/model calls: 0/0; scripted repair: 0.727 ms and one mapping edit.
+Human time and development-agent cost remain unmeasured.
+
 ## Integration notes
 
 - Lead approval is required before merging this slice because it touches `benchmarks/`.
