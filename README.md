@@ -30,6 +30,49 @@ records limitations that still prevent a complete two-live-source agenda.
 
 > **`0.1.0` release candidate — not yet published.** Rastro extracts supplied HTML or JSON, or permitted HTTP sources, using JSON-LD, CSS or JSON-pointer recipes. HTTP is an optional extra with destination controls, robots enforcement, and bounded asynchronous execution. SQLite recipe memory reuses validated strategies across restarts. Optional local Ollama assistance proposes recipes within strict budgets; every candidate is validated before activation. No PyPI release has been published by this project.
 
+
+## Drift and repair offline
+
+The cut-2 demo uses a temporary copy of the dance sample, Mock Lab mutations and the
+real CLI. It keeps all six dataset records while quarantining a repair below its
+configured record threshold, promoting after that threshold is met, rolling back,
+and rejecting valid sale dates used as event dates (DRIFT-001–006, REPAIR-001–006,
+QUAL-005/006). No model, browser or network is needed.
+
+```sh
+UV_PYTHON=/opt/homebrew/bin/python3.12 uv run python examples/uy-dance-agenda/repair_demo.py
+```
+
+Observed output on 2026-11-07 (the script prints CLI commands and selected JSON fields):
+
+```text
+rastro job load job.json --drift
+exit=0 status=success stale=0 drift=none,none fields=
+Mock Lab: moved and renamed title nodes (seed=42)
+rastro job load job.json --drift
+exit=3 status=partial_success stale=1 drift=structural_drift,none fields=city,currency,performance_id,performers,price,starts_at,ticket_url,title,venue
+rastro recipe repair job.json --source 1
+exit=3 decisions=quarantine,reject consistency=consistent,not_assessed
+Configured repair.min_records=4 (was 5)
+rastro recipe repair job.json --source 1
+exit=0 decisions=promote,reject consistency=consistent,not_assessed
+rastro job load job.json --drift
+exit=0 status=success stale=0 drift=structural_drift,none fields=performance_id,title
+rastro recipe compare job.json --from-version 1 --to-version 4
+exit=0 schema_version=1 versions=1->4 changed=title
+rastro recipe rollback job.json --version 1
+exit=0 state=active version=1
+rastro job load job.json --drift
+exit=0 status=success stale=0 drift=structural_drift,none fields=performance_id,title
+Mock Lab: valid sale date placed in event-date paths (seed=42)
+rastro recipe repair job.json --source 2
+exit=1 decisions=reject,reject consistency=inconsistent,not_assessed
+All assertions passed; temporary dataset retained 6 records; external spend=$0
+```
+
+Each repair also writes its full versioned JSON report inside the temporary sample.
+The November sample is date-sensitive. See [repair configuration and limits](docs/repair.md).
+
 ## Why Rastro?
 
 - **A schema is the contract.** Pydantic checks required fields, ranges, types, and your own validators.
