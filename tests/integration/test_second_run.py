@@ -87,6 +87,7 @@ def test_source_down_keeps_previous_records_with_last_observation(sample, capsys
     assert datetime.fromisoformat(stale[0]["last_success"]) == max(
         origin.last_observed_at for origin in old.values()
     )
+    assert stale[0]["last_success"].startswith("2026-11-07T12:00:00.")
     assert stale[0]["last_success"] < stale[0]["last_attempt"]
     new = {r.key: r.origins[source] for r in after if source in r.origins}
     assert old == new

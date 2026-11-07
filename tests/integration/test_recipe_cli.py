@@ -1,39 +1,17 @@
 """REPAIR-002-006 / REC-006: offline lifecycle leaves the dataset intact."""
 
-import asyncio
 import json
 import shutil
-import socket
 from pathlib import Path
 
 import pytest
-from conftest import _ORIGINAL_SOCKET
 
 from rastro.cli import main
 
 SAMPLE = Path(__file__).parents[2] / "examples/uy-dance-agenda/sample"
 
 
-@pytest.fixture(autouse=True)
-def offline_cli_loop(monkeypatch):
-    from datetime import UTC, datetime
-
-    import rastro.cli_recipe as recipe_cli
-
-    class FrozenTime(datetime):
-        @classmethod
-        def now(cls, tz=None):
-            return datetime(2026, 11, 7, 12, tzinfo=UTC)
-
-    monkeypatch.setattr(recipe_cli, "datetime", FrozenTime)
-    original_loop = asyncio.SelectorEventLoop
-
-    def factory():
-        with pytest.MonkeyPatch.context() as patch:
-            patch.setattr(socket, "socket", _ORIGINAL_SOCKET)
-            return original_loop()
-
-    monkeypatch.setattr(asyncio, "SelectorEventLoop", factory)
+pytestmark = pytest.mark.usefixtures("offline_cli_loop")
 
 
 def setup_sample(tmp_path):

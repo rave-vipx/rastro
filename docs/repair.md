@@ -96,8 +96,8 @@ A subsequent successful load updates observed fields through the ordinary datase
 ## Boundaries
 
 The [offline demo](https://github.com/rave-vipx/rastro#drift-and-repair-offline) covers quarantine, promotion,
-rollback and the valid-sale-date trap with no AI or browser. The date-sensitive example
-was executed on 2026-11-07; its November event dates eventually become historical.
+rollback and the valid-sale-date trap with no AI or browser. Its observation clock
+is pinned to 2026-11-07 so the November sample remains reproducible.
 This is synthetic evidence, not proof of live-site repair quality.
 
 Relocation uses one template record and requires an applicable record selector. Changed

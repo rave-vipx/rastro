@@ -1,4 +1,4 @@
-"""Dated offline cut-2 demo; executes the real CLI on a disposable sample (REPAIR-001-006)."""
+"""Clock-pinned real CLI demo on a disposable sample (REPAIR-001-006)."""
 
 from __future__ import annotations
 
@@ -7,10 +7,13 @@ import json
 import os
 import re
 import shutil
-from contextlib import redirect_stdout
+from contextlib import ExitStack, redirect_stdout
+from datetime import UTC, datetime, timedelta
+from itertools import count
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
+from unittest.mock import patch
 
 from rastro.cli import main
 from rastro.domain.jobs import parse_job
@@ -60,7 +63,20 @@ def run_demo(folder: Path) -> None:
     previous_cwd = Path.cwd()
     os.chdir(folder)
     try:
-        _sequence(path, job)
+        # Patch existing observation seams only; the engine keeps its real clock by default.
+        observed, ticks = datetime(2026, 11, 7, 12, tzinfo=UTC), count()
+        with ExitStack() as stack:
+            for module in (
+                "rastro.application.extraction",
+                "rastro.application.service",
+                "rastro.application.memory",
+                "rastro.application.outcomes",
+                "rastro.application.intelligence",
+                "rastro.cli_recipe",
+            ):
+                clock = stack.enter_context(patch(f"{module}.datetime", wraps=datetime))
+                clock.now.side_effect = lambda tz: observed + timedelta(microseconds=next(ticks))
+            _sequence(path, job)
     finally:
         os.chdir(previous_cwd)
 
