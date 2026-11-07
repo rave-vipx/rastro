@@ -10,17 +10,13 @@ from importlib.metadata import version
 from pathlib import Path
 from typing import NoReturn, TextIO
 
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import ValidationError
 from pydantic_core import SchemaError
 
 from rastro import (
     JobExitCode,
-    JsonLdRecipe,
-    Outcome,
-    Rastro,
     RastroError,
     Recipe,
-    Source,
     __version__,
     job_json_schema,
     job_run_json_schema,
@@ -31,13 +27,10 @@ from rastro import (
 from rastro.application.job_preview import preview_job_file, render_preview_table
 from rastro.cli_dataset import add_commands, dataset_command, load_job_command
 from rastro.cli_errors import UsageError, classify
+from rastro.cli_recipe import add_commands as add_recipe_commands
+from rastro.cli_recipe import recipe_command
 from rastro.domain.job_dataset import job_preview_json_schema
 from rastro.domain.job_load import job_load_json_schema
-
-
-class _DemoProduct(BaseModel):
-    name: str = Field(min_length=1)
-    price: float = Field(ge=0, allow_inf_nan=False)
 
 
 class _ArgumentParser(argparse.ArgumentParser):
@@ -108,6 +101,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Schema to print: 'job' input (default), 'run' or 'preview' output",
     )
     add_commands(subcommands, job_commands)
+    add_recipe_commands(subcommands)
     return parser
 
 
@@ -153,6 +147,8 @@ def _run_job_command(args: argparse.Namespace) -> int:
 
 
 def _dispatch(args: argparse.Namespace) -> int:
+    if args.command == "recipe":
+        return recipe_command(args)
     if args.command == "dataset":
         return dataset_command(args)
     if args.command == "doctor":
@@ -185,18 +181,9 @@ def _dispatch(args: argparse.Namespace) -> int:
         return int(JobExitCode.SUCCESS)
     if args.command == "job":
         return _run_job_command(args)
-    result = Rastro().extract_html(
-        '<script type="application/ld+json">'
-        '{"@type":"Product","name":"Trail notebook","offers":{"price":12.5}}'
-        "</script>",
-        source=Source(url="https://example.com/products", locale="en-US"),
-        schema=_DemoProduct,
-        recipe=JsonLdRecipe(
-            item_type="Product", fields={"name": "/name", "price": "/offers/price"}
-        ),
-    )
-    print(result.model_dump_json(indent=2))
-    return int(JobExitCode.SUCCESS if result.status == Outcome.SUCCESS else JobExitCode.FAILED)
+    from rastro.cli_demo import demo_command
+
+    return demo_command()
 
 
 def _report_job_error(error: BaseException) -> int:
@@ -205,7 +192,7 @@ def _report_job_error(error: BaseException) -> int:
 
 
 def _is_job_command(argv: list[str]) -> bool:
-    return next((item for item in argv if not item.startswith("-")), None) == "job"
+    return next((item for item in argv if not item.startswith("-")), None) in {"job", "recipe"}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -228,13 +215,13 @@ def main(argv: list[str] | None = None) -> int:
     try:
         return _dispatch(args)
     except (OSError, ValueError, ValidationError, SchemaError, RastroError) as error:
-        if args.command == "job":
+        if args.command in {"job", "recipe"}:
             return _report_job_error(error)
         hint = "Check input, recipe, and resource limits"
         print(json.dumps({"error": "invalid_input", "hint": hint}), file=sys.stderr)
         return int(JobExitCode.CONFIG_ERROR)
     except Exception as error:
-        if args.command != "job":
+        if args.command not in {"job", "recipe"}:
             raise
         if handler is not None:
             logger.exception("Unexpected error while handling a job command")

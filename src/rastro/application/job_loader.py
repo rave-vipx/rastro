@@ -86,6 +86,9 @@ def validate_job_paths(
         )
         if memory_path is not None and _same_file(dataset_path, memory_path):
             raise ConfigurationError("The dataset must be a separate file from recipe_memory")
+    if job.repair is not None:
+        for fixture in job.repair.fixtures:
+            resolve_job_path(fixture, base_dir=base_dir, allow_absolute_paths=allow_absolute_paths)
     file_paths = {
         index: resolve_job_path(
             source.path, base_dir=base_dir, allow_absolute_paths=allow_absolute_paths

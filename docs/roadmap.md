@@ -89,6 +89,17 @@ Work strategy (2026-11-07): one worktree and branch per slice, combined into one
 | Five-minute README and documentation integration | Done in #61; clean temporary sample, 2.55 seconds excluding installation, $0 external spend |
 | Successful two-live-source dataset, newcomer validation and product-task comparison | Still open: live pilot reports blocked/invalid sources; offline proof does not establish live completeness or usability for a new user |
 
+### Second-cut delivery
+
+| Item | State / evidence |
+| --- | --- |
+| DRIFT-001–006 | Implemented: `job load --drift`, measured snapshots, deterministic explained verdicts and stale table effects; ADR 0018 and offline drift acceptance tests |
+| REPAIR-001–005, SCR-002 | Implemented: bounded proposals, retained last-success evidence, historical/current/schema/consistency/generated regression CI, threshold promotion and quarantine; ADR 0019 and real CLI acceptance |
+| REPAIR-006, REC-005/006 | Implemented: candidate-only persistence, fresh-CI promotion, comparison and rollback CLI; next dataset load uses the serving version |
+| QUAL-005/006 | Implemented for recipe CI: generic optional job rules and separate completeness/structural/semantic indicators; sale-date trap fails despite valid datetime values |
+| Cut demo | Executed offline on a temporary dance sample: threshold quarantine, promotion, six preserved records, rollback and semantic rejection; README records actual commands/output |
+| Open | Independent cut review, live-source repair, automatic semantic load monitoring, retention pruning, drift calibration, heterogeneous relocation, DIFF-002 and final sealed-corpus evaluation remain open; no sealed evidence claimed |
+
 ### v0.3 candidates ranked by pilot evidence
 
 Preserve the [pilot ranking and underlying observations](pilot/uy-dance-agenda.md#3-ranked-obstacles-for-v03-drift-acquisition-roadmap):
@@ -113,7 +124,7 @@ Preserve the [pilot ranking and underlying observations](pilot/uy-dance-agenda.m
 | INT-003 | Five extraction outcomes plus explicit access restrictions, transient failures, and permanent failures. Overflowing JSON numbers are invalid data, never success. |
 | INT-004, QUAL-001–004 | Field provenance, Pydantic/custom validation, explicit rejection. No source excerpt retained; defaults have no evidence. |
 | REC-002 | Declarative serialization with unknown/executable fields rejected. |
-| REC-001/003, REC-005/006, REPAIR-006 | SQLite versions keyed by source/template/schema/region; mappings/fallback definitions, validation-contract references, timestamps and successful-run counts. Lifecycle states, candidate storage, history and rollback are delivered at the domain and storage level ([ADR 0015](decisions/0015-recipe-lifecycle.md)); no facade or CLI surface, automatic degradation or repair yet. Repair and drift work builds on `save_candidate` and `RecipeLifecycle`. |
+| REC-001/003, REC-005/006, REPAIR-006 | SQLite versions keyed by source/template/schema/region; mappings/fallback definitions, validation-contract references, timestamps and successful-run counts. Lifecycle states, candidate storage, history and rollback use [ADR 0015](decisions/0015-recipe-lifecycle.md); the repair CLI now gates promotion with real CI and controls the next dataset load. Automatic degradation remains open. |
 | REC-004 | Model candidates require strict declarative structure, source observations, required-field evidence and full schema success before activation. Evidence policy survives restart; partial/failed candidates never activate. |
 | AI-001–004 | Optional local Ollama adapter, structured proposals, capability boundary and bounded calls/corrections/deadline/context/response/concurrency. Offline contract tests cover these guarantees. Live runs with `qwen3:4b` and `llama3.2:3b` (5 trials each) verified learning, activation, zero-inference cross-process reuse and explicit failures; both failed safely on a page with distractors ([live evidence](live-ollama-evidence.md)). Broader model quality is unmeasured. |
 | GEO-001–003, GEO-005 | Explicit ordered languages with descending Accept-Language weights and locale fallback; locale/languages/timezone/currency/egress reach validators through Pydantic's supported `model_validate` context path; unsupported egress fails before DNS; recipe memory isolates the ordered regional context while retaining default legacy keys. Custom model constructors follow Pydantic semantics and must handle context themselves. Named administrator-declared HTTP(S) proxy egress profiles with environment credential references, no rotation or fallback, and egress-isolated memory; a proxy resolves target DNS, so local pinning does not bind proxied connections (trusted-proxy boundary). Browser geolocation is rejected explicitly until a browser adapter exists (GEO-002). See [ADR 0006](decisions/0006-explicit-regional-context.md) and [ADR 0008](decisions/0008-explicit-egress.md). |

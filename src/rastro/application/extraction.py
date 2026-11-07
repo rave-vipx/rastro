@@ -11,6 +11,7 @@ from uuid import uuid4
 from pydantic import BaseModel, ValidationError
 
 from rastro.application.drift import capture_snapshot
+from rastro.application.success_samples import capture_success
 from rastro.domain.models import (
     ConfigurationError,
     Evidence,
@@ -153,6 +154,7 @@ def extract_document[T: BaseModel](
         ),
     )
     capture_snapshot(result, html, recipe, limits)
+    capture_success(result, html, recipe, source, limits)
     return result
 
 

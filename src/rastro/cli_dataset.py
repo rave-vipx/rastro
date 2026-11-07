@@ -12,6 +12,7 @@ from rastro.application.dataset_load import load_results, stale_sources
 from rastro.application.drift import collect_snapshots
 from rastro.application.job_loader import load_job, resolve_job_path
 from rastro.application.jobs import run_job
+from rastro.application.success_samples import collect_successes
 from rastro.domain.drift import StructuralSnapshot
 from rastro.domain.models import ConfigurationError
 
@@ -60,13 +61,19 @@ def load_job_command(args: argparse.Namespace) -> int:
         capture = collect_snapshots(ScraplingDriftProbe())
     else:
         capture = nullcontext({})
-    with capture as snapshots:
+    from rastro.cli_repair_storage import serving_job
+
+    effective_job = serving_job(job, args.file.parent, args.allow_absolute_paths)
+    with capture as snapshots, collect_successes() as successes:
         report = run_job(
-            job, base_dir=args.file.parent, allow_absolute_paths=args.allow_absolute_paths
+            effective_job, base_dir=args.file.parent, allow_absolute_paths=args.allow_absolute_paths
         )
     loaded = load_results(
         spec, [f.name for f in job.fields], report, store, monitor=monitor, snapshots=snapshots
     )
+    from rastro.cli_repair_storage import retain_successes
+
+    retain_successes(raw_path, spec.name, job.build_schema(), report, successes)
     print(loaded.model_dump_json(indent=2))
     return int(loaded.exit_code)
 
