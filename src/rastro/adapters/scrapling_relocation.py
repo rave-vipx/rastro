@@ -60,11 +60,15 @@ class ScraplingRelocation:
             raise ConfigurationError("Successful result does not match the snapshot records")
         nodes: dict[str, Selector] = {}
         for field, expression in recipe.fields.items():
+            if field not in result.records[0].evidence:
+                continue
             selector, _ = _expression(expression)
             matches = _css(records[0], selector)
-            if len(matches) != 1 or field not in result.records[0].evidence:
+            if len(matches) != 1:
                 raise ConfigurationError("Snapshot fields require unique successful evidence")
             nodes[field] = matches[0]
+        if not nodes:
+            raise ConfigurationError("Relocation requires observed fields in the first record")
         _mask(page)
         snapshot = RelocationSnapshot(
             recipe_digest=recipe_digest(recipe),
@@ -85,7 +89,7 @@ class ScraplingRelocation:
             snapshot = RelocationSnapshot.model_validate(snapshot.model_dump())
         except ValidationError:
             raise ConfigurationError("Invalid relocation snapshot") from None
-        if snapshot.recipe_digest != recipe_digest(recipe) or set(snapshot.fields) != set(
+        if snapshot.recipe_digest != recipe_digest(recipe) or not set(snapshot.fields).issubset(
             recipe.fields
         ):
             raise ConfigurationError("Relocation snapshot does not match the recipe")

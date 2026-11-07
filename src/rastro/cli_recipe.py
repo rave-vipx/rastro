@@ -97,7 +97,7 @@ async def _evaluate_command(context: RepairContext, args: argparse.Namespace) ->
         payload = {"schema_version": 1, "run_id": run_id, "sources": sources}
         encoded = json.dumps(payload, indent=2)
         if descriptor is not None:
-            with os.fdopen(descriptor, "w") as output:
+            with os.fdopen(descriptor, "w", encoding="utf-8") as output:
                 descriptor = None
                 output.write(encoded + "\n")
         print(encoded)

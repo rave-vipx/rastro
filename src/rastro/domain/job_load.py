@@ -7,13 +7,14 @@ from pydantic import Field
 from rastro.domain.dataset import ChangeKind, DatasetRecordKey, SourceStatus
 from rastro.domain.drift import DriftAssessment
 from rastro.domain.job_results import JobExitCode, JobSummary
-from rastro.domain.models import Contract, Outcome
+from rastro.domain.models import Contract, Issue, Outcome
 
 
 class LoadedSource(Contract):
     source_url: str
     status: Outcome
     counts: dict[ChangeKind, int]
+    issues: tuple[Issue, ...] = Field(default=(), exclude_if=lambda v: not v)
 
 
 class StaleSource(SourceStatus):

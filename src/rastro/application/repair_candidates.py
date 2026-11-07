@@ -131,6 +131,7 @@ class RepairCandidateGenerator:
         maximum = self._policy.max_discovery_candidates
         if len(incoming) > maximum:
             raise ResourceLimitError("Repair provider returned too many candidates")
+        baseline = original.model_copy(update={"require_evidence": True, "fallbacks": ()})
         for item in incoming:
             try:
                 data = item.recipe.model_dump()
@@ -141,6 +142,8 @@ class RepairCandidateGenerator:
                 candidate = RepairCandidate.model_validate({**item.model_dump(), "recipe": recipe})
             except ValidationError:
                 raise ConfigurationError("Invalid repair candidate") from None
+            if recipe == baseline:
+                continue
             if all(existing.recipe != recipe for existing in target) and len(target) < maximum:
                 target.append(candidate)
 

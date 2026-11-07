@@ -7,6 +7,12 @@ Load a successful job with both `recipe_memory = "recipes.sqlite"` and a separat
 and, for CSS, hashed element fingerprints in the **dataset** file. Failed and partial
 runs never replace that evidence. The recipe-memory schema is unchanged.
 
+CSS fingerprints cover only fields observed in the first record, so an absent optional
+field does not prevent retention. If the document exceeds relocation's structural budget
+or uses unsupported selectors, the historical fixture is still retained. The successful
+load keeps its exit code and reports `relocation_retention_skipped` in that source's
+`issues` array (DATA-001, SCR-002). No issue array is emitted when retention succeeds.
+
 ```toml
 [repair]
 auto_promote = true
@@ -23,6 +29,11 @@ All fields are optional. Without `[repair]`, automatic promotion is disabled; va
 candidates remain quarantined. Without `[[consistency]]`, semantic confidence is
 reported as unassessed and the semantic gate is inapplicable. With declared rules,
 only `consistent` passes that gate. An `inconsistent` candidate is rejected.
+
+Each configured fixture must match exactly one job source, using its query-free evidence
+URL and regional context. Unmatched or ambiguous bundles raise a configuration error;
+they are never silently omitted. Sources that differ only by query parameters cannot be
+distinguished by these sanitized fixtures.
 
 ## Commands
 
@@ -41,6 +52,9 @@ Existing report files and symlinks are refused. File inputs stay within the job
 directory unless `--allow-absolute-paths` is explicitly supplied. Local inputs and
 fixture files reject symlinks. HTTP evidence uses the existing robots, destination,
 redirect, pacing, byte and access-restriction policies; relocation never fetches.
+The job's base directory is resolved first, permitting OS aliases such as macOS `/tmp`;
+the job file itself and paths within that base still refuse symlinks. Reports and the
+offline demo use UTF-8 independently of the locale.
 
 Exit codes: **0** means every selected source promoted a candidate (other proposals
 may have been rejected); **3** means a candidate remains quarantined; **1** means
@@ -73,6 +87,8 @@ versions stay in lifecycle state `candidate`. Neither state serves unpinned extr
 `recipe promote` re-runs CI on fresh evidence and explicitly enables promotion; it does
 not bypass history, semantic or configured threshold gates. A malformed or now-failing
 candidate cannot be approved through this command.
+Proposals identical to the active mapping after evidence/fallback normalization are
+discarded before version allocation. If none remain, repair reports `no_candidates`.
 
 `RecipeComparison` has `schema_version = 1`, old/new versions and canonical recipe
 digests, changed field names, strategy-change status and an optional `CandidateEvaluation`.

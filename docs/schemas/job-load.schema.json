@@ -192,6 +192,45 @@
       ],
       "type": "string"
     },
+    "Issue": {
+      "additionalProperties": false,
+      "description": "Safe diagnostics: no input values or user-supplied validation messages.",
+      "properties": {
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "field": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Field"
+        },
+        "record_index": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Record Index"
+        }
+      },
+      "required": [
+        "code"
+      ],
+      "title": "Issue",
+      "type": "object"
+    },
     "JobRunStatus": {
       "enum": [
         "success",
@@ -274,6 +313,14 @@
           },
           "title": "Counts",
           "type": "object"
+        },
+        "issues": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Issue"
+          },
+          "title": "Issues",
+          "type": "array"
         },
         "source_url": {
           "title": "Source Url",

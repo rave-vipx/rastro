@@ -18,10 +18,14 @@ from rastro.mocklab.bundle import FixtureBundle, load_fixture
 
 
 def safe_path(raw: str, base: Path, allow: bool) -> Path:
+    base = base.resolve()
     # Check the un-resolved path so containment resolution cannot hide symlinks.
-    path = Path(raw) if Path(raw).is_absolute() else base.absolute() / raw
-    if any(p.is_symlink() for p in (path, *path.parents)):
-        raise ConfigurationError("Recipe command paths must not contain symlinks")
+    path = Path(raw) if Path(raw).is_absolute() else base / raw
+    for candidate in (path, *path.parents):
+        if candidate == base:
+            break
+        if candidate.is_symlink():
+            raise ConfigurationError("Recipe command paths must not contain symlinks")
     return resolve_job_path(raw, base_dir=base, allow_absolute_paths=allow)
 
 
@@ -36,15 +40,16 @@ class RepairContext:
 
     @classmethod
     def load(cls, path: Path, allow: bool) -> "RepairContext":
-        safe_path(str(path.absolute()), path.parent, True)
+        if path.is_symlink():
+            raise ConfigurationError("Recipe command paths must not contain symlinks")
+        base = path.parent.resolve()
+        path = base / path.name
         job = load_job(path, allow_absolute_paths=allow)
         if job.dataset is None or job.recipe_memory is None:
             raise ConfigurationError("Recipe commands require dataset and recipe_memory")
-        memory = safe_path(job.recipe_memory, path.parent, allow)
-        dataset = safe_path(job.dataset.path, path.parent, allow)
-        return cls(
-            job, job.build_schema(), SQLiteRecipeRepository(memory), dataset, path.parent, allow
-        )
+        memory = safe_path(job.recipe_memory, base, allow)
+        dataset = safe_path(job.dataset.path, base, allow)
+        return cls(job, job.build_schema(), SQLiteRecipeRepository(memory), dataset, base, allow)
 
     def source(self, index: int) -> tuple[Source, RecipeKey, Recipe]:
         if not 1 <= index <= len(self.job.sources):
@@ -68,12 +73,19 @@ class RepairContext:
             self.job.dataset.name, source, self.source_fingerprint, recipe
         )
         snapshot, fixtures = (retained[0], [retained[1]]) if retained else (None, [])
+        sources = []
+        for item in self.job.sources:
+            url = item.resolved_source_url() if isinstance(item, FileJobSource) else item.url
+            configured = (item.region or self.job.region).to_source(url)
+            sources.append(_evidence_source(configured))
         for raw in self.job.repair.fixtures if self.job.repair else ():
             path = safe_path(raw, self.base, self.allow)
             if any(p.is_symlink() for p in path.iterdir()):
                 raise ConfigurationError("Fixture files must not be symlinks")
             bundle = load_fixture(path)
-            if bundle.manifest.source == source:
+            if sources.count(bundle.manifest.source) != 1:
+                raise ConfigurationError("Each repair fixture must match exactly one job source")
+            if bundle.manifest.source == _evidence_source(source):
                 fixtures.append(bundle)
         return snapshot, tuple(fixtures)
 
@@ -88,7 +100,7 @@ class RepairContext:
         if not self.dataset_path.exists():
             return {}
         return history_from_store(
-            SQLiteDatasetStore(self.dataset_path),
+            SQLiteDatasetStore(self.dataset_path, limits=self.job.limits),
             self.job.dataset.name,
             tuple(self.schema.model_fields),
         )
@@ -120,3 +132,7 @@ class RepairContext:
                 "Current evidence unavailable: " + (result.issue_code or "acquisition_failed")
             )
         return result.body
+
+
+def _evidence_source(source: Source) -> Source:
+    return Source.model_validate({**source.model_dump(), "url": source.evidence_url})
