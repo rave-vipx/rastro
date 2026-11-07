@@ -43,6 +43,7 @@ record_selector = ".item .cyg--info.espectaculo"
 require_evidence = true
 
 [sources.recipe.fallbacks.fields]
+performance_id = "::attr(data-performance-id)"
 title = "h2.cyg--display-3::text"
 performers = "p::text"
 venue = "address img::attr(alt)"
@@ -78,6 +79,7 @@ item_type = "Event"
 require_evidence = true
 
 [sources.recipe.fallbacks.fields]
+performance_id = "/identifier"
 title = "/name"
 performers = "/description"
 venue = "/location/name"
