@@ -14,7 +14,7 @@ from pydantic import Field, JsonValue, StrictInt, StrictStr, field_validator
 from rastro.domain.job_contract import RedactedContract
 from rastro.domain.job_results import JobExitCode, JobSummary
 from rastro.domain.job_sources import validate_job_path_syntax
-from rastro.domain.models import Contract, Outcome
+from rastro.domain.models import ConfigurationError, Contract, Outcome
 
 JOB_PREVIEW_SCHEMA_ID = "https://rave-vipx.github.io/rastro/schemas/job-preview.schema.json"
 DATASET_NAME = r"^[a-z][a-z0-9_]{0,63}$"
@@ -27,6 +27,7 @@ class DatasetSpec(RedactedContract):
     path: StrictStr = Field(min_length=1, max_length=1024)
     identity: tuple[StrictStr, ...] = Field(min_length=1, max_length=8)
     approve: tuple[StrictStr, ...] | None = Field(default=None, min_length=1, max_length=100)
+    match_fields: tuple[StrictStr, StrictStr, StrictStr] = ("title", "venue", "start_time")
     match_tolerance_minutes: StrictInt | None = Field(default=None, ge=1, le=10_080)
 
     @field_validator("path")
@@ -40,6 +41,13 @@ class DatasetSpec(RedactedContract):
 
     def check_against(self, declared: Sequence[str]) -> None:
         """Reject identity or approve entries that are not declared target fields."""
+        if "match_fields" in self.model_fields_set:
+            if len(set(self.match_fields)) != len(self.match_fields):
+                raise ConfigurationError("dataset.match_fields must not repeat a field")
+            if not set(self.match_fields) <= set(declared):
+                raise ConfigurationError("dataset.match_fields must name declared fields")
+            if not set(self.match_fields) <= set(self.approved_fields(declared)):
+                raise ConfigurationError("dataset.match_fields must be listed in approve")
         known = set(declared)
         approve = self.approved_fields(declared)
         for label, names in (("identity", self.identity), ("approve", approve)):

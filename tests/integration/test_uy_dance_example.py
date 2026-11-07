@@ -27,6 +27,7 @@ EXPECTED_FIELDS = [
     "price",
     "currency",
 ]
+SAMPLE_FIELDS = [*EXPECTED_FIELDS, "performance_id"]
 
 
 def _run_cli(capsys: pytest.CaptureFixture[str], *args: str) -> tuple[int, dict[str, Any]]:
@@ -37,7 +38,7 @@ def _run_cli(capsys: pytest.CaptureFixture[str], *args: str) -> tuple[int, dict[
     return exit_code, payload
 
 
-def test_uy_dance_jobs_validate_offline_and_share_schema_fingerprint(
+def test_uy_dance_jobs_validate_offline_with_stable_sample_schema(
     capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -48,17 +49,12 @@ def test_uy_dance_jobs_validate_offline_and_share_schema_fingerprint(
 
     fingerprints: set[str] = set()
     for job_path in (LIVE_JOB, SAMPLE_JOB, SAMPLE_V2_JOB):
-        raw_toml = job_path.read_text(encoding="utf-8")
-        assert "# [dataset]" in raw_toml
-        assert '# name = "uy_dance_agenda"' in raw_toml
-        assert '# identity = ["title", "venue", "starts_at"]' in raw_toml
-
         code, validated = _run_cli(capsys, "job", "validate", str(job_path))
         assert code == 0
         assert validated["valid"] is True
         assert validated["format_version"] == 1
         assert validated["source_count"] == 2
-        assert validated["fields"] == EXPECTED_FIELDS
+        assert validated["fields"] == (EXPECTED_FIELDS if job_path == LIVE_JOB else SAMPLE_FIELDS)
         assert validated["job"]["region"] == {
             "locale": "es-UY",
             "languages": ["es-UY", "es"],
@@ -66,7 +62,8 @@ def test_uy_dance_jobs_validate_offline_and_share_schema_fingerprint(
             "currency": "UYU",
             "egress": "direct",
         }
-        fingerprints.add(validated["schema_fingerprint"])
+        if job_path != LIVE_JOB:
+            fingerprints.add(validated["schema_fingerprint"])
 
     assert len(fingerprints) == 1
 
@@ -111,8 +108,8 @@ def test_uy_dance_sample_job_runs_offline_with_expected_counts(
 
     for source_result in (venue_result, seller_result):
         for record in source_result["records"]:
-            assert set(record["data"].keys()) == set(EXPECTED_FIELDS)
-            assert set(record["evidence"].keys()) == set(EXPECTED_FIELDS)
+            assert set(record["data"].keys()) == set(SAMPLE_FIELDS)
+            assert set(record["evidence"].keys()) == set(SAMPLE_FIELDS)
 
 
 def test_uy_dance_sample_covers_repeated_rescheduled_near_match_and_sale_date_cases(

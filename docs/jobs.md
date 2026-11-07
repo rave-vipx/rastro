@@ -321,3 +321,13 @@ report = run_job(job, base_dir=Path("."))
 # Or in one step:
 report = run_job_file(Path("job.toml"))
 ```
+
+## Loading a dataset
+
+Use `rastro job load job.toml` to write approved observed fields, then
+`rastro dataset status agenda.sqlite` or
+`rastro dataset export agenda.sqlite --format jsonl` to consume them.
+The load report schema is available with `rastro job schema --target load`.
+`[dataset].match_fields` optionally names the two labels and aware timestamp used
+for uncertain cross-source comparisons; it defaults to `title`, `venue`, `start_time`.
+See [dataset usage and the executed offline sequence](dataset.md#load-inspect-and-export-a-job).

@@ -215,6 +215,28 @@
           "title": "Identity",
           "type": "array"
         },
+        "match_fields": {
+          "default": [
+            "title",
+            "venue",
+            "start_time"
+          ],
+          "maxItems": 3,
+          "minItems": 3,
+          "prefixItems": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Match Fields",
+          "type": "array"
+        },
         "match_tolerance_minutes": {
           "anyOf": [
             {

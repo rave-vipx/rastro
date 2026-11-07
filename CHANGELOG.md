@@ -6,6 +6,11 @@ All notable user-facing changes will be recorded here. No public release has bee
 
 ### Added
 
+- Separate SQLite dataset with approved fields, provenance, origins, stable identity, update/missing/uncertain outcomes and failure retention (DATA-001/004/005, SYNC-002/003/005/006; #56; ADR 0017).
+- Declarative `[dataset]` configuration and read-only `rastro job preview` with observed values, provenance and approval decisions (DATA-002, JOB-002, AGENT-001; #55).
+- Uruguay dance agenda pilot with dated live obstacle evidence and synthetic offline v1/v2 samples (COST-001; #59).
+- `rastro job load`, per-source change counts and stale keys with last-success times, plus labeled `rastro dataset status` and JSON/JSONL export; shipped upcoming-events SQL and the executed README path (DATA-001/003, SYNC-002/006/008, COST-001; #61). The sample now includes synthetic stable performance IDs for repeat/reschedule proof; live jobs retain their original schema. Optional `dataset.match_fields` configures generic near-match field names.
+
 - Recipe lifecycle states (`candidate`, `active`, `degraded`, `retired`), the `RecipeLifecycle` port (`save_candidate`, `transition`, `rollback`, `history`, `next_version`), and machine-readable lifecycle history. Candidates do not displace the serving version; rollback restores a previously served version (REC-005, REC-006, REPAIR-006; #46; ADR 0015).
 - Mock Lab structural mutations: seeded, reproducible HTML and JSON operators for every MOCK-002 category (reordering, class changes, wrapping, missing fields, duplicates, empty containers, changed labels, pagination), each reporting machine-readable changes or an explicit no-target reason, composed by a versioned `MutationPlan` whose outputs carry the synthetic label. `lxml` and `cssselect`, already installed with Scrapling, are now declared dependencies (MOCK-002, MOCK-006; #48; ADR 0014).
 - Synthetic failure scenarios with explicit outcomes and versioned labels (MOCK-003, MOCK-004; #40).

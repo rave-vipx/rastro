@@ -73,12 +73,41 @@ Base for integration: `dev` (`31cbcde`). `staging` (`8f96d41`) is an ancestor of
 3. **Second cut — drift and repair on that path:** field-level drift signals with their effect on the table; Mock Lab reproduction; candidate, activation and rollback through the existing lifecycle; the sale-date-versus-event-date trap; repair reports.
 4. **Evaluation:** product-task comparison against Scrapling + Pydantic (DIFF-002), with human effort measured separately, and the single opening of the sealed corpus (DIFF-001, ADR 0011).
 
-Wave 1 is complete: failure scenarios (#40), Mock Lab core (#45) and follow-ups (#47), recipe lifecycle (#46, #49) and structural mutations (#48). Follow-ups for the first-cut integration slice: the golden-digest docstring (the Windows lxml wheel bundles libxml2 2.11.9) and `HtmlDuplicateElement` performance on large targets.
+Wave 1 is complete: failure scenarios (#40), Mock Lab core (#45) and follow-ups (#47), recipe lifecycle (#46, #49) and structural mutations (#48). The golden-digest docstring now notes Windows libxml2 2.11.9 (#61). **Open follow-up:** `HtmlDuplicateElement` performance on large targets.
+
+Work strategy (2026-11-07): one worktree and branch per slice, combined into one `cut/<name>` branch and one PR per cut against dev (rastro-slice).
+
+### First-cut delivery
+
+| Item | State / evidence |
+| --- | --- |
+| Dataset identity, approved observations, provenance, updates and failure retention | Done, #56; ADR 0017 and dataset integration tests |
+| Declarative dataset block and read-only preview | Done, #55; preview tests and published schema |
+| Known-source pilot, synthetic sample and ranked live obstacles | Done, #59; [dated pilot](pilot/uy-dance-agenda.md) |
+| CLI load, JSON/JSONL export, stale reporting and upcoming SQL | Implemented in #61; `test_dataset_load.py` and shipped query |
+| Five second-run behaviors plus sale-date trap and SQL order | Done in #61; seven named `test_second_run.py` tests and [actual demo output](dataset.md#executed-offline-sequence) |
+| Five-minute README and documentation integration | Done in #61; clean temporary sample, 2.55 seconds excluding installation, $0 external spend |
+| Successful two-live-source dataset, newcomer validation and product-task comparison | Still open: live pilot reports blocked/invalid sources; offline proof does not establish live completeness or usability for a new user |
+
+### v0.3 candidates ranked by pilot evidence
+
+Preserve the [pilot ranking and underlying observations](pilot/uy-dance-agenda.md#3-ranked-obstacles-for-v03-drift-acquisition-roadmap):
+
+1. Localized/yearless date parsing and date-range expansion into performances.
+2. Event-date role disambiguation and multi-schedule card splitting.
+3. Field-level pointer fallbacks, implicit regional fields and relative URL resolution.
+4. Policy-controlled optional JavaScript rendering.
+5. Bounded listing-to-detail traversal and pagination.
+6. Address fallback across validated IPv6/IPv4 targets.
+7. Clear access-restriction reporting and transparent contact metadata; no evasion.
+8. Clear diagnostics for HTTPS downgrades and invalid origin certificates; retain TLS enforcement.
+
 
 ## Current requirement mapping
 
 | Requirement | Evidence / current boundary |
 | --- | --- |
+| DATA-001–005, SYNC-002/003/005/006/008, COST-001 | Dataset store (#56), observed preview (#55), live obstacle pilot (#59), approved load/export/status and second-run proof (#61). SYNC-005 is limited to first/last observation, not full history. Live completeness remains open. |
 | INT-001 | Pydantic schemas, supplied HTML, explicit URL acquisition, bounded batches, and acquisition policy. Automatic source discovery remains out of scope. |
 | INT-002 | Verified memory → bounded exact-name JSON-LD → permitted structured JSON responses (supplied or opt-in `representation="json"` acquisition, RFC 6901 `json` recipes, bounded exact-name discovery) → simple DOM microdata → optional model. Explicit fallback recipes remain supported. Rastro does not discover API endpoints or fetch redundant representations; JSON embedded in HTML scripts is out of scope. See [ADR 0007](decisions/0007-structured-responses.md). |
 | INT-003 | Five extraction outcomes plus explicit access restrictions, transient failures, and permanent failures. Overflowing JSON numbers are invalid data, never success. |
