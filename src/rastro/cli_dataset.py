@@ -2,19 +2,24 @@
 
 import argparse
 import json
+from contextlib import AbstractContextManager, nullcontext
 from datetime import timedelta
 from pathlib import Path
 
 from rastro.adapters.sqlite_dataset import SQLiteDatasetStore
+from rastro.adapters.sqlite_drift import SQLiteDriftMonitor
 from rastro.application.dataset_load import load_results, stale_sources
+from rastro.application.drift import collect_snapshots
 from rastro.application.job_loader import load_job, resolve_job_path
 from rastro.application.jobs import run_job
+from rastro.domain.drift import StructuralSnapshot
 from rastro.domain.models import ConfigurationError
 
 
 def add_commands(subcommands: argparse._SubParsersAction, jobs: argparse._SubParsersAction) -> None:  # type: ignore[type-arg]
     load = jobs.add_parser("load", help="Run a job and load approved observed fields")
     load.add_argument("file", type=Path)
+    load.add_argument("--drift", action="store_true", help="Measure and report structural drift")
     load.add_argument("--output", choices=("json",), default="json")
     load.add_argument("--allow-absolute-paths", action="store_true")
     dataset = subcommands.add_parser("dataset", help="Read dataset records and freshness")
@@ -47,8 +52,21 @@ def load_job_command(args: argparse.Namespace) -> int:
     )
     if path in [args.file.resolve()]:
         raise ConfigurationError("The dataset must be separate from the job file")
-    report = run_job(job, base_dir=args.file.parent, allow_absolute_paths=args.allow_absolute_paths)
-    loaded = load_results(spec, [f.name for f in job.fields], report, store)
+    monitor = SQLiteDriftMonitor(raw_path) if args.drift else None
+    capture: AbstractContextManager[dict[str, StructuralSnapshot]]
+    if args.drift:
+        from rastro.adapters.drift_probe import ScraplingDriftProbe
+
+        capture = collect_snapshots(ScraplingDriftProbe())
+    else:
+        capture = nullcontext({})
+    with capture as snapshots:
+        report = run_job(
+            job, base_dir=args.file.parent, allow_absolute_paths=args.allow_absolute_paths
+        )
+    loaded = load_results(
+        spec, [f.name for f in job.fields], report, store, monitor=monitor, snapshots=snapshots
+    )
     print(loaded.model_dump_json(indent=2))
     return int(loaded.exit_code)
 

@@ -5,6 +5,7 @@ from typing import Any, Literal
 from pydantic import Field
 
 from rastro.domain.dataset import ChangeKind, DatasetRecordKey, SourceStatus
+from rastro.domain.drift import DriftAssessment
 from rastro.domain.job_results import JobExitCode, JobSummary
 from rastro.domain.models import Contract, Outcome
 
@@ -26,6 +27,7 @@ class JobLoadResult(Contract):
     job: JobSummary
     sources: tuple[LoadedSource, ...] = Field(min_length=1)
     stale_sources: tuple[StaleSource, ...]
+    drift: tuple[DriftAssessment, ...] | None = Field(default=None, exclude_if=lambda v: v is None)
 
     @property
     def exit_code(self) -> JobExitCode:
