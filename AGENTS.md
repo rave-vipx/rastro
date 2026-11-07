@@ -13,7 +13,7 @@ not published. `docs/roadmap.md` tracks milestone scope and unfinished requireme
 - For a new milestone or architectural boundary, update `docs/roadmap.md` and add an ADR under `docs/decisions/` when a tradeoff needs explanation.
 - Each meaningful change identifies the relevant requirement IDs from the master spec.
 - Never open, read, search or summarize `benchmarks/recovery/sealed/`, and never edit the frozen recovery corpus or manifest. The sealed half exists only for the final v0.2 evaluation (ADR 0011).
-- Parallel work uses one worktree per slice and independent pull requests against `dev`; do not stack pull requests that will be squash-merged.
+- Parallel work uses one worktree and branch per slice; the coordinator merges slice branches into one `cut/<name>` branch and opens a single pull request per cut against dev (see the rastro-slice skill).
 - Follow docs/development/clean-code.md; split modules before they exceed its size budget.
 
 ## Agent skills

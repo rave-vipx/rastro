@@ -107,7 +107,7 @@ JSON_PLAN = MutationPlan(
     ],
 )
 def test_golden_digests_catch_byte_changes_across_releases(plan, document, digest):
-    """Recorded with lxml 6.1.3 and libxml2 2.14.6; a bump that changes bytes fails here."""
+    """Recorded with lxml 6.1.3; libxml2 2.14.6 (Windows wheel: 2.11.9). Byte changes fail."""
     assert hashlib.sha256(plan.apply(document).document.encode()).hexdigest() == digest
 
 

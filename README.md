@@ -16,9 +16,17 @@
   <a href="https://github.com/rave-vipx/rastro/issues">Issues</a>
 </p>
 
-Rastro is a Python library for turning web content into **validated records with field-level provenance**. Define your Pydantic schema, supply a declarative recipe, and inspect exactly what was extracted, rejected, or missing.
+**Describe the data you need, name the sources you know, and get an updatable database for your application.**
 
-The goal: **describe the data you need, name the sources you know, and get an updatable database for your application.** The first public case, planned for v0.2, feeds an agenda of dance events in Uruguay from known sources; its fields and rules live in an example job, so the same engine serves other projects. Today Rastro delivers the extraction layer: validated records, provenance and recipe memory. The dataset store and the demo are not built yet ([roadmap](docs/roadmap.md)).
+Rastro validates extracted fields, keeps their provenance, and updates a separate
+SQLite dataset without deleting valid records when a source fails. You can use a
+TOML job and the CLI, or the typed Python SDK. Models, browsers and paid services
+are optional; the example below needs none of them.
+
+The first public case is an agenda of dance events in Uruguay. Its fields and
+rules live in [the example](examples/uy-dance-agenda/), so the engine serves other
+projects. The offline sample works end to end; the [dated live pilot](docs/pilot/uy-dance-agenda.md)
+records limitations that still prevent a complete two-live-source agenda.
 
 > **`0.1.0` release candidate — not yet published.** Rastro extracts supplied HTML or JSON, or permitted HTTP sources, using JSON-LD, CSS or JSON-pointer recipes. HTTP is an optional extra with destination controls, robots enforcement, and bounded asynchronous execution. SQLite recipe memory reuses validated strategies across restarts. Optional local Ollama assistance proposes recipes within strict budgets; every candidate is validated before activation. No PyPI release has been published by this project.
 
@@ -32,18 +40,77 @@ The goal: **describe the data you need, name the sources you know, and get an up
 
 The first [reproducible comparison](docs/comparison.md) finds equal extraction results against a competent Scrapling + Pydantic baseline, including a shared silent semantic error. Rastro adds provenance and orchestration at a latency cost; improved accuracy or maintenance cost has not been demonstrated.
 
-## Try it in a minute
+## An agenda database in five minutes
 
-Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then:
+From a checkout of the development branch, install with `uv sync --locked`.
+You need Python 3.12+, [uv](https://docs.astral.sh/uv/getting-started/installation/),
+SQLite's CLI and jq. Run from the repository root; a private temporary copy keeps
+the synthetic sample reusable. These commands were run on 2026-11-07 in 2.55 seconds
+with dependencies installed (installation time is additional). External spend: $0;
+network requests and model calls: zero.
 
-```bash
-git clone https://github.com/rave-vipx/rastro.git
-cd rastro
-uv sync --locked
-uv run rastro demo
+Validate → preview → load → repeat → change a source → query → inspect stale data → export:
+
+```sh
+DEMO=$(mktemp -d)
+DEMO=$(cd "$DEMO" && pwd -P)
+cp -R examples/uy-dance-agenda/sample "$DEMO/agenda"
+uv run rastro job validate "$DEMO/agenda/job.toml" | jq -c '{valid, source_count}'
+uv run rastro job preview "$DEMO/agenda/job.toml" --output json | jq -c '{written, status: .job.status, accepted: .job.records_accepted}'
+uv run rastro job load "$DEMO/agenda/job.toml" | jq -c '{counts: [.sources[].counts], stale_sources}'
+uv run rastro job load "$DEMO/agenda/job.toml" | jq -c '{counts: [.sources[].counts], stale_sources}'
+cp "$DEMO/agenda/v2/"*.html "$DEMO/agenda/"
+uv run rastro job load "$DEMO/agenda/job.toml" | jq -c '{counts: [.sources[].counts], stale_sources}'
+sqlite3 "$DEMO/agenda/agenda.sqlite" < examples/uy-dance-agenda/queries/upcoming.sql
+printf '<html>Source unavailable</html>\n' > "$DEMO/agenda/tickantel-evento.html"
+# The mixed run intentionally returns exit 3; jq prints its stale-origin report.
+uv run rastro job load "$DEMO/agenda/job.toml" | jq -c '{status: .job.status, stale_sources: [.stale_sources[] | {source_url, last_success, affected_records: (.affected_keys | length)}]}'
+uv run rastro dataset status "$DEMO/agenda/agenda.sqlite" | jq -c '{data_trust, stale: [.stale_sources[] | {source_url, last_success, affected_records: (.affected_keys | length)}]}'
+uv run rastro dataset export "$DEMO/agenda/agenda.sqlite" --format jsonl > "$DEMO/agenda.jsonl"
+wc -l < "$DEMO/agenda.jsonl"
 ```
 
-The demo uses synthetic HTML and prints JSON containing `status: "success"`, one validated record, field evidence, and timings. All extraction happens offline.
+Actual stdout (observation times vary; the fixed events stop being upcoming after
+November 2026):
+
+```text
+{"valid":true,"source_count":2}
+{"written":false,"status":"success","accepted":7}
+{"counts":[{"created":4,"updated":0,"unchanged":0,"missing":0,"uncertain":0},{"created":2,"updated":0,"unchanged":1,"missing":0,"uncertain":0}],"stale_sources":[]}
+{"counts":[{"created":0,"updated":0,"unchanged":4,"missing":0,"uncertain":0},{"created":0,"updated":0,"unchanged":3,"missing":0,"uncertain":0}],"stale_sources":[]}
+{"counts":[{"created":0,"updated":1,"unchanged":3,"missing":0,"uncertain":0},{"created":0,"updated":1,"unchanged":2,"missing":0,"uncertain":0}],"stale_sources":[]}
+2026-11-20T20:30:00-03:00|Candombe de Invierno|Auditorio Nelly Goitiño|2026-11-07T20:35:08.627915Z
+2026-11-21T20:30:00-03:00|Candombe de Invierno|Auditorio Nelly Goitiño|2026-11-07T20:35:08.627296Z
+2026-11-26T20:00:00-03:00|Gala Anual 2026: Área Tango y Milonga|Auditorio Nelly Goitiño|2026-11-07T20:35:08.627915Z
+2026-11-26T20:00:00-03:00|Gala Anual 26: Tango y Milonga|Auditorio Nelly Goitiño|2026-11-07T20:35:08.627296Z
+2026-11-28T21:00:00-03:00|Suite del Río de la Plata|Auditorio Nacional Adela Reta|2026-11-07T20:35:08.627296Z
+2026-11-28T21:00:00-03:00|Suite del Río de la Plata|Auditorio Nacional Adela Reta|2026-11-07T20:35:08.627915Z
+{"status":"partial_success","stale_sources":[{"source_url":"https://tickantel.com.uy/ng/espectaculo/9900102/gala-anual-2026-area-tango-y-milonga","last_success":"2026-11-07T20:35:08.627915Z","affected_records":3}]}
+{"data_trust":"untrusted_source_data","stale":[{"source_url":"https://tickantel.com.uy/ng/espectaculo/9900102/gala-anual-2026-area-tango-y-milonga","last_success":"2026-11-07T20:35:08.627915Z","affected_records":3}]}
+       6
+
+```
+
+Seven observations become six records, including one exact identity with two
+origins. The second load creates none; the changed pages update both Suite origins
+in place. The source-outage run returns exit 3 (partial success); the pipeline above
+shows its JSON report through jq. Three origins become stale and all six records
+remain available. The SQL deliberately includes retained records; your application
+can use status and per-origin observation times to choose a freshness policy.
+
+To use another source, edit `[[sources]]` in the copied job: a local page uses
+`kind = "file"`, `path`, `url` and its declarative `recipe`; a live URL also needs
+the [HTTP policy](docs/jobs.md). Pick another field by changing `[[fields]]`, its
+recipe selector/pointer, and the `[dataset].approve` list (omit that list to approve
+all declared fields). Only observed fields are saved. Choose identity once for a
+new dataset; never change it in place. The sample's stable performance IDs are
+synthetic demonstration data, not IDs asserted to exist on the live sites.
+
+Connect an application with [the shipped SQL](examples/uy-dance-agenda/queries/upcoming.sql)
+or the exported JSONL: each line includes values, field provenance, observation
+times, origins and `data_trust: untrusted_source_data`. Both Suite records retain
+uncertain-match warnings for review; differing Gala titles remain separate.
+See [dataset semantics and limits](docs/dataset.md) and the [pilot obstacles](docs/pilot/uy-dance-agenda.md).
 
 ## A complete extraction
 
@@ -136,11 +203,12 @@ bounded. See the [optional intelligence guide](docs/intelligence.md).
 | Pydantic validation and per-field provenance | Available |
 | Explicit outcomes, input budgets, JSON logs and processing timings | Available |
 | Offline CLI demo, diagnostics, recipe validation | Available |
+| Job preview, approved SQLite load, stale-source report, JSON/JSONL export | Available; offline agenda proof above |
 | Optional HTTP acquisition, source policies and bounded async batches | Available |
 | SQLite recipe storage and deterministic reuse | Available |
 | Opt-in JSON-LD/microdata discovery and bounded local Ollama recipe generation | Available; live-model quality evidence pending |
 | Controlled repair and drift monitoring | Planned for v0.2 |
-| Continuous synchronization | Planned for v0.3 |
+| Repeat-load identity and failure retention | Available; scheduling planned for v0.3 |
 | Studio / community recipe Hub | Planned for v0.4 / v0.5 |
 
 ## Contribute
