@@ -1,6 +1,7 @@
 """Independent, transactional drift migration and history (DRIFT-001, ADR 0018)."""
 
 import sqlite3
+from contextlib import closing
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -42,7 +43,7 @@ def test_existing_dataset_coexists_with_drift_and_repeated_runs_are_idempotent(t
     assert monitor.assess("events", current) == first
     assert monitor.baseline("events", current) == current
     assert store.source_status("events") == before
-    with sqlite3.connect(path) as db:
+    with closing(sqlite3.connect(path)) as db:
         assert db.execute("PRAGMA user_version").fetchone()[0] == 1
         assert db.execute("SELECT COUNT(*) FROM drift_runs").fetchone()[0] == 1
         assert db.execute("SELECT version FROM drift_schema").fetchone()[0] == 1
@@ -76,13 +77,14 @@ def test_drift_storage_rejects_unsafe_or_unknown_state(tmp_path, kind):
         link.symlink_to(path)
         monitor = SQLiteDriftMonitor(link)
     else:
-        with sqlite3.connect(path) as db:
+        with closing(sqlite3.connect(path)) as db:
             if kind == "newer":
                 db.execute("UPDATE drift_schema SET version = 99")
             elif kind == "foreign":
                 db.execute("PRAGMA application_id = 123")
             else:
                 db.execute("UPDATE drift_runs SET snapshot = '{}' ")
+            db.commit()
     with pytest.raises(DatasetStorageError):
         monitor.baseline("events", snapshot())
 
@@ -113,7 +115,7 @@ def test_baseline_reads_never_create_or_migrate(tmp_path):
         "events", snapshot().source_url, snapshot().observed_at, "offline"
     )
     assert monitor.baseline("events", snapshot()) is None
-    with sqlite3.connect(path) as db:
+    with closing(sqlite3.connect(path)) as db:
         assert not db.execute("SELECT 1 FROM sqlite_master WHERE name = 'drift_schema'").fetchall()
 
 
@@ -136,5 +138,5 @@ def test_aborted_migration_preserves_existing_dataset(tmp_path, monkeypatch):
     with pytest.raises(DatasetStorageError):
         SQLiteDriftMonitor(path).assess("events", snapshot())
     assert store.source_status("events") == before
-    with sqlite3.connect(path) as db:
+    with closing(sqlite3.connect(path)) as db:
         assert not db.execute("SELECT 1 FROM sqlite_master WHERE name = 'drift_schema'").fetchall()

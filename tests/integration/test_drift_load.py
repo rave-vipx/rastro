@@ -42,7 +42,7 @@ def test_renamed_class_yields_structural_drift_naming_field_and_table_effect(tmp
         seed=7,
         operators=(HtmlChangeClasses(selector=".cyg--dia", rename={"cyg--dia": "date-new"}),),
     )
-    path.write_text(mutation.apply(path.read_text()).document)
+    path.write_text(mutation.apply(path.read_text(encoding="utf-8")).document, encoding="utf-8")
     second, store = load(sample)
     drift = second.drift[0]
     assert drift.verdict == "structural_drift"
@@ -66,6 +66,7 @@ def test_renamed_class_yields_structural_drift_naming_field_and_table_effect(tmp
 def test_cli_drift_is_opt_in_and_persists_without_changing_default_report(tmp_path, capsys):
     import json
     import sqlite3
+    from contextlib import closing
 
     from rastro.cli import main
 
@@ -81,7 +82,7 @@ def test_cli_drift_is_opt_in_and_persists_without_changing_default_report(tmp_pa
     assert main([*command, "--drift"]) == 0
     second = json.loads(capsys.readouterr().out)
     assert all(item["score"] == 0 for item in second["drift"])
-    with sqlite3.connect(sample / "agenda.sqlite") as db:
+    with closing(sqlite3.connect(sample / "agenda.sqlite")) as db:
         assert db.execute("SELECT COUNT(*) FROM drift_runs").fetchone()[0] == 4
 
 

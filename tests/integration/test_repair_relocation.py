@@ -43,11 +43,11 @@ class ThresholdGateFake:
 async def test_relocation_candidate_recovers_moved_node_and_is_promoted_only_above_threshold(
     tmp_path, threshold, serving_version
 ):
-    job = parse_job((SAMPLE / "job.toml").read_text(), format="toml")
+    job = parse_job((SAMPLE / "job.toml").read_text(encoding="utf-8"), format="toml")
     schema = build_job_schema(job.fields)
     recipe = job.sources[0].recipe
     source = Source(url=job.sources[0].url, **job.region.model_dump())
-    html = (SAMPLE / "sodre-cartelera.html").read_text()
+    html = (SAMPLE / "sodre-cartelera.html").read_text(encoding="utf-8")
     parser, adapter, limits = ScraplingParser(), ScraplingRelocation(), Limits()
     before = extract_document(
         html, source=source, schema=schema, recipe=recipe, parser=parser, limits=limits
