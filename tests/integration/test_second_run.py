@@ -3,6 +3,7 @@
 import json
 import shutil
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 import pytest
@@ -103,7 +104,7 @@ def test_sale_date_not_loaded_as_event_date(sample, capsys):
 def test_upcoming_query_returns_future_events_in_order(sample, capsys):
     load(sample, capsys)
     sql = Path("examples/uy-dance-agenda/queries/upcoming.sql").read_text()
-    with sqlite3.connect(sample / "agenda.sqlite") as db:
+    with closing(sqlite3.connect(sample / "agenda.sqlite")) as db:
         rows = db.execute(sql.replace("'now'", "'2026-11-07T00:00:00Z'")).fetchall()
     assert len(rows) == 6
     assert [r[0] for r in rows] == sorted(r[0] for r in rows)
