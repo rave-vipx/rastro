@@ -199,3 +199,17 @@ def test_relocated_recipe_keeps_historical_fixture_and_can_capture_next_success(
             html, source=SOURCE, recipe=candidate.recipe, result=result, limits=Limits()
         )
         assert snapshot.fields["title"]
+
+
+def test_empty_and_unparsable_html_never_exposes_parser_exceptions():
+    import pytest
+
+    from rastro import ConfigurationError
+
+    adapter, snapshot = ScraplingRelocation(), successful_snapshot()
+    for html in ("   ", "<!--private-comment-->"):
+        assert adapter.relocate(html, RECIPE, snapshot, Limits()) == ()
+    with pytest.raises(ConfigurationError, match="Invalid relocation HTML"):
+        adapter.relocate(
+            '<?xml version="1.0" encoding="UTF-8"?><p>private</p>', RECIPE, snapshot, Limits()
+        )

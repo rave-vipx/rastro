@@ -10,6 +10,7 @@ from __future__ import annotations
 import re
 
 from cssselect import SelectorError
+from lxml.etree import LxmlError  # type: ignore[import-untyped]
 from pydantic import BaseModel, ValidationError
 from scrapling.core.utils._utils import _StorageTools
 from scrapling.parser import Selector
@@ -91,6 +92,7 @@ class ScraplingRelocation:
         page, records = _records(html, recipe, limits)
         if not records:
             return ()
+        # shortcut: one template record, expand when heterogeneous-template fixtures require it.
         record = records[0]
         selected = {
             field: _css(record, _expression(expr)[0]) for field, expr in recipe.fields.items()
@@ -156,9 +158,16 @@ def _records(html: str, recipe: CssRecipe, limits: Limits) -> tuple[Selector, li
         raise ConfigurationError("Relocation input must be valid UTF-8") from None
     if size > limits.max_html_bytes:
         raise ResourceLimitError("HTML input exceeds max_html_bytes")
-    page = Selector(html or "<html></html>", adaptive=False, huge_tree=False)
+    try:
+        page = Selector(html or "<html></html>", adaptive=False, huge_tree=False)
+    except (ValueError, LxmlError):
+        raise ConfigurationError("Invalid relocation HTML") from None
+    if page._root is None:
+        return page, []
     for comment in page._root.xpath("//comment() | //processing-instruction()"):
-        comment.getparent().remove(comment)
+        parent = comment.getparent()
+        if parent is not None:
+            parent.remove(comment)
     nodes = list(page._root.iter())
     if len(nodes) > 4096:
         raise ResourceLimitError("Relocation exceeds 4096 nodes")
@@ -174,10 +183,6 @@ def _records(html: str, recipe: CssRecipe, limits: Limits) -> tuple[Selector, li
 def _mask(page: Selector) -> None:
     # Hash both sides identically, so Scrapling debug logs cannot expose source content.
     for node in page._root.iter():
-        if not isinstance(node.tag, str):
-            node.text = None
-            node.tail = None
-            continue
         node.tag = "h" + digest(node.tag)
         attributes = {
             key if key in {"class", "id", "href", "src"} else "h" + digest(key): "h" + digest(value)
