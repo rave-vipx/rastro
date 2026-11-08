@@ -2,8 +2,11 @@ import asyncio
 import socket
 import sqlite3
 from contextlib import closing
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from itertools import count
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from pydantic import BaseModel, Field
@@ -118,3 +121,36 @@ def forbid_native_network(monkeypatch):
 
     monkeypatch.setattr(Curl, "perform", forbidden)
     monkeypatch.setattr(AsyncCurl, "add_handle", forbidden)
+
+
+@pytest.fixture(autouse=True)
+def pin_observation_clock():
+    """QUAL-005, SYNC-008: November samples retain semantics and ordered observations."""
+    from contextlib import ExitStack
+
+    observed = datetime(2026, 11, 7, 12, tzinfo=UTC)
+    ticks = count()
+    with ExitStack() as stack:
+        for module in (
+            "rastro.application.extraction",
+            "rastro.application.service",
+            "rastro.application.memory",
+            "rastro.application.outcomes",
+            "rastro.application.intelligence",
+            "rastro.cli_recipe",
+        ):
+            clock = stack.enter_context(patch(f"{module}.datetime", wraps=datetime))
+            clock.now.side_effect = lambda tz: observed + timedelta(microseconds=next(ticks))
+        yield
+
+
+@pytest.fixture
+def offline_cli_loop(monkeypatch):
+    original_loop = asyncio.SelectorEventLoop
+
+    def factory():
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(socket, "socket", _ORIGINAL_SOCKET)
+            return original_loop()
+
+    monkeypatch.setattr(asyncio, "SelectorEventLoop", factory)

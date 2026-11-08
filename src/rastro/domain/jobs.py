@@ -21,6 +21,7 @@ from pydantic import (
 )
 
 from rastro.domain.acquisition import AcquisitionPolicy
+from rastro.domain.consistency import ConsistencyRule
 from rastro.domain.intelligence import InferencePolicy
 from rastro.domain.job_contract import ENV_REFERENCE, RedactedContract
 from rastro.domain.job_dataset import DatasetSpec
@@ -36,6 +37,7 @@ from rastro.domain.job_sources import (
 from rastro.domain.json import strict_json
 from rastro.domain.memory import RecipeContext
 from rastro.domain.models import Limits, Recipe, ResourceLimitError
+from rastro.domain.recipe_compare import RepairPolicy
 
 JOB_SCHEMA_ID = "https://rave-vipx.github.io/rastro/schemas/job.schema.json"
 MAX_JOB_BYTES = 262_144
@@ -74,6 +76,10 @@ class Job(RedactedContract):
     model: JobModelProvider | None = None
     inference_policy: InferencePolicy | None = None
     dataset: DatasetSpec | None = None
+    consistency: tuple[ConsistencyRule, ...] = Field(
+        default=(), max_length=100, exclude_if=lambda value: not value
+    )
+    repair: RepairPolicy | None = Field(default=None, exclude_if=lambda value: value is None)
 
     @field_validator("format_version", mode="before")
     @classmethod
@@ -103,6 +109,11 @@ class Job(RedactedContract):
             raise ValueError("context and recipe_version require recipe_memory")
         if self.recipe is not None:
             _check_recipe_fields(self.recipe, declared)
+        if any(rule.field not in declared for rule in self.consistency):
+            raise ValueError("Consistency rules must reference declared fields")
+        if self.repair is not None:
+            for path in self.repair.fixtures:
+                validate_job_path_syntax(path)
         if self.dataset is not None:
             self.dataset.check_against([item.name for item in self.fields])
         self._check_env_references()

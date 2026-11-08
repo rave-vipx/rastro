@@ -134,3 +134,24 @@ max_length = 3
 name = "performance_id"
 type = "string"
 min_length = 1
+
+# Event datetimes must not be before the observation time (one hour of slack).
+[[consistency]]
+kind = "after_observation"
+field = "starts_at"
+tolerance_minutes = 60
+
+# Many performances must not collapse onto a single date (a sale date repeats per event).
+[[consistency]]
+kind = "distinct_ratio"
+field = "starts_at"
+min_ratio = 0.5
+min_records = 3
+
+# The median start must stay near the dataset history (an agenda rolls forward slowly).
+[[consistency]]
+kind = "historical_shift"
+field = "starts_at"
+max_shift = 45
+unit = "days"
+min_history = 3

@@ -2,19 +2,25 @@
 
 import argparse
 import json
+from contextlib import AbstractContextManager, nullcontext
 from datetime import timedelta
 from pathlib import Path
 
 from rastro.adapters.sqlite_dataset import SQLiteDatasetStore
+from rastro.adapters.sqlite_drift import SQLiteDriftMonitor
 from rastro.application.dataset_load import load_results, stale_sources
+from rastro.application.drift import collect_snapshots
 from rastro.application.job_loader import load_job, resolve_job_path
 from rastro.application.jobs import run_job
+from rastro.application.success_samples import collect_successes
+from rastro.domain.drift import StructuralSnapshot
 from rastro.domain.models import ConfigurationError
 
 
 def add_commands(subcommands: argparse._SubParsersAction, jobs: argparse._SubParsersAction) -> None:  # type: ignore[type-arg]
     load = jobs.add_parser("load", help="Run a job and load approved observed fields")
     load.add_argument("file", type=Path)
+    load.add_argument("--drift", action="store_true", help="Measure and report structural drift")
     load.add_argument("--output", choices=("json",), default="json")
     load.add_argument("--allow-absolute-paths", action="store_true")
     dataset = subcommands.add_parser("dataset", help="Read dataset records and freshness")
@@ -42,13 +48,41 @@ def load_job_command(args: argparse.Namespace) -> int:
     )
     store = SQLiteDatasetStore(
         raw_path,
+        limits=job.limits,
         near_match_fields=spec.match_fields,
         near_match_tolerance=timedelta(minutes=spec.match_tolerance_minutes or 30),
     )
     if path in [args.file.resolve()]:
         raise ConfigurationError("The dataset must be separate from the job file")
-    report = run_job(job, base_dir=args.file.parent, allow_absolute_paths=args.allow_absolute_paths)
-    loaded = load_results(spec, [f.name for f in job.fields], report, store)
+    monitor = SQLiteDriftMonitor(raw_path, limits=job.limits) if args.drift else None
+    capture: AbstractContextManager[dict[str, StructuralSnapshot]]
+    if args.drift:
+        from rastro.adapters.drift_probe import ScraplingDriftProbe
+
+        capture = collect_snapshots(ScraplingDriftProbe())
+    else:
+        capture = nullcontext({})
+    from rastro.cli_repair_storage import serving_job
+
+    effective_job = serving_job(job, args.file.parent, args.allow_absolute_paths)
+    with capture as snapshots, collect_successes() as successes:
+        report = run_job(
+            effective_job, base_dir=args.file.parent, allow_absolute_paths=args.allow_absolute_paths
+        )
+    loaded = load_results(
+        spec, [f.name for f in job.fields], report, store, monitor=monitor, snapshots=snapshots
+    )
+    from rastro.cli_repair_storage import retain_successes
+
+    issues = retain_successes(raw_path, spec.name, job.build_schema(), report, successes)
+    loaded = loaded.model_copy(
+        update={
+            "sources": tuple(
+                source.model_copy(update={"issues": issues.get(source.source_url, ())})
+                for source in loaded.sources
+            )
+        }
+    )
     print(loaded.model_dump_json(indent=2))
     return int(loaded.exit_code)
 

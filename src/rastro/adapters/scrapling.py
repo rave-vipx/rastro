@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 
 from cssselect import SelectorError
+from lxml.etree import LxmlError  # type: ignore[import-untyped]
 from scrapling.parser import Selector
 
 from rastro.domain.json import MISSING, resolve_pointer, strict_json
@@ -18,6 +19,16 @@ from rastro.domain.models import (
     ResourceLimitError,
 )
 from rastro.ports.parser import Candidate, ParsedDocument
+
+
+def _parse_html(html: str) -> Selector:
+    try:
+        page = Selector(html, adaptive=False, huge_tree=False)
+    except (ValueError, LxmlError):
+        raise ConfigurationError("Invalid HTML document") from None
+    if page._root is None:
+        raise ConfigurationError("Invalid HTML document")
+    return page
 
 
 def _objects(value: object, path: str = "") -> Iterator[tuple[dict[str, object], str]]:
@@ -44,7 +55,7 @@ class ScraplingParser:
             raise ConfigurationError("HTML documents require a css or jsonld recipe")
         if not html.strip():
             return ParsedDocument(())
-        page = Selector(html, adaptive=False, huge_tree=False)
+        page = _parse_html(html)
         try:
             if isinstance(recipe, CssRecipe):
                 return self._css(page, recipe, limits)
