@@ -73,3 +73,10 @@ field = "starts_at"
 max_shift = 45
 unit = "days"
 min_history = 3
+
+# User-declared rule: this agenda expects varied event titles.
+[[consistency]]
+kind = "distinct_ratio"
+field = "title"
+min_ratio = 0.5
+min_records = 3

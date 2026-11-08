@@ -27,6 +27,10 @@ class DatasetStorageError(RastroError):
     """Invalid dataset input or storage failure; diagnostics contain no payloads."""
 
 
+class DatasetNotFoundError(DatasetStorageError):
+    """The dataset file does not exist; history has not been established."""
+
+
 type IdentityValue = str | StrictInt | StrictFloat | StrictBool
 
 

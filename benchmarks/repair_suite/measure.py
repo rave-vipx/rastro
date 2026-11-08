@@ -31,6 +31,7 @@ OUTCOMES = (
     "no_candidates",
     "not_broken",
     "silent_wrong",
+    "held",
 )
 
 
@@ -97,8 +98,14 @@ def run_case(page: str, name: str) -> dict[str, Any]:
             assert matches(stored_rows(folder, dataset), expected), "base rows must match"
             page_file = folder / "page.html"
             page_file.write_text(case.transform(page_file.read_text(encoding="utf-8")), "utf-8")
-            code, _ = cli("job", "load", "job.toml", "--drift")
-            if code == 0:
+            code, loaded = cli("job", "load", "job.toml", "--drift")
+            held = any(
+                s.get("consistency", {}).get("verdict") == "inconsistent"
+                for s in loaded.get("sources", [])
+            )
+            if code == 3 and held and matches(stored_rows(folder, dataset), expected):
+                outcome = "held"
+            elif code == 0:
                 ok = matches(stored_rows(folder, dataset), expected)
                 outcome = "not_broken" if ok else "silent_wrong"
             else:
