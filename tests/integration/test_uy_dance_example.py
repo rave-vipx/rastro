@@ -187,12 +187,12 @@ def test_sodre_sample_now_accepts_records():
     from rastro.application.extraction import extract_document
     from rastro.domain.jobs import parse_job
 
-    job = parse_job(SAMPLE_JOB.read_text(), format="toml")
+    job = parse_job(SAMPLE_JOB.read_text(encoding="utf-8"), format="toml")
     source = job.sources[0]
     recipe = source.recipe
     assert recipe.fields["starts_at"] == "time.cyg--dia::text"
     result = extract_document(
-        (SAMPLE_JOB.parent / "sodre-cartelera.html").read_text(),
+        (SAMPLE_JOB.parent / "sodre-cartelera.html").read_text(encoding="utf-8"),
         source=Source(url=source.url, **job.region.model_dump()),
         schema=job.build_schema(),
         recipe=recipe,
