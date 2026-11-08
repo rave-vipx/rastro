@@ -1,4 +1,4 @@
-"""DIFF-002 baseline measurement; Rastro comparison is reserved for slice E2."""
+"""DIFF-002 offline product-task comparison."""
 
 import argparse
 import hashlib
@@ -15,6 +15,7 @@ from typing import Any
 from unittest.mock import patch
 
 from benchmarks.product_task.baseline import ROOT, Source, load_source, read_records, sources
+from benchmarks.product_task.rastro_path import run as run_rastro
 
 HERE = Path(__file__).resolve().parent
 HUMAN_STEPS = [
@@ -113,6 +114,8 @@ def evidence() -> dict[str, Any]:
     hashes = [
         *HERE.rglob("*.py"),
         *HERE.joinpath("baseline").glob("*.json"),
+        *HERE.joinpath("rastro").glob("*.json"),
+        *(ROOT / "src/rastro").rglob("*.py"),
         *HERE.joinpath("fixtures").glob("*.json"),
         *HERE.joinpath("fixtures").glob("*.html"),
         ROOT / "benchmarks/baseline.py",
@@ -125,7 +128,9 @@ def evidence() -> dict[str, Any]:
             "python": platform.python_version(),
             "platform": platform.platform(),
             "sqlite": sqlite3.sqlite_version,
-            "packages": {name: version(name) for name in ("scrapling", "pydantic", "lxml")},
+            "packages": {
+                name: version(name) for name in ("scrapling", "pydantic", "lxml", "rastro-engine")
+            },
             "git_head": subprocess.check_output(
                 ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
             ).strip(),
@@ -189,11 +194,7 @@ def measure(database: Path) -> dict[str, Any]:
         "requirement": "DIFF-002",
         **evidence(),
         "baseline": baseline_metrics(phases, repair_seconds, repair, requests),
-        "rastro": {
-            "status": "pending_E2",
-            "steps": ["job", "preview", "load", "repair"],
-            "metrics": None,
-        },
+        "rastro": run_rastro(database.parent / "rastro"),
     }
 
 

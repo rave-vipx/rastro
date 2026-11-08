@@ -51,9 +51,22 @@ def test_measurement_scores_wrong_accepted_records_and_missing_separately() -> N
     assert score([], expected) == {"silent_errors": 0, "missing_records": 1}
 
 
+@pytest.mark.usefixtures("offline_cli_loop")
 def test_harness_reports_real_phases_and_unmeasured_human_time(tmp_path: Path) -> None:
     report = measure(tmp_path / "agenda.sqlite")
-    assert report["rastro"]["status"] == "pending_E2"
+    rastro = report["rastro"]
+    assert [p["records"] for p in rastro["phases"]] == [6, 7, 7, 7, 7]
+    assert [p["silent_errors"] for p in rastro["phases"]] == [0] * 5
+    assert [p["missing_records"] for p in rastro["phases"]] == [0] * 5
+    assert rastro["phases"][3]["stale_records"] == 1
+    assert rastro["phases"][3]["status"] == "missing_data"
+    assert rastro["repair"]["decision"] == "promote"
+    assert rastro["repair"]["generation_outcome"] == "no_candidates"
+    assert rastro["repair"]["config_edits"] == 1
+    assert rastro["repair"]["evaluation"]["historical_passed"] >= 1
+    assert all(item["exit_code"] == 0 for item in rastro["phases"][0]["preflight"])
+    assert rastro["network_requests"] == rastro["model_calls"] == 0
+    assert rastro["repair"]["human_minutes"] is None
     baseline = report["baseline"]
     assert [phase["records"] for phase in baseline["phases"]] == [6, 7, 7, 7, 7]
     assert [phase["silent_errors"] for phase in baseline["phases"]] == [0, 0, 0, 0, 0]
@@ -127,3 +140,30 @@ def test_partial_source_never_overwrites_previous_snapshot(tmp_path: Path) -> No
     html = (ROOT / source.path).read_text().replace(">450<", ">-1<", 1).replace(">600<", ">700<")
     assert load_source(database, source, html=html) == "partial_success"
     assert read_records(database) == before
+
+
+def test_rastro_uses_identical_inputs_and_field_mappings() -> None:
+    """DIFF-002: adapters receive the same source bytes, identity and selectors."""
+    from benchmarks.product_task.measure import HERE
+
+    job = json.loads((HERE / "rastro/job.json").read_text())
+    assert job["dataset"]["identity"] == ["performance_id"]
+    for baseline, rastro in zip(sources(), job["sources"], strict=True):
+        assert rastro["path"] == Path(baseline.path).name
+        assert rastro["url"] == baseline.url
+        assert rastro["recipe"]["fields"] == baseline.mapping.fields
+        assert rastro["recipe"]["strategy"] == baseline.mapping.strategy
+
+
+def test_rastro_network_attempt_aborts_measurement(tmp_path, monkeypatch) -> None:
+    """DIFF-002: a Rastro-side network attempt cannot be reported as zero."""
+    import socket
+
+    from benchmarks.product_task.rastro_path import run
+
+    def attempt(*args):
+        socket.getaddrinfo("network.example", 443)
+
+    monkeypatch.setattr("benchmarks.product_task.rastro_path.command", attempt)
+    with pytest.raises(RuntimeError, match="attempted network"):
+        run(tmp_path / "rastro")

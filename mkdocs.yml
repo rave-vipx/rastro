@@ -38,6 +38,7 @@ nav:
   - Mock Lab mutations: mock-lab-mutations.md
   - Optional intelligence: intelligence.md
   - Extraction comparison: comparison.md
+  - Product-task comparison (v0.2): comparison-v02.md
   - Recovery benchmark protocol: recovery-benchmark.md
   - Release evidence: release-evidence.md
   - Live Ollama evidence: live-ollama-evidence.md
