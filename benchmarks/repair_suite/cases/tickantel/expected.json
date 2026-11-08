@@ -1,0 +1,29 @@
+[
+ {
+  "performance_id": "tick-1",
+  "title": "Gala Anual de Tango",
+  "venue": "Auditorio Nelly Goitiño",
+  "starts_at": "2099-03-10T20:30:00-03:00",
+  "ticket_url": "https://tickets.example/uy/tick-1",
+  "price": "350",
+  "currency": "UYU"
+ },
+ {
+  "performance_id": "tick-2",
+  "title": "Noche de Milonga",
+  "venue": "Auditorio Nelly Goitiño",
+  "starts_at": "2099-03-11T20:30:00-03:00",
+  "ticket_url": "https://tickets.example/uy/tick-2",
+  "price": "400",
+  "currency": "UYU"
+ },
+ {
+  "performance_id": "tick-3",
+  "title": "Ballet de Cámara",
+  "venue": "Auditorio Nelly Goitiño",
+  "starts_at": "2099-03-12T20:30:00-03:00",
+  "ticket_url": "https://tickets.example/uy/tick-3",
+  "price": "450",
+  "currency": "UYU"
+ }
+]
