@@ -181,3 +181,78 @@ def test_unknown_dataset_is_not_successful_empty_output(sample, capsys):
     capsys.readouterr()
     assert main(["dataset", "export", str(sample / "agenda.sqlite"), "--dataset", "typo"]) == 2
     assert not capsys.readouterr().out
+
+
+def sale_date_swap(sample):
+    import re
+
+    from rastro.mocklab.mutations import HtmlChangeLabel, MutationPlan
+
+    seller = sample / "tickantel-evento.html"
+    body = seller.read_text()
+    changes = tuple(
+        HtmlChangeLabel(
+            selector='script[type="application/ld+json"]',
+            match=f'"startDate": "{date}"',
+            text='"startDate": "2026-11-01T10:00:00-03:00"',
+        )
+        for date in re.findall(r'"startDate": "([^"]+)"', body)
+    )
+    seller.write_text(MutationPlan(seed=42, operators=changes).apply(body).document)
+
+
+def test_sale_date_swap_is_held_and_old_rows_kept(sample):
+    job = load_job(sample / "job.toml")
+    store = SQLiteDatasetStore(sample / "agenda.sqlite")
+    names = [f.name for f in job.fields]
+    report = run_job(job, base_dir=sample)
+    load_results(job.dataset, names, report, store)
+    before = {r.key: r for r in store.records(job.dataset.name)}
+    sale_date_swap(sample)
+    changed = run_job(job, base_dir=sample)
+    held = load_results(job.dataset, names, changed, store, rules=job.consistency)
+    assert held.exit_code == 3
+    assert held.sources[1].consistency.verdict == "inconsistent"
+    assert all(n == 0 for n in held.sources[1].counts.values())
+    after = {r.key: r for r in store.records(job.dataset.name)}
+    for key, record in before.items():
+        if changed.results[1].source_url in record.origins:
+            url = changed.results[1].source_url
+            assert after[key].origins[url] == record.origins[url]
+
+
+@pytest.mark.parametrize("history_only", [False, True])
+def test_consistent_load_unchanged_and_no_rules_means_no_gate(sample, history_only):
+    job = load_job(sample / "job.toml")
+    store = SQLiteDatasetStore(sample / "agenda.sqlite")
+    names = [f.name for f in job.fields]
+    rules = job.consistency[-1:] if history_only else job.consistency
+    loaded = load_results(job.dataset, names, run_job(job, base_dir=sample), store, rules=rules)
+    assert loaded.exit_code == 0
+    expected = "not_assessed" if history_only else "consistent"
+    assert loaded.sources[0].consistency.verdict == expected
+    assert loaded.sources[1].consistency.verdict == "consistent"
+    sale_date_swap(sample)
+    loaded = load_results(job.dataset, names, run_job(job, base_dir=sample), store)
+    assert loaded.exit_code == 0
+    assert all(s.consistency is None for s in loaded.sources)
+    assert any(
+        r.fields["starts_at"].startswith("2026-11-01") for r in store.records(job.dataset.name)
+    )
+
+
+def test_held_source_reported_stale_with_consistency_failed_and_exit_3(sample, capsys):
+    assert main(["job", "load", str(sample / "job.toml")]) == 0
+    capsys.readouterr()
+    sale_date_swap(sample)
+    assert main(["job", "load", str(sample / "job.toml")]) == 3
+    payload = json.loads(capsys.readouterr().out)
+    held = payload["sources"][1]
+    assert held["consistency"]["verdict"] == "inconsistent"
+    assert any(
+        r["kind"] == "after_observation" and r["status"] == "violated"
+        for r in held["consistency"]["results"]
+    )
+    assert held["next_action"] == "rastro recipe repair"
+    assert payload["stale_sources"][0]["reason"] == "consistency_failed"
+    assert payload["stale_sources"][0]["affected_keys"]

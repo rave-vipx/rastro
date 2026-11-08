@@ -11,6 +11,7 @@ from rastro.adapters.sqlite_dataset_schema import connection, safe, update_statu
 from rastro.adapters.structured import load_json
 from rastro.domain.dataset import (
     ChangeKind,
+    DatasetNotFoundError,
     DatasetRecordKey,
     DatasetStorageError,
     ObservedRecord,
@@ -215,6 +216,10 @@ class SQLiteDatasetStore:
     @safe
     def records(self, dataset: str) -> tuple[StoredRecord, ...]:
         DatasetRecordKey(dataset=dataset, identity=("validation",))
+        if not self._path.exists() and not any(
+            p.is_symlink() for p in (self._path, *self._path.parents)
+        ):
+            raise DatasetNotFoundError("Dataset file does not exist")
         with connection(self._path, self._limits) as db:
             return tuple(self._read(db, dataset).values())
 

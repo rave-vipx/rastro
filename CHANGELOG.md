@@ -4,6 +4,10 @@ All notable user-facing changes will be recorded here. No public release has bee
 
 ## Unreleased
 
+### Fixed
+
+- Job loads gate approved observations on declared consistency rules before storage; inconsistent sources retain stale rows, report rule results and a repair action, and exit 3 (QUAL-005/006, SYNC-006).
+
 ## 0.2.0rc1 — not published
 
 ### Added

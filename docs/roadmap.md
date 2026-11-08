@@ -210,3 +210,13 @@ See the [master specification](https://github.com/rave-vipx/rastro/blob/main/RAS
 - **Limitations:** no browser adapter/geolocation and no non-direct egress adapter.
   Separate structured API acquisition (INT-002) and DIFF-001 evidence remain open.
 - **Architecture:** [ADR 0006](decisions/0006-explicit-regional-context.md).
+
+### v0.3 B3 — consistency gates the load
+
+Delivered QUAL-005/006 and SYNC-006 on the dataset load path: declared job rules run
+against approved observations and pre-write dataset history. An inconsistent source
+keeps its old rows, becomes stale with `consistency_failed`, and returns exit 3 with
+rule results and `rastro recipe repair`. Consistent or unassessed sources load normally;
+no rules means no semantic gate. Held observations are excluded from repair samples.
+The offline repair suite records detection separately as `held` (see its README for
+the before/after counts and the user-declared title-diversity rule).
