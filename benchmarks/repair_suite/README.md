@@ -48,16 +48,22 @@ also declare `distinct_ratio` on `title` (minimum ratio 0.5 over at least 3 reco
 these agendas expect varied titles. This is a user-declared rule, not an engine assumption.
 `held` counts as safe and never as `promoted_correct`; it measures detection, not recovery.
 
-| Outcome | Before B3 | After B3 |
-| --- | ---: | ---: |
-| promoted_correct | 6 | 6 |
-| promoted_wrong | 0 | 0 |
-| quarantined | 0 | 0 |
-| rejected | 3 | 3 |
-| no_candidates | 9 | 9 |
-| not_broken | 2 | 2 |
-| silent_wrong | 5 | 0 |
-| held | 0 | 5 |
+| Outcome | Current |
+| --- | ---: |
+| promoted_correct | 10 |
+| promoted_wrong | 0 |
+| quarantined | 0 |
+| rejected | 3 |
+| no_candidates | 4 |
+| not_broken | 2 |
+| silent_wrong | 0 |
+| held | 6 |
 
-`results.json` is the after B3 run. Previously silent wrong date/title loads are held;
-this does not imply that their recipes were repaired.
+This table is generated from the current `results.json` run. All six date/title traps,
+including SODRE's `h2.cyg--display-3` venue trap, are held; no trap is promoted wrongly.
+This measures detection, not recovery of those recipes.
+
+The load gate compares every source against the same history captured before any source
+is written (QUAL-005). Held runs retain earlier rows and cannot become successful drift
+baselines (SYNC-006, DRIFT-001). Partial loads include rejected candidates in their
+structural-validity denominator (QUAL-006).
