@@ -72,7 +72,7 @@ def test_cli_container_repair_promotes_and_next_load_stores_one_correct_row(tmp_
     assert comparison["evaluation"]["historical_passed"] == 1
     active = context.repository.get(key).recipe
     assert active.version == comparison["candidate_version"]
-    assert active.record_selector == "article.dance, article.performance"
+    assert active.record_selector == "article.dance, main > article.performance"
     assert main(["job", "load", str(job), "--drift"]) == 0
     capsys.readouterr()
     (record,) = SQLiteDatasetStore(tmp_path / "events.sqlite").records("events")
