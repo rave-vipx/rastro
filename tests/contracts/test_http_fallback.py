@@ -66,3 +66,17 @@ async def test_connect_timeout_leaves_time_for_alternates(monkeypatch):
 
     monkeypatch.setattr(AsyncSession, "get", get)
     await CurlTransport().get(target, headers={}, timeout=1, max_bytes=10)
+
+
+@pytest.mark.parametrize("timeout", [0.0001, 0, -1])
+async def test_transport_never_disables_curl_timeout(monkeypatch, timeout):
+    async def get(session, url, **kwargs):
+        assert int(kwargs["timeout"] * 1000) >= 1
+        return Response()
+
+    monkeypatch.setattr(AsyncSession, "get", get)
+    if timeout > 0:
+        await CurlTransport().get(TARGET, headers={}, timeout=timeout, max_bytes=10)
+    else:
+        with pytest.raises(AcquisitionError, match="request_timeout"):
+            await CurlTransport().get(TARGET, headers={}, timeout=timeout, max_bytes=10)
