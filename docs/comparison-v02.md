@@ -66,7 +66,8 @@ correctness. Candidate
 staging uses existing repository/context interfaces; no new runtime feature was
 added. The failure-to-propose attempt is included in Rastro's repair time.
 
-In the reviewer probe, the baseline's own `.performance` fix is rejected by
+In a one-off review probe (a throwaway script run by the independent reviewer, not part of
+the repository or the harness, so not reproducible from this checkout), the baseline's own `.performance` fix is rejected by
 Rastro's historical-fixture CI (`recipe promote` fails `historical_fixture_0`).
 A schema-valid wrong title mapping (`.dance, .performance` with
 `title: .venue::text`) is accepted by the baseline as 1 silent error (stores title
@@ -112,7 +113,9 @@ nonblank non-comment physical line, including imports, docstrings and punctuatio
 JSON formatting and declarative versus Python representation affect the totals.
 Repair-file counts are additional to initial configuration counts.
 
-The reviewer probes show the sensitivity of the line counts (baseline vs Rastro):
+One-off review probes (throwaway scripts, not in the repository) show the sensitivity of the line
+counts (baseline vs Rastro). Only rules A and B are derivable from `results.json`; C and D are
+not reproduced by the harness:
 
 | Rule | Baseline lines | Rastro lines |
 | --- | ---: | ---: |

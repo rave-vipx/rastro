@@ -79,7 +79,7 @@ The live pilot did not establish a complete two-source dataset. `0.2.0rc1` is no
 
 ### v0.3 candidates ranked by pilot evidence
 
-The [pilot observations](pilot/uy-dance-agenda.md#3-ranked-obstacles-for-v03-drift-acquisition-roadmap) lead this list; later items are operational follow-ups from the v0.2 implementation, not measured pilot rankings.
+The [pilot observations](pilot/uy-dance-agenda.md#3-ranked-obstacles-for-v03-drift-acquisition-roadmap) lead this list; items 8–11 are earlier pilot-ranked acquisition items kept below the newer ones; the "Open" line lists operational follow-ups from the v0.2 implementation, not measured pilot rankings.
 
 1. SODRE Spanish date text yields zero live records: localized and yearless parsing and date-range expansion.
 2. Distinguish sale date from event date and split multiple schedules.
