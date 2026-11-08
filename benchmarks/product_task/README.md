@@ -1,8 +1,8 @@
-# Offline product-task baseline (DIFF-002)
+# Offline product-task comparison (DIFF-002)
 
-This is slice E1 of the v0.2 evaluation: an independent Scrapling + Pydantic
-baseline and a measurement harness. **Rastro's path is pending E2**; this is not a
-completed comparison or evidence that either integration is better. It follows
+This combines E1's independent Scrapling + Pydantic baseline with E2's real
+Rastro validate/preview/load and scripted manual candidate/promotion path. See
+[the comparison](../../docs/comparison-v02.md) for both sides' numbers and limits. It follows
 [ADR 0005](../../docs/decisions/0005-reproducible-release-evidence.md) and does not
 open or change the frozen recovery corpus from ADR 0011.
 
@@ -71,7 +71,8 @@ The committed break changes Costa's record class from `.dance` to `.performance`
 and its price from 250 to 280. It is authored independently of cut 2's Mock Lab;
 it is not a generated Mock Lab mutation. `fixtures/repair.json` changes exactly
 one selector. Repair is a **prewritten manual fix replay**, not automatic repair.
-E2 must run Rastro on these same bytes or explicitly replace both paths' inputs.
+Rastro runs on these same bytes, and its automatic candidate generator returns
+`no_candidates`; the scripted manual repair goes through candidate CI/promotion.
 
 ## Measurement rules
 
@@ -113,7 +114,9 @@ both per-file counts and their sum. The one-time SQLite loader, shared extractor
 and shared benchmark contracts are counted separately, so reuse does not hide
 setup code. Tests, fixture HTML, oracle, report and measurement harness are
 excluded from integration LOC. The repair additionally records changed mapping
-entries and physical lines in `repair.json`. Apply these same rules to E2.
+entries and physical lines in `repair.json`. Rastro applies the same rules to `rastro/job.json`, with its manual staging
+helper and whole shared runtime counted separately; `rastro/repair.json` is the
+additional repair configuration.
 
 Successful offline execution requires **zero** network requests: Python socket
 connect, connect_ex and DNS resolution are blocked and counted, and an attempt
@@ -123,10 +126,11 @@ recurring service spend is zero; local compute, electricity and development
 agent usage are unpriced, not free. Listed human steps and `human_minutes: null`
 keep human effort separate; agent build minutes/tokens were not instrumented.
 
-## Recorded baseline run
+## Original E1 baseline run
 
-One cold workflow run on 3.12.16 / macOS-26.6.2-arm64-arm-64bit;
-see `results.json` for versions, source hashes and seconds before rounding.
+The original E1 cold workflow run on 3.12.16 / macOS-26.6.2-arm64-arm-64bit;
+the table below is historical. `results.json` now contains a fresh run of both
+sides, documented in [comparison-v02.md](../../docs/comparison-v02.md).
 
 | Phase | Machine milliseconds | Rows | Silent errors | Stale rows |
 | --- | ---: | ---: | ---: | ---: |
@@ -141,14 +145,13 @@ Shared extractor/contracts: 143/75 lines (whole reused modules, including unused
 Network requests/model calls: 0/0; scripted repair: 0.727 ms and one mapping edit.
 Human time and development-agent cost remain unmeasured.
 
-## Integration notes
+## E2 integration
 
-- Lead approval is required before merging this slice because it touches `benchmarks/`.
-- Shared files are unchanged. The integration owner should link this method from
-  `docs/comparison.md` and the roadmap, add a DIFF-002 changelog entry, and link
-  E2's completed comparison in documentation navigation if appropriate.
-- No dependency, public runtime API, persisted Rastro format or architecture boundary
-  changes; existing ADRs 0005 and 0011 govern this evidence.
-- Full verification excludes `tests/unit/test_recovery_corpus.py`: that existing
-  module explicitly opens the sealed split. The remaining suite runs offline.
-  Ruff/mypy traversal also explicitly excludes `benchmarks/recovery/sealed/`.
+The original baseline, counting rules and inputs are unchanged. The comparison
+is linked from the documentation navigation. No runtime dependency, public protocol
+or persisted-format change is introduced. ADRs 0005 and 0011 still govern this
+evidence; no sealed corpus is opened or edited. Human minutes and development
+agent usage remain uninstrumented.
+
+For complete checks, exclude `tests/unit/test_recovery_corpus.py`: that existing
+module opens the sealed split. Ruff/mypy must also exclude the sealed directory.

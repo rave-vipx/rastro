@@ -1,5 +1,8 @@
 # Reproducible extraction comparison
 
+The [v0.2 product-task comparison](comparison-v02.md) measures loading two sources,
+adding a third, and scripted repair to a SQLite database (DIFF-002).
+
 These experiments support **DIFF-001**, **QUAL-003**, **REC-001**, **OBS-001** and
 specification sections 05 and 17–18. They compare Rastro with an independent
 Scrapling + Pydantic baseline written for this repository.
