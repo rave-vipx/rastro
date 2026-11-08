@@ -1,0 +1,32 @@
+[
+ {
+  "performance_id": "zita-1",
+  "title": "Tango en Sala",
+  "starts_at": "2099-03-10T20:30:00-03:00",
+  "ticket_url": "https://zitarrosa.example/eventos/zita-1"
+ },
+ {
+  "performance_id": "zita-2",
+  "title": "Candombe Abierto",
+  "starts_at": "2099-03-11T20:30:00-03:00",
+  "ticket_url": "https://zitarrosa.example/eventos/zita-2"
+ },
+ {
+  "performance_id": "zita-3",
+  "title": "Milonga de Otoño",
+  "starts_at": "2099-03-12T20:30:00-03:00",
+  "ticket_url": "https://zitarrosa.example/eventos/zita-3"
+ },
+ {
+  "performance_id": "zita-4",
+  "title": "Folklore Joven",
+  "starts_at": "2099-03-13T20:30:00-03:00",
+  "ticket_url": "https://zitarrosa.example/eventos/zita-4"
+ },
+ {
+  "performance_id": "zita-5",
+  "title": "Danza Contemporánea",
+  "starts_at": "2099-03-14T20:30:00-03:00",
+  "ticket_url": "https://zitarrosa.example/eventos/zita-5"
+ }
+]
