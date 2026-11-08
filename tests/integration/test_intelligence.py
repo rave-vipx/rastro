@@ -56,18 +56,23 @@ async def test_deterministic_jsonld_precedes_model(html, source, schema):
 
 @pytest.mark.asyncio
 async def test_learned_recipe_supplies_regional_validation_context(source):
+    observed = []
+
     class Regional(BaseModel):
         name: str
 
         @field_validator("name")
         @classmethod
         def validate_region(cls, value: str, info: ValidationInfo) -> str:
+            observed.append(info.context["observed_at"])
             assert info.context == {
                 "locale": "es-UY",
                 "languages": ("es-UY", "en"),
                 "timezone": "America/Montevideo",
                 "currency": "UYU",
                 "egress": "direct",
+                "observed_at": observed[-1],
+                "source_url": "https://example.com/products",
             }
             return value
 
@@ -84,6 +89,7 @@ async def test_learned_recipe_supplies_regional_validation_context(source):
         schema=Regional,
     )
     assert result.status == Outcome.SUCCESS
+    assert observed[0] == result.records[0].evidence["name"].observed_at
 
 
 @pytest.mark.asyncio

@@ -71,9 +71,9 @@ emit a warning; use the selector configuration above when warnings are errors.
 | `max_concurrency` | `4` | Global active DNS/transfer slots per client; one active request per host. |
 | `max_sources` | `100` | Maximum sources per batch; excessive batches raise `ResourceLimitError`. |
 | `min_interval_seconds` | `1` | Minimum time after a host request completes before its next request begins. |
-| `request_timeout_seconds` | `15` | Deadline covering DNS resolution and one HTTP transfer. |
+| `request_timeout_seconds` | `15` | Deadline covering DNS resolution and all address attempts for one request. |
 | `operation_timeout_seconds` | `60` | Deadline covering acquisition, including queues, robots, redirects, and backoff. |
-| `max_requests` | `30` | Attempt budget per source, including robots, redirects, retries, and failed DNS attempts. |
+| `max_requests` | `30` | Attempt budget per source, including robots, redirects, retries, address fallback, and failed DNS attempts. |
 | `max_redirects` | `5` | Maximum document redirects and maximum redirects per robots lookup. |
 | `max_retries` | `2` | Additional attempts per hop for network/DNS/timeouts and selected transient HTTP statuses. |
 | `backoff_seconds` | `1` | Initial exponential retry delay. |
@@ -244,6 +244,28 @@ multicast, mapped, and known transition addresses are rejected. Standard ports
 only. Ambient (environment) proxies, cookies, netrc, impersonation, and automatic
 redirects or transport retries are disabled; only an explicitly selected egress
 profile uses a proxy. There is no identity rotation or restriction bypass.
+
+For direct egress, connection failures can fall back sequentially to up to three
+validated addresses in DNS order (SEC-001/002/003). All resolved addresses are
+validated before any connection, even addresses beyond that three-address cap;
+a private address anywhere rejects the entire answer. Each connection keeps the
+original URL, Host header and TLS hostname. A refused connection or connect timeout
+can advance to the next address; an HTTP response, TLS failure, or later transfer
+failure cannot trigger address fallback. Normal HTTP retries still follow
+`max_retries` and Retry-After.
+
+Address attempts share the request and operation deadlines. When alternates exist,
+each connect phase gets a share of the remaining request time, leaving time for
+fallback; a complete transfer can use the remaining request budget. Each attempt
+counts toward `max_requests`, observes host pacing and contributes to network time;
+address fallback does not increment the separate `retries` counter. Proxy egress
+never uses local address fallback, because the proxy resolves the target.
+
+Custom transports receive `PinnedTarget.alternates` (default `()`) alongside the
+current `address`. Only raise `AcquisitionError(..., connect_failure=True)` when
+connection setup failed before an HTTP exchange; the default is `False`. The curl
+adapter requires connection timing and response metadata to prove that condition.
+Missing metadata, generic errors and exhausted budgets remain explicit failures.
 
 Caller-provided adapters and schemas are trusted code. Policies apply within one
 client, not across processes. System DNS runs in the platform executor; an OS DNS

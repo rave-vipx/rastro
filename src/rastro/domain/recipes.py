@@ -17,6 +17,7 @@ from pydantic_core import CoreSchema, core_schema
 from rastro.domain.json import POINTER
 from rastro.domain.sources import Contract, Representation
 
+DOCUMENT_PREFIX = "document:"  # CSS field evaluated against the page root, not the record
 _SELECTORS = frozenset({"item_type", "record_selector", "record_path"})
 
 
@@ -118,6 +119,7 @@ class CssRecipe(Recipe):
 
     @staticmethod
     def check_expression(expression: str) -> None:
+        expression = expression.removeprefix(DOCUMENT_PREFIX)
         if not re.search(r"::(?:text|attr\([^)]+\))$", expression):
             raise ValueError("CSS field mappings must end in ::text or ::attr(name)")
 

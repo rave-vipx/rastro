@@ -6,10 +6,11 @@ import json
 from cssselect import SelectorError, parse
 from scrapling.parser import Selector
 
-from rastro.adapters.scrapling import ScraplingParser, _parse_html
+from rastro.adapters.scrapling import ScraplingParser, _parse_html, element_count, field_scope
 from rastro.adapters.structured import JsonParser
 from rastro.domain.drift import FieldStructure
 from rastro.domain.models import ConfigurationError, CssRecipe, Limits, Recipe, ResourceLimitError
+from rastro.domain.recipes import DOCUMENT_PREFIX
 
 
 class ScraplingDriftProbe:
@@ -48,14 +49,15 @@ class ScraplingDriftProbe:
             count, shapes = 0, []
             # Pseudo-elements select values; fingerprint their owning element's structure.
             selectors = []
-            for tree in parse(selector):
+            for tree in parse(selector.removeprefix(DOCUMENT_PREFIX)):
                 own_value = tree.canonical().startswith("::")
                 tree.pseudo_element = None
                 selectors.append(None if own_value else tree.canonical())
             for node in nodes:
-                count += len(node.css(selector))
+                scope, css = field_scope(selector, page, node)
+                count += element_count(scope, css)
                 for element_selector in selectors:
-                    for element in node.css(element_selector) if element_selector else [node]:
+                    for element in scope.css(element_selector) if element_selector else [scope]:
                         shapes.append(_shape(element, limits))
                         if len(shapes) > limits.max_json_nodes:
                             raise ResourceLimitError("Drift matches exceed configured limits")

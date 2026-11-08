@@ -181,3 +181,123 @@ def test_unknown_dataset_is_not_successful_empty_output(sample, capsys):
     capsys.readouterr()
     assert main(["dataset", "export", str(sample / "agenda.sqlite"), "--dataset", "typo"]) == 2
     assert not capsys.readouterr().out
+
+
+def test_html_export_escapes_script_in_values(sample, capsys, monkeypatch):
+    assert main(["job", "load", str(sample / "job.toml")]) == 0
+    capsys.readouterr()
+    records = SQLiteDatasetStore(sample / "agenda.sqlite").records("uy_dance_agenda")
+    record = records[0].model_copy(
+        update={"fields": {**records[0].fields, "title": "<script>alert(1)</script>"}}
+    )
+    monkeypatch.setattr(SQLiteDatasetStore, "records", lambda self, dataset: (record,))
+    assert main(["dataset", "export", str(sample / "agenda.sqlite"), "--format", "html"]) == 0
+    output = capsys.readouterr().out
+    assert "&lt;script&gt;alert(1)&lt;/script&gt;" in output
+    assert "<script>" not in output
+
+
+def test_html_export_links_only_http_urls(sample, capsys, monkeypatch):
+    assert main(["job", "load", str(sample / "job.toml")]) == 0
+    capsys.readouterr()
+    records = SQLiteDatasetStore(sample / "agenda.sqlite").records("uy_dance_agenda")
+    fields = {
+        **records[0].fields,
+        "title": "javascript:alert(1)",
+        "ticket_url": "https://example.com/",
+    }
+    monkeypatch.setattr(
+        SQLiteDatasetStore,
+        "records",
+        lambda self, dataset: (records[0].model_copy(update={"fields": fields}),),
+    )
+    assert main(["dataset", "export", str(sample / "agenda.sqlite"), "--format", "html"]) == 0
+    output = capsys.readouterr().out
+    assert 'href="https://example.com/"' in output
+    assert 'href="javascript:' not in output
+    assert "javascript:alert(1)" in output
+
+
+def test_upcoming_filter_and_sort_with_missing_values_last(sample, capsys, monkeypatch):
+    assert main(["job", "load", str(sample / "job.toml")]) == 0
+    capsys.readouterr()
+    record = SQLiteDatasetStore(sample / "agenda.sqlite").records("uy_dance_agenda")[0]
+    values = ["2099-01-02T00:00:00Z", None, "2000-01-01T00:00:00Z", "2099-01-01T00:00:00Z"]
+    records = tuple(
+        record.model_copy(update={"fields": {**record.fields, "starts_at": v}}) for v in values
+    )
+    monkeypatch.setattr(SQLiteDatasetStore, "records", lambda self, dataset: records)
+    args = ["dataset", "export", str(sample / "agenda.sqlite"), "--sort-field", "starts_at"]
+    assert main(args) == 0
+    result = json.loads(capsys.readouterr().out)["records"]
+    assert [r["fields"]["starts_at"] for r in result] == [values[2], values[3], values[0], None]
+    assert main([*args, "--upcoming"]) == 0
+    result = json.loads(capsys.readouterr().out)["records"]
+    assert [r["fields"]["starts_at"] for r in result] == [values[3], values[0]]
+
+
+def test_html_marks_stale_source_rows(sample, capsys):
+    assert main(["job", "load", str(sample / "job.toml")]) == 0
+    capsys.readouterr()
+    store = SQLiteDatasetStore(sample / "agenda.sqlite")
+    status = store.source_status("uy_dance_agenda")[0]
+    store.mark_source_unavailable(
+        "uy_dance_agenda",
+        status.source_url,
+        status.last_attempt + timedelta(seconds=1),
+        "unavailable",
+    )
+    assert main(["dataset", "export", str(sample / "agenda.sqlite"), "--format", "html"]) == 0
+    assert "<td>stale</td>" in capsys.readouterr().out
+
+
+def test_json_export_unchanged_without_new_flags(sample, capsys):
+    assert main(["job", "load", str(sample / "job.toml")]) == 0
+    capsys.readouterr()
+    path = sample / "agenda.sqlite"
+    assert main(["dataset", "export", str(path)]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload == {
+        "schema_version": 1,
+        "data_trust": "untrusted_source_data",
+        "dataset": "uy_dance_agenda",
+        "records": [
+            r.model_dump(mode="json") for r in SQLiteDatasetStore(path).records("uy_dance_agenda")
+        ],
+    }
+
+
+def test_html_empty_result_retains_columns(sample, capsys, monkeypatch):
+    assert main(["job", "load", str(sample / "job.toml")]) == 0
+    capsys.readouterr()
+    record = SQLiteDatasetStore(sample / "agenda.sqlite").records("uy_dance_agenda")[0]
+    record = record.model_copy(update={"fields": {**record.fields, "starts_at": "2000-01-01"}})
+    monkeypatch.setattr(SQLiteDatasetStore, "records", lambda self, dataset: (record,))
+    assert (
+        main(
+            [
+                "dataset",
+                "export",
+                str(sample / "agenda.sqlite"),
+                "--format",
+                "html",
+                "--sort-field",
+                "starts_at",
+                "--upcoming",
+            ]
+        )
+        == 0
+    )
+    output = capsys.readouterr().out
+    assert "<th>starts_at</th>" in output
+    assert "No records" in output
+
+
+def test_upcoming_rejects_non_date_and_requires_sort_field(sample, capsys):
+    assert main(["job", "load", str(sample / "job.toml")]) == 0
+    capsys.readouterr()
+    path = str(sample / "agenda.sqlite")
+    assert main(["dataset", "export", path, "--upcoming"]) == 2
+    assert json.loads(capsys.readouterr().err)["error"] == "invalid_input"
+    assert main(["dataset", "export", path, "--sort-field", "title", "--upcoming"]) == 2
+    assert json.loads(capsys.readouterr().err)["error"] == "invalid_input"

@@ -63,5 +63,5 @@ async def pin_destination(url: str, policy: AcquisitionPolicy, resolver: Resolve
     if not addresses:
         raise AcquisitionError("dns_failure", Outcome.TRANSIENT_FAILURE)
     # A mixed public/private DNS answer is rejected in its entirety.
-    validated = tuple(public_address(value) for value in addresses)
-    return PinnedTarget(canonical, host, port, validated[0])
+    validated = tuple(dict.fromkeys(public_address(value) for value in addresses))
+    return PinnedTarget(canonical, host, port, validated[0], validated[1:])

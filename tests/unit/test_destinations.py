@@ -97,3 +97,31 @@ async def test_mixed_and_empty_dns_answers():
         resolver,
     )
     assert target.address == "2606:4700:4700::1111"
+
+
+@pytest.mark.asyncio
+async def test_pin_retains_all_validated_alternates_in_dns_order():
+    addresses = ("2606:4700:4700::1111", "8.8.8.8", "1.1.1.1", "8.8.4.4")
+
+    class Resolver:
+        async def resolve(self, host, port):
+            return addresses
+
+    target = await pin_destination(
+        "https://example.com/", AcquisitionPolicy(allowed_hosts=("example.com",)), Resolver()
+    )
+    assert target.address == addresses[0]
+    assert target.alternates == addresses[1:]
+
+
+@pytest.mark.asyncio
+async def test_alternates_exclude_duplicate_addresses():
+    class Resolver:
+        async def resolve(self, host, port):
+            return ("8.8.8.8", "8.8.8.8", "1.1.1.1", "1.1.1.1")
+
+    target = await pin_destination(
+        "https://example.com/", AcquisitionPolicy(allowed_hosts=("example.com",)), Resolver()
+    )
+    assert target.address == "8.8.8.8"
+    assert target.alternates == ("1.1.1.1",)
