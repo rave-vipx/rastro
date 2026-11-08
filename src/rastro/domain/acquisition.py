@@ -153,10 +153,13 @@ class AcquisitionPolicy(_RedactedErrors):
 
 @dataclass(frozen=True)
 class PinnedTarget:
+    """A validated destination and remaining public addresses in DNS order."""
+
     url: str
     host: str
     port: int
     address: str
+    alternates: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -197,9 +200,13 @@ class AcquisitionResult:
 
 
 class AcquisitionError(Exception):
-    """A safe failure category; never contains a raw URL or transport exception."""
+    """A safe failure category; never contains a raw URL or transport exception.
 
-    def __init__(self, code: str, outcome: Outcome) -> None:
+    ``connect_failure`` proves connection setup failed before an HTTP exchange.
+    """
+
+    def __init__(self, code: str, outcome: Outcome, *, connect_failure: bool = False) -> None:
         self.code = code
         self.outcome = outcome
+        self.connect_failure = connect_failure
         super().__init__(code)

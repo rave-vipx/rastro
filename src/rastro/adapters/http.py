@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import ipaddress
 
-from curl_cffi import CurlECode, CurlHttpVersion, CurlOpt
+from curl_cffi import CurlECode, CurlHttpVersion, CurlInfo, CurlOpt
 from curl_cffi.curl import CURL_WRITEFUNC_ERROR
 from curl_cffi.requests import AsyncSession
 from curl_cffi.requests.exceptions import RequestException
@@ -47,6 +47,11 @@ class CurlTransport:
             CurlOpt.MAXFILESIZE_LARGE: max_bytes,
         }
         if proxy is None:
+            if target.alternates:
+                # Leave time for sequential fallback within the shared request deadline.
+                options[CurlOpt.CONNECTTIMEOUT_MS] = max(
+                    1, int(timeout * 1000 / (1 + min(2, len(target.alternates))))
+                )
             options[CurlOpt.PROXY] = b""
             options[CurlOpt.NOPROXY] = b"*"
             # Literal addresses bypass DNS already; hostnames must use the validated record.
@@ -76,7 +81,11 @@ class CurlTransport:
                 options[CurlOpt.PROXYPASSWORD] = (proxy.password or "").encode()
         try:
             async with AsyncSession(
-                trust_env=False, curl_options=options, max_clients=1, retry=0
+                trust_env=False,
+                curl_options=options,
+                curl_infos=[CurlInfo.CONNECT_TIME],
+                max_clients=1,
+                retry=0,
             ) as session:
                 response = await session.get(
                     target.url,
@@ -120,10 +129,24 @@ class CurlTransport:
                 CurlECode.PROXY,
             }:
                 raise AcquisitionError("proxy_failure", Outcome.TRANSIENT_FAILURE) from None
-            if error.code == CurlECode.OPERATION_TIMEDOUT:
-                raise AcquisitionError("request_timeout", Outcome.TRANSIENT_FAILURE) from None
             if error.code in {CurlECode.PEER_FAILED_VERIFICATION, CurlECode.SSL_CERTPROBLEM}:
                 raise AcquisitionError(
                     "tls_verification_failed", Outcome.PERMANENT_FAILURE
                 ) from None
-            raise AcquisitionError("network_failure", Outcome.TRANSIENT_FAILURE) from None
+            response = error.response
+            connect_failure = (
+                proxy is None
+                and error.code in {CurlECode.COULDNT_CONNECT, CurlECode.OPERATION_TIMEDOUT}
+                and response is not None
+                and response.infos.get(CurlInfo.CONNECT_TIME) == 0
+                and response.status_code == response.request_size == response.header_size == 0
+                and not body
+            )
+            code = (
+                "request_timeout"
+                if error.code == CurlECode.OPERATION_TIMEDOUT
+                else "network_failure"
+            )
+            raise AcquisitionError(
+                code, Outcome.TRANSIENT_FAILURE, connect_failure=connect_failure
+            ) from None
