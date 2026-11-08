@@ -103,6 +103,50 @@
       "title": "AcquisitionPolicy",
       "type": "object"
     },
+    "AfterObservation": {
+      "additionalProperties": false,
+      "description": "Datetimes of ``field`` must not lie before the observation time (minus tolerance).",
+      "properties": {
+        "field": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Field",
+          "type": "string"
+        },
+        "kind": {
+          "const": "after_observation",
+          "title": "Kind",
+          "type": "string"
+        },
+        "max_violation_ratio": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "default": 0.0,
+          "ge": 0,
+          "le": 1,
+          "title": "Max Violation Ratio"
+        },
+        "tolerance_minutes": {
+          "default": 0,
+          "maximum": 525600,
+          "minimum": 0,
+          "title": "Tolerance Minutes",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "field"
+      ],
+      "title": "AfterObservation",
+      "type": "object"
+    },
     "BooleanField": {
       "additionalProperties": false,
       "properties": {
@@ -130,6 +174,27 @@
       ],
       "title": "BooleanField",
       "type": "object"
+    },
+    "ConsistencyRule": {
+      "discriminator": {
+        "mapping": {
+          "after_observation": "#/$defs/AfterObservation",
+          "distinct_ratio": "#/$defs/DistinctRatio",
+          "historical_shift": "#/$defs/HistoricalShift"
+        },
+        "propertyName": "kind"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/AfterObservation"
+        },
+        {
+          "$ref": "#/$defs/DistinctRatio"
+        },
+        {
+          "$ref": "#/$defs/HistoricalShift"
+        }
+      ]
     },
     "CssRecipe": {
       "additionalProperties": false,
@@ -213,6 +278,28 @@
           "maxItems": 8,
           "minItems": 1,
           "title": "Identity",
+          "type": "array"
+        },
+        "match_fields": {
+          "default": [
+            "title",
+            "venue",
+            "start_time"
+          ],
+          "maxItems": 3,
+          "minItems": 3,
+          "prefixItems": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Match Fields",
           "type": "array"
         },
         "match_tolerance_minutes": {
@@ -363,6 +450,50 @@
       "title": "DecimalField",
       "type": "object"
     },
+    "DistinctRatio": {
+      "additionalProperties": false,
+      "description": "Distinct values of ``field`` over record count must not fall below ``min_ratio``.",
+      "properties": {
+        "field": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Field",
+          "type": "string"
+        },
+        "kind": {
+          "const": "distinct_ratio",
+          "title": "Kind",
+          "type": "string"
+        },
+        "min_ratio": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "default": 0.5,
+          "gt": 0,
+          "le": 1,
+          "title": "Min Ratio"
+        },
+        "min_records": {
+          "default": 3,
+          "maximum": 100000,
+          "minimum": 2,
+          "title": "Min Records",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "field"
+      ],
+      "title": "DistinctRatio",
+      "type": "object"
+    },
     "EgressProfile": {
       "additionalProperties": false,
       "description": "One administrator-declared HTTP(S) proxy. Credentials are environment references.",
@@ -486,6 +617,59 @@
         "path"
       ],
       "title": "FileJobSource",
+      "type": "object"
+    },
+    "HistoricalShift": {
+      "additionalProperties": false,
+      "description": "Median of ``field`` must not shift more than ``max_shift`` versus dataset history.\n\n``unit = \"days\"`` compares datetimes; ``unit = \"ratio\"`` compares numbers as\n``|current - history| / |history|``.",
+      "properties": {
+        "field": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Field",
+          "type": "string"
+        },
+        "kind": {
+          "const": "historical_shift",
+          "title": "Kind",
+          "type": "string"
+        },
+        "max_shift": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "gt": 0,
+          "le": 1000000,
+          "title": "Max Shift"
+        },
+        "min_history": {
+          "default": 3,
+          "maximum": 1000000,
+          "minimum": 1,
+          "title": "Min History",
+          "type": "integer"
+        },
+        "unit": {
+          "default": "days",
+          "enum": [
+            "days",
+            "ratio"
+          ],
+          "title": "Unit",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "field",
+        "max_shift"
+      ],
+      "title": "HistoricalShift",
       "type": "object"
     },
     "HtmlRecipe": {
@@ -1124,6 +1308,63 @@
       "title": "RegionalContext",
       "type": "object"
     },
+    "RepairPolicy": {
+      "additionalProperties": false,
+      "description": "Automatic promotion requires explicit opt-in and every measured gate.",
+      "properties": {
+        "auto_promote": {
+          "default": false,
+          "title": "Auto Promote",
+          "type": "boolean"
+        },
+        "fixtures": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 31,
+          "title": "Fixtures",
+          "type": "array"
+        },
+        "min_completeness": {
+          "default": 1.0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Min Completeness",
+          "type": "number"
+        },
+        "min_historical_fixtures": {
+          "default": 1,
+          "maximum": 32,
+          "minimum": 1,
+          "title": "Min Historical Fixtures",
+          "type": "integer"
+        },
+        "min_records": {
+          "default": 1,
+          "maximum": 100000,
+          "minimum": 1,
+          "title": "Min Records",
+          "type": "integer"
+        },
+        "min_semantic_confidence": {
+          "default": 1.0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Min Semantic Confidence",
+          "type": "number"
+        },
+        "min_structural_validity": {
+          "default": 1.0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Min Structural Validity",
+          "type": "number"
+        }
+      },
+      "title": "RepairPolicy",
+      "type": "object"
+    },
     "Representation": {
       "enum": [
         "html",
@@ -1314,6 +1555,15 @@
       ],
       "default": null
     },
+    "consistency": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/ConsistencyRule"
+      },
+      "maxItems": 100,
+      "title": "Consistency",
+      "type": "array"
+    },
     "context": {
       "anyOf": [
         {
@@ -1466,6 +1716,17 @@
         "locale": "und",
         "timezone": "UTC"
       }
+    },
+    "repair": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RepairPolicy"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     },
     "sources": {
       "items": {

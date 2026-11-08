@@ -8,12 +8,12 @@ languages = ["es-UY", "es"]
 timezone = "America/Montevideo"
 currency = "UYU"
 
-# Uncomment to enable [dataset] configuration (or run `rastro job preview`):
-# [dataset]
-# name = "uy_dance_agenda"
-# path = "agenda.sqlite"
-# identity = ["title", "venue", "starts_at"]
-# match_tolerance_minutes = 90
+[dataset]
+name = "uy_dance_agenda"
+path = "agenda.sqlite"
+identity = ["performance_id"]
+match_fields = ["title", "venue", "starts_at"]
+match_tolerance_minutes = 90
 
 [[sources]]
 kind = "file"
@@ -27,6 +27,7 @@ record_selector = ".item .cyg--info.espectaculo"
 require_evidence = true
 
 [sources.recipe.fields]
+performance_id = "::attr(data-performance-id)"
 title = "h2.cyg--display-3::text"
 performers = "p::text"
 venue = "address img::attr(alt)"
@@ -42,6 +43,7 @@ record_selector = ".item .cyg--info.espectaculo"
 require_evidence = true
 
 [sources.recipe.fallbacks.fields]
+performance_id = "::attr(data-performance-id)"
 title = "h2.cyg--display-3::text"
 performers = "p::text"
 venue = "address img::attr(alt)"
@@ -61,6 +63,7 @@ item_type = "Event"
 require_evidence = true
 
 [sources.recipe.fields]
+performance_id = "/identifier"
 title = "/name"
 performers = "/performer/name"
 venue = "/location/name"
@@ -76,6 +79,7 @@ item_type = "Event"
 require_evidence = true
 
 [sources.recipe.fallbacks.fields]
+performance_id = "/identifier"
 title = "/name"
 performers = "/description"
 venue = "/location/name"
@@ -125,3 +129,29 @@ type = "string"
 required = false
 min_length = 3
 max_length = 3
+
+[[fields]]
+name = "performance_id"
+type = "string"
+min_length = 1
+
+# Event datetimes must not be before the observation time (one hour of slack).
+[[consistency]]
+kind = "after_observation"
+field = "starts_at"
+tolerance_minutes = 60
+
+# Many performances must not collapse onto a single date (a sale date repeats per event).
+[[consistency]]
+kind = "distinct_ratio"
+field = "starts_at"
+min_ratio = 0.5
+min_records = 3
+
+# The median start must stay near the dataset history (an agenda rolls forward slowly).
+[[consistency]]
+kind = "historical_shift"
+field = "starts_at"
+max_shift = 45
+unit = "days"
+min_history = 3

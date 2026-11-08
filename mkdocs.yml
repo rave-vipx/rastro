@@ -26,9 +26,14 @@ nav:
   - Overview: index.md
   - Getting started: getting-started.md
   - Declarative jobs: jobs.md
+  - Dataset load and export: dataset.md
+  - Uruguay dance agenda pilot: pilot/uy-dance-agenda.md
   - HTTP acquisition: acquisition.md
   - Recipe memory: memory.md
   - Recipe lifecycle: recipe-lifecycle.md
+  - Structural drift: drift.md
+  - Semantic consistency: consistency.md
+  - Recipe CI and repair: repair.md
   - Instant Mock Lab: mock-lab.md
   - Mock Lab mutations: mock-lab-mutations.md
   - Optional intelligence: intelligence.md
@@ -44,6 +49,9 @@ nav:
   - Clean code and module size: development/clean-code.md
   - Development work log: development/work-log.md
   - Engineering decisions:
+      - Last-success repair evidence: decisions/0019-repair-evidence-storage.md
+      - Measured drift signals: decisions/0018-drift-signals.md
+      - Dataset identity and storage: decisions/0017-dataset-store.md
       - Updatable database outcome: decisions/0016-dataset-outcome.md
       - Recipe lifecycle: decisions/0015-recipe-lifecycle.md
       - Mock Lab fixtures, labels and sanitization: decisions/0014-mock-lab.md

@@ -6,6 +6,16 @@ All notable user-facing changes will be recorded here. No public release has bee
 
 ### Added
 
+- Measured opt-in dataset drift with named field evidence, deterministic risk and retained-table effects (DRIFT-001–006; ADR 0018).
+- Offline repair candidates from Scrapling relocation, fallbacks and discovery, plus explicitly enabled bounded models; recipe CI replays sanitized last-success and Mock Lab fixtures, checks schema, provenance and generic consistency rules, and promotes only a unique candidate meeting configured thresholds (REPAIR-001–005, SCR-002, QUAL-005/006).
+- `rastro recipe repair|promote|compare|rollback`, machine-readable comparisons and per-run repair reports; failed/quarantined candidates keep the serving recipe and dataset records (REC-005/006, REPAIR-003–006).
+- Optional job `[[consistency]]` and `[repair]` fields, published schemas, and latest-success relocation/sample tables in the dataset file with an independent version row (ADR 0019). Existing jobs without these fields keep their validation output.
+
+- Separate SQLite dataset with approved fields, provenance, origins, stable identity, update/missing/uncertain outcomes and failure retention (DATA-001/004/005, SYNC-002/003/005/006; #56; ADR 0017).
+- Declarative `[dataset]` configuration and read-only `rastro job preview` with observed values, provenance and approval decisions (DATA-002, JOB-002, AGENT-001; #55).
+- Uruguay dance agenda pilot with dated live obstacle evidence and synthetic offline v1/v2 samples (COST-001; #59).
+- `rastro job load`, per-source change counts and stale keys with last-success times, plus labeled `rastro dataset status` and JSON/JSONL export; shipped upcoming-events SQL and the executed README path (DATA-001/003, SYNC-002/006/008, COST-001; #61). The sample now includes synthetic stable performance IDs for repeat/reschedule proof; live jobs retain their original schema. Optional `dataset.match_fields` configures generic near-match field names.
+
 - Recipe lifecycle states (`candidate`, `active`, `degraded`, `retired`), the `RecipeLifecycle` port (`save_candidate`, `transition`, `rollback`, `history`, `next_version`), and machine-readable lifecycle history. Candidates do not displace the serving version; rollback restores a previously served version (REC-005, REC-006, REPAIR-006; #46; ADR 0015).
 - Mock Lab structural mutations: seeded, reproducible HTML and JSON operators for every MOCK-002 category (reordering, class changes, wrapping, missing fields, duplicates, empty containers, changed labels, pagination), each reporting machine-readable changes or an explicit no-target reason, composed by a versioned `MutationPlan` whose outputs carry the synthetic label. `lxml` and `cssselect`, already installed with Scrapling, are now declared dependencies (MOCK-002, MOCK-006; #48; ADR 0014).
 - Synthetic failure scenarios with explicit outcomes and versioned labels (MOCK-003, MOCK-004; #40).
@@ -13,6 +23,8 @@ All notable user-facing changes will be recorded here. No public release has bee
 - Top-level Mock Lab fixture exports and support for extracted opaque product values while scrubbing structural attributes and URL paths (MOCK-001, MOCK-004, MOCK-005).
 
 ### Changed
+
+- With recipe memory configured, `job load` uses the lifecycle's serving version after bootstrap, so promotion/rollback controls the next load; `job run` and SDK explicit-recipe precedence are unchanged. Dataset files gain additive `relocation_*` tables; no recipe-memory migration. The dance example's consistency rules now live in its job files instead of `consistency.toml` (REPAIR-006, QUAL-005/006).
 
 - SQLite recipe memory migrates to schema 2 on first open through a forward-only transaction. Existing 0.1.0 payloads keep loading: the highest version per key remains active and older versions become retired rollback targets. Version 0.1.0 cannot read migrated files; back up before upgrading. `RecipeRepository` remains unchanged from 0.1.0 (REC-005, REC-006, REPAIR-006; #46; ADR 0015).
 

@@ -672,7 +672,7 @@ Risk scoring must be deterministic and explainable initially.
 
 A drift signal names the field that lost evidence and its effect on the dataset (records not updated, values kept from an earlier observation, records flagged stale).
 
-### DRIFT-006 — FUTURE
+### DRIFT-007 — FUTURE
 
 Evaluate predictive models trained on sufficient historical failure data.
 

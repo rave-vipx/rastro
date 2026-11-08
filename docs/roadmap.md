@@ -73,18 +73,58 @@ Base for integration: `dev` (`31cbcde`). `staging` (`8f96d41`) is an ancestor of
 3. **Second cut — drift and repair on that path:** field-level drift signals with their effect on the table; Mock Lab reproduction; candidate, activation and rollback through the existing lifecycle; the sale-date-versus-event-date trap; repair reports.
 4. **Evaluation:** product-task comparison against Scrapling + Pydantic (DIFF-002), with human effort measured separately, and the single opening of the sealed corpus (DIFF-001, ADR 0011).
 
-Wave 1 is complete: failure scenarios (#40), Mock Lab core (#45) and follow-ups (#47), recipe lifecycle (#46, #49) and structural mutations (#48). Follow-ups for the first-cut integration slice: the golden-digest docstring (the Windows lxml wheel bundles libxml2 2.11.9) and `HtmlDuplicateElement` performance on large targets.
+Wave 1 is complete: failure scenarios (#40), Mock Lab core (#45) and follow-ups (#47), recipe lifecycle (#46, #49) and structural mutations (#48). The golden-digest docstring now notes Windows libxml2 2.11.9 (#61). **Open follow-up:** `HtmlDuplicateElement` performance on large targets.
+
+Work strategy (2026-11-07): one worktree and branch per slice, combined into one `cut/<name>` branch and one PR per cut against dev (rastro-slice).
+
+### First-cut delivery
+
+| Item | State / evidence |
+| --- | --- |
+| Dataset identity, approved observations, provenance, updates and failure retention | Done, #56; ADR 0017 and dataset integration tests |
+| Declarative dataset block and read-only preview | Done, #55; preview tests and published schema |
+| Known-source pilot, synthetic sample and ranked live obstacles | Done, #59; [dated pilot](pilot/uy-dance-agenda.md) |
+| CLI load, JSON/JSONL export, stale reporting and upcoming SQL | Implemented in #61; `test_dataset_load.py` and shipped query |
+| Five second-run behaviors plus sale-date trap and SQL order | Done in #61; seven named `test_second_run.py` tests and [actual demo output](dataset.md#executed-offline-sequence) |
+| Five-minute README and documentation integration | Done in #61; clean temporary sample, 2.55 seconds excluding installation, $0 external spend |
+| Successful two-live-source dataset, newcomer validation and product-task comparison | Still open: live pilot reports blocked/invalid sources; offline proof does not establish live completeness or usability for a new user |
+
+### Second-cut delivery
+
+| Item | State / evidence |
+| --- | --- |
+| DRIFT-001–006 | Implemented: `job load --drift`, measured snapshots, deterministic explained verdicts and stale table effects; ADR 0018 and offline drift acceptance tests |
+| REPAIR-001–005, SCR-002 | Implemented: bounded proposals, retained last-success evidence, historical/current/schema/consistency/generated regression CI, threshold promotion and quarantine; ADR 0019 and real CLI acceptance |
+| REPAIR-006, REC-005/006 | Implemented: candidate-only persistence, fresh-CI promotion, comparison and rollback CLI; next dataset load uses the serving version |
+| QUAL-005/006 | Implemented for recipe CI: generic optional job rules and separate completeness/structural/semantic indicators; sale-date trap fails despite valid datetime values |
+| Cut demo | Executed offline on a temporary dance sample: threshold quarantine, promotion, six preserved records, rollback and semantic rejection; README records actual commands/output |
+| Open | Independent cut review, live-source repair, automatic semantic load monitoring, retention pruning, drift calibration, heterogeneous relocation, DIFF-002 and final sealed-corpus evaluation remain open; no sealed evidence claimed |
+
+### v0.3 candidates ranked by pilot evidence
+
+Preserve the [pilot ranking and underlying observations](pilot/uy-dance-agenda.md#3-ranked-obstacles-for-v03-drift-acquisition-roadmap):
+
+1. Localized/yearless date parsing and date-range expansion into performances.
+2. Event-date role disambiguation and multi-schedule card splitting.
+3. Field-level pointer fallbacks, implicit regional fields and relative URL resolution.
+4. Policy-controlled optional JavaScript rendering.
+5. Bounded listing-to-detail traversal and pagination.
+6. Address fallback across validated IPv6/IPv4 targets.
+7. Clear access-restriction reporting and transparent contact metadata; no evasion.
+8. Clear diagnostics for HTTPS downgrades and invalid origin certificates; retain TLS enforcement.
+
 
 ## Current requirement mapping
 
 | Requirement | Evidence / current boundary |
 | --- | --- |
+| DATA-001–005, SYNC-002/003/005/006/008, COST-001 | Dataset store (#56), observed preview (#55), live obstacle pilot (#59), approved load/export/status and second-run proof (#61). SYNC-005 is limited to first/last observation, not full history. Live completeness remains open. |
 | INT-001 | Pydantic schemas, supplied HTML, explicit URL acquisition, bounded batches, and acquisition policy. Automatic source discovery remains out of scope. |
 | INT-002 | Verified memory → bounded exact-name JSON-LD → permitted structured JSON responses (supplied or opt-in `representation="json"` acquisition, RFC 6901 `json` recipes, bounded exact-name discovery) → simple DOM microdata → optional model. Explicit fallback recipes remain supported. Rastro does not discover API endpoints or fetch redundant representations; JSON embedded in HTML scripts is out of scope. See [ADR 0007](decisions/0007-structured-responses.md). |
 | INT-003 | Five extraction outcomes plus explicit access restrictions, transient failures, and permanent failures. Overflowing JSON numbers are invalid data, never success. |
 | INT-004, QUAL-001–004 | Field provenance, Pydantic/custom validation, explicit rejection. No source excerpt retained; defaults have no evidence. |
 | REC-002 | Declarative serialization with unknown/executable fields rejected. |
-| REC-001/003, REC-005/006, REPAIR-006 | SQLite versions keyed by source/template/schema/region; mappings/fallback definitions, validation-contract references, timestamps and successful-run counts. Lifecycle states, candidate storage, history and rollback are delivered at the domain and storage level ([ADR 0015](decisions/0015-recipe-lifecycle.md)); no facade or CLI surface, automatic degradation or repair yet. Repair and drift work builds on `save_candidate` and `RecipeLifecycle`. |
+| REC-001/003, REC-005/006, REPAIR-006 | SQLite versions keyed by source/template/schema/region; mappings/fallback definitions, validation-contract references, timestamps and successful-run counts. Lifecycle states, candidate storage, history and rollback use [ADR 0015](decisions/0015-recipe-lifecycle.md); the repair CLI now gates promotion with real CI and controls the next dataset load. Automatic degradation remains open. |
 | REC-004 | Model candidates require strict declarative structure, source observations, required-field evidence and full schema success before activation. Evidence policy survives restart; partial/failed candidates never activate. |
 | AI-001–004 | Optional local Ollama adapter, structured proposals, capability boundary and bounded calls/corrections/deadline/context/response/concurrency. Offline contract tests cover these guarantees. Live runs with `qwen3:4b` and `llama3.2:3b` (5 trials each) verified learning, activation, zero-inference cross-process reuse and explicit failures; both failed safely on a page with distractors ([live evidence](live-ollama-evidence.md)). Broader model quality is unmeasured. |
 | GEO-001–003, GEO-005 | Explicit ordered languages with descending Accept-Language weights and locale fallback; locale/languages/timezone/currency/egress reach validators through Pydantic's supported `model_validate` context path; unsupported egress fails before DNS; recipe memory isolates the ordered regional context while retaining default legacy keys. Custom model constructors follow Pydantic semantics and must handle context themselves. Named administrator-declared HTTP(S) proxy egress profiles with environment credential references, no rotation or fallback, and egress-isolated memory; a proxy resolves target DNS, so local pinning does not bind proxied connections (trusted-proxy boundary). Browser geolocation is rejected explicitly until a browser adapter exists (GEO-002). See [ADR 0006](decisions/0006-explicit-regional-context.md) and [ADR 0008](decisions/0008-explicit-egress.md). |
