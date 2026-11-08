@@ -153,6 +153,8 @@ def test_rastro_uses_identical_inputs_and_field_mappings() -> None:
         assert rastro["url"] == baseline.url
         assert rastro["recipe"]["fields"] == baseline.mapping.fields
         assert rastro["recipe"]["strategy"] == baseline.mapping.strategy
+        assert rastro["recipe"].get("record_selector") == baseline.mapping.record_selector
+        assert rastro["recipe"].get("item_type") == baseline.mapping.item_type
 
 
 def test_rastro_network_attempt_aborts_measurement(tmp_path, monkeypatch) -> None:
