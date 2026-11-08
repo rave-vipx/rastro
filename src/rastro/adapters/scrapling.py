@@ -18,6 +18,7 @@ from rastro.domain.models import (
     Recipe,
     ResourceLimitError,
 )
+from rastro.domain.recipes import DOCUMENT_PREFIX
 from rastro.ports.parser import Candidate, ParsedDocument
 
 
@@ -29,6 +30,18 @@ def _parse_html(html: str) -> Selector:
     if page._root is None:
         raise ConfigurationError("Invalid HTML document")
     return page
+
+
+def field_scope(expression: str, page: Selector, node: Selector) -> tuple[Selector, str]:
+    """Return the element a CSS field expression is evaluated against, and its selector."""
+    if expression.startswith(DOCUMENT_PREFIX):
+        return page, expression.removeprefix(DOCUMENT_PREFIX)
+    return node, expression
+
+
+def _matches(scope: Selector, selector: str) -> list[str]:
+    """Matched values; whitespace-only text nodes around nested markup are not evidence."""
+    return [value for value in map(str, scope.css(selector).getall()) if value.strip()]
 
 
 def _objects(value: object, path: str = "") -> Iterator[tuple[dict[str, object], str]]:
@@ -73,7 +86,8 @@ class ScraplingParser:
             locators: dict[str, str] = {}
             issues: list[Issue] = []
             for field, selector in recipe.fields.items():
-                matches = node.css(selector).getall()
+                scope, css = field_scope(selector, page, node)
+                matches = _matches(scope, css)
                 if len(matches) > 1:
                     issues.append(Issue(code="ambiguous_match", record_index=index, field=field))
                 elif matches:

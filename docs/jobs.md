@@ -203,6 +203,9 @@ when the date is more than 30 days before observation. A `date` field accepts
 `06 de noviembre`; a `datetime` field rejects it because no time was supplied.
 Localized non-ISO input requires timezone and observation context; extraction supplies both.
 
+A `date` field also accepts an ISO datetime and keeps its calendar day in `[region].timezone`
+when `localized = true`. A list of times (`26 NOV 2026 - 19 H y 21.30 H`) uses the first time.
+
 URL fields resolve relative links against the source evidence URL before validating them
 as HTTP(S). The Python model also supports this through `context={"source_url": "..."}`.
 Without that context, relative URLs fail validation. Resolution does not fetch the link.
@@ -216,6 +219,30 @@ Without that context, relative URLs fail validation. Resolution does not fetch t
 - **Recipe memory (`recipe_memory`, `context`, `recipe_version`).** `recipe_memory` points to a SQLite database file (`:memory:` is rejected). `context` (`RecipeContext`) and `recipe_version` require `recipe_memory`, and `recipe_version` cannot be combined with an explicit `recipe`.
 - **Model providers (`model`, `inference_policy`).** Optional `provider = "ollama"` (`model`, `base_url` or `base_url_env`) or `provider = "openai_compatible"` (`model`, `base_url` or `base_url_env`, `api_key_env`, `allow_remote`, `response_format`, `token_limit`, `temperature`). Non-loopback endpoints and `*cloud*` model names require `allow_remote = true` and HTTPS (on `openai_compatible`). Because an endpoint read from `base_url_env` is only known at run time, `openai_compatible` with `base_url_env` also requires `allow_remote = true`. Ollama endpoints, including `base_url_env` values, must be loopback, which the adapter checks at run time.
 
+### CSS field scope: `document:` and blank text
+
+A `css` recipe evaluates each field expression inside its record. Prefix an expression with
+`document:` to evaluate it against the whole page instead, for a value printed once outside
+the records, such as a venue name in a footer:
+
+```toml
+[sources.recipe.fields]
+title = "h4.card-title::text"
+venue = "document:footer#mainFooter strong.mt-4::text"
+```
+
+Every record receives the same value, and the uniqueness rules are unchanged: no match leaves
+the field missing (`missing_evidence` when the field is required) and more than one match is
+`ambiguous_match`. The evidence locator keeps the full expression, prefix included. The prefix
+is CSS-only (`jsonld` and `json` mappings are unchanged), still requires `::text` or
+`::attr(name)`, and is not supported by relocation repair, which skips such recipes
+(`relocation_retention_skipped`). It cannot write constants: the value must exist on the page.
+
+Whitespace-only text nodes are never matches, so `h6::text` over
+`<h6>MIE 11 NOV <span>19:00</span></h6>` reads `MIE 11 NOV` instead of reporting the blank text
+after the span as a second match. When a card lists several dates in sibling nodes, a selector
+such as `time.cyg--dia:first-of-type::text` picks the first.
+
 ## Dataset block and preview
 
 An optional `[dataset]` block declares where approved records would be stored and how a record
@@ -226,8 +253,8 @@ validates, runs and prints exactly as before.
 [dataset]
 name = "uy_dance_agenda"                    # [a-z][a-z0-9_]{0,63}
 path = "agenda.sqlite"                      # relative to the job file; same rules as other job paths
-identity = ["title", "venue", "starts_at"]  # declared field names, 1 to 8
-approve = ["title", "venue", "city", "starts_at", "ticket_url", "price"]  # optional
+identity = ["title", "venue", "starts_on"]  # declared field names, 1 to 8
+approve = ["title", "venue", "city", "starts_on", "starts_at", "ticket_url", "price"]  # optional
 match_tolerance_minutes = 90                # optional
 ```
 

@@ -1,5 +1,7 @@
-# Public dance events in Uruguay from a venue listings page (SODRE)
-# and a ticket seller event page (Tickantel).
+# Public dance events in Uruguay from venue listing pages (SODRE, Sala Zitarrosa,
+# Magnolio Sala) and a ticket seller event page (Tickantel), loaded into one dataset.
+# Venue pages without a time give `starts_on`; `starts_at` is filled only when the
+# page states a time. Rejected by robots on 2026-11-08, so not listed: Passline, Entraste.
 format_version = 1
 
 [region]
@@ -9,19 +11,24 @@ timezone = "America/Montevideo"
 currency = "UYU"
 
 [acquisition]
-allowed_hosts = ["sodre.gub.uy", "tickantel.com.uy"]
+allowed_hosts = [
+  "sodre.gub.uy",
+  "tickantel.com.uy",
+  "salazitarrosa.montevideo.gub.uy",
+  "magnoliosala.uy",
+]
 max_concurrency = 1
 min_interval_seconds = 2.0
 request_timeout_seconds = 15.0
 operation_timeout_seconds = 45.0
 max_redirects = 3
 
-# Uncomment to enable [dataset] configuration (or run `rastro job preview`):
-# [dataset]
-# name = "uy_dance_agenda"
-# path = "agenda.sqlite"
-# identity = ["title", "venue", "starts_at"]
-# match_tolerance_minutes = 90
+[dataset]
+name = "uy_dance_agenda"
+path = "agenda.sqlite"
+identity = ["title", "venue", "starts_on"]
+match_tolerance_minutes = 90
+match_fields = ["title", "venue", "starts_at"]
 
 [[sources]]
 url = "https://sodre.gub.uy/espectaculos/"
@@ -32,28 +39,50 @@ strategy = "css"
 record_selector = ".item .cyg--info.espectaculo"
 require_evidence = true
 
+# A card can list several dates in sibling <time> nodes; the first one identifies it.
 [sources.recipe.fields]
 title = "h2.cyg--display-3::text"
 performers = "p::text"
+category = "span.cyg--etiqueta:last-of-type::text"
 venue = "address img::attr(alt)"
-city = "address span.cyg--ciudad::text"
-starts_at = "time.cyg--dia::attr(datetime)"
+starts_on = "time.cyg--dia:first-of-type::text"
+starts_at = "time.cyg--dia:first-of-type::text"
 ticket_url = "a.cyg--btn::attr(href)"
-price = "span.cyg--precio::text"
-currency = "span.cyg--moneda::text"
 
-[[sources.recipe.fallbacks]]
+[[sources]]
+url = "https://salazitarrosa.montevideo.gub.uy/programacion"
+
+[sources.recipe]
+version = 1
 strategy = "css"
-record_selector = ".item .cyg--info.espectaculo"
+record_selector = "a.card"
 require_evidence = true
 
-[sources.recipe.fallbacks.fields]
-title = "h2.cyg--display-3::text"
-performers = "p::text"
-venue = "address img::attr(alt)"
-city = "address img::attr(alt)"
-starts_at = "time.cyg--dia::text"
-ticket_url = "a.cyg--btn::attr(href)"
+# The cards state a day and month but no time; the venue is printed once in the footer.
+[sources.recipe.fields]
+title = "h4.card-title::text"
+category = ".eventCard_tags span::text"
+venue = "document:footer#mainFooter strong.mt-4::text"
+starts_on = ".eventCard_date span::text"
+ticket_url = "::attr(href)"
+
+[[sources]]
+url = "https://magnoliosala.uy/"
+
+[sources.recipe]
+version = 1
+strategy = "css"
+record_selector = "div.evento"
+require_evidence = true
+
+# The venue is the desktop header's site name. The date (weekday, day, month) and the hour sit in different nodes: only the date is read.
+# An event on several days has one h6 per day; the first identifies it.
+[sources.recipe.fields]
+title = "h4.evento--titulo::text"
+performers = "h5.evento--subtitulo::text"
+venue = "document:div.page--header-desk h1 span::text"
+starts_on = "h6.evento--fecha:first-of-type::text"
+ticket_url = "a.evento--a::attr(href)"
 
 [[sources]]
 url = "https://tickantel.com.uy/ng/espectaculo/40021938/muestra-final-2026-area-tango-y-area-candombe"
@@ -69,21 +98,7 @@ title = "/name"
 performers = "/performer/name"
 venue = "/location/name"
 city = "/location/address/addressLocality"
-starts_at = "/startDate"
-ticket_url = "/offers/url"
-price = "/offers/price"
-currency = "/offers/priceCurrency"
-
-[[sources.recipe.fallbacks]]
-strategy = "jsonld"
-item_type = "Event"
-require_evidence = true
-
-[sources.recipe.fallbacks.fields]
-title = "/name"
-performers = "/description"
-venue = "/location/name"
-city = "/location/address/addressCountry"
+starts_on = "/startDate"
 starts_at = "/startDate"
 ticket_url = "/offers/url"
 price = "/offers/price"
@@ -97,6 +112,13 @@ min_length = 1
 [[fields]]
 name = "performers"
 type = "string"
+required = false
+min_length = 1
+
+[[fields]]
+name = "category"
+type = "string"
+required = false
 min_length = 1
 
 [[fields]]
@@ -107,11 +129,19 @@ min_length = 1
 [[fields]]
 name = "city"
 type = "string"
+required = false
 min_length = 1
+
+[[fields]]
+name = "starts_on"
+type = "date"
+localized = true
 
 [[fields]]
 name = "starts_at"
 type = "datetime"
+required = false
+localized = true
 
 [[fields]]
 name = "ticket_url"
