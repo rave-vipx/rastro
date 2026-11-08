@@ -3,7 +3,7 @@
 On this offline task both integrations produce the correct database, retain it
 when extraction breaks, and restore the changed price after a scripted manual
 repair. The baseline has lower elapsed times in this run and fewer site-specific
-lines under the harness rule: 78 vs 124; under a common JSON layout, 78 vs 81;
+lines under the harness rule: 78 vs 124; under a common JSON layout, 78 vs 81 (a one-off review probe, not reproduced by the harness);
 including one-time helpers, 136 vs 137. Silent errors tie only for the shared
 scripted fix; network requests, model calls, external service spend and manual
 selector-edit counts tie. This does not establish general superiority
