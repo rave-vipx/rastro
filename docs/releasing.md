@@ -1,6 +1,6 @@
 # Release checklist
 
-No package release has been published. `0.1.0` is a release candidate: package metadata carries the intended version, but no tag, registry upload or Trusted Publisher exists until maintainers approve the release.
+No package release has been published. `0.2.0rc1` is an untagged release candidate: package metadata carries the intended version, but its tag, promotion, registry upload and Trusted Publisher await maintainer approval. The earlier `v0.1.0rc1` tag exists on `main`.
 
 The [release evidence register](release-evidence.md) records completed checks and open gates; the [comparison](comparison.md) publishes current results, including where Rastro is equal or worse. M5 technical work is complete.
 
