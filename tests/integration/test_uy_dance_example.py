@@ -28,6 +28,18 @@ EXPECTED_FIELDS = [
     "currency",
 ]
 SAMPLE_FIELDS = [*EXPECTED_FIELDS, "performance_id"]
+LIVE_FIELDS = [
+    "title",
+    "performers",
+    "category",
+    "venue",
+    "city",
+    "starts_on",
+    "starts_at",
+    "ticket_url",
+    "price",
+    "currency",
+]
 
 
 def _run_cli(capsys: pytest.CaptureFixture[str], *args: str) -> tuple[int, dict[str, Any]]:
@@ -53,8 +65,8 @@ def test_uy_dance_jobs_validate_offline_with_stable_sample_schema(
         assert code == 0
         assert validated["valid"] is True
         assert validated["format_version"] == 1
-        assert validated["source_count"] == 2
-        assert validated["fields"] == (EXPECTED_FIELDS if job_path == LIVE_JOB else SAMPLE_FIELDS)
+        assert validated["source_count"] == (4 if job_path == LIVE_JOB else 2)
+        assert validated["fields"] == (LIVE_FIELDS if job_path == LIVE_JOB else SAMPLE_FIELDS)
         assert validated["job"]["region"] == {
             "locale": "es-UY",
             "languages": ["es-UY", "es"],

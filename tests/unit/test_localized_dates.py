@@ -1,6 +1,7 @@
 """Spanish source dates preserve explicit times (DATA-005)."""
 
 from datetime import date, datetime
+from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -86,3 +87,27 @@ def test_rollover_uses_local_year_and_thirty_day_boundary():
     assert parse_localized("31 dic", timezone=str(TZ), now=utc_new_year, want_time=False) == date(
         2026, 12, 31
     )
+
+
+@pytest.mark.parametrize("text", ["26 NOV 2026 - 19 H y 21.30 H", "26 NOV 2026 - 19 H, 21 H"])
+def test_time_lists_use_the_first_time(text):
+    from rastro.domain.localized_dates import parse_localized
+
+    got = parse_localized(text, timezone=str(TZ), now=NOW, want_time=True)
+    assert got == datetime(2026, 11, 26, 19, tzinfo=TZ)
+    assert parse_localized(text, timezone=str(TZ), now=NOW, want_time=False) == date(2026, 11, 26)
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("2026-11-20T20:30:00-03:00", date(2026, 11, 20)),
+        ("2026-11-21T01:30:00Z", date(2026, 11, 20)),
+        ("2026-11-20", "2026-11-20"),
+    ],
+)
+def test_localized_date_field_keeps_the_local_day_of_iso_datetimes(text, expected):
+    from rastro.domain.job_field_values import localized_date
+
+    info = SimpleNamespace(context={"timezone": str(TZ), "observed_at": NOW})
+    assert localized_date(text, info, want_time=False) == expected  # type: ignore[arg-type]

@@ -31,7 +31,8 @@ _DATE = re.compile(
     r"(?P<day>\d{1,2})(?:(?:\s+al\s+|\s*[,y]\s*)\d{1,2})*"
     r"\s+(?:de\s+)?(?P<month>[a-z]+)\.?"
     r"(?:\s+(?:de\s+)?(?P<year>\d{4}))?"
-    r"(?:\s*(?:-\s*)?(?P<hour>\d{1,2})(?:[:.](?P<minute>\d{2}))?\s*(?P<suffix>hs?)?)?",
+    r"(?:\s*(?:-\s*)?(?P<hour>\d{1,2})(?:[:.](?P<minute>\d{2}))?\s*(?P<suffix>hs?)?"
+    r"(?:\s*(?:y|,)\s*\d{1,2}(?:[:.]\d{2})?\s*hs?)*)?",
     re.IGNORECASE,
 )
 
@@ -39,7 +40,7 @@ _DATE = re.compile(
 def parse_localized(
     text: str, *, timezone: str, now: datetime, want_time: bool
 ) -> datetime | date | None:
-    """Parse a Spanish calendar date; ranges/lists use their first day.
+    """Parse a Spanish calendar date; ranges and lists use their first day and first time.
 
     Yearless dates use the observation's local year, advancing a year only
     when the date is more than 30 calendar days before the observation.
