@@ -24,7 +24,9 @@ class Source(BaseModel):
 def sources() -> list[Source]:
     return [
         Source.model_validate(value)
-        for value in json.loads(Path(__file__).with_name("sources.json").read_text())
+        for value in json.loads(
+            Path(__file__).with_name("sources.json").read_text(encoding="utf-8")
+        )
     ]
 
 

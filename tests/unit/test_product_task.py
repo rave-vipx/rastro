@@ -87,7 +87,7 @@ def test_invalid_price_snapshot_preserves_database(tmp_path: Path, replacement: 
     database = tmp_path / "agenda.sqlite"
     assert load_source(database, source) == "success"
     before = read_records(database)
-    bad = (ROOT / source.path).read_text().replace(">250<", replacement)
+    bad = (ROOT / source.path).read_text(encoding="utf-8").replace(">250<", replacement)
     assert load_source(database, source, html=bad) == "invalid_data"
     assert read_records(database) == before
 
@@ -99,7 +99,7 @@ def test_ambiguous_fields_and_duplicate_identity_are_rejected(tmp_path: Path) ->
     database = tmp_path / "agenda.sqlite"
     assert load_source(database, source) == "success"
     before = read_records(database)
-    html = (ROOT / source.path).read_text()
+    html = (ROOT / source.path).read_text(encoding="utf-8")
     article = html[html.index("<article") : html.index("</article>") + len("</article>")]
     duplicated = html.replace("</main>", article + "</main>")
     assert load_source(database, source, html=duplicated) == "ambiguous_identity"
@@ -124,10 +124,10 @@ def test_network_attempt_aborts_measurement(
 
 def test_existing_database_is_not_overwritten(tmp_path: Path) -> None:
     database = tmp_path / "agenda.sqlite"
-    database.write_text("keep me")
+    database.write_text("keep me", encoding="utf-8")
     with pytest.raises(ValueError, match="new database"):
         measure(database)
-    assert database.read_text() == "keep me"
+    assert database.read_text(encoding="utf-8") == "keep me"
 
 
 def test_partial_source_never_overwrites_previous_snapshot(tmp_path: Path) -> None:
@@ -137,7 +137,12 @@ def test_partial_source_never_overwrites_previous_snapshot(tmp_path: Path) -> No
     database = tmp_path / "agenda.sqlite"
     assert load_source(database, source) == "success"
     before = read_records(database)
-    html = (ROOT / source.path).read_text().replace(">450<", ">-1<", 1).replace(">600<", ">700<")
+    html = (
+        (ROOT / source.path)
+        .read_text(encoding="utf-8")
+        .replace(">450<", ">-1<", 1)
+        .replace(">600<", ">700<")
+    )
     assert load_source(database, source, html=html) == "partial_success"
     assert read_records(database) == before
 
@@ -146,7 +151,7 @@ def test_rastro_uses_identical_inputs_and_field_mappings() -> None:
     """DIFF-002: adapters receive the same source bytes, identity and selectors."""
     from benchmarks.product_task.measure import HERE
 
-    job = json.loads((HERE / "rastro/job.json").read_text())
+    job = json.loads((HERE / "rastro/job.json").read_text(encoding="utf-8"))
     assert job["dataset"]["identity"] == ["performance_id"]
     for baseline, rastro in zip(sources(), job["sources"], strict=True):
         assert rastro["path"] == Path(baseline.path).name

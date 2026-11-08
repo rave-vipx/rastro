@@ -9,7 +9,7 @@ from rastro.cli_repair_context import RepairContext
 
 def stage_candidate(job: Path, edit: Path) -> tuple[int, int]:
     """Stage source one's prewritten edit; return version and changed-entry count."""
-    edits = json.loads(edit.read_text())
+    edits = json.loads(edit.read_text(encoding="utf-8"))
     context = RepairContext.load(job, False)
     _, key, previous = context.source(1)
     candidate = previous.model_copy(update={**edits, "version": previous.version + 1})

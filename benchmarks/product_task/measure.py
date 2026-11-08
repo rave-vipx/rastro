@@ -78,7 +78,7 @@ def run_phases(database: Path) -> tuple[list[dict[str, Any]], float, dict[str, s
     """Use a fresh database; exclude scoring and human work from phase timings."""
     if database.exists():
         raise ValueError("Measurement requires a new database")
-    oracle = json.loads((HERE / "fixtures/expected.json").read_text())
+    oracle = json.loads((HERE / "fixtures/expected.json").read_text(encoding="utf-8"))
     initial = oracle["initial"]
     expanded = [*initial, oracle["third"]]
     repaired_truth = [*initial, oracle["repaired_third"]]
@@ -103,7 +103,7 @@ def run_phases(database: Path) -> tuple[list[dict[str, Any]], float, dict[str, s
         )
         phases.append(phase(database, "broken", [broken], repaired_truth))
         started = perf_counter()
-        repair = json.loads((HERE / "fixtures/repair.json").read_text())
+        repair = json.loads((HERE / "fixtures/repair.json").read_text(encoding="utf-8"))
         fixed = broken.model_copy(update={"mapping": broken.mapping.model_copy(update=repair)})
         phases.append(phase(database, "repaired", [fixed], repaired_truth))
         repair_seconds = perf_counter() - started
@@ -204,7 +204,10 @@ def main() -> None:
     args = parser.parse_args()
     with TemporaryDirectory(prefix="rastro-product-task-") as directory:
         report = measure(Path(directory) / "baseline.sqlite")
-    args.output.write_text(json.dumps(report, indent=2, ensure_ascii=False, allow_nan=False) + "\n")
+    args.output.write_text(
+        json.dumps(report, indent=2, ensure_ascii=False, allow_nan=False) + "\n",
+        encoding="utf-8",
+    )
 
 
 if __name__ == "__main__":
