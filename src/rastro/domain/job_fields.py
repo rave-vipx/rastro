@@ -7,11 +7,13 @@ import math
 from collections.abc import Sequence
 from datetime import date, datetime
 from decimal import Decimal
+from functools import partial
 from typing import Annotated, Any, Literal, Self
 
 from pydantic import (
     AnyHttpUrl,
     BaseModel,
+    BeforeValidator,
     Field,
     StrictBool,
     StrictInt,
@@ -23,6 +25,7 @@ from pydantic import (
 from pydantic_core import SchemaError
 
 from rastro.domain.job_contract import RedactedContract
+from rastro.domain.job_field_values import localized_date, relative_url
 from rastro.domain.models import ConfigurationError
 
 type JobFieldType = Literal[
@@ -176,23 +179,27 @@ class DecimalField(_FieldBase):
 
 class DateField(_FieldBase):
     type: Literal["date"] = "date"
+    localized: StrictBool = False
 
     def field_definition(self) -> tuple[Any, Any]:
-        return self._wrap_required(date)
+        target = Annotated[date, BeforeValidator(partial(localized_date, want_time=False))]
+        return self._wrap_required(target if self.localized else date)
 
 
 class DateTimeField(_FieldBase):
     type: Literal["datetime"] = "datetime"
+    localized: StrictBool = False
 
     def field_definition(self) -> tuple[Any, Any]:
-        return self._wrap_required(datetime)
+        target = Annotated[datetime, BeforeValidator(partial(localized_date, want_time=True))]
+        return self._wrap_required(target if self.localized else datetime)
 
 
 class UrlField(_FieldBase):
     type: Literal["url"] = "url"
 
     def field_definition(self) -> tuple[Any, Any]:
-        return self._wrap_required(AnyHttpUrl)
+        return self._wrap_required(Annotated[AnyHttpUrl, BeforeValidator(relative_url)])
 
 
 type JobField = Annotated[

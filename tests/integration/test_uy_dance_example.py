@@ -167,3 +167,25 @@ def test_uy_dance_sample_covers_repeated_rescheduled_near_match_and_sale_date_ca
     for rec in seller_v1:
         assert rec["starts_at"] != "2026-11-01T10:00:00-03:00"
         assert rec["starts_at"].startswith("2026-11-2")
+
+
+def test_sodre_sample_now_accepts_records():
+    from rastro import Limits, Source
+    from rastro.adapters.scrapling import ScraplingParser
+    from rastro.application.extraction import extract_document
+    from rastro.domain.jobs import parse_job
+
+    job = parse_job(SAMPLE_JOB.read_text(), format="toml")
+    source = job.sources[0]
+    recipe = source.recipe
+    assert recipe.fields["starts_at"] == "time.cyg--dia::text"
+    result = extract_document(
+        (SAMPLE_JOB.parent / "sodre-cartelera.html").read_text(),
+        source=Source(url=source.url, **job.region.model_dump()),
+        schema=job.build_schema(),
+        recipe=recipe,
+        parser=ScraplingParser(),
+        limits=Limits(),
+    )
+    assert result.metrics.accepted == 4
+    assert result.records[0].evidence["starts_at"].locator.endswith("time.cyg--dia::text")
