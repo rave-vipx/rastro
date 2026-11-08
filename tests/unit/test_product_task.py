@@ -52,7 +52,23 @@ def test_measurement_scores_wrong_accepted_records_and_missing_separately() -> N
 
 
 @pytest.mark.usefixtures("offline_cli_loop")
-def test_harness_reports_real_phases_and_unmeasured_human_time(tmp_path: Path) -> None:
+@pytest.mark.parametrize("automatic", [True, False])
+def test_harness_reports_real_phases_and_unmeasured_human_time(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, automatic: bool
+) -> None:
+    from benchmarks.product_task import rastro_path
+
+    command = rastro_path.command
+
+    def no_automatic_repair(*args):
+        if args[:2] == ("recipe", "repair"):
+            return 1, {
+                "sources": [{"outcome": "no_candidates", "inference_calls": 0, "comparisons": []}]
+            }
+        return command(*args)
+
+    if not automatic:
+        monkeypatch.setattr(rastro_path, "command", no_automatic_repair)
     report = measure(tmp_path / "agenda.sqlite")
     rastro = report["rastro"]
     assert [p["records"] for p in rastro["phases"]] == [6, 7, 7, 7, 7]
@@ -61,8 +77,12 @@ def test_harness_reports_real_phases_and_unmeasured_human_time(tmp_path: Path) -
     assert rastro["phases"][3]["stale_records"] == 1
     assert rastro["phases"][3]["status"] == "missing_data"
     assert rastro["repair"]["decision"] == "promote"
-    assert rastro["repair"]["generation_outcome"] == "no_candidates"
-    assert rastro["repair"]["config_edits"] == 1
+    assert rastro["repair"]["generation_outcome"] == (
+        "candidates" if automatic else "no_candidates"
+    )
+    assert rastro["repair"]["config_edits"] == (0 if automatic else 1)
+    if automatic:
+        assert rastro["repair"]["config_lines"] == 0
     assert rastro["repair"]["evaluation"]["historical_passed"] >= 1
     assert all(item["exit_code"] == 0 for item in rastro["phases"][0]["preflight"])
     assert rastro["network_requests"] == rastro["model_calls"] == 0

@@ -39,7 +39,7 @@ class ElementFingerprint(Contract):
 
 
 class RelocationSnapshot(Contract):
-    """First record's field fingerprints, captured only after a successful run.
+    """First record and observed field fingerprints from a successful run.
 
     The caller retains the latest successful snapshot per source/schema/recipe;
     failed runs must not replace it. There is no implicit Scrapling storage.
@@ -50,6 +50,7 @@ class RelocationSnapshot(Contract):
     schema_fingerprint: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
     observed_at: AwareDatetime
     fields: dict[str, ElementFingerprint] = Field(min_length=1, max_length=100)
+    record: ElementFingerprint | None = None
 
 
 class RepairEvidence(Contract):
@@ -61,7 +62,7 @@ class RepairCandidate(Contract):
     recipe: Recipe
     origin: Literal["scrapling_relocation", "fallback", "discovery", "model"]
     rationale: Reason
-    evidence: tuple[RepairEvidence, ...] = Field(default=(), max_length=100)
+    evidence: tuple[RepairEvidence, ...] = Field(default=(), max_length=101)
 
     @property
     def ambiguous(self) -> bool:

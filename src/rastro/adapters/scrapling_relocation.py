@@ -1,13 +1,14 @@
 """Offline adaptive relocation at the parser boundary (SCR-002, REPAIR-001).
 
-Only field nodes within an unchanged record selector are relocated. A fingerprint
-of the first successful record proposes a template; CI must validate all records,
+Container and field fingerprints from the first success propose a template;
+CI must validate all records,
 history and semantics. No fetcher, adaptive storage or activation is involved.
 """
 
 from __future__ import annotations
 
 import re
+from copy import deepcopy
 
 from cssselect import SelectorError
 from lxml.etree import LxmlError  # type: ignore[import-untyped]
@@ -15,6 +16,7 @@ from pydantic import BaseModel, ValidationError
 from scrapling.core.utils._utils import _StorageTools
 from scrapling.parser import Selector
 
+from rastro.adapters.scrapling_container import container_selector
 from rastro.domain.models import (
     ConfigurationError,
     CssRecipe,
@@ -76,6 +78,7 @@ class ScraplingRelocation:
             schema_fingerprint=result.schema_fingerprint,
             observed_at=result.completed_at,
             fields={name: _fingerprint(node) for name, node in nodes.items()},
+            record=_fingerprint(records[0]),
         )
         if len(snapshot.model_dump_json().encode()) > limits.max_html_bytes:
             raise ResourceLimitError("Relocation snapshot exceeds max_html_bytes")
@@ -94,6 +97,20 @@ class ScraplingRelocation:
         ):
             raise ConfigurationError("Relocation snapshot does not match the recipe")
         page, records = _records(html, recipe, limits)
+        record_selector = recipe.record_selector
+        evidence: list[RepairEvidence] = []
+        if not records and snapshot.record is not None and page._root is not None:
+            masked = Selector(root=deepcopy(page._root), adaptive=False)
+            _mask(masked)
+            new, count = container_selector(page, masked, snapshot.record)
+            if new is not None:
+                records = _css(page, new)
+                if len(records) > limits.max_records:
+                    raise ResourceLimitError("Record count exceeds max_records")
+                record_selector = f"{record_selector}, {new}"
+                evidence.append(
+                    RepairEvidence(field="record_selector", match_count=max(count, len(records)))
+                )
         if not records:
             return ()
         # shortcut: one template record, expand when heterogeneous-template fixtures require it.
@@ -103,7 +120,6 @@ class ScraplingRelocation:
         }
         _mask(page)
         fields = dict(recipe.fields)
-        evidence: list[RepairEvidence] = []
         for field, fingerprint in snapshot.fields.items():
             if _expression(recipe.fields[field])[0] == ":scope":
                 evidence.append(RepairEvidence(field=field, match_count=1))
@@ -117,11 +133,11 @@ class ScraplingRelocation:
                 fields[field] = ", ".join(
                     [fields[field], *(_relative(record, node) + suffix for node in matches)]
                 )
-        if fields == recipe.fields:
+        if fields == recipe.fields and record_selector == recipe.record_selector:
             return ()
         try:
             candidate = CssRecipe(
-                record_selector=recipe.record_selector,
+                record_selector=record_selector,
                 fields=fields,
                 version=recipe.version,
                 require_evidence=True,
