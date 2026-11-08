@@ -28,11 +28,12 @@ _MONTHS = {
 _DATE = re.compile(
     r"(?:(?:lun(?:es)?|mar(?:tes)?|mi[eé](?:rcoles)?|jue(?:ves)?|vie(?:rnes)?|"
     r"s[aá]b(?:ado)?|dom(?:ingo)?)\.?\s+)?"
-    r"(?P<day>\d{1,2})(?:(?:\s+al\s+|\s*[,y]\s*)\d{1,2})*"
+    r"(?P<days>\d{1,2}(?:(?:\s+al\s+|\s*[,y]\s*)\d{1,2})*)"
     r"\s+(?:de\s+)?(?P<month>[a-z]+)\.?"
     r"(?:\s+(?:de\s+)?(?P<year>\d{4}))?"
-    r"(?:\s*(?:-\s*)?(?P<hour>\d{1,2})(?:[:.](?P<minute>\d{2}))?\s*(?P<suffix>hs?)?"
-    r"(?:\s*(?:y|,)\s*\d{1,2}(?:[:.]\d{2})?\s*hs?)*)?",
+    r"(?:\s*(?:-\s*)?(?P<times>\d{1,2}(?:[:.]\d{2})?\s*hs?"
+    r"|\d{1,2}[:.]\d{2})"
+    r"(?P<more_times>(?:\s*(?:y|,)\s*\d{1,2}(?:[:.]\d{2})?\s*hs?)*))?",
     re.IGNORECASE,
 )
 
@@ -42,28 +43,44 @@ def parse_localized(
 ) -> datetime | date | None:
     """Parse a Spanish calendar date; ranges and lists use their first day and first time.
 
-    Yearless dates use the observation's local year, advancing a year only
-    when the date is more than 30 calendar days before the observation.
+    Yearless dates choose the earliest valid adjacent-year date within the
+    30-day lookback or in the future; every listed day and time must be valid.
     """
     match = _DATE.fullmatch(text.strip().casefold())
     if match is None or (month := _MONTHS.get(match["month"])) is None:
         return None
     local_now = now.astimezone(ZoneInfo(timezone))
+    day = _calendar_day(match, month, local_now.date())
+    if day is None:
+        return None
+    times = re.split(r"\s*(?:y|,)\s*", (match["times"] or "") + (match["more_times"] or ""))
+    parsed_times = []
     try:
-        day = date(int(match["year"] or local_now.year), month, int(match["day"]))
-        if match["year"] is None and day < local_now.date() - timedelta(days=30):
-            day = day.replace(year=day.year + 1)
-        if not want_time:
-            return day
-        if match["hour"] is None or (match["minute"] is None and match["suffix"] is None):
-            return None
-        return datetime(
-            day.year,
-            day.month,
-            day.day,
-            int(match["hour"]),
-            int(match["minute"] or 0),
-            tzinfo=local_now.tzinfo,
-        )
+        for text_time in filter(None, times):
+            parts = re.findall(r"\d+", text_time)
+            parsed_times.append(
+                datetime(
+                    day.year,
+                    day.month,
+                    day.day,
+                    int(parts[0]),
+                    int(parts[1]) if len(parts) > 1 else 0,
+                    tzinfo=local_now.tzinfo,
+                )
+            )
     except ValueError:
         return None
+    return (parsed_times[0] if parsed_times else None) if want_time else day
+
+
+def _calendar_day(match: re.Match[str], month: int, today: date) -> date | None:
+    days = [int(value) for value in re.findall(r"\d+", match["days"])]
+    years = [int(match["year"])] if match["year"] else range(today.year - 1, today.year + 2)
+    for year in years:
+        try:
+            candidates = [date(year, month, day) for day in days]
+        except ValueError:
+            continue
+        if match["year"] or candidates[0] >= today - timedelta(days=30):
+            return candidates[0]
+    return None

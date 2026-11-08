@@ -111,3 +111,35 @@ def test_localized_date_field_keeps_the_local_day_of_iso_datetimes(text, expecte
 
     info = SimpleNamespace(context={"timezone": str(TZ), "observed_at": NOW})
     assert localized_date(text, info, want_time=False) == expected  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize("want_time", [False, True])
+@pytest.mark.parametrize(
+    "text",
+    [
+        "12 de noviembre 25",
+        "12 nov 24",
+        "9 nov 25 H",
+        "9 nov 20:99",
+        "22 NOV 2026 - 99",
+        "12 al 99 NOV 2026 - 20 H",
+        "26 NOV 2026 - 19 H y 99:99 H",
+    ],
+)
+def test_every_localized_group_must_be_valid(text, want_time):
+    from rastro.domain.localized_dates import parse_localized
+
+    assert parse_localized(text, timezone=str(TZ), now=NOW, want_time=want_time) is None
+
+
+@pytest.mark.parametrize(
+    ("text", "now", "expected"),
+    [
+        ("31 dic", datetime(2027, 1, 1, tzinfo=TZ), date(2026, 12, 31)),
+        ("29 feb", datetime(2027, 12, 15, tzinfo=TZ), date(2028, 2, 29)),
+    ],
+)
+def test_yearless_dates_try_adjacent_years(text, now, expected):
+    from rastro.domain.localized_dates import parse_localized
+
+    assert parse_localized(text, timezone=str(TZ), now=now, want_time=False) == expected
