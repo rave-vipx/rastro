@@ -1,14 +1,15 @@
 # Uruguay dance agenda, v0.3 goal A: four live sources into one dataset
 
 Requirements: SYNC-002/006, DATA-004/005, SCR-003, SCHED-007. Job:
-[`examples/uy-dance-agenda/job.toml`](../../examples/uy-dance-agenda/job.toml), run on
+`examples/uy-dance-agenda/job.toml`, run on
 **2026-11-08, 18:55 local (21:55Z)** from an empty scratch directory.
 
 ```bash
 cp examples/uy-dance-agenda/job.toml "$SCRATCH/job.toml" && cd "$SCRATCH"
 uv run rastro job load job.toml                       # run 1: exit 3 (partial_success)
 uv run rastro job load job.toml                       # run 2: exit 3, 0 records created
-uv run rastro dataset export agenda.sqlite --format html --sort-field starts_on --upcoming
+uv run rastro dataset export agenda.sqlite --format html --sort-field starts_on --upcoming \
+  --timezone America/Montevideo
 ```
 
 Exit 3 is expected: one SODRE card is rejected (below), so that source is `partial_success`.

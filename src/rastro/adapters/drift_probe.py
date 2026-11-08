@@ -6,7 +6,7 @@ import json
 from cssselect import SelectorError, parse
 from scrapling.parser import Selector
 
-from rastro.adapters.scrapling import ScraplingParser, _parse_html, field_scope
+from rastro.adapters.scrapling import ScraplingParser, _parse_html, element_count, field_scope
 from rastro.adapters.structured import JsonParser
 from rastro.domain.drift import FieldStructure
 from rastro.domain.models import ConfigurationError, CssRecipe, Limits, Recipe, ResourceLimitError
@@ -55,7 +55,7 @@ class ScraplingDriftProbe:
                 selectors.append(None if own_value else tree.canonical())
             for node in nodes:
                 scope, css = field_scope(selector, page, node)
-                count += len(scope.css(css))
+                count += element_count(scope, css)
                 for element_selector in selectors:
                     for element in scope.css(element_selector) if element_selector else [scope]:
                         shapes.append(_shape(element, limits))

@@ -61,9 +61,9 @@ class ScraplingRelocation:
             raise ConfigurationError("Successful result does not match the snapshot records")
         nodes: dict[str, Selector] = {}
         for field, expression in recipe.fields.items():
+            selector, _ = _expression(expression)
             if field not in result.records[0].evidence:
                 continue
-            selector, _ = _expression(expression)
             matches = _css(records[0], selector)
             if len(matches) != 1:
                 raise ConfigurationError("Snapshot fields require unique successful evidence")
