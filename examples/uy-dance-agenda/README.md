@@ -64,3 +64,9 @@ Validate and run the live pilot job (requires internet access; uses deterministi
 uv run rastro job validate examples/uy-dance-agenda/job.toml
 uv run rastro job run examples/uy-dance-agenda/job.toml --output json
 ```
+
+Export the offline sample as an HTML agenda (SCHED-007, DATA-004):
+```bash
+uv run rastro job load examples/uy-dance-agenda/sample/job.toml
+uv run rastro dataset export examples/uy-dance-agenda/sample/agenda.sqlite --format html --sort-field starts_at --upcoming > agenda.html
+```
