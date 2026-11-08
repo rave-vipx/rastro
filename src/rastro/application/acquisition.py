@@ -204,12 +204,19 @@ class WebAcquirer:
                             if operation.requests >= self.policy.max_requests:
                                 raise AcquisitionError("request_limit", Outcome.PERMANENT_FAILURE)
                             operation.requests += 1
+                        remaining = deadline - asyncio.get_running_loop().time()
+                        if remaining <= 0:
+                            raise AcquisitionError("request_timeout", Outcome.TRANSIENT_FAILURE)
+                        # Reserve pacing before dividing the transfer budget among addresses.
+                        timeout = max(
+                            0.001, remaining - host.interval * (len(addresses) - index - 1)
+                        )
                         network_start = perf_counter()
                         try:
                             return await self._transport.get(
                                 replace(target, address=address, alternates=addresses[index + 1 :]),
                                 headers=operation.headers,
-                                timeout=max(0, deadline - asyncio.get_running_loop().time()),
+                                timeout=timeout,
                                 max_bytes=max_bytes,
                                 proxy=operation.proxy,
                             )

@@ -25,6 +25,9 @@ class CurlTransport:
         max_bytes: int,
         proxy: ProxyRoute | None = None,
     ) -> HttpResponse:
+        if timeout <= 0:
+            raise AcquisitionError("request_timeout", Outcome.TRANSIENT_FAILURE)
+        timeout = max(0.001, timeout)
         body = bytearray()
         exceeded = False
 

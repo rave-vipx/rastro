@@ -137,3 +137,53 @@ async def test_fallback_on_robots_lookup_obeys_rules():
     assert result.issue_code == "robots_denied"
     assert result.requests == 2
     assert all(target.url.endswith("/robots.txt") for target, _ in transport.calls)
+
+
+async def test_pacing_leaves_ipv4_fallback_time(monkeypatch):
+    clock = [asyncio.get_running_loop().time()]
+    monkeypatch.setattr(asyncio.get_running_loop(), "time", lambda: clock[0])
+
+    async def sleep(delay):
+        clock[0] += delay
+
+    monkeypatch.setattr(asyncio, "sleep", sleep)
+
+    class CurlLikeTransport(Transport):
+        async def get(self, target, **kwargs):
+            if target.url == SOURCE.url and target.address == ADDRESSES[0]:
+                self.calls.append((target, kwargs))
+                clock[0] += kwargs["timeout"] / (1 + len(target.alternates))
+                raise connect_failure()
+            if target.url == SOURCE.url:
+                assert kwargs["timeout"] >= 0.001
+            return await super().get(target, **kwargs)
+
+    transport = CurlLikeTransport()
+    acquirer = client(transport, Resolver(ADDRESSES[:2]), max_retries=0, request_timeout_seconds=2)
+    acquirer._hosts["example.com"].interval = 1
+    result = await acquirer.acquire(SOURCE, max_bytes=100)
+    assert result.status == Outcome.SUCCESS
+    assert transport.calls[-1][0].address == ADDRESSES[1]
+
+
+@pytest.mark.parametrize("remaining", [0.0001, 0, -0.01])
+async def test_dns_budget_is_checked_before_transport(monkeypatch, remaining):
+    clock = [asyncio.get_running_loop().time()]
+    monkeypatch.setattr(asyncio.get_running_loop(), "time", lambda: clock[0])
+
+    class SlowResolver(Resolver):
+        async def resolve(self, host, port):
+            clock[0] += 1 - remaining
+            return await super().resolve(host, port)
+
+    transport = Transport()
+    result = await client(
+        transport, SlowResolver(), max_retries=0, request_timeout_seconds=1
+    ).acquire(SOURCE, max_bytes=100)
+    if remaining > 0:
+        assert result.status == Outcome.SUCCESS
+        assert all(options["timeout"] >= 0.001 for _, options in transport.calls)
+    else:
+        assert result.status == Outcome.TRANSIENT_FAILURE
+        assert result.issue_code == "request_timeout"
+        assert not transport.calls
