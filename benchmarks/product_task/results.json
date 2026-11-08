@@ -1,0 +1,482 @@
+{
+  "requirement": "DIFF-002",
+  "environment": {
+    "python": "3.12.16",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "sqlite": "3.54.1",
+    "packages": {
+      "scrapling": "0.5",
+      "pydantic": "2.14.2",
+      "lxml": "6.1.3",
+      "rastro-engine": "0.1.0"
+    },
+    "git_head": "1cbb1ae894d925e595ae6e6b7990e502047b3268",
+    "git_dirty": true
+  },
+  "source_sha256": {
+    "benchmarks/baseline.py": "10625c48ffc2eff8324f2d37f7c8252899e93e89b758a4f24fcdc6ba2d568608",
+    "benchmarks/contracts.py": "1ba47f535dd808b618ee510bf575810ce43d9e877e6ed1a0c82c52dd802cd1e2",
+    "benchmarks/product_task/__init__.py": "3badd6d0ca3d26522c162804d45676b7b66d39aa5c6d2cdab6a0300c1a6bb564",
+    "benchmarks/product_task/baseline/__init__.py": "3577b4a00acad172879bf28f3f39782a7bb90e50f7f597773f31ed84834d3427",
+    "benchmarks/product_task/baseline/agenda.py": "24bf65d4d0e31779fa55060daff5f8de2ff4deef430c76852e073be4fdd3572b",
+    "benchmarks/product_task/baseline/sources.json": "0676064eff5661ccd001ab66aa96aca99baee8f2c5b723be033f44046746dd58",
+    "benchmarks/product_task/fixtures/expected.json": "24632d8788e0639c746907ea2eb6bd3397ec6a1b19cbb0dbcb30d7e5963890a2",
+    "benchmarks/product_task/fixtures/repair.json": "cd8006bf37c8be6db52d6b6bc2a7da9124ebc54b467c2a338e60e5c13a444047",
+    "benchmarks/product_task/fixtures/third-broken.html": "6a6121b9e3e8d119c20d9e50a19168c41de8823d8ceb1f1a47208ea231b810fb",
+    "benchmarks/product_task/fixtures/third.html": "53046d4f958dcdaec5fd81ba032249f577db9e1fc1bd49b1ee3624feb583c68f",
+    "benchmarks/product_task/measure.py": "e5aff1db5ff6523033c0559290589b73e83a80505cb7ee7476814e5a0a409246",
+    "benchmarks/product_task/rastro/job.json": "daa463ccd1210e2ba067cd58ec0327f81b0cde57bdd8a46e8d6d701602d5023b",
+    "benchmarks/product_task/rastro/loader.py": "c7aeeaffb47e62d436602773cf7ab6cf491247941159f7d5cfb427064fdd9d4d",
+    "benchmarks/product_task/rastro/repair.json": "abbf408d5bf130a73eef072a9eda5ba29d86402ca7c618b6d09397c52c74178e",
+    "benchmarks/product_task/rastro_path.py": "5fe8c1fe5a329b1e36d92f4a3dfd1b76cf6a5b3717840dc9b898996430786601",
+    "examples/uy-dance-agenda/sample/sodre-cartelera.html": "de9c4152d27cd93c1b65a219d1617851170d830b24bb8e89d5122dedf39efa5a",
+    "examples/uy-dance-agenda/sample/tickantel-evento.html": "e1c3e11ce360779846dad424cc369f24c1b91a877eb28b9ff220d500740e69e6",
+    "src/rastro/__init__.py": "9f197f2cb135ef961159303a0b4ac787acda13c6fa070a3eb9bd77c9675e8501",
+    "src/rastro/adapters/__init__.py": "560ae791a43cac5884449ce03b7d1648b5ccc46ecf1d3365dffbcef79a4ab269",
+    "src/rastro/adapters/discovery.py": "85a892b659f43d5ecba3043c17bfd18557c8ce669a120781ab86aa4857b14243",
+    "src/rastro/adapters/dns.py": "1b4e27c4ca1ea4979cfaab7af0eaa5424ce6e371e846ee4ea9e94fc279303a8a",
+    "src/rastro/adapters/drift_probe.py": "72a72a897d7ef6f59aee17c6893cc3fdd07bb5432a72269cee6f8d51877b62f7",
+    "src/rastro/adapters/http.py": "39a22133b2c97be2811081495c50c3de7c2552ba629685638f2c6c3a3053b49c",
+    "src/rastro/adapters/ollama.py": "e1dd851f41b4fabdcc75391f8b254a360b46e8447e47a832a48a0609ab1e0a65",
+    "src/rastro/adapters/openai_compatible.py": "c9a59cd2d5f5320decb8575e9cc852c4a2f4c06eed60a2cc73f6ff9f2d627cdc",
+    "src/rastro/adapters/scrapling.py": "bb04e4dbef3610e5586d1f102bc7c58a37e4dbc0643a21aecffee09f08462002",
+    "src/rastro/adapters/scrapling_relocation.py": "c43ad9d6f5af570aaab3864be1c7fbc09534cd6ca20a46999ac6536e67f6a0ad",
+    "src/rastro/adapters/sqlite.py": "a4be99d09b8e43f8e6289e3070f75eb83f181534858b71be8160463e21009d7b",
+    "src/rastro/adapters/sqlite_dataset.py": "485834b511f8711f4908223c82595900251e2084df434a3f03dafb59115f7db7",
+    "src/rastro/adapters/sqlite_dataset_schema.py": "8356872eb6797a6d12c2912cbef13be873f9b2b85fd1cc84f7586e9d6cc88b15",
+    "src/rastro/adapters/sqlite_drift.py": "26f5550f2a8d727f356c2b50edca7063d150534f011b86bea263bd6e7d74eaee",
+    "src/rastro/adapters/sqlite_lifecycle.py": "c84d34efb6072e90dafeba7e0cbc3b313774be43947a706095f23bde5fda32d2",
+    "src/rastro/adapters/sqlite_records.py": "3287979e3457021ffab994c6f24f13b1de206b8f55b675d9c2a5115e3769373e",
+    "src/rastro/adapters/sqlite_relocation.py": "c94051f3ee917ed4581f518fbd3b1c8cecc84cdca1d975ef4be6cc91367d4f41",
+    "src/rastro/adapters/sqlite_schema.py": "0781d8dc766beb4c9edaae6e69aa5e75cdc0a3f11fa318ff96acc725213531d9",
+    "src/rastro/adapters/structured.py": "a4e69511d51b5b1351fb39f00bbaae502adba9a6a0ad063709356efe2f209b3d",
+    "src/rastro/application/__init__.py": "ccccfc0bb62e6978ce5515ad31c5d2f8e93b7c730fe86b1d0ba098853a690e80",
+    "src/rastro/application/acquisition.py": "4c6ef4b65f1abec29b30a86a3d53f6f0e9d085ffb366baa3f90bf53db689d36b",
+    "src/rastro/application/batch.py": "79273a28c50fc6e2b4914cc7497efd2d91d4373d08234d774b03d57a68242062",
+    "src/rastro/application/consistency.py": "67cf030d0d1341635f141e8cb1bddb0f90d206a05056efae96ba521b247e4ae1",
+    "src/rastro/application/dataset_load.py": "2f5ee0c078cd0d171b3087dbfea19e7bac737d0257ad6f4979523341b774b948",
+    "src/rastro/application/destinations.py": "631431ef1fb70d77300f66533a25ae7b558aca5d3791b08aeaddfdbd92551cb5",
+    "src/rastro/application/drift.py": "036faf8df2c592fc3aa183e27dc369dd1f4bc17e5264ba43ae79d1d96daca221",
+    "src/rastro/application/engine.py": "10e475fc3e12a3e4fa5ee1fcf2c46cfdaae24cdf35697cd3e3784b22476f37b7",
+    "src/rastro/application/extraction.py": "f30a230985700bcb4123e7c245c53cb9ba820148a41314989719f2a91e0f33b9",
+    "src/rastro/application/field_aliases.py": "ece8f483842c386e48dfaaee573e577d9c3acda6bd3d0a00be70c1d9553d4af5",
+    "src/rastro/application/http_policy.py": "4c2b7ec4a3a27a00bffa67a1dca5c16a2ca93ca5c24be95689380421d002d75f",
+    "src/rastro/application/intelligence.py": "399b2b59614a5135dc0f7ae6fda4fe265e7543845eea4b707627e5867af74d95",
+    "src/rastro/application/job_loader.py": "ab70a6ada770a57749960455d8a24a79e7b039cc4b257154d95628d033646a4a",
+    "src/rastro/application/job_preview.py": "e1a212abfe7d6515dbe95051da48e1e6c1c51345ef8bd2c38f78d0d1b3d204d9",
+    "src/rastro/application/jobs.py": "4324cb61be5ca2acf4c7537d90dd156b5e8cbcab36c8b7fd4bda79f5636c00ea",
+    "src/rastro/application/memory.py": "e770970741323ca9cd9dc879ff59e0dc32b84a8de005f5b7a9c5d394f9043e03",
+    "src/rastro/application/outcomes.py": "6cf0526ccd01373ca6d8b2ba85afea10994ed833cf05c332a6791c3eb66df0d9",
+    "src/rastro/application/proposals.py": "d96bfe26522c96ba6e245cfc24ee6248f4cf46cb9e8104140370c31d2dc2ae2f",
+    "src/rastro/application/recipe_ci.py": "eb8ce1ce301a104ed5945852487ecebfe904b831fc6844010a8dcbbca646a7ae",
+    "src/rastro/application/recipe_repair.py": "11330beef787279a918751cef2e618cadc6e530463879301e9f6179d0a6f81f6",
+    "src/rastro/application/repair_candidates.py": "e22992c876f8d6a75ae9de9a1b8e8bd419a7a5333ae88e1460955ee058f70a9b",
+    "src/rastro/application/robots.py": "9927a10bbfed5057c8b866ddd4b0b87ff9f15e45d1cc887256f81b9778db2bde",
+    "src/rastro/application/service.py": "507150343f20e08d86b4ff4c89457db75637cd3a00622f151727d008d0854324",
+    "src/rastro/application/success_samples.py": "e7290cd02eeee0f1b89fd9484faa6a432569b1e1ea5951c417f01c5fb48e940a",
+    "src/rastro/cli.py": "43bd4b55c2b1ca7e5fecf1b3c5902bb4add5222b9e4db072167f7f986becafb5",
+    "src/rastro/cli_dataset.py": "0f05ecd6e43e1e25b8dcc48d238241b820e0becbfb48fb9af34d4b130fedd6be",
+    "src/rastro/cli_demo.py": "d1303a7833d27fc50855556922b605b308577907af45fca4d21c1a9463dfd30e",
+    "src/rastro/cli_errors.py": "ec0322bcdc20dfded5fe1bf1b975d07441373948833cd73f3ff890c719a4d183",
+    "src/rastro/cli_recipe.py": "9a78689ed4dcc29748263b5a8d9b4a66d369526319ca8d8e23857976812cb445",
+    "src/rastro/cli_repair_context.py": "1eeb4174b8dd88c018050c6f536843650c94882b938ee10f98fca4d5309ec5fc",
+    "src/rastro/cli_repair_storage.py": "1b1405cbf5e99ea3f54793c2318776f2ce525ac4ad07403c44a7fb1541d4d2ed",
+    "src/rastro/domain/__init__.py": "f9cfa5d0a7090e1d3a64c3162ee486c994d9bea8d8dbbdfc3acc8a8481564f3d",
+    "src/rastro/domain/acquisition.py": "cbb708925fa90289b6f0f3bccb8a06e64b250c6db191dc4f202dfd8fd000b54f",
+    "src/rastro/domain/consistency.py": "5fc4274eaf1cec608dd8abf90fa9f074c81e3f2c40e9fdf8b9466057c6b7eec0",
+    "src/rastro/domain/dataset.py": "8e2b40274ae7846c5b67bbfd2184fed17b6c05954ae7a0b40a6cd5ef94dc6b28",
+    "src/rastro/domain/drift.py": "9acb4ac56b1091a2aef7a75a3d1ea3ef09e712c18ce1b9c21f28f341ef2cfae4",
+    "src/rastro/domain/intelligence.py": "c07d675dea1890dc036d3b5dc496b774a2d87e45d5b9142d8d7d23d06bb3f539",
+    "src/rastro/domain/job_contract.py": "625448e13d56730a8f8e6c44809c6fefae6adced8a9b3898f0d8512985fa0ed2",
+    "src/rastro/domain/job_dataset.py": "312096d197fcf1ccdf48805f19eedb536218b69c926ccab745fe76964e88aef9",
+    "src/rastro/domain/job_fields.py": "c8fceea0b8b4451a9af4d4926ebbce78d6864a621fd63b341e3b625402e55946",
+    "src/rastro/domain/job_load.py": "de3d41d29065bd12ac90270c811ee6ceb39eaf75955968171f03fd897a38b8ab",
+    "src/rastro/domain/job_providers.py": "cfa979b849461d4f7108e4750723a6d9b5a65a848bb08bde50296eee76e18b75",
+    "src/rastro/domain/job_results.py": "e40b95b74b8a4b9eb6b1475ea22438b2ea2a2079b4570e1ac783e50e94462571",
+    "src/rastro/domain/job_sources.py": "07c43cbc9a50007a0a4dc0b916e4df54008efa2334de188fbad6fa161693b1ce",
+    "src/rastro/domain/jobs.py": "ad117ff63b32d0db07832df515b90427f76ea190543e66444918429230e68c48",
+    "src/rastro/domain/json.py": "33f711fe3ada4dc51c0af37b6a181086adf5eb03547c58d96c6c933308f79e8e",
+    "src/rastro/domain/lifecycle.py": "6a9efb9f50566da76ae6d2ff0c36edb430cab886a0dc6b13cac51e685b8caed9",
+    "src/rastro/domain/lifecycle_history.py": "dd41d9715c935a7aede9fd3521411e9dd83e356d9affc896f4d96008f18b28eb",
+    "src/rastro/domain/memory.py": "9333960e16e50f7d0eec489177a3437335272f6c443aa2803433fe6d71dce5d0",
+    "src/rastro/domain/models.py": "8ca60d3402fe94b329a3bb38e0f5813371416708b86b198c3df65532c60e0a20",
+    "src/rastro/domain/recipe_compare.py": "58bd0c7796a6380025a3e78d3273830ab27531b3cf559052d8c540bf87c1dfa9",
+    "src/rastro/domain/recipes.py": "3dfa918df0b0603ce7271cd036601b366a1f4e1699ebea5a74f63a42d141eeba",
+    "src/rastro/domain/repair.py": "1051875a04b763b123a121ff5c4b0a2be2e06d8000d24329bfa5512324c4703c",
+    "src/rastro/domain/results.py": "052956ed4223ca28d771c0f3566fa922523533d3de24c20397cf9671b53ef0df",
+    "src/rastro/domain/sources.py": "0e8076d166e853919d91157bc9cb4368a5bce504b45384696a2f0b09554dffee",
+    "src/rastro/mocklab/__init__.py": "123153029e1c768afe8ac64375f3de47be472350199bcd69dd742c3901e80c36",
+    "src/rastro/mocklab/bundle.py": "cba2ddd02d236f13a4ef16ee237a7505e3afe35428f4fdb11e9e9513d9eeea4c",
+    "src/rastro/mocklab/detectors.py": "73263bf90b43863a24fd4d4a303e44dbde2c4962e142601cc6b1a6335466f9f6",
+    "src/rastro/mocklab/errors.py": "e7b40f0d13b295629ce468a4a50bde23cc00949f2fe5d57be43d7064ee81a272",
+    "src/rastro/mocklab/failures.py": "e88a5f96cc0112c92aceea33e61a0410dc2caeae240b3866a8c238c10a650b0c",
+    "src/rastro/mocklab/fixtures.py": "d1f12b43c23e6871c326aef793cef72aa702458026aeec3f1734939d43b62ccf",
+    "src/rastro/mocklab/html_sanitizer.py": "0c57727bb4bc7bcbe232d75e7ecd1b6858384a29ec0a5770f8125a9b840d296d",
+    "src/rastro/mocklab/json_scrubber.py": "c0a8c496715d79cc7f441146946cac1e7bb6f2e416bcdc7eac825661b23a9c01",
+    "src/rastro/mocklab/labels.py": "89785dc741a35118cf0a5df52dec479e7b89e94b70a40eb5ffe67e571447b29a",
+    "src/rastro/mocklab/mutations/__init__.py": "5e32fc9dae229e3492063be0e26d97b8c6cab2fbc9b043d1a5301fbc50e0407b",
+    "src/rastro/mocklab/mutations/contracts.py": "35309c01caa525df0e6ff75bdae271cca3025b129ed94976d6d4c225963ea722",
+    "src/rastro/mocklab/mutations/html_base.py": "c5126bc15a9cefc90e7d042eeff760ab7be8be54b94b9cef1d310f3fe1b64a1d",
+    "src/rastro/mocklab/mutations/html_content.py": "20f904cd19f7f868bfc0cd05d93cccb6d7a7ebfa63c48dc9b7760d5a3a592042",
+    "src/rastro/mocklab/mutations/html_dom.py": "be46a753bb20b7b40445192486184ee33e610436498a243b7f5d0b04e0941aeb",
+    "src/rastro/mocklab/mutations/html_structure.py": "cdd70ff1db3bb03bc6ac7890488e7f87e75c8bdc969d13a5389d1fcf9f1806a1",
+    "src/rastro/mocklab/mutations/json_base.py": "064d3548498a313b47fbbec4fa732abf5716ee57fd7608738026780229083b53",
+    "src/rastro/mocklab/mutations/json_containers.py": "b7d4447675b79cdfc059a553203127672a693bfc9ab13228ea6c5cf9a5f20da8",
+    "src/rastro/mocklab/mutations/json_doc.py": "8420284dce32185b9272763df87dd36f6da4482f1b439c8630b97e6dad8aef2d",
+    "src/rastro/mocklab/mutations/json_fields.py": "3b31008baf40cc6c9e4701a703e821fee3938b38836298e7d76a87dcc2c74bdd",
+    "src/rastro/mocklab/mutations/limits.py": "6fcbebb04b118355219432e74f6d8f812bcfc3873b24f6b689893ea11c591af0",
+    "src/rastro/mocklab/mutations/plan.py": "f30aa9889edb175532d68daea702a4a0a994ede82bf134c27fabb146eaecbd41",
+    "src/rastro/mocklab/mutations/rng.py": "912d787af1faa615afca9af6fca1cf0622be13a000ac8d4e75059f5c7c90ff52",
+    "src/rastro/mocklab/records.py": "2a9fd46274779083f51c269d8c810f2bf7c74876d93b305f49afed73a5219243",
+    "src/rastro/mocklab/retention.py": "e3ae5e3e837475b7766d41245bc48a387f862a888ae05ec04140d12c8985075f",
+    "src/rastro/mocklab/sanitize.py": "847bcc6e43b26742f8a18553fcd21c5af62e2657335444367125bfea0521de68",
+    "src/rastro/mocklab/seeds.py": "88c1b02cc8664ebe68fb038ba0e3dc6d3d39ea25f0df0787876af7e42c48a421",
+    "src/rastro/ports/__init__.py": "5e930431e88fdab4c47d30c7d13fe22cbe723d135a3009cfca90c27aabade968",
+    "src/rastro/ports/acquisition.py": "e7beb4b70cc97c603302304511afeb471731b92a942c0955a942a2d62ae21dc2",
+    "src/rastro/ports/dataset.py": "223cb453218285a86389a22eb4ae8c72aa4ee6dadce485d8552af08100a5b68e",
+    "src/rastro/ports/discovery.py": "40948da5e83e4f5690846048ab19d623dfa1f343a62da24f4efa35b421243e3d",
+    "src/rastro/ports/drift.py": "70124f033ef6f40647d1c8a6058c4cf14db6ea97435aa0a7428b525bb777d608",
+    "src/rastro/ports/model.py": "b998dac56c5d81b0b3036f9b372d4e98a3510624835704aa13b49f7fb5e97128",
+    "src/rastro/ports/parser.py": "1c83f2def4a572d1a25226f19b7dd8a81bf2041ed7e0c7f61ce7eef56407d520",
+    "src/rastro/ports/recipes.py": "2128cf10a48d0528b1d07de3e65c4b8a6e908d3c00a11489a613fc8111e87bd9",
+    "uv.lock": "8c235a342e76719d186dca53776a2a2fb7ca3568e4ca23c29667f1032280dcf0"
+  },
+  "baseline": {
+    "phases": [
+      {
+        "name": "initial_two",
+        "status": "success",
+        "source_statuses": [
+          "success",
+          "success"
+        ],
+        "wall_seconds": 0.0031622500100638717,
+        "machine_minutes": 5.270416683439786e-05,
+        "records": 6,
+        "stale_records": 0,
+        "silent_errors": 0,
+        "missing_records": 0,
+        "dataset_wrong_records": 0
+      },
+      {
+        "name": "add_third",
+        "status": "success",
+        "source_statuses": [
+          "success"
+        ],
+        "wall_seconds": 0.0012347500014584512,
+        "machine_minutes": 2.0579166690974186e-05,
+        "records": 7,
+        "stale_records": 0,
+        "silent_errors": 0,
+        "missing_records": 0,
+        "dataset_wrong_records": 0
+      },
+      {
+        "name": "repeat",
+        "status": "success",
+        "source_statuses": [
+          "success",
+          "success",
+          "success"
+        ],
+        "wall_seconds": 0.0022580830263905227,
+        "machine_minutes": 3.7634717106508715e-05,
+        "records": 7,
+        "stale_records": 0,
+        "silent_errors": 0,
+        "missing_records": 0,
+        "dataset_wrong_records": 0
+      },
+      {
+        "name": "broken",
+        "status": "missing_data",
+        "source_statuses": [
+          "missing_data"
+        ],
+        "wall_seconds": 9.795799269340932e-05,
+        "machine_minutes": 1.632633211556822e-06,
+        "records": 7,
+        "stale_records": 1,
+        "silent_errors": 0,
+        "missing_records": 0,
+        "dataset_wrong_records": 1
+      },
+      {
+        "name": "repaired",
+        "status": "success",
+        "source_statuses": [
+          "success"
+        ],
+        "wall_seconds": 0.0006076249992474914,
+        "machine_minutes": 1.0127083320791523e-05,
+        "records": 7,
+        "stale_records": 0,
+        "silent_errors": 0,
+        "missing_records": 0,
+        "dataset_wrong_records": 0
+      }
+    ],
+    "network_requests": 0,
+    "model_calls": 0,
+    "site_specific_lines": 78,
+    "line_counts": {
+      "benchmarks/product_task/baseline/agenda.py": 16,
+      "benchmarks/product_task/baseline/sources.json": 62
+    },
+    "one_time_loader_lines": 58,
+    "shared_extractor_lines": 143,
+    "shared_contract_lines": 75,
+    "initial_machine_minutes": 5.270416683439786e-05,
+    "repair": {
+      "scripted_wall_seconds": 0.0008095829980447888,
+      "config_edits": 1,
+      "config_lines": 3,
+      "human_minutes": null,
+      "human_steps": [
+        "On missing_data inspect the changed HTML; change record_selector from .dance to .performance.",
+        "Re-run the failed source and verify the price update and unchanged row count."
+      ]
+    },
+    "human_steps": [
+      "Inspect the two sample sources and define the agenda schema and stable identity.",
+      "Write source selectors/JSON pointers; validate records and inspect the database query.",
+      "Inspect the third source, add its mapping and run the load again.",
+      "On missing_data inspect the changed HTML; change record_selector from .dance to .performance.",
+      "Re-run the failed source and verify the price update and unchanged row count."
+    ],
+    "human_minutes": null,
+    "cost": {
+      "initial_model_calls": 0,
+      "recurring_model_calls": 0,
+      "initial_network_requests": 0,
+      "recurring_network_requests": 0,
+      "external_service_spend": 0,
+      "development_agent_usage": "not instrumented"
+    }
+  },
+  "rastro": {
+    "phases": [
+      {
+        "name": "initial_two",
+        "status": "success",
+        "source_statuses": [
+          "success",
+          "success"
+        ],
+        "wall_seconds": 0.05915629197261296,
+        "machine_minutes": 0.0009859381995435494,
+        "records": 6,
+        "stale_records": 0,
+        "silent_errors": 0,
+        "missing_records": 0,
+        "dataset_wrong_records": 0,
+        "preflight": [
+          {
+            "command": "validate",
+            "exit_code": 0
+          },
+          {
+            "command": "preview",
+            "exit_code": 0
+          }
+        ]
+      },
+      {
+        "name": "add_third",
+        "status": "success",
+        "source_statuses": [
+          "success"
+        ],
+        "wall_seconds": 0.023114082985557616,
+        "machine_minutes": 0.00038523471642596026,
+        "records": 7,
+        "stale_records": 0,
+        "silent_errors": 0,
+        "missing_records": 0,
+        "dataset_wrong_records": 0,
+        "preflight": [
+          {
+            "command": "validate",
+            "exit_code": 0
+          },
+          {
+            "command": "preview",
+            "exit_code": 0
+          }
+        ]
+      },
+      {
+        "name": "repeat",
+        "status": "success",
+        "source_statuses": [
+          "success",
+          "success",
+          "success"
+        ],
+        "wall_seconds": 0.05526545798056759,
+        "machine_minutes": 0.0009210909663427932,
+        "records": 7,
+        "stale_records": 0,
+        "silent_errors": 0,
+        "missing_records": 0,
+        "dataset_wrong_records": 0,
+        "preflight": []
+      },
+      {
+        "name": "broken",
+        "status": "missing_data",
+        "source_statuses": [
+          "missing_data"
+        ],
+        "wall_seconds": 0.007769874995574355,
+        "machine_minutes": 0.00012949791659290592,
+        "records": 7,
+        "stale_records": 1,
+        "silent_errors": 0,
+        "missing_records": 0,
+        "dataset_wrong_records": 1,
+        "preflight": []
+      },
+      {
+        "name": "repaired",
+        "status": "success",
+        "source_statuses": [
+          "success"
+        ],
+        "wall_seconds": 0.016004083008738235,
+        "machine_minutes": 0.00026673471681230393,
+        "records": 7,
+        "stale_records": 0,
+        "silent_errors": 0,
+        "missing_records": 0,
+        "dataset_wrong_records": 0,
+        "preflight": []
+      }
+    ],
+    "network_requests": 0,
+    "model_calls": 0,
+    "site_specific_lines": 124,
+    "line_counts": {
+      "benchmarks/product_task/rastro/job.json": 124
+    },
+    "one_time_loader_lines": 13,
+    "shared_runtime_lines": 10765,
+    "initial_machine_minutes": 0.0009859381995435494,
+    "repair": {
+      "scripted_wall_seconds": 0.0358112080139108,
+      "config_edits": 1,
+      "config_lines": 3,
+      "generation_outcome": "no_candidates",
+      "human_minutes": null,
+      "human_steps": [
+        "On missing_data inspect HTML and try recipe repair; stage the manual selector fix.",
+        "Review the promotion report, reload the source and verify the updated database."
+      ],
+      "decision": "promote",
+      "evaluation": {
+        "schema_version": 1,
+        "decision": "promote",
+        "reasons": [
+          "all_gates_passed"
+        ],
+        "current_status": "success",
+        "current_records": 1,
+        "historical_fixtures": 1,
+        "historical_passed": 1,
+        "indicators": {
+          "schema_version": 1,
+          "records": 1,
+          "completeness": 1.0,
+          "structural_validity": 1.0,
+          "semantic_confidence": null,
+          "verdict": "not_assessed",
+          "results": []
+        },
+        "regressions": [
+          {
+            "name": "historical_fixture_0",
+            "passed": true
+          },
+          {
+            "name": "nonempty_validated_records",
+            "passed": true
+          },
+          {
+            "name": "required_field_provenance",
+            "passed": true
+          },
+          {
+            "name": "no_rejected_current_records",
+            "passed": true
+          }
+        ]
+      },
+      "comparisons": [
+        {
+          "schema_version": 1,
+          "previous_version": 1,
+          "candidate_version": 2,
+          "previous_digest": "7c643482c4c65c834b4c56206892c5bf085a12817cdd0adebb9c95519cbd66ff",
+          "candidate_digest": "b30fee4fcaee4950c6ac2b66f7e0526dcb9e07e01c00671c0d4a71f3ce270136",
+          "changed_fields": [],
+          "strategy_changed": false,
+          "evaluation": {
+            "schema_version": 1,
+            "decision": "promote",
+            "reasons": [
+              "all_gates_passed"
+            ],
+            "current_status": "success",
+            "current_records": 1,
+            "historical_fixtures": 1,
+            "historical_passed": 1,
+            "indicators": {
+              "schema_version": 1,
+              "records": 1,
+              "completeness": 1.0,
+              "structural_validity": 1.0,
+              "semantic_confidence": null,
+              "verdict": "not_assessed",
+              "results": []
+            },
+            "regressions": [
+              {
+                "name": "historical_fixture_0",
+                "passed": true
+              },
+              {
+                "name": "nonempty_validated_records",
+                "passed": true
+              },
+              {
+                "name": "required_field_provenance",
+                "passed": true
+              },
+              {
+                "name": "no_rejected_current_records",
+                "passed": true
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "human_steps": [
+      "Inspect the two sample sources; declare fields, identity and recipes in job.json.",
+      "Run job validate and preview; inspect values and provenance; run job load and query SQLite.",
+      "Inspect the third source, add its source/recipe block and validate, preview and load.",
+      "On missing_data inspect HTML and try recipe repair; stage the manual selector fix.",
+      "Review the promotion report, reload the source and verify the updated database."
+    ],
+    "human_minutes": null,
+    "cost": {
+      "initial_model_calls": 0,
+      "recurring_model_calls": 0,
+      "initial_network_requests": 0,
+      "recurring_network_requests": 0,
+      "external_service_spend": 0,
+      "development_agent_usage": "not instrumented"
+    }
+  }
+}
