@@ -6,6 +6,7 @@ import json
 import re
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any
 
 from rastro.mocklab.mutations.html_content import HtmlChangeClasses
 from rastro.mocklab.mutations.html_structure import HtmlWrapElement
@@ -48,7 +49,7 @@ def _sub(pattern: str, repl: str) -> Transform:
     return lambda html: re.sub(pattern, repl, html)
 
 
-def _jsonld(edit: Callable[[list[dict]], list[dict]]) -> Transform:
+def _jsonld(edit: Callable[[list[dict[str, Any]]], list[dict[str, Any]]]) -> Transform:
     def run(html: str) -> str:
         match = re.search(r'(<script type="application/ld\+json">)(.*?)(</script>)', html, re.S)
         assert match
@@ -58,8 +59,10 @@ def _jsonld(edit: Callable[[list[dict]], list[dict]]) -> Transform:
     return run
 
 
-def _each(change: Callable[[dict], None]) -> Callable[[list[dict]], list[dict]]:
-    def run(events: list[dict]) -> list[dict]:
+def _each(
+    change: Callable[[dict[str, Any]], None],
+) -> Callable[[list[dict[str, Any]]], list[dict[str, Any]]]:
+    def run(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
         for event in events:
             change(event)
         return events
@@ -67,19 +70,19 @@ def _each(change: Callable[[dict], None]) -> Callable[[list[dict]], list[dict]]:
     return run
 
 
-def _nest_place(event: dict) -> None:
+def _nest_place(event: dict[str, Any]) -> None:
     event["location"] = {"@type": "Place", "place": {"name": event["location"]["name"]}}
 
 
-def _sale_date(event: dict) -> None:
+def _sale_date(event: dict[str, Any]) -> None:
     event["startDate"] = event["offers"]["validFrom"]
 
 
-def _venue_as_name(event: dict) -> None:
+def _venue_as_name(event: dict[str, Any]) -> None:
     event["headline"], event["name"] = event["name"], event["location"]["name"]
 
 
-def _promo(events: list[dict]) -> list[dict]:
+def _promo(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [*events, {"@type": "Event", "name": "Abonos 2099", "identifier": "promo"}]
 
 

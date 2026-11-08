@@ -3,6 +3,7 @@
 import json
 import shutil
 import sqlite3
+from contextlib import closing
 from datetime import timedelta
 from pathlib import Path
 
@@ -190,7 +191,7 @@ def sale_date_swap(sample):
     from rastro.mocklab.mutations import HtmlChangeLabel, MutationPlan
 
     seller = sample / "tickantel-evento.html"
-    body = seller.read_text()
+    body = seller.read_text(encoding="utf-8")
     changes = tuple(
         HtmlChangeLabel(
             selector='script[type="application/ld+json"]',
@@ -199,7 +200,9 @@ def sale_date_swap(sample):
         )
         for date in re.findall(r'"startDate": "([^"]+)"', body)
     )
-    seller.write_text(MutationPlan(seed=42, operators=changes).apply(body).document)
+    seller.write_text(
+        MutationPlan(seed=42, operators=changes).apply(body).document, encoding="utf-8"
+    )
 
 
 def test_sale_date_swap_is_held_and_old_rows_kept(sample):
@@ -329,17 +332,17 @@ def test_held_load_cannot_become_drift_baseline(price_job, capsys):
     args = ["job", "load", str(price_job), "--drift"]
     assert main(args) == 0
     capsys.readouterr()
-    with sqlite3.connect(price_job.parent / "data.sqlite") as db:
+    with closing(sqlite3.connect(price_job.parent / "data.sqlite")) as db:
         before = db.execute("SELECT run FROM drift_runs WHERE successful = 1").fetchall()
     write_prices(price_job.parent, "a", 1000)
     assert main(args) == 3
     capsys.readouterr()
-    with sqlite3.connect(price_job.parent / "data.sqlite") as db:
+    with closing(sqlite3.connect(price_job.parent / "data.sqlite")) as db:
         assert db.execute("SELECT run FROM drift_runs WHERE successful = 0").fetchall()
     from rastro.adapters.sqlite_drift import SQLiteDriftMonitor
     from rastro.domain.drift import StructuralSnapshot
 
-    with sqlite3.connect(price_job.parent / "data.sqlite") as db:
+    with closing(sqlite3.connect(price_job.parent / "data.sqlite")) as db:
         payload = db.execute("SELECT snapshot FROM drift_runs WHERE successful = 0").fetchone()[0]
     held = StructuralSnapshot.model_validate_json(payload)
     baseline = SQLiteDriftMonitor(price_job.parent / "data.sqlite").baseline("prices", held)
@@ -380,7 +383,7 @@ def test_sodre_title_trap_extracts_venue_and_is_held(tmp_path, capsys):
     capsys.readouterr()
     page = folder / "page.html"
     trap = next(c for c in SODRE if c.name == "title_selector_hits_venue")
-    page.write_text(trap.transform(page.read_text()))
+    page.write_text(trap.transform(page.read_text(encoding="utf-8")), encoding="utf-8")
     report = run_job(load_job(path), base_dir=folder)
     assert {r.data.title for r in report.results[0].records} == {VENUE}
     assert main(["job", "load", str(path)]) == 3
@@ -395,6 +398,7 @@ def test_repair_suite_readme_matches_measured_counts():
     readme = (folder / "README.md").read_text()
     for outcome, count in counts.items():
         assert f"| {outcome} | {count} |" in readme
+
 
 def test_html_export_escapes_script_in_values(sample, capsys, monkeypatch):
     assert main(["job", "load", str(sample / "job.toml")]) == 0

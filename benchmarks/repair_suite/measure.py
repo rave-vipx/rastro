@@ -21,7 +21,7 @@ from typing import Any
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE))
 
-from mutations import CASES  # noqa: E402
+from mutations import CASES  # type: ignore[import-not-found]  # noqa: E402
 
 OUTCOMES = (
     "promoted_correct",
