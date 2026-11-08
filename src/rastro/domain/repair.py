@@ -66,7 +66,9 @@ class RepairCandidate(Contract):
 
     @property
     def ambiguous(self) -> bool:
-        return any(item.match_count > 1 for item in self.evidence)
+        return any(
+            item.match_count > 1 and item.field != "record_selector" for item in self.evidence
+        )
 
 
 class RepairCandidates(Contract):

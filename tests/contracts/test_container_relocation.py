@@ -73,6 +73,8 @@ def test_container_class_rename_yields_union_candidate_that_passes_history():
     candidate = candidate_for(AFTER)
     assert candidate.recipe.record_selector == "article.dance, article.performance"
     assert candidate.recipe.require_evidence
+    assert candidate.evidence[0].match_count == 1
+    assert not candidate.ambiguous
     verdict = evaluate(candidate, AFTER)
     assert verdict.historical_passed == 1
     assert verdict.decision == "promote"
@@ -106,13 +108,14 @@ def test_container_relocation_never_matches_unrelated_promo_cards():
     assert evaluate(candidate, changed).decision == "promote"
 
 
-def test_tied_containers_are_all_selected_and_quarantined():
+def test_homogeneous_tied_containers_are_judged_by_recipe_ci():
     card = AFTER.split("<main>")[1].split("</main>")[0]
     changed = AFTER.replace("</main>", card + "</main>")
     candidate = candidate_for(changed)
     assert candidate.evidence[0].match_count == 2
     assert len(extract(changed, candidate.recipe).records) == 2
-    assert evaluate(candidate, changed).decision == "quarantine"
+    assert not candidate.ambiguous
+    assert evaluate(candidate, changed).decision == "promote"
 
 
 def test_classless_container_uses_shared_parent_path():
@@ -155,14 +158,15 @@ def test_container_relocation_does_not_log_or_persist_unmasked_content(caplog):
         assert text not in captured.model_dump_json()
 
 
-def test_classless_tied_containers_share_parent_path_and_quarantine():
+def test_classless_homogeneous_containers_share_parent_path():
     changed = AFTER.replace(' class="performance"', "")
     card = changed.split("<main>")[1].split("</main>")[0]
     changed = changed.replace("</main>", card + "</main>")
     candidate = candidate_for(changed)
     assert "main" in candidate.recipe.record_selector
     assert len(extract(changed, candidate.recipe).records) == 2
-    assert evaluate(candidate, changed).decision == "quarantine"
+    assert not candidate.ambiguous
+    assert evaluate(candidate, changed).decision == "promote"
 
 
 def test_mismatched_container_tag_cannot_become_a_candidate():
@@ -173,12 +177,12 @@ def test_mismatched_container_tag_cannot_become_a_candidate():
 def test_heterogeneous_containers_remain_ambiguous():
     promo = (
         '<article class="performance"><h2 class="title">Synthetic promo</h2>'
-        '<p class="venue">Other hall</p><a>Buy something</a></article>'
+        "<a>Buy something</a></article>"
     )
     changed = AFTER.replace("</main>", promo + "</main>")
     candidate = candidate_for(changed)
     assert candidate.evidence[0].match_count == 2
-    assert evaluate(candidate, changed).decision == "quarantine"
+    assert evaluate(candidate, changed).decision == "reject"
 
 
 def test_container_evidence_fits_with_one_hundred_observed_fields():
