@@ -1,6 +1,6 @@
 # Roadmap and requirement coverage
 
-**Active milestone: v0.2 — from known sources to a usable database** (specification 1.2, [ADR 0016](decisions/0016-dataset-outcome.md)). The product outcome: describe the data you need, name the sources you know, and get an updatable database for your application. First public case: an agenda of dance events in Uruguay (an example job; the engine stays domain-neutral).
+**v0.2 implementation complete — from known sources to a usable database** (specification 1.2, [ADR 0016](decisions/0016-dataset-outcome.md)). The product outcome: describe the data you need, name the sources you know, and get an updatable database for your application. First public case: an agenda of dance events in Uruguay (an example job; the engine stays domain-neutral).
 
 v0.1 remains the reference release. It is complete: `0.1.0rc1` is its release candidate, with M1–M4 implemented, the M5 technical evidence recorded, every section 18 acceptance criterion evidenced, and DIFF-001 partially demonstrated. Publication (namespace ownership, legal/trademark review, tag and Trusted Publishing) awaits maintainer approval through the release gates in issue #5; nothing has been published.
 
@@ -66,53 +66,28 @@ Base for integration: `dev` (`31cbcde`). `staging` (`8f96d41`) is an ancestor of
 | **Reframed v0.3** | Three entry modes and observed field proposals (DISC-003); pagination, JavaScript, sessions, per-domain concurrency and run recovery chosen by pilot obstacles; scheduling with the same job (SCHED-007); paid-service limits (COST-002) |
 | **Reframed v0.5** | Hub starts with Git export/import of recipe, schema, redistributable sample, test and last-verified date |
 
-## v0.2 order of work
+## v0.2 delivery and evaluation
 
-1. **Pilot:** two real sources for the dance agenda (a venue's listings, a ticket seller's event page); record the obstacles found.
-2. **First cut — known sources to a database:** the user's job, preview, SQLite load of approved fields, JSONL export and the "upcoming dances" query, with no Python; a reproducible local sample and a dated live run. Closes when a second run keeps the event count, updates a rescheduled performance, keeps distinct performances distinct, keeps a failed source's records with their last observation time, and flags uncertain cross-source matches.
-3. **Second cut — drift and repair on that path:** field-level drift signals with their effect on the table; Mock Lab reproduction; candidate, activation and rollback through the existing lifecycle; the sale-date-versus-event-date trap; repair reports.
-4. **Evaluation:** product-task comparison against Scrapling + Pydantic (DIFF-002), with human effort measured separately, and the single opening of the sealed corpus (DIFF-001, ADR 0011).
+The v0.2 implementation is complete for release-candidate preparation, with the following evidence and explicit evaluation limits:
 
-Wave 1 is complete: failure scenarios (#40), Mock Lab core (#45) and follow-ups (#47), recipe lifecycle (#46, #49) and structural mutations (#48). The golden-digest docstring now notes Windows libxml2 2.11.9 (#61). **Open follow-up:** `HtmlDuplicateElement` performance on large targets.
+1. **Pilot and preview:** [PR #59](https://github.com/rave-vipx/rastro/pull/59) records the [dance agenda pilot](pilot/uy-dance-agenda.md); [PR #55](https://github.com/rave-vipx/rastro/pull/55) adds the dataset block and preview (DATA-002, JOB-002).
+2. **Known sources to a database:** [PR #56](https://github.com/rave-vipx/rastro/pull/56) adds the dataset store and [PR #61](https://github.com/rave-vipx/rastro/pull/61) delivers load, export, the example query and second-run proof (DATA-001–005, SYNC-002/003/005/006/008, COST-001).
+3. **Drift and repair:** [PR #62](https://github.com/rave-vipx/rastro/pull/62) delivers drift, repair candidates, consistency and recipe CI (DRIFT-001–006, REPAIR-001–006, SCR-002, QUAL-005/006).
+4. **Product-task evaluation:** the [v0.2 comparison](comparison-v02.md) records DIFF-002 evidence and its limits. DIFF-001's sealed-corpus recovery run has not been done; no sealed result is claimed.
 
-Work strategy (2026-11-07): one worktree and branch per slice, combined into one `cut/<name>` branch and one PR per cut against dev (rastro-slice).
-
-### First-cut delivery
-
-| Item | State / evidence |
-| --- | --- |
-| Dataset identity, approved observations, provenance, updates and failure retention | Done, #56; ADR 0017 and dataset integration tests |
-| Declarative dataset block and read-only preview | Done, #55; preview tests and published schema |
-| Known-source pilot, synthetic sample and ranked live obstacles | Done, #59; [dated pilot](pilot/uy-dance-agenda.md) |
-| CLI load, JSON/JSONL export, stale reporting and upcoming SQL | Implemented in #61; `test_dataset_load.py` and shipped query |
-| Five second-run behaviors plus sale-date trap and SQL order | Done in #61; seven named `test_second_run.py` tests and [actual demo output](dataset.md#executed-offline-sequence) |
-| Five-minute README and documentation integration | Done in #61; clean temporary sample, 2.55 seconds excluding installation, $0 external spend |
-| Successful two-live-source dataset, newcomer validation and product-task comparison | Still open: live pilot reports blocked/invalid sources; offline proof does not establish live completeness or usability for a new user |
-
-### Second-cut delivery
-
-| Item | State / evidence |
-| --- | --- |
-| DRIFT-001–006 | Implemented: `job load --drift`, measured snapshots, deterministic explained verdicts and stale table effects; ADR 0018 and offline drift acceptance tests |
-| REPAIR-001–005, SCR-002 | Implemented: bounded proposals, retained last-success evidence, historical/current/schema/consistency/generated regression CI, threshold promotion and quarantine; ADR 0019 and real CLI acceptance |
-| REPAIR-006, REC-005/006 | Implemented: candidate-only persistence, fresh-CI promotion, comparison and rollback CLI; next dataset load uses the serving version |
-| QUAL-005/006 | Implemented for recipe CI: generic optional job rules and separate completeness/structural/semantic indicators; sale-date trap fails despite valid datetime values |
-| Cut demo | Executed offline on a temporary dance sample: threshold quarantine, promotion, six preserved records, rollback and semantic rejection; README records actual commands/output |
-| Open | Independent cut review, live-source repair, automatic semantic load monitoring, retention pruning, drift calibration, heterogeneous relocation, DIFF-002 and final sealed-corpus evaluation remain open; no sealed evidence claimed |
+The live pilot did not establish a complete two-source dataset. `0.2.0rc1` is not tagged or promoted; those are owner decisions, and no package has been published.
 
 ### v0.3 candidates ranked by pilot evidence
 
-Preserve the [pilot ranking and underlying observations](pilot/uy-dance-agenda.md#3-ranked-obstacles-for-v03-drift-acquisition-roadmap):
+The [pilot observations](pilot/uy-dance-agenda.md#3-ranked-obstacles-for-v03-drift-acquisition-roadmap) lead this list; later items are operational follow-ups from the v0.2 implementation, not measured pilot rankings.
 
-1. Localized/yearless date parsing and date-range expansion into performances.
-2. Event-date role disambiguation and multi-schedule card splitting.
-3. Field-level pointer fallbacks, implicit regional fields and relative URL resolution.
-4. Policy-controlled optional JavaScript rendering.
-5. Bounded listing-to-detail traversal and pagination.
-6. Address fallback across validated IPv6/IPv4 targets.
-7. Clear access-restriction reporting and transparent contact metadata; no evasion.
-8. Clear diagnostics for HTTPS downgrades and invalid origin certificates; retain TLS enforcement.
-
+1. SODRE Spanish date text yields zero live records: localized and yearless parsing and date-range expansion.
+2. Distinguish sale date from event date and split multiple schedules.
+3. Handle partial JSON-LD with field-level fallbacks and regional context.
+4. Validate live-source repair on real changes.
+5. Add retention pruning for stored evidence.
+6. Calibrate drift against observed sources.
+7. Evaluate relocation across heterogeneous sources.
 
 ## Current requirement mapping
 

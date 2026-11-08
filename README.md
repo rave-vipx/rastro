@@ -28,7 +28,7 @@ rules live in [the example](examples/uy-dance-agenda/), so the engine serves oth
 projects. The offline sample works end to end; the [dated live pilot](docs/pilot/uy-dance-agenda.md)
 records limitations that still prevent a complete two-live-source agenda.
 
-> **`0.1.0` release candidate — not yet published.** Rastro extracts supplied HTML or JSON, or permitted HTTP sources, using JSON-LD, CSS or JSON-pointer recipes. HTTP is an optional extra with destination controls, robots enforcement, and bounded asynchronous execution. SQLite recipe memory reuses validated strategies across restarts. Optional local Ollama assistance proposes recipes within strict budgets; every candidate is validated before activation. No PyPI release has been published by this project.
+> **`0.2.0rc1` release candidate — not yet published.** Rastro extracts supplied HTML or JSON, or permitted HTTP sources, using JSON-LD, CSS or JSON-pointer recipes. HTTP is an optional extra with destination controls, robots enforcement, and bounded asynchronous execution. SQLite recipe memory reuses validated strategies across restarts. Optional local Ollama assistance proposes recipes within strict budgets; every candidate is validated before activation. No PyPI release has been published by this project.
 
 
 ## Drift and repair offline

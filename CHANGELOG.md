@@ -4,9 +4,11 @@ All notable user-facing changes will be recorded here. No public release has bee
 
 ## Unreleased
 
+## 0.2.0rc1 — not published
+
 ### Added
 
-- Measured opt-in dataset drift with named field evidence, deterministic risk and retained-table effects (DRIFT-001–006; ADR 0018).
+- Measured opt-in dataset drift with named field evidence, deterministic risk and retained-table effects (DRIFT-001–006; #62; ADR 0018).
 - Offline repair candidates from Scrapling relocation, fallbacks and discovery, plus explicitly enabled bounded models; recipe CI replays sanitized last-success and Mock Lab fixtures, checks schema, provenance and generic consistency rules, and promotes only a unique candidate meeting configured thresholds (REPAIR-001–005, SCR-002, QUAL-005/006).
 - `rastro recipe repair|promote|compare|rollback`, machine-readable comparisons and per-run repair reports; failed/quarantined candidates keep the serving recipe and dataset records (REC-005/006, REPAIR-003–006).
 - Optional job `[[consistency]]` and `[repair]` fields, published schemas, and latest-success relocation/sample tables in the dataset file with an independent version row (ADR 0019). Existing jobs without these fields keep their validation output.
@@ -27,6 +29,13 @@ All notable user-facing changes will be recorded here. No public release has bee
 - With recipe memory configured, `job load` uses the lifecycle's serving version after bootstrap, so promotion/rollback controls the next load; `job run` and SDK explicit-recipe precedence are unchanged. Dataset files gain additive `relocation_*` tables; no recipe-memory migration. The dance example's consistency rules now live in its job files instead of `consistency.toml` (REPAIR-006, QUAL-005/006).
 
 - SQLite recipe memory migrates to schema 2 on first open through a forward-only transaction. Existing 0.1.0 payloads keep loading: the highest version per key remains active and older versions become retired rollback targets. Version 0.1.0 cannot read migrated files; back up before upgrading. `RecipeRepository` remains unchanged from 0.1.0 (REC-005, REC-006, REPAIR-006; #46; ADR 0015).
+
+### Known limitations
+
+- The product-task comparison (DIFF-002) is documented separately in the evaluation cut.
+- DIFF-001 sealed-corpus recovery evaluation has not been run; no recovery result is claimed. The release candidate has not been tagged or promoted.
+- The live pilot did not establish a complete two-source dataset; SODRE Spanish date text yielded zero live records, and sale dates can be confused with event dates. See the [pilot](docs/pilot/uy-dance-agenda.md).
+- Live-source repair, retention pruning, drift calibration and heterogeneous relocation remain future work.
 
 ## 0.1.0rc1 — 2026-11-03
 
