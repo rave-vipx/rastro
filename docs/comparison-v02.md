@@ -27,7 +27,7 @@ Rastro's independently usable load/export/query path is in [Dataset](dataset.md)
 ## Method and environment
 
 Recorded on 2026-11-08, Python 3.12.16, macOS 26.6.2 arm64, SQLite 3.54.1,
-Scrapling 0.5, Pydantic 2.14.2, lxml 6.1.3, Rastro 0.1.0 (pre-RC metadata). The report records
+Scrapling 0.5, Pydantic 2.14.2, lxml 6.1.3, Rastro 0.1.0 (the report predates the 0.2.0rc1 version bump; no measured code changed). The report records
 Git parent/dirty status and SHA-256 hashes of the measured code, job, source
 mappings, fixtures, hand-written expected table and lockfile. Host load and CPU
 power state were not controlled.
