@@ -161,8 +161,8 @@ runs and field declaration order.
 | `number` | finite `float` (`allow_inf_nan=False`) | `ge`, `le` (finite `float`) |
 | `decimal` | finite `Decimal` (`allow_inf_nan=False`) | `ge`, `le` (finite `Decimal` or string/number) |
 | `boolean` | `bool` | — |
-| `date` | `datetime.date` | — |
-| `datetime` | `datetime.datetime` | — |
+| `date` | `datetime.date` | `localized` (boolean, default `false`) |
+| `datetime` | `datetime.datetime` | `localized` (boolean, default `false`) |
 | `url` | `AnyHttpUrl` (`http` / `https`, any host, no TLD required) | — |
 
 All field types accept `required = true` (default) or `required = false` (nullable, defaulting
@@ -188,12 +188,24 @@ Extracted values are different. Scraped text always arrives as strings, so the g
 | `boolean` | `true`, `"true"`, `"yes"`, `"on"`, `"1"`, `1` (and their false counterparts) | `"maybe"`, `2` |
 | `date` | `"2026-11-03"` | `"03/11/2026"` |
 | `datetime` | `"2026-11-03T10:00:00Z"` | `"yesterday"` |
-| `url` | `"https://example.com/a"` | `"/relative"`, `"ftp://x"` |
+| `url` | `"https://example.com/a"`, `"/relative"` with source context | `"ftp://x"`, `"javascript:x"` |
 | `string` | any string that meets the length and pattern constraints | numbers that are not strings |
 
 Values that cannot be coerced become `validation_error` issues on the record, never silent
-defaults. Normalize locale-specific formats (decimal commas, local date orders) in the recipe or
-with the Python SDK.
+defaults. Normalize decimal commas or unsupported local formats in the recipe or with the Python SDK.
+
+For Spanish source dates, opt in on each `date` or `datetime` field with `localized = true`
+(DATA-005, JOB-002). ISO input remains supported. Month names and abbreviations are case
+insensitive; weekday prefixes are ignored. For example, `12 al 14 NOV 2026 - 20 H` becomes
+November 12 at 20:00 in `[region].timezone`. Ranges and lists use their first day.
+Yearless dates use the observation's year in that timezone, advancing to the next year
+when the date is more than 30 days before observation. A `date` field accepts
+`06 de noviembre`; a `datetime` field rejects it because no time was supplied.
+Localized non-ISO input requires timezone and observation context; extraction supplies both.
+
+URL fields resolve relative links against the source evidence URL before validating them
+as HTTP(S). The Python model also supports this through `context={"source_url": "..."}`.
+Without that context, relative URLs fail validation. Resolution does not fetch the link.
 
 ## Sources, recipes, memory and providers
 

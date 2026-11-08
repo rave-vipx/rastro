@@ -31,18 +31,23 @@ def test_jsonld_end_to_end_with_provenance(html, source, schema, recipe):
 
 
 def test_explicit_extraction_supplies_regional_validation_context():
+    observed = []
+
     class RegionalPrice(BaseModel):
         price: str
 
         @field_validator("price")
         @classmethod
         def validate_region(cls, value: str, info: ValidationInfo) -> str:
+            observed.append(info.context["observed_at"])
             assert info.context == {
                 "locale": "es-UY",
                 "languages": ("es-UY", "en"),
                 "timezone": "America/Montevideo",
                 "currency": "UYU",
                 "egress": "direct",
+                "observed_at": observed[-1],
+                "source_url": "https://example.com/",
             }
             return value
 
@@ -59,6 +64,7 @@ def test_explicit_extraction_supplies_regional_validation_context():
         recipe=Recipe(strategy="jsonld", fields={"price": "/price"}),
     )
     assert result.status == Outcome.SUCCESS
+    assert observed[0] == result.records[0].evidence["price"].observed_at
 
 
 def test_custom_pydantic_init_is_not_bypassed_to_supply_context():

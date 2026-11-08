@@ -75,18 +75,23 @@ async def test_web_extraction_uses_the_same_validation_and_provenance(
 
 
 async def test_acquired_extraction_preserves_regional_validation_context_after_redirect():
+    observed = []
+
     class Regional(BaseModel):
         name: str
 
         @field_validator("name")
         @classmethod
         def validate_region(cls, value: str, info: ValidationInfo) -> str:
+            observed.append(info.context["observed_at"])
             assert info.context == {
                 "locale": "pt-BR",
                 "languages": ("pt-BR", "en"),
                 "timezone": "America/Sao_Paulo",
                 "currency": "BRL",
                 "egress": "direct",
+                "observed_at": observed[-1],
+                "source_url": "https://example.com/final",
             }
             return value
 
@@ -105,6 +110,7 @@ async def test_acquired_extraction_preserves_regional_validation_context_after_r
         recipe=Recipe(strategy="jsonld", fields={"name": "/name"}),
     )
     assert result.status == Outcome.SUCCESS
+    assert observed[0] == result.records[0].evidence["name"].observed_at
 
 
 async def test_failures_are_results_with_no_false_success(schema, source, recipe):
