@@ -3,7 +3,7 @@
 from collections.abc import Mapping, Sequence
 from typing import Any, Literal
 
-from rastro.application.consistency import evaluate_consistency, history_from_store
+from rastro.application.consistency import History, evaluate_consistency, history_from_store
 from rastro.application.drift import snapshot_result
 from rastro.domain.consistency import ConsistencyRule
 from rastro.domain.dataset import ChangeKind, DatasetRecordKey, ObservedRecord
@@ -30,9 +30,15 @@ def load_results(
     sources = []
     assessments = []
     approved = spec.approved_fields(names)
+    history = history_from_store(store, spec.name, approved) if rules else {}
     for result in report.results:
-        sources.append(_load_source(spec, approved, result, store, rules))
+        source = _load_source(spec, approved, result, store, rules, history)
+        sources.append(source)
         if monitor is not None:
+            if source.consistency is not None and source.consistency.verdict == "inconsistent":
+                result = result.model_copy(
+                    update={"status": Outcome.INSUFFICIENT_EVIDENCE, "records": ()}
+                )
             snapshot = snapshot_result(
                 result, approved, captured=(snapshots or {}).get(result.job_id)
             )
@@ -52,6 +58,7 @@ def _load_source(
     result: ExtractionResult[Any],
     store: DatasetStore,
     rules: Sequence[ConsistencyRule],
+    history: History,
 ) -> LoadedSource:
     counts = dict.fromkeys(ChangeKind, 0)
     consistency = None
@@ -64,7 +71,8 @@ def _load_source(
                 [o.fields for o in observations],
                 result.completed_at,
                 declared_fields=approved,
-                history=history_from_store(store, spec.name, approved),
+                history=history,
+                rejected=result.metrics.rejected,
             )
         if consistency is not None and consistency.verdict == "inconsistent":
             store.mark_source_unavailable(

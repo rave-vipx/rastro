@@ -132,7 +132,7 @@ SODRE = (
         "trap",
         _chain(
             _plan(_classes("h2.cyg--display-3", rename={"cyg--display-3": "cyg--titulo"})),
-            _sub(r"<address>", f'<address><span class="cyg--display-3">{VENUE}</span>'),
+            _sub(r"<address>", f'<address><h2 class="cyg--display-3">{VENUE}</h2>'),
         ),
     ),
     Case(
