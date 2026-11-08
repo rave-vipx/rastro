@@ -32,7 +32,8 @@ All notable user-facing changes will be recorded here. No public release has bee
 
 ### Known limitations
 
-- The product-task comparison (DIFF-002) is documented separately in the evaluation cut.
+- DIFF-002 product-task comparison: one offline synthetic task; human effort unmeasured; see docs/comparison-v02.md.
+- DIFF-002 remains partial: human effort / minutes to a correct database were not measured (`human_minutes: null`); development-agent usage was not instrumented.
 - DIFF-001 sealed-corpus recovery evaluation has not been run; no recovery result is claimed. The release candidate has not been tagged or promoted.
 - The live pilot did not establish a complete two-source dataset; SODRE Spanish date text yielded zero live records, and sale dates can be confused with event dates. See the [pilot](docs/pilot/uy-dance-agenda.md).
 - Live-source repair, retention pruning, drift calibration and heterogeneous relocation remain future work.

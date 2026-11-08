@@ -1,6 +1,6 @@
 # Roadmap and requirement coverage
 
-**v0.2 implementation complete — from known sources to a usable database** (specification 1.2, [ADR 0016](decisions/0016-dataset-outcome.md)). The product outcome: describe the data you need, name the sources you know, and get an updatable database for your application. First public case: an agenda of dance events in Uruguay (an example job; the engine stays domain-neutral).
+**v0.2 implementation delivered; evaluation partial — from known sources to a usable database** (specification 1.2, [ADR 0016](decisions/0016-dataset-outcome.md)). The product outcome: describe the data you need, name the sources you know, and get an updatable database for your application. First public case: an agenda of dance events in Uruguay (an example job; the engine stays domain-neutral).
 
 v0.1 remains the reference release. It is complete: `0.1.0rc1` is its release candidate, with M1–M4 implemented, the M5 technical evidence recorded, every section 18 acceptance criterion evidenced, and DIFF-001 partially demonstrated. Publication (namespace ownership, legal/trademark review, tag and Trusted Publishing) awaits maintainer approval through the release gates in issue #5; nothing has been published.
 
@@ -68,12 +68,12 @@ Base for integration: `dev` (`31cbcde`). `staging` (`8f96d41`) is an ancestor of
 
 ## v0.2 delivery and evaluation
 
-The v0.2 implementation is complete for release-candidate preparation, with the following evidence and explicit evaluation limits:
+The v0.2 implementation is delivered for release-candidate preparation. Evaluation remains partial, with the following evidence and limits:
 
 1. **Pilot and preview:** [PR #59](https://github.com/rave-vipx/rastro/pull/59) records the [dance agenda pilot](pilot/uy-dance-agenda.md); [PR #55](https://github.com/rave-vipx/rastro/pull/55) adds the dataset block and preview (DATA-002, JOB-002).
-2. **Known sources to a database:** [PR #56](https://github.com/rave-vipx/rastro/pull/56) adds the dataset store and [PR #61](https://github.com/rave-vipx/rastro/pull/61) delivers load, export, the example query and second-run proof (DATA-001–005, SYNC-002/003/005/006/008, COST-001).
+2. **Known sources to a database:** [PR #56](https://github.com/rave-vipx/rastro/pull/56) adds the dataset store and [PR #61](https://github.com/rave-vipx/rastro/pull/61) delivers load, export, the example query and second-run proof (DATA-001–005, SYNC-002/003/005/006/008, COST-001) (SYNC-005 partial).
 3. **Drift and repair:** [PR #62](https://github.com/rave-vipx/rastro/pull/62) delivers drift, repair candidates, consistency and recipe CI (DRIFT-001–006, REPAIR-001–006, SCR-002, QUAL-005/006).
-4. **Product-task evaluation:** the [v0.2 comparison](comparison-v02.md) records DIFF-002 evidence and its limits. DIFF-001's sealed-corpus recovery run has not been done; no sealed result is claimed.
+4. **Product-task evaluation:** the [v0.2 comparison](comparison-v02.md) records partial DIFF-002 evidence and its limits. DIFF-002 is partial: human effort / minutes to a correct database were not measured (`human_minutes: null`); DIFF-001 sealed run not done. No sealed result is claimed.
 
 The live pilot did not establish a complete two-source dataset. `0.2.0rc1` is not tagged or promoted; those are owner decisions, and no package has been published.
 
@@ -88,6 +88,12 @@ The [pilot observations](pilot/uy-dance-agenda.md#3-ranked-obstacles-for-v03-dri
 5. Add retention pruning for stored evidence.
 6. Calibrate drift against observed sources.
 7. Evaluate relocation across heterogeneous sources.
+8. Relative URL resolution.
+9. Address fallback across validated IPv6/IPv4 targets.
+10. Clear access-restriction reporting and transparent contact metadata; no evasion.
+11. Clear diagnostics for HTTPS downgrades and invalid origin certificates; retain TLS enforcement.
+
+Open: HtmlDuplicateElement performance on large targets; newcomer validation / usability for a new user.
 
 ## Current requirement mapping
 
@@ -108,6 +114,7 @@ The [pilot observations](pilot/uy-dance-agenda.md#3-ranked-obstacles-for-v03-dri
 | SEC-001/002/003 | Exact host policy, public destination checks, DNS pinning, per-hop validation, robots enforcement, throttling and restriction outcomes. See ADR 0002 and HTTP tests. |
 | SEC-004/005/007/008 | Recipe and diagnostic boundaries, no recipe code execution, input/candidate/request/body/deadline budgets. Process sandboxing remains the host’s responsibility. |
 | SEC-009/010 | Scoped deletion and last-success retention for recipe memory; no management server. External backups and OS access controls remain the host’s responsibility. |
+| DIFF-002 | Partial: one offline synthetic product task with scripted repair; human effort / minutes to a correct database were not measured (`human_minutes: null`); development-agent usage was not instrumented. DIFF-001 sealed run not done. See the [v0.2 comparison](comparison-v02.md). |
 | DIFF-001 | Partial: against a competent Scrapling + Pydantic baseline on a held-out synthetic set, Rastro ties an adapted baseline on source-specific configuration (10 vs 10 entries, with 33 fewer adapter lines), exposes 16/16 vs 1/16 visibility items, and reduces scripted-model calls per successful record tenfold with SQLite memory. Accuracy and silent-error detection are equal, Rastro is slower, and maintenance/recovery effort is unmeasured. See the [comparison](comparison.md). |
 
 ## M1 progress record

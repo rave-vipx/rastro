@@ -2,9 +2,11 @@
 
 On this offline task both integrations produce the correct database, retain it
 when extraction breaks, and restore the changed price after a scripted manual
-repair. The baseline has lower elapsed times and fewer site-specific lines in
-this run. Silent errors, network requests, model calls, external service spend
-and manual selector-edit counts tie. This does not establish general superiority
+repair. The baseline has lower elapsed times in this run and fewer site-specific
+lines under the harness rule: 78 vs 124; under a common JSON layout, 78 vs 81;
+including one-time helpers, 136 vs 137. Silent errors tie only for the shared
+scripted fix; network requests, model calls, external service spend and manual
+selector-edit counts tie. This does not establish general superiority
 for either integration or satisfy the sealed DIFF-001 evaluation.
 
 ## Reproduce and inspect
@@ -57,11 +59,19 @@ Both repairs are prewritten manual fix replays. The baseline edits `.dance` to
 automatic recovery. A generic staging helper stores a candidate with the single
 selector edit `.dance, .performance`; `recipe promote` re-runs current and retained
 historical fixture CI before activation, then `job load` consumes it. Keeping both
-classes permits replay of the historical page. One historical fixture and all four
-generated regression checks pass. No semantic rules were configured: semantic
-confidence is null / `not_assessed`, not proof of semantic correctness. Candidate
+classes permits replay of the historical page. The historical fixture and all
+three generated regression checks (four in total) pass. No semantic rules were
+configured: semantic confidence is null / `not_assessed`, not proof of semantic
+correctness. Candidate
 staging uses existing repository/context interfaces; no new runtime feature was
 added. The failure-to-propose attempt is included in Rastro's repair time.
+
+In the reviewer probe, the baseline's own `.performance` fix is rejected by
+Rastro's historical-fixture CI (`recipe promote` fails `historical_fixture_0`).
+A schema-valid wrong title mapping (`.dance, .performance` with
+`title: .venue::text`) is accepted by the baseline as 1 silent error (stores title
+"Sala Costa") and rejected by Rastro's promote, so the repair times compare
+different acceptance bars.
 
 ## Recorded numbers
 
@@ -91,7 +101,8 @@ Times below are milliseconds; full precision seconds are retained in the report.
 | Initial / recurring external service spend | 0 / 0 | 0 / 0 |
 | Human minutes / development-agent minutes and tokens | Unknown / uninstrumented | Unknown / uninstrumented |
 
-The baseline wins the measured elapsed-time and site-specific-line comparisons.
+The baseline has lower measured elapsed times and fewer site-specific lines
+under the harness rule; the line gap depends on counting and formatting choices.
 Rastro needs fewer one-time helper lines because it reuses the installed dataset
 and recipe lifecycle implementation; that runtime is separately counted, not
 hidden as zero code. Whole-module counts include unused runtime helpers and are
@@ -101,9 +112,24 @@ nonblank non-comment physical line, including imports, docstrings and punctuatio
 JSON formatting and declarative versus Python representation affect the totals.
 Repair-file counts are additional to initial configuration counts.
 
+The reviewer probes show the sensitivity of the line counts (baseline vs Rastro):
+
+| Rule | Baseline lines | Rastro lines |
+| --- | ---: | ---: |
+| A: harness rule, as reported | 78 | 124 |
+| B: include one-time integration helpers | 136 | 137 |
+| C: drop punctuation-only lines | 64 | 87 |
+| D: use the same compact JSON layout for both JSON files | 78 | 81 |
+
+Rule B includes `baseline/__init__.py` (58 lines) and `rastro/loader.py`
+(13 lines). About 43 of Rastro's lines are the nine-field `fields` block laid
+out one key per line. Rastro's `dataset.identity` and `path` are counted as
+site-specific while the baseline's equivalent sits in the separately counted
+loader. These are alternative counts, not changes to the reported harness rule.
+
 Both failures report `missing_data`; their one wrong retained price is classified
 as stale data, not a silently accepted new error. Successful phases have no wrong
-rows against the shared oracle. These fixtures do not measure detection of an
+rows against the shared oracle. The shared scripted phases do not measure detection of an
 arbitrary valid-but-wrong value, so zero silent errors is not an error-detection
 advantage. Network connection/DNS attempts are blocked and counted; Rastro's native
 curl transfers are also blocked. A network attempt aborts measurement. No model

@@ -1,7 +1,8 @@
 # Offline product-task comparison (DIFF-002)
 
-This combines E1's independent Scrapling + Pydantic baseline with E2's real
-Rastro validate/preview/load and scripted manual candidate/promotion path. See
+This combines the independent Scrapling + Pydantic baseline from the first
+evaluation step with the real Rastro validate/preview/load and scripted manual
+candidate/promotion path. See
 [the comparison](../../docs/comparison-v02.md) for both sides' numbers and limits. It follows
 [ADR 0005](../../docs/decisions/0005-reproducible-release-evidence.md) and does not
 open or change the frozen recovery corpus from ADR 0011.
@@ -126,10 +127,10 @@ recurring service spend is zero; local compute, electricity and development
 agent usage are unpriced, not free. Listed human steps and `human_minutes: null`
 keep human effort separate; agent build minutes/tokens were not instrumented.
 
-## Original E1 baseline run
+## Original baseline run
 
-The original E1 cold workflow run on 3.12.16 / macOS-26.6.2-arm64-arm-64bit;
-the table below is historical. `results.json` now contains a fresh run of both
+The original cold workflow run from the first evaluation step used
+3.12.16 / macOS-26.6.2-arm64-arm-64bit; the table below is historical. `results.json` now contains a fresh run of both
 sides, documented in [comparison-v02.md](../../docs/comparison-v02.md).
 
 | Phase | Machine milliseconds | Rows | Silent errors | Stale rows |
@@ -145,7 +146,7 @@ Shared extractor/contracts: 143/75 lines (whole reused modules, including unused
 Network requests/model calls: 0/0; scripted repair: 0.727 ms and one mapping edit.
 Human time and development-agent cost remain unmeasured.
 
-## E2 integration
+## Rastro integration
 
 The original baseline, counting rules and inputs are unchanged. The comparison
 is linked from the documentation navigation. No runtime dependency, public protocol
