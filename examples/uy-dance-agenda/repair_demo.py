@@ -56,10 +56,12 @@ def command(*args: str) -> tuple[int, dict[str, Any]]:
 def run_demo(folder: Path) -> None:
     sample = Path(__file__).parent / "sample"
     shutil.copytree(sample, folder, ignore=shutil.ignore_patterns("*.sqlite", "repair-report-*"))
-    job = parse_job((folder / "job.toml").read_text(), format="toml").model_dump(mode="json")
+    job = parse_job((folder / "job.toml").read_text(encoding="utf-8"), format="toml").model_dump(
+        mode="json"
+    )
     job.update(recipe_memory="recipes.sqlite", repair={"auto_promote": True, "min_records": 5})
     path = folder / "job.json"
-    path.write_text(json.dumps(job))
+    path.write_text(json.dumps(job), encoding="utf-8")
     previous_cwd = Path.cwd()
     os.chdir(folder)
     try:
@@ -84,7 +86,7 @@ def run_demo(folder: Path) -> None:
 def _sequence(path: Path, job: dict[str, Any]) -> None:
     assert command("job", "load", "job.json", "--drift")[0] == 0
     html = Path("sodre-cartelera.html")
-    original = html.read_text()
+    original = html.read_text(encoding="utf-8")
     changed = MutationPlan(
         seed=42,
         operators=(
@@ -92,12 +94,12 @@ def _sequence(path: Path, job: dict[str, Any]) -> None:
             HtmlChangeClasses(selector="h2.cyg--display-3", rename={"cyg--display-3": "new-title"}),
         ),
     ).apply(original)
-    html.write_text(changed.document)
+    html.write_text(changed.document, encoding="utf-8")
     print("Mock Lab: moved and renamed title nodes (seed=42)")
     assert command("job", "load", "job.json", "--drift")[0] == 3
     assert command("recipe", "repair", "job.json", "--source", "1")[0] == 3
     job["repair"]["min_records"] = 4
-    path.write_text(json.dumps(job))
+    path.write_text(json.dumps(job), encoding="utf-8")
     print("Configured repair.min_records=4 (was 5)")
     code, report = command("recipe", "repair", "job.json", "--source", "1")
     assert code == 0
@@ -114,10 +116,10 @@ def _sequence(path: Path, job: dict[str, Any]) -> None:
         == 0
     )
     assert command("recipe", "rollback", "job.json", "--version", "1")[0] == 0
-    html.write_text(original)
+    html.write_text(original, encoding="utf-8")
     assert command("job", "load", "job.json", "--drift")[0] == 0
     seller = Path("tickantel-evento.html")
-    body = seller.read_text()
+    body = seller.read_text(encoding="utf-8")
     replacements = tuple(
         HtmlChangeLabel(
             selector='script[type="application/ld+json"]',
@@ -126,7 +128,9 @@ def _sequence(path: Path, job: dict[str, Any]) -> None:
         )
         for date in re.findall(r'"startDate": "([^"]+)"', body)
     )
-    seller.write_text(MutationPlan(seed=42, operators=replacements).apply(body).document)
+    seller.write_text(
+        MutationPlan(seed=42, operators=replacements).apply(body).document, encoding="utf-8"
+    )
     print("Mock Lab: valid sale date placed in event-date paths (seed=42)")
     code, report = command("recipe", "repair", "job.json", "--source", "2")
     assert code == 1

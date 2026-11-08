@@ -6,7 +6,7 @@ import json
 from cssselect import SelectorError, parse
 from scrapling.parser import Selector
 
-from rastro.adapters.scrapling import ScraplingParser
+from rastro.adapters.scrapling import ScraplingParser, _parse_html
 from rastro.adapters.structured import JsonParser
 from rastro.domain.drift import FieldStructure
 from rastro.domain.models import ConfigurationError, CssRecipe, Limits, Recipe, ResourceLimitError
@@ -39,7 +39,7 @@ class ScraplingDriftProbe:
             raise ConfigurationError("Recipe contains an invalid CSS selector") from None
 
     def _css(self, document: str, recipe: CssRecipe, limits: Limits) -> dict[str, FieldStructure]:
-        page = Selector(document or "<html></html>", adaptive=False, huge_tree=False)
+        page = _parse_html(document or "<html></html>")
         nodes = page.css(recipe.record_selector)
         if len(nodes) > limits.max_records:
             raise ResourceLimitError("Drift record count exceeds configured limits")

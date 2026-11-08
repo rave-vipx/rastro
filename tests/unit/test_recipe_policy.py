@@ -7,10 +7,10 @@ from pydantic import BaseModel
 
 from rastro.adapters.scrapling import ScraplingParser
 from rastro.application.extraction import extract_document
-from rastro.application.recipe_ci import evaluate_candidate
-from rastro.domain.consistency import AfterObservation
-from rastro.domain.models import ConfigurationError, CssRecipe, Limits, Source
-from rastro.domain.recipe_compare import RepairPolicy
+from rastro.application.recipe_ci import _decide, evaluate_candidate
+from rastro.domain.consistency import AfterObservation, ConsistencyReport
+from rastro.domain.models import ConfigurationError, CssRecipe, Limits, Outcome, Source
+from rastro.domain.recipe_compare import RegressionCheck, RepairPolicy
 from rastro.domain.repair import RepairCandidate
 from rastro.mocklab.fixtures import build_fixture
 
@@ -66,6 +66,31 @@ def test_unassessable_consistency_does_not_pass():
     )
     assert result.indicators.verdict == "not_assessed"
     assert result.decision == "quarantine"
+
+
+def test_consistent_candidate_below_semantic_confidence_threshold_is_quarantined():
+    """QUAL-005/006, REPAIR-004: consistent does not imply sufficient confidence."""
+    # Current rules give consistent runs confidence 1; exercise the CI gate's graded contract.
+    indicators = ConsistencyReport(
+        records=4,
+        completeness=1,
+        structural_validity=1,
+        verdict="consistent",
+        semantic_confidence=0.75,
+        results=(),
+    )
+    decision, reasons = _decide(
+        RepairCandidate(recipe=RECIPE, origin="discovery", rationale="Test candidate"),
+        Outcome.SUCCESS,
+        4,
+        indicators,
+        (RegressionCheck(name="historical_fixture_0", passed=True),),
+        (RegressionCheck(name="nonempty_validated_records", passed=True),),
+        True,
+        RepairPolicy(auto_promote=True, min_semantic_confidence=0.9),
+    )
+    assert decision == "quarantine"
+    assert reasons == ("semantic_threshold_not_met",)
 
 
 def test_current_success_cannot_hide_historical_regression():

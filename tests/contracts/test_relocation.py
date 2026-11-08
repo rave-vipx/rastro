@@ -213,3 +213,26 @@ def test_empty_and_unparsable_html_never_exposes_parser_exceptions():
         adapter.relocate(
             '<?xml version="1.0" encoding="UTF-8"?><p>private</p>', RECIPE, snapshot, Limits()
         )
+
+
+def test_success_without_observed_fields_cannot_be_fingerprinted():
+    """SCR-002: an inconsistent success report cannot create an empty snapshot."""
+    import pytest
+
+    from rastro import ConfigurationError
+
+    result = extract_document(
+        BEFORE,
+        source=SOURCE,
+        schema=Event,
+        recipe=RECIPE,
+        parser=ScraplingParser(),
+        limits=Limits(),
+    )
+    result = result.model_copy(
+        update={"records": (result.records[0].model_copy(update={"evidence": {}}),)}
+    )
+    with pytest.raises(ConfigurationError, match="observed fields"):
+        ScraplingRelocation().capture(
+            BEFORE, source=SOURCE, recipe=RECIPE, result=result, limits=Limits()
+        )

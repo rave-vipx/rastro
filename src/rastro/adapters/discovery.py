@@ -7,7 +7,7 @@ import re
 from pydantic import ValidationError
 from scrapling.parser import Selector
 
-from rastro.adapters.scrapling import _objects
+from rastro.adapters.scrapling import _objects, _parse_html
 from rastro.domain.json import strict_json
 from rastro.domain.models import CssRecipe, JsonLdRecipe, Limits, Recipe, ResourceLimitError
 from rastro.ports.discovery import AliasMap
@@ -31,7 +31,7 @@ class ScraplingDiscovery:
             raise ResourceLimitError("HTML input exceeds max_html_bytes")
         if not html.strip():
             return ()
-        page = Selector(html, adaptive=False, huge_tree=False)
+        page = _parse_html(html)
         names = _accepted_names(fields, aliases)
         candidates: list[Recipe] = []
 

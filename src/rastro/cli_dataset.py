@@ -48,12 +48,13 @@ def load_job_command(args: argparse.Namespace) -> int:
     )
     store = SQLiteDatasetStore(
         raw_path,
+        limits=job.limits,
         near_match_fields=spec.match_fields,
         near_match_tolerance=timedelta(minutes=spec.match_tolerance_minutes or 30),
     )
     if path in [args.file.resolve()]:
         raise ConfigurationError("The dataset must be separate from the job file")
-    monitor = SQLiteDriftMonitor(raw_path) if args.drift else None
+    monitor = SQLiteDriftMonitor(raw_path, limits=job.limits) if args.drift else None
     capture: AbstractContextManager[dict[str, StructuralSnapshot]]
     if args.drift:
         from rastro.adapters.drift_probe import ScraplingDriftProbe
@@ -73,7 +74,15 @@ def load_job_command(args: argparse.Namespace) -> int:
     )
     from rastro.cli_repair_storage import retain_successes
 
-    retain_successes(raw_path, spec.name, job.build_schema(), report, successes)
+    issues = retain_successes(raw_path, spec.name, job.build_schema(), report, successes)
+    loaded = loaded.model_copy(
+        update={
+            "sources": tuple(
+                source.model_copy(update={"issues": issues.get(source.source_url, ())})
+                for source in loaded.sources
+            )
+        }
+    )
     print(loaded.model_dump_json(indent=2))
     return int(loaded.exit_code)
 

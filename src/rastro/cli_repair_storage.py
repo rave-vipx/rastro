@@ -10,7 +10,14 @@ from rastro.adapters.sqlite_relocation import SQLiteRelocationStore
 from rastro.application.success_samples import SuccessfulSample
 from rastro.domain.job_results import JobRunResult
 from rastro.domain.jobs import Job
-from rastro.domain.models import CssRecipe, Outcome, Source
+from rastro.domain.models import (
+    ConfigurationError,
+    CssRecipe,
+    Issue,
+    Outcome,
+    ResourceLimitError,
+    Source,
+)
 from rastro.mocklab.fixtures import build_fixture
 
 
@@ -20,7 +27,8 @@ def retain_successes(
     schema: type[BaseModel],
     report: JobRunResult[Any],
     samples: dict[str, SuccessfulSample],
-) -> None:
+) -> dict[str, tuple[Issue, ...]]:
+    issues: dict[str, tuple[Issue, ...]] = {}
     for result in report.results:
         sample = samples.get(result.job_id)
         if sample is None or result.status != Outcome.SUCCESS:
@@ -57,16 +65,20 @@ def retain_successes(
         )
         snapshot = None
         if isinstance(sample.recipe, CssRecipe):
-            snapshot = ScraplingRelocation().capture(
-                sample.body,
-                source=sample.source,
-                recipe=sample.recipe,
-                result=sample.result,
-                limits=sample.limits,
-            )
+            try:
+                snapshot = ScraplingRelocation().capture(
+                    sample.body,
+                    source=sample.source,
+                    recipe=sample.recipe,
+                    result=sample.result,
+                    limits=sample.limits,
+                )
+            except (ConfigurationError, ResourceLimitError):
+                issues[result.source_url] = (Issue(code="relocation_retention_skipped"),)
         SQLiteRelocationStore(path, limits=sample.limits).save(
             dataset, sample.source, fixture, snapshot, observed_at=sample.result.completed_at
         )
+    return issues
 
 
 def serving_job(job: Job, base: Path, allow: bool) -> Job:
