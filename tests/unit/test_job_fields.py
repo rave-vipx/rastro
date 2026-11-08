@@ -210,3 +210,44 @@ def test_localized_date_preserves_iso_midnight_and_missing_context_fails():
     assert schema.model_validate({"day": "2026-11-22T00:00:00Z"}).day == date(2026, 11, 22)
     with pytest.raises(ValidationError, match="unparseable localized date"):
         schema.model_validate({"day": "22 nov"})
+
+
+@pytest.mark.parametrize(
+    "value", ["", "   ", "Entradas agotadas", "N/A", "12345", "//evil.example/phish"]
+)
+def test_url_with_source_context_rejects_non_urls(value):
+    from rastro import UrlField
+
+    schema = build_job_schema([UrlField(name="url")])
+    with pytest.raises(ValidationError):
+        schema.model_validate({"url": value}, context={"source_url": "https://example.com/shows/"})
+
+
+def test_localized_datetime_requires_an_iso_time():
+    from rastro import DateTimeField
+
+    schema = build_job_schema([DateTimeField(name="starts_at", localized=True)])
+    with pytest.raises(ValidationError):
+        schema.model_validate({"starts_at": "2026-11-22"})
+
+
+def test_localized_date_converts_space_separated_iso_datetime_to_region():
+    from rastro import DateField
+
+    schema = build_job_schema([DateField(name="day", localized=True)])
+    record = schema.model_validate(
+        {"day": "2026-11-21 01:30:00Z"}, context={"timezone": "America/Montevideo"}
+    )
+    assert record.day == date(2026, 11, 20)
+
+
+@pytest.mark.parametrize("value", ["06 de noviembre", "2026-11-21T01:30:00Z"])
+def test_unknown_timezone_is_a_validation_error(value):
+    from rastro import DateField
+
+    schema = build_job_schema([DateField(name="day", localized=True)])
+    with pytest.raises(ValidationError):
+        schema.model_validate(
+            {"day": value},
+            context={"timezone": "Invalid/Timezone", "observed_at": datetime(2026, 11, 8)},
+        )
