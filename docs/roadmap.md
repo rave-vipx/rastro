@@ -73,13 +73,15 @@ The v0.2 implementation is delivered for release-candidate preparation. Evaluati
 1. **Pilot and preview:** [PR #59](https://github.com/rave-vipx/rastro/pull/59) records the [dance agenda pilot](pilot/uy-dance-agenda.md); [PR #55](https://github.com/rave-vipx/rastro/pull/55) adds the dataset block and preview (DATA-002, JOB-002).
 2. **Known sources to a database:** [PR #56](https://github.com/rave-vipx/rastro/pull/56) adds the dataset store and [PR #61](https://github.com/rave-vipx/rastro/pull/61) delivers load, export, the example query and second-run proof (DATA-001–005, SYNC-002/003/005/006/008, COST-001) (SYNC-005 partial).
 3. **Drift and repair:** [PR #62](https://github.com/rave-vipx/rastro/pull/62) delivers drift, repair candidates, consistency and recipe CI (DRIFT-001–006, REPAIR-001–006, SCR-002, QUAL-005/006).
-4. **Product-task evaluation:** the [v0.2 comparison](comparison-v02.md) records partial DIFF-002 evidence and its limits. DIFF-002 is partial: human effort / minutes to a correct database were not measured (`human_minutes: null`); DIFF-001 sealed run not done. No sealed result is claimed.
+4. **Product-task evaluation:** the [v0.2 comparison](comparison-v02.md) records partial DIFF-002 evidence and its limits. DIFF-002 is partial: human effort / minutes to a correct database were not measured (`human_minutes: null`); DIFF-001 sealed run not done: the recovery harness must be built first (see the first v0.3 task below). No sealed result is claimed.
 
 The live pilot did not establish a complete two-source dataset. `0.2.0rc1` is not tagged or promoted; those are owner decisions, and no package has been published.
 
 ### v0.3 candidates ranked by pilot evidence
 
 The [pilot observations](pilot/uy-dance-agenda.md#3-ranked-obstacles-for-v03-drift-acquisition-roadmap) lead this list; items 8–11 are earlier pilot-ranked acquisition items kept below the newer ones; the "Open" line lists operational follow-ups from the v0.2 implementation, not measured pilot rankings.
+
+**First v0.3 task (owner decision, 2026-11-08): build the recovery benchmark harness.** The DIFF-001 sealed run is still open because the runner in the [frozen protocol](recovery-benchmark.md#reproducibility) does not exist yet: `python -m benchmarks.recovery verify|run|verdict`, the five executors (`baseline_static`, `baseline_adapted` with its hashed fallback library, `rastro` through the public SDK, `always_alarm`, `never_alarm`), the `deny_all`/`approve_all` approvers, the Wilson-interval metrics, the C1–C8 verdict and the scenario-independence scan. Build and tune it on the development split only, with different authors for the baseline and the repair code, freeze the executor hashes, then run the sealed split once (ADR 0011). The sealed half has not been opened.
 
 1. SODRE Spanish date text yields zero live records: localized and yearless parsing and date-range expansion.
 2. Distinguish sale date from event date and split multiple schedules.
