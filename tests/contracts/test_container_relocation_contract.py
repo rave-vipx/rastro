@@ -71,7 +71,7 @@ def evaluate(candidate, html):
 
 def test_container_class_rename_yields_union_candidate_that_passes_history():
     candidate = candidate_for(AFTER)
-    assert candidate.recipe.record_selector == "article.dance, article.performance"
+    assert candidate.recipe.record_selector == "article.dance, main > article.performance"
     assert candidate.recipe.require_evidence
     assert candidate.evidence[0].match_count == 1
     assert not candidate.ambiguous
@@ -182,7 +182,8 @@ def test_heterogeneous_containers_remain_ambiguous():
     changed = AFTER.replace("</main>", promo + "</main>")
     candidate = candidate_for(changed)
     assert candidate.evidence[0].match_count == 2
-    assert evaluate(candidate, changed).decision == "reject"
+    assert candidate.ambiguous
+    assert evaluate(candidate, changed).decision == "quarantine"
 
 
 def test_container_evidence_fits_with_one_hundred_observed_fields():

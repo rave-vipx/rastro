@@ -33,7 +33,10 @@ class ElementFingerprint(Contract):
     """Scrapling 0.5 comparison properties, containing hashes instead of page text."""
 
     tag: FingerprintToken
-    attributes: dict[FingerprintAttribute, FingerprintToken] = Field(max_length=100)
+    attributes: dict[
+        FingerprintAttribute,
+        FingerprintToken | Annotated[tuple[FingerprintToken, ...], Field(max_length=100)],
+    ] = Field(max_length=100)
     text: FingerprintToken | None
     path: tuple[FingerprintToken, ...] = Field(max_length=128)
 
@@ -56,6 +59,7 @@ class RelocationSnapshot(Contract):
 class RepairEvidence(Contract):
     field: str = Field(min_length=1, max_length=256)
     match_count: int = Field(ge=0, le=4096)
+    ambiguous: bool | None = None
 
 
 class RepairCandidate(Contract):
@@ -67,7 +71,8 @@ class RepairCandidate(Contract):
     @property
     def ambiguous(self) -> bool:
         return any(
-            item.match_count > 1 and item.field != "record_selector" for item in self.evidence
+            item.ambiguous if item.ambiguous is not None else item.match_count > 1
+            for item in self.evidence
         )
 
 

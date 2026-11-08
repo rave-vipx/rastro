@@ -121,14 +121,19 @@ is pinned to 2026-11-07 so the November sample remains reproducible.
 This is synthetic evidence, not proof of live-site repair quality.
 
 Relocation uses one template record. When the record selector finds nothing, Scrapling
-can relocate its saved container fingerprint. The proposed selector combines the old
-selector with the matched tag and shared classes, or a shared parent path when no classes
-are shared. The tag restriction excludes differently tagged banners. Keeping both selectors
-allows historical pages to keep parsing; field relocation then runs inside the new container
-in the same candidate. The `record_selector` evidence entry counts container matches
-(including ties), or all records selected if the generic selector expands beyond those
-matches. Multiple matches remain ambiguous and are quarantined, even when their fields
-validate. Promotion still requires the ordinary history, evidence and configured CI gates.
+can relocate its saved container fingerprint, hashing class tokens individually and
+comparing them as sets. The proposed selector combines the old selector with the shared
+ancestor path (joined by child combinators), the matched tag and shared classes, and is
+accepted only when the recipe's field selectors or relocated field fingerprints find its
+fields inside the container. Keeping both selectors allows historical pages to keep
+parsing; field relocation then runs inside the new container in the same candidate. The
+`record_selector` evidence entry counts container matches (including ties), or all records
+selected if the derived selector expands beyond those matches. Homogeneous listing
+containers—sharing the same parent path, child-tag sequence and class token set, with no
+competing same-class or classless same-tag containers of another shape on the page—pass to
+recipe CI; any heterogeneous, extra or unverified single-container match is marked
+ambiguous and quarantined, even when its fields validate. Promotion still requires the
+ordinary history, evidence and configured CI gates.
 
 If no container candidate is available, repair tries declared fallbacks, discovery and
 optionally the job's configured model. Models are never enabled implicitly. Last-success replay conservatively
