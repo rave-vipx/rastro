@@ -30,6 +30,7 @@ from rastro.domain.models import (
     ResourceLimitError,
     Source,
 )
+from rastro.domain.recipes import DOCUMENT_PREFIX
 from rastro.domain.repair import (
     ElementFingerprint,
     RelocationSnapshot,
@@ -66,9 +67,9 @@ class ScraplingRelocation:
             raise ConfigurationError("Successful result does not match the snapshot records")
         nodes: dict[str, Selector] = {}
         for field, expression in recipe.fields.items():
+            selector, _ = _expression(expression)
             if field not in result.records[0].evidence:
                 continue
-            selector, _ = _expression(expression)
             matches = _css(records[0], selector)
             if len(matches) != 1:
                 raise ConfigurationError("Snapshot fields require unique successful evidence")
@@ -159,6 +160,8 @@ class ScraplingRelocation:
 
 
 def _expression(expression: str) -> tuple[str, str]:
+    if expression.startswith(DOCUMENT_PREFIX):
+        raise ConfigurationError("Relocation does not support document-scoped fields")
     match = _SUFFIX.fullmatch(expression)
     if match is None:
         raise ConfigurationError("Relocation requires scalar field selectors")

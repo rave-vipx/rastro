@@ -102,6 +102,8 @@ def extract_document[T: BaseModel](
                     "locale": source.locale,
                     "languages": source.languages,
                     "timezone": source.timezone,
+                    "observed_at": started_at,
+                    "source_url": evidence_url,
                     "currency": source.currency,
                     "egress": source.egress,
                 },

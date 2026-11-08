@@ -13,6 +13,7 @@ from rastro.application.drift import collect_snapshots
 from rastro.application.job_loader import load_job, resolve_job_path
 from rastro.application.jobs import run_job
 from rastro.application.success_samples import collect_successes
+from rastro.cli_dataset_export import html_export, select_records
 from rastro.domain.drift import StructuralSnapshot
 from rastro.domain.models import ConfigurationError
 
@@ -31,7 +32,15 @@ def add_commands(subcommands: argparse._SubParsersAction, jobs: argparse._SubPar
         parser.add_argument(
             "--dataset", help="Dataset name (required if file contains multiple datasets)"
         )
-        parser.add_argument("--format", choices=("json", "jsonl"), default="json")
+        parser.add_argument(
+            "--format",
+            choices=("json", "jsonl", "html") if command == "export" else ("json", "jsonl"),
+            default="json",
+        )
+        if command == "export":
+            parser.add_argument("--sort-field")
+            parser.add_argument("--upcoming", action="store_true")
+            parser.add_argument("--timezone", default="UTC")
 
 
 def load_job_command(args: argparse.Namespace) -> int:
@@ -111,7 +120,18 @@ def dataset_command(args: argparse.Namespace) -> int:
     if args.dataset not in names:
         raise ConfigurationError("Dataset name does not exist in this file")
     if args.dataset_command == "export":
-        items = [r.model_dump(mode="json") for r in store.records(args.dataset)]
+        all_records = store.records(args.dataset)
+        records = select_records(
+            all_records, args.sort_field, args.upcoming, timezone=args.timezone
+        )
+        if args.format == "html":
+            stale = {
+                key for source in stale_sources(store, args.dataset) for key in source.affected_keys
+            }
+            fields = list(dict.fromkeys(name for record in all_records for name in record.fields))
+            print(html_export(records, stale, fields))
+            return 0
+        items = [r.model_dump(mode="json") for r in records]
     else:
         items = [s.model_dump(mode="json") for s in store.source_status(args.dataset)]
     label = {"schema_version": 1, "data_trust": "untrusted_source_data"}

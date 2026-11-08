@@ -6,7 +6,7 @@ Full pilot findings, live run counts, field coverage, and ranked v0.3 obstacles 
 
 ## Files
 
-- [`job.toml`](job.toml) — Declarative job targeting the two live Uruguayan sources:
+- [`job.toml`](job.toml) — Declarative job with a `[dataset]` block (identity `title`, `venue`, `starts_on`) targeting four live Uruguayan sources. The v0.3 job reads SODRE, Sala Zitarrosa and Magnolio Sala listing pages plus the Tickantel event page; its schema (`starts_on` required, `starts_at` optional, both `localized`) differs from the two sample jobs. Synthetic copies of the three listing pages live in [`sample/v03/`](sample/v03/) and back `tests/integration/test_uy_dance_v03_sources.py`. Results: [`docs/pilot/uy-dance-agenda-v03.md`](../../docs/pilot/uy-dance-agenda-v03.md). The two source notes below describe the original v0.2 job:
   1. **Venue listings page (`sodre.gub.uy`)**: `https://sodre.gub.uy/espectaculos/` (CSS recipe over `.item .cyg--info.espectaculo` cards with a visible-text fallback). On the live site, `<time class="cyg--dia">` omits the HTML5 `datetime` attribute and renders localized Spanish prose/ranges (`"12 al 14 NOV 2026 - 20 H"`), so the live run yields `0` accepted records (`status = "insufficient_evidence"`) from the venue source.
   2. **Ticket seller event page (`tickantel.com.uy`)**: `https://tickantel.com.uy/ng/espectaculo/40021938/muestra-final-2026-area-tango-y-area-candombe` (JSON-LD `Event` recipe with a fallback for Tickantel's partial `PostalAddress`/`description` shape). Produces all `3` accepted records in the live run (`status = "success"`).
 - [`sample/job.toml`](sample/job.toml) — Reproducible offline version of the same job pointing at synthetic local HTML files:
@@ -63,4 +63,18 @@ Validate and run the live pilot job (requires internet access; uses deterministi
 ```bash
 uv run rastro job validate examples/uy-dance-agenda/job.toml
 uv run rastro job run examples/uy-dance-agenda/job.toml --output json
+```
+
+Export the offline sample as an HTML agenda (SCHED-007, DATA-004):
+```bash
+uv run rastro job load examples/uy-dance-agenda/sample/job.toml
+uv run rastro dataset export examples/uy-dance-agenda/sample/agenda.sqlite --format html --sort-field starts_at --upcoming > agenda.html
+```
+
+Load the live job into a dataset and export the upcoming agenda (run it from a scratch
+directory; `agenda.sqlite` is written next to the job file):
+
+```bash
+uv run rastro job load job.toml
+uv run rastro dataset export agenda.sqlite --format html --sort-field starts_on --upcoming > agenda.html
 ```

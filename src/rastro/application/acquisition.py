@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import replace
 from time import perf_counter
-from typing import TYPE_CHECKING
 from urllib.parse import urlsplit, urlunsplit
 
+from rastro.application.acquisition_state import _Host, _Operation
 from rastro.application.destinations import permitted_url, pin_destination
 from rastro.application.http_policy import (
     REDIRECT_STATUSES,
@@ -26,39 +26,11 @@ from rastro.domain.acquisition import (
     AcquisitionPolicy,
     AcquisitionResult,
     HttpResponse,
-    ProxyRoute,
 )
 from rastro.domain.models import Outcome, Representation, Source
 from rastro.ports.acquisition import HttpTransport, Resolver
 
-if TYPE_CHECKING:
-    from protego import Protego
-
 __all__ = ["WebAcquirer", "retry_after"]
-
-
-@dataclass
-class _Host:
-    lock: asyncio.Lock = field(default_factory=asyncio.Lock)
-    next_request: float = 0
-    cooldown: float = 0
-    denied: bool = False
-    interval: float = 0
-
-
-@dataclass
-class _Operation:
-    url: str
-    headers: dict[str, str] = field(default_factory=dict)
-    requests: int = 0
-    retries: int = 0
-    redirects: int = 0
-    bytes_received: int = 0
-    network_seconds: float = 0
-    http_status: int | None = None
-    retry_after_seconds: float | None = None
-    robots: dict[str, Protego | None] = field(default_factory=dict)
-    proxy: ProxyRoute | None = None
 
 
 class WebAcquirer:
@@ -219,19 +191,44 @@ class WebAcquirer:
     ) -> HttpResponse:
         async with self._slots:
             operation.requests += 1
+            deadline = asyncio.get_running_loop().time() + self.policy.request_timeout_seconds
             try:
-                async with asyncio.timeout(self.policy.request_timeout_seconds):
+                async with asyncio.timeout_at(deadline):
                     target = await pin_destination(url, self.policy, self._resolver)
-                    network_start = perf_counter()
-                    try:
-                        return await self._transport.get(
-                            target,
-                            headers=operation.headers,
-                            timeout=self.policy.request_timeout_seconds,
-                            max_bytes=max_bytes,
-                            proxy=operation.proxy,
+                    addresses = (target.address, *target.alternates[:2])
+                    if operation.proxy is not None:
+                        addresses = addresses[:1]
+                    for index, address in enumerate(addresses):
+                        if index:
+                            await asyncio.sleep(host.interval)
+                            if operation.requests >= self.policy.max_requests:
+                                raise AcquisitionError("request_limit", Outcome.PERMANENT_FAILURE)
+                            operation.requests += 1
+                        remaining = deadline - asyncio.get_running_loop().time()
+                        if remaining <= 0:
+                            raise AcquisitionError("request_timeout", Outcome.TRANSIENT_FAILURE)
+                        # Reserve pacing before dividing the transfer budget among addresses.
+                        timeout = max(
+                            0.001, remaining - host.interval * (len(addresses) - index - 1)
                         )
-                    finally:
-                        operation.network_seconds += perf_counter() - network_start
+                        network_start = perf_counter()
+                        try:
+                            return await self._transport.get(
+                                replace(target, address=address, alternates=addresses[index + 1 :]),
+                                headers=operation.headers,
+                                timeout=timeout,
+                                max_bytes=max_bytes,
+                                proxy=operation.proxy,
+                            )
+                        except AcquisitionError as error:
+                            if (
+                                not error.connect_failure
+                                or error.outcome != Outcome.TRANSIENT_FAILURE
+                                or index == len(addresses) - 1
+                            ):
+                                raise
+                        finally:
+                            operation.network_seconds += perf_counter() - network_start
             finally:
                 host.next_request = perf_counter() + host.interval
+        raise AssertionError("Address loop must return or raise")  # pragma: no cover

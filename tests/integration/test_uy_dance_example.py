@@ -28,6 +28,18 @@ EXPECTED_FIELDS = [
     "currency",
 ]
 SAMPLE_FIELDS = [*EXPECTED_FIELDS, "performance_id"]
+LIVE_FIELDS = [
+    "title",
+    "performers",
+    "category",
+    "venue",
+    "city",
+    "starts_on",
+    "starts_at",
+    "ticket_url",
+    "price",
+    "currency",
+]
 
 
 def _run_cli(capsys: pytest.CaptureFixture[str], *args: str) -> tuple[int, dict[str, Any]]:
@@ -53,8 +65,8 @@ def test_uy_dance_jobs_validate_offline_with_stable_sample_schema(
         assert code == 0
         assert validated["valid"] is True
         assert validated["format_version"] == 1
-        assert validated["source_count"] == 2
-        assert validated["fields"] == (EXPECTED_FIELDS if job_path == LIVE_JOB else SAMPLE_FIELDS)
+        assert validated["source_count"] == (4 if job_path == LIVE_JOB else 2)
+        assert validated["fields"] == (LIVE_FIELDS if job_path == LIVE_JOB else SAMPLE_FIELDS)
         assert validated["job"]["region"] == {
             "locale": "es-UY",
             "languages": ["es-UY", "es"],
@@ -167,3 +179,25 @@ def test_uy_dance_sample_covers_repeated_rescheduled_near_match_and_sale_date_ca
     for rec in seller_v1:
         assert rec["starts_at"] != "2026-11-01T10:00:00-03:00"
         assert rec["starts_at"].startswith("2026-11-2")
+
+
+def test_sodre_sample_now_accepts_records():
+    from rastro import Limits, Source
+    from rastro.adapters.scrapling import ScraplingParser
+    from rastro.application.extraction import extract_document
+    from rastro.domain.jobs import parse_job
+
+    job = parse_job(SAMPLE_JOB.read_text(encoding="utf-8"), format="toml")
+    source = job.sources[0]
+    recipe = source.recipe
+    assert recipe.fields["starts_at"] == "time.cyg--dia::text"
+    result = extract_document(
+        (SAMPLE_JOB.parent / "sodre-cartelera.html").read_text(encoding="utf-8"),
+        source=Source(url=source.url, **job.region.model_dump()),
+        schema=job.build_schema(),
+        recipe=recipe,
+        parser=ScraplingParser(),
+        limits=Limits(),
+    )
+    assert result.metrics.accepted == 4
+    assert result.records[0].evidence["starts_at"].locator.endswith("time.cyg--dia::text")

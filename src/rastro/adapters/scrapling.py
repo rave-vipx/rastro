@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 
-from cssselect import SelectorError
+from cssselect import SelectorError, parse
 from lxml.etree import LxmlError  # type: ignore[import-untyped]
 from scrapling.parser import Selector
 
@@ -18,6 +18,7 @@ from rastro.domain.models import (
     Recipe,
     ResourceLimitError,
 )
+from rastro.domain.recipes import DOCUMENT_PREFIX
 from rastro.ports.parser import Candidate, ParsedDocument
 
 
@@ -29,6 +30,41 @@ def _parse_html(html: str) -> Selector:
     if page._root is None:
         raise ConfigurationError("Invalid HTML document")
     return page
+
+
+def field_scope(expression: str, page: Selector, node: Selector) -> tuple[Selector, str]:
+    """Return the element a CSS field expression is evaluated against, and its selector."""
+    if expression.startswith(DOCUMENT_PREFIX):
+        return page, expression.removeprefix(DOCUMENT_PREFIX)
+    return node, expression
+
+
+def element_count(scope: Selector, selector: str) -> int:
+    """Elements a selector list matches; pseudo-elements select values of their element."""
+    count = 0
+    seen: set[str] = set()
+    for tree in parse(selector):
+        if tree.canonical().startswith("::"):
+            count += 1
+            continue
+        tree.pseudo_element = None
+        # A selector list ("a, b") matching the same element twice is one match.
+        seen.update(
+            element._root.getroottree().getpath(element._root)
+            for element in scope.css(tree.canonical())
+        )
+    return count + len(seen)
+
+
+def _matches(scope: Selector, selector: str) -> tuple[int, list[str]]:
+    """Element count and values. Blank text around nested markup is not evidence only
+    when one element matched; an element holding only blank text yields "", and empty
+    attributes stay ""."""
+    elements = element_count(scope, selector)
+    values = [str(value) for value in scope.css(selector).getall()]
+    if elements == 1 and "::text" in selector:
+        values = [value for value in values if value.strip()] or values[:1]
+    return elements, values
 
 
 def _objects(value: object, path: str = "") -> Iterator[tuple[dict[str, object], str]]:
@@ -73,8 +109,9 @@ class ScraplingParser:
             locators: dict[str, str] = {}
             issues: list[Issue] = []
             for field, selector in recipe.fields.items():
-                matches = node.css(selector).getall()
-                if len(matches) > 1:
+                scope, css = field_scope(selector, page, node)
+                elements, matches = _matches(scope, css)
+                if elements > 1 or len(matches) > 1:
                     issues.append(Issue(code="ambiguous_match", record_index=index, field=field))
                 elif matches:
                     values[field] = str(matches[0]).strip()

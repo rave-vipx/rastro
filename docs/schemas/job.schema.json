@@ -339,6 +339,11 @@
     "DateField": {
       "additionalProperties": false,
       "properties": {
+        "localized": {
+          "default": false,
+          "title": "Localized",
+          "type": "boolean"
+        },
         "name": {
           "maxLength": 64,
           "minLength": 1,
@@ -367,6 +372,11 @@
     "DateTimeField": {
       "additionalProperties": false,
       "properties": {
+        "localized": {
+          "default": false,
+          "title": "Localized",
+          "type": "boolean"
+        },
         "name": {
           "maxLength": 64,
           "minLength": 1,
