@@ -1,0 +1,62 @@
+[
+  {
+    "name": "sodre",
+    "path": "examples/uy-dance-agenda/sample/sodre-cartelera.html",
+    "url": "https://sodre.gub.uy/espectaculos/",
+    "mapping": {
+      "strategy": "css",
+      "fields": {
+        "performance_id": "::attr(data-performance-id)",
+        "title": "h2.cyg--display-3::text",
+        "performers": "p::text",
+        "venue": "address img::attr(alt)",
+        "city": "address span.cyg--ciudad::text",
+        "starts_at": "time.cyg--dia::attr(datetime)",
+        "ticket_url": "a.cyg--btn::attr(href)",
+        "price": "span.cyg--precio::text",
+        "currency": "span.cyg--moneda::text"
+      },
+      "record_selector": ".item .cyg--info.espectaculo"
+    }
+  },
+  {
+    "name": "tickantel",
+    "path": "examples/uy-dance-agenda/sample/tickantel-evento.html",
+    "url": "https://tickantel.com.uy/ng/espectaculo/9900102/gala-anual-2026-area-tango-y-milonga",
+    "mapping": {
+      "strategy": "jsonld",
+      "fields": {
+        "performance_id": "/identifier",
+        "title": "/name",
+        "performers": "/performer/name",
+        "venue": "/location/name",
+        "city": "/location/address/addressLocality",
+        "starts_at": "/startDate",
+        "ticket_url": "/offers/url",
+        "price": "/offers/price",
+        "currency": "/offers/priceCurrency"
+      },
+      "item_type": "Event"
+    }
+  },
+  {
+    "name": "costa",
+    "path": "benchmarks/product_task/fixtures/third.html",
+    "url": "https://costa.example/agenda",
+    "mapping": {
+      "strategy": "css",
+      "record_selector": ".dance",
+      "fields": {
+        "performance_id": "::attr(data-id)",
+        "title": "h2::text",
+        "performers": ".performers::text",
+        "venue": ".venue::text",
+        "city": ".city::text",
+        "starts_at": "time::attr(datetime)",
+        "ticket_url": "a::attr(href)",
+        "price": ".price::text",
+        "currency": ".currency::text"
+      }
+    }
+  }
+]

@@ -1,0 +1,155 @@
+{
+  "requirement": "DIFF-002",
+  "environment": {
+    "python": "3.12.16",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "sqlite": "3.54.1",
+    "packages": {
+      "scrapling": "0.5",
+      "pydantic": "2.14.2",
+      "lxml": "6.1.3"
+    },
+    "git_head": "13e4577597f9dbf251c2fff87c2294e7fe43cd12",
+    "git_dirty": false
+  },
+  "source_sha256": {
+    "benchmarks/baseline.py": "10625c48ffc2eff8324f2d37f7c8252899e93e89b758a4f24fcdc6ba2d568608",
+    "benchmarks/contracts.py": "1ba47f535dd808b618ee510bf575810ce43d9e877e6ed1a0c82c52dd802cd1e2",
+    "benchmarks/product_task/__init__.py": "3badd6d0ca3d26522c162804d45676b7b66d39aa5c6d2cdab6a0300c1a6bb564",
+    "benchmarks/product_task/baseline/__init__.py": "3577b4a00acad172879bf28f3f39782a7bb90e50f7f597773f31ed84834d3427",
+    "benchmarks/product_task/baseline/agenda.py": "24bf65d4d0e31779fa55060daff5f8de2ff4deef430c76852e073be4fdd3572b",
+    "benchmarks/product_task/baseline/sources.json": "0676064eff5661ccd001ab66aa96aca99baee8f2c5b723be033f44046746dd58",
+    "benchmarks/product_task/fixtures/expected.json": "24632d8788e0639c746907ea2eb6bd3397ec6a1b19cbb0dbcb30d7e5963890a2",
+    "benchmarks/product_task/fixtures/repair.json": "cd8006bf37c8be6db52d6b6bc2a7da9124ebc54b467c2a338e60e5c13a444047",
+    "benchmarks/product_task/fixtures/third-broken.html": "6a6121b9e3e8d119c20d9e50a19168c41de8823d8ceb1f1a47208ea231b810fb",
+    "benchmarks/product_task/fixtures/third.html": "53046d4f958dcdaec5fd81ba032249f577db9e1fc1bd49b1ee3624feb583c68f",
+    "benchmarks/product_task/measure.py": "d608a5ddc3a44f12aabb020e2e5f4942b40ba23ab4f9c9af30d60757ae59f8e7",
+    "examples/uy-dance-agenda/sample/sodre-cartelera.html": "de9c4152d27cd93c1b65a219d1617851170d830b24bb8e89d5122dedf39efa5a",
+    "examples/uy-dance-agenda/sample/tickantel-evento.html": "e1c3e11ce360779846dad424cc369f24c1b91a877eb28b9ff220d500740e69e6",
+    "uv.lock": "8c235a342e76719d186dca53776a2a2fb7ca3568e4ca23c29667f1032280dcf0"
+  },
+  "baseline": {
+    "phases": [
+      {
+        "name": "initial_two",
+        "status": "success",
+        "source_statuses": [
+          "success",
+          "success"
+        ],
+        "wall_seconds": 0.003093708015512675,
+        "machine_minutes": 5.156180025854458e-05,
+        "records": 6,
+        "stale_records": 0,
+        "silent_errors": 0,
+        "missing_records": 0,
+        "dataset_wrong_records": 0
+      },
+      {
+        "name": "add_third",
+        "status": "success",
+        "source_statuses": [
+          "success"
+        ],
+        "wall_seconds": 0.0008193340036086738,
+        "machine_minutes": 1.365556672681123e-05,
+        "records": 7,
+        "stale_records": 0,
+        "silent_errors": 0,
+        "missing_records": 0,
+        "dataset_wrong_records": 0
+      },
+      {
+        "name": "repeat",
+        "status": "success",
+        "source_statuses": [
+          "success",
+          "success",
+          "success"
+        ],
+        "wall_seconds": 0.0018957499996758997,
+        "machine_minutes": 3.159583332793166e-05,
+        "records": 7,
+        "stale_records": 0,
+        "silent_errors": 0,
+        "missing_records": 0,
+        "dataset_wrong_records": 0
+      },
+      {
+        "name": "broken",
+        "status": "missing_data",
+        "source_statuses": [
+          "missing_data"
+        ],
+        "wall_seconds": 8.345901733264327e-05,
+        "machine_minutes": 1.3909836222107212e-06,
+        "records": 7,
+        "stale_records": 1,
+        "silent_errors": 0,
+        "missing_records": 0,
+        "dataset_wrong_records": 1
+      },
+      {
+        "name": "repaired",
+        "status": "success",
+        "source_statuses": [
+          "success"
+        ],
+        "wall_seconds": 0.0005431250028777868,
+        "machine_minutes": 9.052083381296446e-06,
+        "records": 7,
+        "stale_records": 0,
+        "silent_errors": 0,
+        "missing_records": 0,
+        "dataset_wrong_records": 0
+      }
+    ],
+    "network_requests": 0,
+    "model_calls": 0,
+    "site_specific_lines": 78,
+    "line_counts": {
+      "benchmarks/product_task/baseline/agenda.py": 16,
+      "benchmarks/product_task/baseline/sources.json": 62
+    },
+    "one_time_loader_lines": 58,
+    "shared_extractor_lines": 143,
+    "shared_contract_lines": 75,
+    "initial_machine_minutes": 5.156180025854458e-05,
+    "repair": {
+      "scripted_wall_seconds": 0.0007269579800777137,
+      "config_edits": 1,
+      "config_lines": 3,
+      "human_minutes": null,
+      "human_steps": [
+        "On missing_data inspect the changed HTML; change record_selector from .dance to .performance.",
+        "Re-run the failed source and verify the price update and unchanged row count."
+      ]
+    },
+    "human_steps": [
+      "Inspect the two sample sources and define the agenda schema and stable identity.",
+      "Write source selectors/JSON pointers; validate records and inspect the database query.",
+      "Inspect the third source, add its mapping and run the load again.",
+      "On missing_data inspect the changed HTML; change record_selector from .dance to .performance.",
+      "Re-run the failed source and verify the price update and unchanged row count."
+    ],
+    "human_minutes": null,
+    "cost": {
+      "initial_model_calls": 0,
+      "recurring_model_calls": 0,
+      "initial_network_requests": 0,
+      "recurring_network_requests": 0,
+      "external_service_spend": 0,
+      "development_agent_usage": "not instrumented"
+    }
+  },
+  "rastro": {
+    "status": "pending_E2",
+    "steps": [
+      "job",
+      "preview",
+      "load",
+      "repair"
+    ],
+    "metrics": null
+  }
+}
