@@ -40,6 +40,7 @@ def add_commands(subcommands: argparse._SubParsersAction, jobs: argparse._SubPar
         if command == "export":
             parser.add_argument("--sort-field")
             parser.add_argument("--upcoming", action="store_true")
+            parser.add_argument("--timezone", default="UTC")
 
 
 def load_job_command(args: argparse.Namespace) -> int:
@@ -106,7 +107,9 @@ def dataset_command(args: argparse.Namespace) -> int:
         raise ConfigurationError("Dataset name does not exist in this file")
     if args.dataset_command == "export":
         all_records = store.records(args.dataset)
-        records = select_records(all_records, args.sort_field, args.upcoming)
+        records = select_records(
+            all_records, args.sort_field, args.upcoming, timezone=args.timezone
+        )
         if args.format == "html":
             stale = {
                 key for source in stale_sources(store, args.dataset) for key in source.affected_keys

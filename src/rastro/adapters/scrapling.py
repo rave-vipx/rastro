@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 
-from cssselect import SelectorError
+from cssselect import SelectorError, parse
 from lxml.etree import LxmlError  # type: ignore[import-untyped]
 from scrapling.parser import Selector
 
@@ -39,9 +39,27 @@ def field_scope(expression: str, page: Selector, node: Selector) -> tuple[Select
     return node, expression
 
 
-def _matches(scope: Selector, selector: str) -> list[str]:
-    """Matched values; whitespace-only text nodes around nested markup are not evidence."""
-    return [value for value in map(str, scope.css(selector).getall()) if value.strip()]
+def element_count(scope: Selector, selector: str) -> int:
+    """Elements a selector list matches; pseudo-elements select values of their element."""
+    count = 0
+    for tree in parse(selector):
+        if tree.canonical().startswith("::"):
+            count += 1
+            continue
+        tree.pseudo_element = None
+        count += len(scope.css(tree.canonical()))
+    return count
+
+
+def _matches(scope: Selector, selector: str) -> tuple[int, list[str]]:
+    """Element count and values. Blank text around nested markup is not evidence only
+    when one element matched; an element holding only blank text yields "", and empty
+    attributes stay ""."""
+    elements = element_count(scope, selector)
+    values = [str(value) for value in scope.css(selector).getall()]
+    if elements == 1 and "::text" in selector:
+        values = [value for value in values if value.strip()] or values[:1]
+    return elements, values
 
 
 def _objects(value: object, path: str = "") -> Iterator[tuple[dict[str, object], str]]:
@@ -87,8 +105,8 @@ class ScraplingParser:
             issues: list[Issue] = []
             for field, selector in recipe.fields.items():
                 scope, css = field_scope(selector, page, node)
-                matches = _matches(scope, css)
-                if len(matches) > 1:
+                elements, matches = _matches(scope, css)
+                if elements > 1 or len(matches) > 1:
                     issues.append(Issue(code="ambiguous_match", record_index=index, field=field))
                 elif matches:
                     values[field] = str(matches[0]).strip()

@@ -3,10 +3,10 @@
 import asyncio
 
 import pytest
+from test_acquisition import Resolver, Transport, client, response
 
 from rastro import Outcome, Source
 from rastro.domain.acquisition import AcquisitionError
-from tests.integration.test_acquisition import Resolver, Transport, client, response
 
 pytestmark = pytest.mark.asyncio
 ADDRESSES = ("2606:4700:4700::1111", "8.8.8.8", "1.1.1.1", "8.8.4.4")
