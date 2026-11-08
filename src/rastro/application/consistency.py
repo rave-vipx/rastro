@@ -23,6 +23,7 @@ from rastro.domain.consistency import (
     RuleResult,
     RuleStatus,
 )
+from rastro.domain.dataset import DatasetNotFoundError
 from rastro.ports.dataset import DatasetStore
 
 type Record = Mapping[str, Any]
@@ -67,7 +68,10 @@ def evaluate_consistency(
 
 def history_from_store(store: DatasetStore, dataset: str, fields: Sequence[str]) -> History:
     """Collect stored values per field. Call before applying the candidate snapshot."""
-    stored = store.records(dataset)
+    try:
+        stored = store.records(dataset)
+    except DatasetNotFoundError:
+        stored = ()
     return {name: [r.fields[name] for r in stored if name in r.fields] for name in fields}
 
 

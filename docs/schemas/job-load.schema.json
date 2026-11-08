@@ -11,6 +11,88 @@
       "title": "ChangeKind",
       "type": "string"
     },
+    "ConsistencyReport": {
+      "additionalProperties": false,
+      "description": "Three separate indicators (QUAL-006); ``None`` means \"not assessed\", never 1.0.\n\n- ``completeness``: share of declared fields that carry a value.\n- ``structural_validity``: share of candidate records that passed validation.\n- ``semantic_confidence``: lowest confidence among assessable rules.",
+      "properties": {
+        "completeness": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Completeness"
+        },
+        "records": {
+          "minimum": 0,
+          "title": "Records",
+          "type": "integer"
+        },
+        "results": {
+          "items": {
+            "$ref": "#/$defs/RuleResult"
+          },
+          "title": "Results",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "semantic_confidence": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Semantic Confidence"
+        },
+        "structural_validity": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Structural Validity"
+        },
+        "verdict": {
+          "enum": [
+            "consistent",
+            "inconsistent",
+            "not_assessed"
+          ],
+          "title": "Verdict",
+          "type": "string"
+        }
+      },
+      "required": [
+        "records",
+        "completeness",
+        "structural_validity",
+        "semantic_confidence",
+        "verdict",
+        "results"
+      ],
+      "title": "ConsistencyReport",
+      "type": "object"
+    },
     "DatasetRecordKey": {
       "additionalProperties": false,
       "properties": {
@@ -304,6 +386,17 @@
     "LoadedSource": {
       "additionalProperties": false,
       "properties": {
+        "consistency": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConsistencyReport"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "counts": {
           "additionalProperties": {
             "type": "integer"
@@ -321,6 +414,19 @@
           },
           "title": "Issues",
           "type": "array"
+        },
+        "next_action": {
+          "anyOf": [
+            {
+              "const": "rastro recipe repair",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Next Action"
         },
         "source_url": {
           "title": "Source Url",
@@ -356,6 +462,89 @@
       "maximum": 1,
       "minimum": 0,
       "type": "number"
+    },
+    "RuleResult": {
+      "additionalProperties": false,
+      "description": "One rule's outcome. Explanations carry field names and numbers, never source values.",
+      "properties": {
+        "assessed": {
+          "minimum": 0,
+          "title": "Assessed",
+          "type": "integer"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confidence"
+        },
+        "explanation": {
+          "title": "Explanation",
+          "type": "string"
+        },
+        "field": {
+          "title": "Field",
+          "type": "string"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "observed": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Observed"
+        },
+        "status": {
+          "$ref": "#/$defs/RuleStatus"
+        },
+        "threshold": {
+          "title": "Threshold",
+          "type": "number"
+        },
+        "violating_indices": {
+          "default": [],
+          "items": {
+            "type": "integer"
+          },
+          "title": "Violating Indices",
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind",
+        "field",
+        "status",
+        "assessed",
+        "threshold",
+        "explanation"
+      ],
+      "title": "RuleResult",
+      "type": "object"
+    },
+    "RuleStatus": {
+      "enum": [
+        "passed",
+        "violated",
+        "not_assessable"
+      ],
+      "title": "RuleStatus",
+      "type": "string"
     },
     "StaleSource": {
       "additionalProperties": false,

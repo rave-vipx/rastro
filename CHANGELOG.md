@@ -9,10 +9,12 @@ All notable user-facing changes will be recorded here. No public release has bee
 - Localized date and datetime job fields (`localized = true`) parse Spanish listing text using the job region's timezone; a datetime without a time fails explicitly. Relative links resolve against the source URL (DATA-005, JOB-002).
 - CSS field expressions may read one page-level node with the `document:` prefix (exactly one match, with provenance).
 - `rastro dataset export --format html`, plus `--sort-field`, `--upcoming` and `--timezone`; daily scheduling examples in `docs/scheduling.md` (SCHED-007, DATA-004).
+- Automatic repair relocates a renamed or moved record container from the last successful snapshot, proposes an "old, new" selector union, and quarantines heterogeneous matches; measured on `benchmarks/repair_suite` (REPAIR-001, SCR-002).
 - The Uruguay agenda example loads four live sources; see `docs/pilot/uy-dance-agenda-v03.md` (52 upcoming events, spot-check 10/10, on 2026-11-08).
 
 ### Fixed
 
+- Job loads gate approved observations on declared consistency rules before storage; inconsistent sources retain stale rows, report rule results and a repair action, and exit 3 (QUAL-005/006, SYNC-006).
 - Acquisition falls back across validated DNS addresses on connection failure only, within the same timeout and request budget, and never through a proxy.
 - Blank text nodes no longer count as field matches; uniqueness is decided on elements.
 

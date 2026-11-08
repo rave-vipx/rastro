@@ -147,3 +147,18 @@ def test_history_comes_from_store_records() -> None:
 
     history = history_from_store(FakeStore(), "d", ["a", "b", "c"])  # type: ignore[arg-type]
     assert history == {"a": [1, 3], "b": [2], "c": []}
+
+
+def test_missing_store_has_no_history_and_does_not_create_database(tmp_path) -> None:
+    from rastro.adapters.sqlite_dataset import SQLiteDatasetStore
+    from rastro.domain.dataset import DatasetStorageError
+
+    path = tmp_path / "new.sqlite"
+    assert history_from_store(SQLiteDatasetStore(path), "d", ["value"]) == {"value": []}
+    assert not path.exists()
+    with pytest.raises(DatasetStorageError):
+        SQLiteDatasetStore(path).records("d")
+    link = tmp_path / "link.sqlite"
+    link.symlink_to(path)
+    with pytest.raises(DatasetStorageError, match="symlink"):
+        history_from_store(SQLiteDatasetStore(link), "d", ["value"])

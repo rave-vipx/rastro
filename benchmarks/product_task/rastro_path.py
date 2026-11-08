@@ -19,7 +19,7 @@ HUMAN_STEPS = [
     "Inspect the two sample sources; declare fields, identity and recipes in job.json.",
     "Run job validate and preview; inspect values and provenance; run job load and query SQLite.",
     "Inspect the third source, add its source/recipe block and validate, preview and load.",
-    "On missing_data inspect HTML and try recipe repair; stage the manual selector fix.",
+    "On missing_data try recipe repair; stage a manual selector fix only if none promotes.",
     "Review the promotion report, reload the source and verify the updated database.",
 ]
 
@@ -121,20 +121,24 @@ def run(folder: Path) -> dict[str, Any]:
         phases.append(phase(folder, "broken", third, repaired))
         started = perf_counter()
         _, generated = command("recipe", "repair", str(folder / "job.json"), "--source", "1")
-        candidate_version, edit_count = stage_candidate(
-            folder / "job.json", HERE / "rastro/repair.json"
-        )
-        code, repair = command(
-            "recipe",
-            "promote",
-            str(folder / "job.json"),
-            "--source",
-            "1",
-            "--version",
-            str(candidate_version),
-        )
-        if code:
-            raise RuntimeError(f"Rastro promotion failed: {repair}")
+        repair, edit_count = generated, 0
+        if not any(
+            c["evaluation"]["decision"] == "promote" for c in generated["sources"][0]["comparisons"]
+        ):
+            candidate_version, edit_count = stage_candidate(
+                folder / "job.json", HERE / "rastro/repair.json"
+            )
+            code, repair = command(
+                "recipe",
+                "promote",
+                str(folder / "job.json"),
+                "--source",
+                "1",
+                "--version",
+                str(candidate_version),
+            )
+            if code:
+                raise RuntimeError(f"Rastro promotion failed: {repair}")
         phases.append(phase(folder, "repaired", third, repaired))
         repair_seconds = perf_counter() - started
     promoted = next(
@@ -155,7 +159,7 @@ def run(folder: Path) -> dict[str, Any]:
         "repair": {
             "scripted_wall_seconds": repair_seconds,
             "config_edits": edit_count,
-            "config_lines": counted_lines(HERE / "rastro/repair.json"),
+            "config_lines": counted_lines(HERE / "rastro/repair.json") if edit_count else 0,
             "generation_outcome": generated["sources"][0]["outcome"],
             "human_minutes": None,
             "human_steps": HUMAN_STEPS[3:],

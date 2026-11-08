@@ -71,3 +71,11 @@ def test_relocation_capture_rejects_document_field_even_when_unobserved():
         ScraplingRelocation().capture(
             html, source=SOURCE, recipe=recipe, result=result, limits=Limits()
         )
+
+
+def test_selector_list_matching_one_element_twice_is_not_ambiguous():
+    # Repair unions ("old, new") may select the same element through both parts.
+    html = '<ul><li><h2 class="t">Milonga</h2><p>Sala</p></li></ul>'
+    _, result = _extract(html, {"title": "h2.t::text, :scope > *:nth-child(1)::text"}, ())
+    assert result.status == Outcome.SUCCESS
+    assert result.records[0].data.model_dump()["title"] == "Milonga"

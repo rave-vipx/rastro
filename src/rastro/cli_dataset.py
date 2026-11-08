@@ -79,10 +79,24 @@ def load_job_command(args: argparse.Namespace) -> int:
             effective_job, base_dir=args.file.parent, allow_absolute_paths=args.allow_absolute_paths
         )
     loaded = load_results(
-        spec, [f.name for f in job.fields], report, store, monitor=monitor, snapshots=snapshots
+        spec,
+        [f.name for f in job.fields],
+        report,
+        store,
+        rules=job.consistency,
+        monitor=monitor,
+        snapshots=snapshots,
     )
     from rastro.cli_repair_storage import retain_successes
 
+    held_urls = {
+        s.source_url
+        for s in loaded.sources
+        if s.consistency is not None and s.consistency.verdict == "inconsistent"
+    }
+    for result in report.results:
+        if result.source_url in held_urls:
+            successes.pop(result.job_id, None)
     issues = retain_successes(raw_path, spec.name, job.build_schema(), report, successes)
     loaded = loaded.model_copy(
         update={

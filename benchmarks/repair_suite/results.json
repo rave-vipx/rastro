@@ -1,0 +1,236 @@
+{
+ "cases": [
+  {
+   "page": "sodre",
+   "mutation": "container_class_rename",
+   "kind": "structural",
+   "outcome": "promoted_correct",
+   "seconds": 1.23,
+   "model_calls": 0
+  },
+  {
+   "page": "sodre",
+   "mutation": "wrapper_around_list",
+   "kind": "structural",
+   "outcome": "not_broken",
+   "seconds": 0.64,
+   "model_calls": 0
+  },
+  {
+   "page": "sodre",
+   "mutation": "field_class_rename",
+   "kind": "structural",
+   "outcome": "promoted_correct",
+   "seconds": 1.24,
+   "model_calls": 0
+  },
+  {
+   "page": "sodre",
+   "mutation": "field_moved_in_card",
+   "kind": "structural",
+   "outcome": "promoted_correct",
+   "seconds": 1.24,
+   "model_calls": 0
+  },
+  {
+   "page": "sodre",
+   "mutation": "container_and_field_rename",
+   "kind": "structural",
+   "outcome": "promoted_correct",
+   "seconds": 1.24,
+   "model_calls": 0
+  },
+  {
+   "page": "sodre",
+   "mutation": "link_class_rename",
+   "kind": "structural",
+   "outcome": "promoted_correct",
+   "seconds": 1.24,
+   "model_calls": 0
+  },
+  {
+   "page": "sodre",
+   "mutation": "sale_date_in_event_path",
+   "kind": "trap",
+   "outcome": "held",
+   "seconds": 0.62,
+   "model_calls": 0
+  },
+  {
+   "page": "sodre",
+   "mutation": "title_selector_hits_venue",
+   "kind": "trap",
+   "outcome": "held",
+   "seconds": 0.62,
+   "model_calls": 0
+  },
+  {
+   "page": "sodre",
+   "mutation": "container_matches_promos",
+   "kind": "trap",
+   "outcome": "rejected",
+   "seconds": 0.92,
+   "model_calls": 0
+  },
+  {
+   "page": "sodre",
+   "mutation": "page_emptied",
+   "kind": "trap",
+   "outcome": "no_candidates",
+   "seconds": 0.91,
+   "model_calls": 0
+  },
+  {
+   "page": "tickantel",
+   "mutation": "jsonld_key_moved",
+   "kind": "structural",
+   "outcome": "rejected",
+   "seconds": 0.91,
+   "model_calls": 0
+  },
+  {
+   "page": "tickantel",
+   "mutation": "sale_date_in_event_path",
+   "kind": "trap",
+   "outcome": "held",
+   "seconds": 0.61,
+   "model_calls": 0
+  },
+  {
+   "page": "tickantel",
+   "mutation": "title_selector_hits_venue",
+   "kind": "trap",
+   "outcome": "held",
+   "seconds": 0.61,
+   "model_calls": 0
+  },
+  {
+   "page": "tickantel",
+   "mutation": "container_matches_promos",
+   "kind": "trap",
+   "outcome": "rejected",
+   "seconds": 0.9,
+   "model_calls": 0
+  },
+  {
+   "page": "tickantel",
+   "mutation": "page_emptied",
+   "kind": "trap",
+   "outcome": "no_candidates",
+   "seconds": 0.9,
+   "model_calls": 0
+  },
+  {
+   "page": "zitarrosa",
+   "mutation": "container_class_rename",
+   "kind": "structural",
+   "outcome": "promoted_correct",
+   "seconds": 1.22,
+   "model_calls": 0
+  },
+  {
+   "page": "zitarrosa",
+   "mutation": "wrapper_around_list",
+   "kind": "structural",
+   "outcome": "promoted_correct",
+   "seconds": 1.21,
+   "model_calls": 0
+  },
+  {
+   "page": "zitarrosa",
+   "mutation": "field_class_rename",
+   "kind": "structural",
+   "outcome": "promoted_correct",
+   "seconds": 1.23,
+   "model_calls": 0
+  },
+  {
+   "page": "zitarrosa",
+   "mutation": "field_moved_in_card",
+   "kind": "structural",
+   "outcome": "promoted_correct",
+   "seconds": 1.22,
+   "model_calls": 0
+  },
+  {
+   "page": "zitarrosa",
+   "mutation": "container_and_field_rename",
+   "kind": "structural",
+   "outcome": "promoted_correct",
+   "seconds": 1.21,
+   "model_calls": 0
+  },
+  {
+   "page": "zitarrosa",
+   "mutation": "link_class_rename",
+   "kind": "structural",
+   "outcome": "not_broken",
+   "seconds": 0.63,
+   "model_calls": 0
+  },
+  {
+   "page": "zitarrosa",
+   "mutation": "sale_date_in_event_path",
+   "kind": "trap",
+   "outcome": "held",
+   "seconds": 0.61,
+   "model_calls": 0
+  },
+  {
+   "page": "zitarrosa",
+   "mutation": "title_selector_hits_venue",
+   "kind": "trap",
+   "outcome": "held",
+   "seconds": 0.61,
+   "model_calls": 0
+  },
+  {
+   "page": "zitarrosa",
+   "mutation": "container_matches_promos",
+   "kind": "trap",
+   "outcome": "no_candidates",
+   "seconds": 0.9,
+   "model_calls": 0
+  },
+  {
+   "page": "zitarrosa",
+   "mutation": "page_emptied",
+   "kind": "trap",
+   "outcome": "no_candidates",
+   "seconds": 0.91,
+   "model_calls": 0
+  }
+ ],
+ "counts": {
+  "promoted_correct": 10,
+  "promoted_wrong": 0,
+  "quarantined": 0,
+  "rejected": 3,
+  "no_candidates": 4,
+  "not_broken": 2,
+  "silent_wrong": 0,
+  "held": 6
+ },
+ "by_kind": {
+  "structural": {
+   "promoted_correct": 10,
+   "promoted_wrong": 0,
+   "quarantined": 0,
+   "rejected": 1,
+   "no_candidates": 0,
+   "not_broken": 2,
+   "silent_wrong": 0,
+   "held": 0
+  },
+  "trap": {
+   "promoted_correct": 0,
+   "promoted_wrong": 0,
+   "quarantined": 0,
+   "rejected": 2,
+   "no_candidates": 4,
+   "not_broken": 0,
+   "silent_wrong": 0,
+   "held": 6
+  }
+ }
+}

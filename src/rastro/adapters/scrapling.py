@@ -42,13 +42,18 @@ def field_scope(expression: str, page: Selector, node: Selector) -> tuple[Select
 def element_count(scope: Selector, selector: str) -> int:
     """Elements a selector list matches; pseudo-elements select values of their element."""
     count = 0
+    seen: set[str] = set()
     for tree in parse(selector):
         if tree.canonical().startswith("::"):
             count += 1
             continue
         tree.pseudo_element = None
-        count += len(scope.css(tree.canonical()))
-    return count
+        # A selector list ("a, b") matching the same element twice is one match.
+        seen.update(
+            element._root.getroottree().getpath(element._root)
+            for element in scope.css(tree.canonical())
+        )
+    return count + len(seen)
 
 
 def _matches(scope: Selector, selector: str) -> tuple[int, list[str]]:

@@ -1,0 +1,95 @@
+format_version = 1
+recipe_memory = "recipes.sqlite"
+
+[region]
+locale = "es-UY"
+languages = ["es-UY", "es"]
+timezone = "America/Montevideo"
+currency = "UYU"
+
+[repair]
+auto_promote = true
+min_records = 3
+
+[dataset]
+name = "tickantel_suite"
+path = "data.sqlite"
+identity = ["performance_id"]
+match_fields = ["title", "venue", "starts_at"]
+match_tolerance_minutes = 90
+
+[[sources]]
+kind = "file"
+path = "page.html"
+url = "https://tickantel.example/eventos/"
+
+[sources.recipe]
+version = 1
+strategy = "jsonld"
+item_type = "Event"
+require_evidence = true
+
+[sources.recipe.fields]
+performance_id = "/identifier"
+title = "/name"
+venue = "/location/name"
+starts_at = "/startDate"
+ticket_url = "/offers/url"
+price = "/offers/price"
+currency = "/offers/priceCurrency"
+
+[[fields]]
+name = "title"
+type = "string"
+min_length = 1
+[[fields]]
+name = "venue"
+type = "string"
+min_length = 1
+[[fields]]
+name = "starts_at"
+type = "datetime"
+
+[[fields]]
+name = "ticket_url"
+type = "url"
+
+[[fields]]
+name = "performance_id"
+type = "string"
+min_length = 1
+[[fields]]
+name = "price"
+type = "decimal"
+required = false
+ge = 0
+[[fields]]
+name = "currency"
+type = "string"
+required = false
+min_length = 3
+max_length = 3
+[[consistency]]
+kind = "after_observation"
+field = "starts_at"
+tolerance_minutes = 60
+
+[[consistency]]
+kind = "distinct_ratio"
+field = "starts_at"
+min_ratio = 0.5
+min_records = 3
+
+[[consistency]]
+kind = "historical_shift"
+field = "starts_at"
+max_shift = 45
+unit = "days"
+min_history = 3
+
+# User-declared rule: this agenda expects varied event titles.
+[[consistency]]
+kind = "distinct_ratio"
+field = "title"
+min_ratio = 0.5
+min_records = 3

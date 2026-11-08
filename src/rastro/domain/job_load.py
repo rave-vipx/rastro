@@ -4,6 +4,7 @@ from typing import Any, Literal
 
 from pydantic import Field
 
+from rastro.domain.consistency import ConsistencyReport
 from rastro.domain.dataset import ChangeKind, DatasetRecordKey, SourceStatus
 from rastro.domain.drift import DriftAssessment
 from rastro.domain.job_results import JobExitCode, JobSummary
@@ -14,6 +15,10 @@ class LoadedSource(Contract):
     source_url: str
     status: Outcome
     counts: dict[ChangeKind, int]
+    consistency: ConsistencyReport | None = Field(default=None, exclude_if=lambda v: v is None)
+    next_action: Literal["rastro recipe repair"] | None = Field(
+        default=None, exclude_if=lambda v: v is None
+    )
     issues: tuple[Issue, ...] = Field(default=(), exclude_if=lambda v: not v)
 
 
@@ -32,6 +37,8 @@ class JobLoadResult(Contract):
 
     @property
     def exit_code(self) -> JobExitCode:
+        if any(s.consistency and s.consistency.verdict == "inconsistent" for s in self.sources):
+            return JobExitCode.PARTIAL_SUCCESS
         return {
             "success": JobExitCode.SUCCESS,
             "partial_success": JobExitCode.PARTIAL_SUCCESS,

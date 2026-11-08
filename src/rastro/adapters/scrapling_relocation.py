@@ -1,13 +1,13 @@
 """Offline adaptive relocation at the parser boundary (SCR-002, REPAIR-001).
 
-Only field nodes within an unchanged record selector are relocated. A fingerprint
-of the first successful record proposes a template; CI must validate all records,
-history and semantics. No fetcher, adaptive storage or activation is involved.
+Container and field fingerprints from the first success propose a template; CI must validate
+all records, history and semantics. No fetcher, adaptive storage or activation is involved.
 """
 
 from __future__ import annotations
 
 import re
+from copy import deepcopy
 
 from cssselect import SelectorError
 from lxml.etree import LxmlError  # type: ignore[import-untyped]
@@ -15,6 +15,12 @@ from pydantic import BaseModel, ValidationError
 from scrapling.core.utils._utils import _StorageTools
 from scrapling.parser import Selector
 
+from rastro.adapters.scrapling_container import (
+    container_evidence,
+    container_selector,
+    field_supported,
+    relocate_matches,
+)
 from rastro.domain.models import (
     ConfigurationError,
     CssRecipe,
@@ -77,6 +83,7 @@ class ScraplingRelocation:
             schema_fingerprint=result.schema_fingerprint,
             observed_at=result.completed_at,
             fields={name: _fingerprint(node) for name, node in nodes.items()},
+            record=_fingerprint(records[0]),
         )
         if len(snapshot.model_dump_json().encode()) > limits.max_html_bytes:
             raise ResourceLimitError("Relocation snapshot exceeds max_html_bytes")
@@ -95,6 +102,17 @@ class ScraplingRelocation:
         ):
             raise ConfigurationError("Relocation snapshot does not match the recipe")
         page, records = _records(html, recipe, limits)
+        record_selector = recipe.record_selector
+        relocated: list[Selector] = []
+        if not records and snapshot.record is not None and page._root is not None:
+            masked = Selector(root=deepcopy(page._root), adaptive=False)
+            _mask(masked)
+            new, relocated = container_selector(page, masked, snapshot.record)
+            if new is not None:
+                records = _css(page, new)
+                if len(records) > limits.max_records:
+                    raise ResourceLimitError("Record count exceeds max_records")
+                record_selector = f"{record_selector}, {new}"
         if not records:
             return ()
         # shortcut: one template record, expand when heterogeneous-template fixtures require it.
@@ -103,13 +121,15 @@ class ScraplingRelocation:
             field: _css(record, _expression(expr)[0]) for field, expr in recipe.fields.items()
         }
         _mask(page)
+        evidence = container_evidence(page, relocated, records, snapshot.fields, selected)
         fields = dict(recipe.fields)
-        evidence: list[RepairEvidence] = []
         for field, fingerprint in snapshot.fields.items():
             if _expression(recipe.fields[field])[0] == ":scope":
                 evidence.append(RepairEvidence(field=field, match_count=1))
                 continue
-            matches = record.relocate(fingerprint.model_dump(), 40, selector_type=True)
+            matches = relocate_matches(record, fingerprint)
+            if relocated and not selected[field] and not field_supported(matches, fingerprint):
+                return ()
             evidence.append(RepairEvidence(field=field, match_count=len(matches)))
             if matches and [node._root for node in matches] != [
                 node._root for node in selected[field]
@@ -118,11 +138,11 @@ class ScraplingRelocation:
                 fields[field] = ", ".join(
                     [fields[field], *(_relative(record, node) + suffix for node in matches)]
                 )
-        if fields == recipe.fields:
+        if fields == recipe.fields and record_selector == recipe.record_selector:
             return ()
         try:
             candidate = CssRecipe(
-                record_selector=recipe.record_selector,
+                record_selector=record_selector,
                 fields=fields,
                 version=recipe.version,
                 require_evidence=True,
@@ -191,9 +211,14 @@ def _mask(page: Selector) -> None:
     # Hash both sides identically, so Scrapling debug logs cannot expose source content.
     for node in page._root.iter():
         node.tag = "h" + digest(node.tag)
+        classes = sorted(set(node.get("class", "").split()))
+        if len(classes) > 100:
+            raise ResourceLimitError("Relocation exceeds 100 class tokens")
         attributes = {
-            key if key in {"class", "id", "href", "src"} else "h" + digest(key): "h" + digest(value)
-            for key, value in sorted(node.attrib.items())
+            key if key in {"class", "id", "href", "src"} else "h" + digest(key): (
+                " ".join("h" + digest(c) for c in classes) if key == "class" else "h" + digest(v)
+            )
+            for key, v in sorted(node.attrib.items())
         }
         node.attrib.clear()
         node.attrib.update(attributes)
@@ -204,6 +229,8 @@ def _mask(page: Selector) -> None:
 def _fingerprint(node: Selector) -> ElementFingerprint:
     # Scrapling 0.5 has no public serialization helper; keep this dependency in the adapter.
     data = _StorageTools.element_to_dict(node._root)
+    if "class" in data["attributes"]:
+        data["attributes"]["class"] = tuple(data["attributes"]["class"].split())
     # Parent and sibling similarity would penalize the very node moves we repair.
     return ElementFingerprint.model_validate(
         {key: data[key] for key in ElementFingerprint.model_fields}

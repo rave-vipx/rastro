@@ -33,13 +33,16 @@ class ElementFingerprint(Contract):
     """Scrapling 0.5 comparison properties, containing hashes instead of page text."""
 
     tag: FingerprintToken
-    attributes: dict[FingerprintAttribute, FingerprintToken] = Field(max_length=100)
+    attributes: dict[
+        FingerprintAttribute,
+        FingerprintToken | Annotated[tuple[FingerprintToken, ...], Field(max_length=100)],
+    ] = Field(max_length=100)
     text: FingerprintToken | None
     path: tuple[FingerprintToken, ...] = Field(max_length=128)
 
 
 class RelocationSnapshot(Contract):
-    """First record's field fingerprints, captured only after a successful run.
+    """First record and observed field fingerprints from a successful run.
 
     The caller retains the latest successful snapshot per source/schema/recipe;
     failed runs must not replace it. There is no implicit Scrapling storage.
@@ -50,22 +53,27 @@ class RelocationSnapshot(Contract):
     schema_fingerprint: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
     observed_at: AwareDatetime
     fields: dict[str, ElementFingerprint] = Field(min_length=1, max_length=100)
+    record: ElementFingerprint | None = None
 
 
 class RepairEvidence(Contract):
     field: str = Field(min_length=1, max_length=256)
     match_count: int = Field(ge=0, le=4096)
+    ambiguous: bool | None = None
 
 
 class RepairCandidate(Contract):
     recipe: Recipe
     origin: Literal["scrapling_relocation", "fallback", "discovery", "model"]
     rationale: Reason
-    evidence: tuple[RepairEvidence, ...] = Field(default=(), max_length=100)
+    evidence: tuple[RepairEvidence, ...] = Field(default=(), max_length=101)
 
     @property
     def ambiguous(self) -> bool:
-        return any(item.match_count > 1 for item in self.evidence)
+        return any(
+            item.ambiguous if item.ambiguous is not None else item.match_count > 1
+            for item in self.evidence
+        )
 
 
 class RepairCandidates(Contract):

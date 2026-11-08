@@ -1,0 +1,82 @@
+format_version = 1
+recipe_memory = "recipes.sqlite"
+
+[region]
+locale = "es-UY"
+languages = ["es-UY", "es"]
+timezone = "America/Montevideo"
+currency = "UYU"
+
+[repair]
+auto_promote = true
+min_records = 5
+
+[dataset]
+name = "sodre_suite"
+path = "data.sqlite"
+identity = ["performance_id"]
+match_fields = ["title", "venue", "starts_at"]
+match_tolerance_minutes = 90
+
+[[sources]]
+kind = "file"
+path = "page.html"
+url = "https://sodre.example/espectaculos/"
+
+[sources.recipe]
+version = 1
+strategy = "css"
+record_selector = ".item .cyg--info.espectaculo"
+require_evidence = true
+
+[sources.recipe.fields]
+performance_id = "::attr(data-performance-id)"
+title = "h2.cyg--display-3::text"
+venue = "address img::attr(alt)"
+starts_at = "time.cyg--dia::attr(datetime)"
+ticket_url = "a.cyg--btn::attr(href)"
+
+[[fields]]
+name = "title"
+type = "string"
+min_length = 1
+[[fields]]
+name = "venue"
+type = "string"
+min_length = 1
+[[fields]]
+name = "starts_at"
+type = "datetime"
+
+[[fields]]
+name = "ticket_url"
+type = "url"
+
+[[fields]]
+name = "performance_id"
+type = "string"
+min_length = 1
+[[consistency]]
+kind = "after_observation"
+field = "starts_at"
+tolerance_minutes = 60
+
+[[consistency]]
+kind = "distinct_ratio"
+field = "starts_at"
+min_ratio = 0.5
+min_records = 3
+
+[[consistency]]
+kind = "historical_shift"
+field = "starts_at"
+max_shift = 45
+unit = "days"
+min_history = 3
+
+# User-declared rule: this agenda expects varied event titles.
+[[consistency]]
+kind = "distinct_ratio"
+field = "title"
+min_ratio = 0.5
+min_records = 3

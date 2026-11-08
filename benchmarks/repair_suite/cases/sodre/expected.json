@@ -1,0 +1,44 @@
+[
+ {
+  "performance_id": "sodre-1",
+  "title": "Candombe de Invierno",
+  "venue": "Auditorio Nelly Goitiño",
+  "starts_at": "2099-03-10T20:30:00-03:00",
+  "ticket_url": "https://tickets.example/uy/sodre-1"
+ },
+ {
+  "performance_id": "sodre-2",
+  "title": "Gala Anual: Tango y Milonga",
+  "venue": "Auditorio Nelly Goitiño",
+  "starts_at": "2099-03-11T20:30:00-03:00",
+  "ticket_url": "https://tickets.example/uy/sodre-2"
+ },
+ {
+  "performance_id": "sodre-3",
+  "title": "Noche de Ballet",
+  "venue": "Auditorio Nelly Goitiño",
+  "starts_at": "2099-03-12T20:30:00-03:00",
+  "ticket_url": "https://tickets.example/uy/sodre-3"
+ },
+ {
+  "performance_id": "sodre-4",
+  "title": "Folklore en Danza",
+  "venue": "Auditorio Nelly Goitiño",
+  "starts_at": "2099-03-13T20:30:00-03:00",
+  "ticket_url": "https://tickets.example/uy/sodre-4"
+ },
+ {
+  "performance_id": "sodre-5",
+  "title": "Milonga del Sur",
+  "venue": "Auditorio Nelly Goitiño",
+  "starts_at": "2099-03-14T20:30:00-03:00",
+  "ticket_url": "https://tickets.example/uy/sodre-5"
+ },
+ {
+  "performance_id": "sodre-6",
+  "title": "Ballet Contemporáneo",
+  "venue": "Auditorio Nelly Goitiño",
+  "starts_at": "2099-03-15T20:30:00-03:00",
+  "ticket_url": "https://tickets.example/uy/sodre-6"
+ }
+]

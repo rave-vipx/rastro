@@ -2,6 +2,8 @@
 
 import json
 import shutil
+import sqlite3
+from contextlib import closing
 from datetime import timedelta
 from pathlib import Path
 
@@ -181,6 +183,221 @@ def test_unknown_dataset_is_not_successful_empty_output(sample, capsys):
     capsys.readouterr()
     assert main(["dataset", "export", str(sample / "agenda.sqlite"), "--dataset", "typo"]) == 2
     assert not capsys.readouterr().out
+
+
+def sale_date_swap(sample):
+    import re
+
+    from rastro.mocklab.mutations import HtmlChangeLabel, MutationPlan
+
+    seller = sample / "tickantel-evento.html"
+    body = seller.read_text(encoding="utf-8")
+    changes = tuple(
+        HtmlChangeLabel(
+            selector='script[type="application/ld+json"]',
+            match=f'"startDate": "{date}"',
+            text='"startDate": "2026-11-01T10:00:00-03:00"',
+        )
+        for date in re.findall(r'"startDate": "([^"]+)"', body)
+    )
+    seller.write_text(
+        MutationPlan(seed=42, operators=changes).apply(body).document, encoding="utf-8"
+    )
+
+
+def test_sale_date_swap_is_held_and_old_rows_kept(sample):
+    job = load_job(sample / "job.toml")
+    store = SQLiteDatasetStore(sample / "agenda.sqlite")
+    names = [f.name for f in job.fields]
+    report = run_job(job, base_dir=sample)
+    load_results(job.dataset, names, report, store)
+    before = {r.key: r for r in store.records(job.dataset.name)}
+    sale_date_swap(sample)
+    changed = run_job(job, base_dir=sample)
+    held = load_results(job.dataset, names, changed, store, rules=job.consistency)
+    assert held.exit_code == 3
+    assert held.sources[1].consistency.verdict == "inconsistent"
+    assert all(n == 0 for n in held.sources[1].counts.values())
+    after = {r.key: r for r in store.records(job.dataset.name)}
+    for key, record in before.items():
+        if changed.results[1].source_url in record.origins:
+            url = changed.results[1].source_url
+            assert after[key].origins[url] == record.origins[url]
+
+
+@pytest.mark.parametrize("history_only", [False, True])
+def test_consistent_load_unchanged_and_no_rules_means_no_gate(sample, history_only):
+    job = load_job(sample / "job.toml")
+    store = SQLiteDatasetStore(sample / "agenda.sqlite")
+    names = [f.name for f in job.fields]
+    rules = job.consistency[-1:] if history_only else job.consistency
+    loaded = load_results(job.dataset, names, run_job(job, base_dir=sample), store, rules=rules)
+    assert loaded.exit_code == 0
+    expected = "not_assessed" if history_only else "consistent"
+    assert loaded.sources[0].consistency.verdict == expected
+    assert loaded.sources[1].consistency.verdict == expected
+    sale_date_swap(sample)
+    loaded = load_results(job.dataset, names, run_job(job, base_dir=sample), store)
+    assert loaded.exit_code == 0
+    assert all(s.consistency is None for s in loaded.sources)
+    assert any(
+        r.fields["starts_at"].startswith("2026-11-01") for r in store.records(job.dataset.name)
+    )
+
+
+def test_held_source_reported_stale_with_consistency_failed_and_exit_3(sample, capsys):
+    assert main(["job", "load", str(sample / "job.toml")]) == 0
+    capsys.readouterr()
+    sale_date_swap(sample)
+    assert main(["job", "load", str(sample / "job.toml")]) == 3
+    payload = json.loads(capsys.readouterr().out)
+    held = payload["sources"][1]
+    assert held["consistency"]["verdict"] == "inconsistent"
+    assert any(
+        r["kind"] == "after_observation" and r["status"] == "violated"
+        for r in held["consistency"]["results"]
+    )
+    assert held["next_action"] == "rastro recipe repair"
+    assert payload["stale_sources"][0]["reason"] == "consistency_failed"
+    assert payload["stale_sources"][0]["affected_keys"]
+
+
+@pytest.fixture
+def price_job(tmp_path):
+    """Synthetic numeric history for QUAL-005 and DRIFT-002 regression proofs."""
+    path = tmp_path / "job.json"
+    config = {
+        "format_version": 1,
+        "recipe_memory": "recipes.sqlite",
+        "dataset": {"name": "prices", "path": "data.sqlite", "identity": ["id"]},
+        "fields": [{"name": "id", "type": "string"}, {"name": "price", "type": "number"}],
+        "consistency": [
+            dict(
+                kind="historical_shift",
+                field="price",
+                unit="ratio",
+                max_shift=0.6,
+                min_history=1,
+            )
+        ],
+        "sources": [
+            {
+                "kind": "file",
+                "path": f"{name}.html",
+                "url": f"https://example.test/{name}",
+                "recipe": {
+                    "strategy": "css",
+                    "record_selector": "article",
+                    "fields": {"id": "::attr(data-id)", "price": "span::text"},
+                },
+            }
+            for name in "ab"
+        ],
+    }
+    path.write_text(json.dumps(config))
+    for name in "ab":
+        write_prices(tmp_path, name, 100)
+    return path
+
+
+def write_prices(folder, name, price):
+    (folder / f"{name}.html").write_text(
+        "<main>"
+        + "".join(f'<article data-id="{name}{i}"><span>{price}</span></article>' for i in range(3))
+        + "</main>"
+    )
+
+
+@pytest.mark.parametrize("order", ["ab", "ba"])
+def test_history_gate_uses_pre_load_history(price_job, capsys, order):
+    config = json.loads(price_job.read_text())
+    if order == "ba":
+        config["sources"].reverse()
+    price_job.write_text(json.dumps(config))
+    assert main(["job", "load", str(price_job)]) == 0
+    capsys.readouterr()
+    write_prices(price_job.parent, "a", 150)
+    write_prices(price_job.parent, "b", 165)
+    assert main(["job", "load", str(price_job)]) == 3
+    report = json.loads(capsys.readouterr().out)
+    assert {s["source_url"][-1]: s["consistency"]["verdict"] for s in report["sources"]} == {
+        "a": "consistent",
+        "b": "inconsistent",
+    }
+    rows = SQLiteDatasetStore(price_job.parent / "data.sqlite").records("prices")
+    assert {r.fields["price"] for r in rows if r.key.identity[0].startswith("b")} == {100}
+
+
+def test_held_load_cannot_become_drift_baseline(price_job, capsys):
+    args = ["job", "load", str(price_job), "--drift"]
+    assert main(args) == 0
+    capsys.readouterr()
+    with closing(sqlite3.connect(price_job.parent / "data.sqlite")) as db:
+        before = db.execute("SELECT run FROM drift_runs WHERE successful = 1").fetchall()
+    write_prices(price_job.parent, "a", 1000)
+    assert main(args) == 3
+    capsys.readouterr()
+    with closing(sqlite3.connect(price_job.parent / "data.sqlite")) as db:
+        assert db.execute("SELECT run FROM drift_runs WHERE successful = 0").fetchall()
+    from rastro.adapters.sqlite_drift import SQLiteDriftMonitor
+    from rastro.domain.drift import StructuralSnapshot
+
+    with closing(sqlite3.connect(price_job.parent / "data.sqlite")) as db:
+        payload = db.execute("SELECT snapshot FROM drift_runs WHERE successful = 0").fetchone()[0]
+    held = StructuralSnapshot.model_validate_json(payload)
+    baseline = SQLiteDriftMonitor(price_job.parent / "data.sqlite").baseline("prices", held)
+    assert baseline.run_id in {r[0] for r in before}
+
+
+def test_partial_load_reports_rejected_candidates(sample):
+    """QUAL-006: three valid candidates and one rejection give validity 0.75."""
+    job = load_job(sample / "job.toml")
+    report = run_job(job, base_dir=sample)
+    source = report.results[0]
+    partial = source.model_copy(
+        update={
+            "status": Outcome.PARTIAL_SUCCESS,
+            "records": source.records[:3],
+            "metrics": source.metrics.model_copy(update={"rejected": 1}),
+        }
+    )
+    loaded = load_results(
+        job.dataset,
+        [f.name for f in job.fields],
+        JobRunResult.from_results(
+            schema_fingerprint=report.job.schema_fingerprint, results=[partial]
+        ),
+        SQLiteDatasetStore(sample / "agenda.sqlite"),
+        rules=job.consistency,
+    )
+    assert loaded.sources[0].consistency.structural_validity == 0.75
+
+
+def test_sodre_title_trap_extracts_venue_and_is_held(tmp_path, capsys):
+    from benchmarks.repair_suite.mutations import SODRE, VENUE
+
+    shutil.copytree(Path("benchmarks/repair_suite/cases/sodre"), tmp_path / "sodre")
+    folder = tmp_path / "sodre"
+    path = folder / "job.toml"
+    assert main(["job", "load", str(path)]) == 0
+    capsys.readouterr()
+    page = folder / "page.html"
+    trap = next(c for c in SODRE if c.name == "title_selector_hits_venue")
+    page.write_text(trap.transform(page.read_text(encoding="utf-8")), encoding="utf-8")
+    report = run_job(load_job(path), base_dir=folder)
+    assert {r.data.title for r in report.results[0].records} == {VENUE}
+    assert main(["job", "load", str(path)]) == 3
+    held = json.loads(capsys.readouterr().out)["sources"][0]
+    assert held["consistency"]["verdict"] == "inconsistent"
+
+
+def test_repair_suite_readme_matches_measured_counts():
+    """DIFF-002: published claims must match the measured artifact."""
+    folder = Path("benchmarks/repair_suite")
+    counts = json.loads((folder / "results.json").read_text())["counts"]
+    readme = (folder / "README.md").read_text()
+    for outcome, count in counts.items():
+        assert f"| {outcome} | {count} |" in readme
 
 
 def test_html_export_escapes_script_in_values(sample, capsys, monkeypatch):
