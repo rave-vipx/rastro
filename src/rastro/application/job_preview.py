@@ -21,6 +21,7 @@ from rastro.domain.job_results import JobRunResult
 from rastro.domain.models import ConfigurationError, ExtractionResult
 
 if TYPE_CHECKING:
+    from rastro.domain.jobs import Job
     from rastro.ports.acquisition import AcquisitionPort
     from rastro.ports.model import ModelPort
 
@@ -91,6 +92,31 @@ def build_preview(spec: DatasetSpec, names: list[str], report: JobRunResult[Any]
     )
 
 
+def preview_job(
+    job: Job,
+    *,
+    base_dir: Path,
+    allow_absolute_paths: bool = False,
+    acquisition: AcquisitionPort | None = None,
+    model: ModelPort | None = None,
+) -> JobPreview:
+    """Preview an already loaded job with a ``[dataset]`` block. Writes no dataset file."""
+    if job.dataset is None:
+        raise ConfigurationError("job preview requires a [dataset] block in the job file")
+    if job.recipe_memory is not None:
+        raise ConfigurationError(
+            "job preview cannot run jobs with recipe_memory: recipe storage would be written"
+        )
+    report = run_job(
+        job,
+        base_dir=base_dir,
+        allow_absolute_paths=allow_absolute_paths,
+        acquisition=acquisition,
+        model=model,
+    )
+    return build_preview(job.dataset, [item.name for item in job.fields], report)
+
+
 def preview_job_file(
     path: str | Path,
     *,
@@ -101,20 +127,13 @@ def preview_job_file(
     """Load a job with a ``[dataset]`` block and preview a run. Writes no dataset file."""
     file_path = Path(path)
     job = load_job(file_path, allow_absolute_paths=allow_absolute_paths)
-    if job.dataset is None:
-        raise ConfigurationError("job preview requires a [dataset] block in the job file")
-    if job.recipe_memory is not None:
-        raise ConfigurationError(
-            "job preview cannot run jobs with recipe_memory: recipe storage would be written"
-        )
-    report = run_job(
+    return preview_job(
         job,
         base_dir=file_path.parent,
         allow_absolute_paths=allow_absolute_paths,
         acquisition=acquisition,
         model=model,
     )
-    return build_preview(job.dataset, [item.name for item in job.fields], report)
 
 
 def _cell(value: object) -> str:

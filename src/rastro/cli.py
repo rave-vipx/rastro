@@ -29,6 +29,8 @@ from rastro.cli_dataset import add_commands, dataset_command, load_job_command
 from rastro.cli_errors import UsageError, classify
 from rastro.cli_recipe import add_commands as add_recipe_commands
 from rastro.cli_recipe import recipe_command
+from rastro.cli_studio import add_command as add_studio_command
+from rastro.cli_studio import studio_command
 from rastro.domain.job_dataset import job_preview_json_schema
 from rastro.domain.job_load import job_load_json_schema
 
@@ -102,6 +104,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     add_commands(subcommands, job_commands)
     add_recipe_commands(subcommands)
+    add_studio_command(subcommands)
     return parser
 
 
@@ -151,6 +154,8 @@ def _dispatch(args: argparse.Namespace) -> int:
         return recipe_command(args)
     if args.command == "dataset":
         return dataset_command(args)
+    if args.command == "studio":
+        return studio_command(args)
     if args.command == "doctor":
         print(
             json.dumps(

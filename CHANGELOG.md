@@ -2,6 +2,10 @@
 
 All notable user-facing changes will be recorded here. No public release has been published.
 
+## Unreleased
+
+- `rastro studio` (optional `studio` extra) serves a loopback-only page to validate, preview, correct a selector, accept and copy connect commands for a job; see `docs/studio.md` (P-008).
+
 ## 0.3.0 — not published (2026-11-11)
 
 Nothing from this project is published to PyPI.

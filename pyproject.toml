@@ -35,6 +35,7 @@ dependencies = [
 http = ["curl-cffi>=0.16.1,<0.18", "protego>=0.6.2,<0.8"]
 ollama = ["httpx>=0.28.1,<0.29"]
 openai = ["httpx>=0.28.1,<0.29"]
+studio = ["starlette>=1.10,<2", "uvicorn>=0.30,<1"]
 
 [project.urls]
 Homepage = "https://github.com/rave-vipx/rastro"
@@ -49,6 +50,9 @@ rastro = "rastro.cli:main"
 [dependency-groups]
 dev = [
   "httpx>=0.28.1,<0.29",
+  "starlette>=1.10,<2",
+  "uvicorn>=0.30,<1",
+  "httpx2>=2,<3",
   "curl-cffi>=0.16.1,<0.18",
   "protego>=0.6.2,<0.8",
   "hypothesis>=6,<7",
