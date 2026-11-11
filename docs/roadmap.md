@@ -105,19 +105,23 @@ The pilot observations lead this list; items 8–11 are earlier pilot-ranked acq
 
 **First v0.3 task (owner decision, 2026-11-08): build the recovery benchmark harness.** The DIFF-001 sealed run is still open because the runner in the [frozen protocol](recovery-benchmark.md#reproducibility) does not exist yet: `python -m benchmarks.recovery verify|run|verdict`, the five executors (`baseline_static`, `baseline_adapted` with its hashed fallback library, `rastro` through the public SDK, `always_alarm`, `never_alarm`), the `deny_all`/`approve_all` approvers, the Wilson-interval metrics, the C1–C8 verdict and the scenario-independence scan. Build and tune it on the development split only, with different authors for the baseline and the repair code, freeze the executor hashes, then run the sealed split once (ADR 0011). The sealed half has not been opened.
 
-1. SODRE Spanish date text yields zero live records: localized and yearless parsing and date-range expansion.
-2. Distinguish sale date from event date and split multiple schedules.
-3. Handle partial JSON-LD with field-level fallbacks and regional context.
-4. Validate live-source repair on real changes.
-5. Add retention pruning for stored evidence.
-6. Calibrate drift against observed sources.
-7. Evaluate relocation across heterogeneous sources.
-8. Relative URL resolution.
-9. Address fallback across validated IPv6/IPv4 targets.
-10. Clear access-restriction reporting and transparent contact metadata; no evasion.
-11. Clear diagnostics for HTTPS downgrades and invalid origin certificates; retain TLS enforcement.
+Status at the leftovers cut (2026-11-11):
 
-Open: HtmlDuplicateElement performance on large targets; newcomer validation / usability for a new user.
+| # | Candidate | State |
+| --- | --- | --- |
+| 1 | Spanish, yearless dates and ranges | Done in #65 (localized fields) |
+| 2 | Sale vs event date; several schedules per card | Several dates per card: `expand:` field prefix (leftovers cut). Sale vs event date is chosen by the job's selectors |
+| 3 | Partial JSON-LD field fallbacks | JSON pointer lists per field (leftovers cut) |
+| 4 | Repair validated on a real change | Needs a live breakage; tripwire 2026-12-15 |
+| 5 | Retention pruning | `rastro recipe prune` (leftovers cut); dataset evidence already keeps only the latest success (ADR 0019) |
+| 6 | Drift calibrated on observed sources | Needs live history; waits for a user running daily loads |
+| 7 | Relocation across heterogeneous sources | Done in #66 (heterogeneous matches quarantined) |
+| 8 | Relative URL resolution | Done in #65 |
+| 9 | IPv6/IPv4 address fallback | Done in #65 |
+| 10 | Access-restriction reporting, no evasion | Done (`access_restriction` outcomes, robots refusal) |
+| 11 | HTTPS downgrade and certificate diagnostics | Done (`https_downgrade`, `tls_verification_failed`) |
+
+Open, waiting for a real user: HtmlDuplicateElement speed (Mock Lab is frozen); newcomer usability test.
 
 ## Current requirement mapping
 

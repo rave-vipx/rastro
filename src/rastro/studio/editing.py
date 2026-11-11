@@ -34,12 +34,15 @@ def _fields_of(raw: dict[str, Any], source: int | None) -> dict[str, Any]:
 
 
 def list_selectors(job: Job) -> list[dict[str, Any]]:
-    """Editable (source, field, selector) rows; source is null for the job-level recipe."""
+    """Editable (source, field, selector) rows; source is null for the job-level recipe.
+
+    JSON-LD pointer lists are not editable here and are left out."""
     rows: list[dict[str, Any]] = []
     if job.recipe is not None:
         rows += [
             {"source": None, "field": name, "selector": value}
             for name, value in job.recipe.fields.items()
+            if isinstance(value, str)
         ]
     for index, source in enumerate(job.sources):
         recipe = getattr(source, "recipe", None)
@@ -47,6 +50,7 @@ def list_selectors(job: Job) -> list[dict[str, Any]]:
             rows += [
                 {"source": index, "field": name, "selector": value}
                 for name, value in recipe.fields.items()
+                if isinstance(value, str)
             ]
     return rows
 
