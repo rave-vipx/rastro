@@ -20,11 +20,12 @@
 
 Rastro turns web pages into validated records with field-level provenance, loads them into a SQLite dataset, and repairs its own extraction recipes when a page changes. The engine is generic: fields and rules live in a TOML job, not in the library; the [events example](examples/uy-dance-agenda/) runs offline on synthetic pages.
 
-> **v0.3.0, not published.** Nothing is on PyPI; install from source.
+> **v0.5.0, not published.** Nothing is on PyPI; install from source.
 
 ## What works today
 
 - Multi-source load: one job reads several listing pages into one SQLite dataset; a second run creates nothing new, and a failing source keeps its last valid rows.
+- Optional front ends on the same services: `rastro studio` (local page to preview and correct a job), `rastro mcp` (tools for agents such as Claude Code) and `rastro recipe export`/`import` (share a verified recipe through Git). See the [docs](https://rave-vipx.github.io/rastro/).
 - Repair suite (synthetic pages modeled on real ones): structural breakages repaired automatically 5/11 before, 10/11 now (`jsonld_key_moved` still rejected), 0 wrong recipes promoted. Data traps: 6 held by the consistency gate, 2 rejected, 4 no candidates; silent wrong data 5 to 0. Not yet proven on a real live breakage.
 
 ## Limits

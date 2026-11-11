@@ -12,6 +12,8 @@ from uuid import uuid4
 from rastro.application.recipe_ci import evaluate_candidate
 from rastro.application.recipe_repair import repair_candidates
 from rastro.application.repair_candidates import RepairCandidateGenerator
+from rastro.cli_hub import add_commands as add_hub_commands
+from rastro.cli_hub import hub_command
 from rastro.cli_repair_context import RepairContext, safe_path
 from rastro.domain.lifecycle import RecipeState
 from rastro.domain.models import ConfigurationError, Limits
@@ -22,6 +24,7 @@ from rastro.domain.repair import RepairCandidate
 def add_commands(subcommands: argparse._SubParsersAction) -> None:  # type: ignore[type-arg]
     parser = subcommands.add_parser("recipe", help="Evaluate, promote or roll back recipes")
     commands = parser.add_subparsers(dest="recipe_command", required=True)
+    add_hub_commands(commands)
     for name in ("repair", "promote", "rollback", "compare"):
         command = commands.add_parser(name)
         command.add_argument("file", type=Path)
@@ -43,6 +46,8 @@ def add_commands(subcommands: argparse._SubParsersAction) -> None:  # type: igno
 
 
 def recipe_command(args: argparse.Namespace) -> int:
+    if args.recipe_command in {"export", "import"}:
+        return hub_command(args)
     context = RepairContext.load(args.file, args.allow_absolute_paths)
     if args.recipe_command == "compare":
         _, key, _ = context.source(args.source)

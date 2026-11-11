@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import unicodedata
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -21,6 +22,7 @@ from rastro.domain.job_results import JobRunResult
 from rastro.domain.models import ConfigurationError, ExtractionResult
 
 if TYPE_CHECKING:
+    from rastro.domain.jobs import Job
     from rastro.ports.acquisition import AcquisitionPort
     from rastro.ports.model import ModelPort
 
@@ -91,6 +93,31 @@ def build_preview(spec: DatasetSpec, names: list[str], report: JobRunResult[Any]
     )
 
 
+def preview_job(
+    job: Job,
+    *,
+    base_dir: Path,
+    allow_absolute_paths: bool = False,
+    acquisition: AcquisitionPort | None = None,
+    model: ModelPort | None = None,
+) -> JobPreview:
+    """Preview an already loaded job with a ``[dataset]`` block. Writes no dataset file."""
+    if job.dataset is None:
+        raise ConfigurationError("job preview requires a [dataset] block in the job file")
+    if job.recipe_memory is not None:
+        raise ConfigurationError(
+            "job preview cannot run jobs with recipe_memory: recipe storage would be written"
+        )
+    report = run_job(
+        job,
+        base_dir=base_dir,
+        allow_absolute_paths=allow_absolute_paths,
+        acquisition=acquisition,
+        model=model,
+    )
+    return build_preview(job.dataset, [item.name for item in job.fields], report)
+
+
 def preview_job_file(
     path: str | Path,
     *,
@@ -101,20 +128,13 @@ def preview_job_file(
     """Load a job with a ``[dataset]`` block and preview a run. Writes no dataset file."""
     file_path = Path(path)
     job = load_job(file_path, allow_absolute_paths=allow_absolute_paths)
-    if job.dataset is None:
-        raise ConfigurationError("job preview requires a [dataset] block in the job file")
-    if job.recipe_memory is not None:
-        raise ConfigurationError(
-            "job preview cannot run jobs with recipe_memory: recipe storage would be written"
-        )
-    report = run_job(
+    return preview_job(
         job,
         base_dir=file_path.parent,
         allow_absolute_paths=allow_absolute_paths,
         acquisition=acquisition,
         model=model,
     )
-    return build_preview(job.dataset, [item.name for item in job.fields], report)
 
 
 def _cell(value: object) -> str:
@@ -162,3 +182,25 @@ def render_preview_table(preview: JobPreview) -> str:
         for record in source.records:
             lines += _record_lines(record)
     return "\n".join([*lines, "", "* identity field"])
+
+
+def bounded_preview(
+    preview: JobPreview, *, max_records: int = 50, max_chars: int = 500
+) -> dict[str, Any]:
+    """JSON form of a preview for agents and Studio: at most ``max_records`` records per
+    source and string values cut to ``max_chars``, with ``truncated`` saying so (AGENT-002)."""
+    payload: dict[str, Any] = preview.model_dump(mode="json")
+    truncated = False
+    for source in payload["sources"]:
+        if len(source["records"]) > max_records:
+            source["records"] = source["records"][:max_records]
+            truncated = True
+        for record in source["records"]:
+            for field in record["fields"]:
+                value = field["value"]
+                text = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
+                if len(text) > max_chars:
+                    field["value"] = text[:max_chars] + "…"
+                    truncated = True
+    payload["truncated"] = truncated
+    return payload

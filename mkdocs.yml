@@ -26,10 +26,13 @@ nav:
   - Overview: index.md
   - Getting started: getting-started.md
   - Declarative jobs: jobs.md
+  - MCP server: mcp.md
   - Dataset load and export: dataset.md
+  - Local Studio: studio.md
   - HTTP acquisition: acquisition.md
   - Recipe memory: memory.md
   - Recipe lifecycle: recipe-lifecycle.md
+  - Recipe hub (bundles): hub.md
   - Structural drift: drift.md
   - Semantic consistency: consistency.md
   - Recipe CI and repair: repair.md
@@ -49,6 +52,7 @@ nav:
   - Clean code and module size: development/clean-code.md
   - Development work log: development/work-log.md
   - Engineering decisions:
+      - Minimal Studio, MCP and Hub: decisions/0020-studio-mcp-hub-minimal.md
       - Last-success repair evidence: decisions/0019-repair-evidence-storage.md
       - Measured drift signals: decisions/0018-drift-signals.md
       - Dataset identity and storage: decisions/0017-dataset-store.md

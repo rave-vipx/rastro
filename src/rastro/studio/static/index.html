@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rastro Studio</title>
+<link rel="stylesheet" href="/static/studio.css">
+</head>
+<body>
+<header><h1>Rastro Studio</h1><p id="root"></p><p id="listing" role="status"></p></header>
+<main>
+  <section>
+    <h2>1. Job file</h2>
+    <select id="files" aria-label="Job file"></select>
+    <button id="validate">2. Validate</button>
+    <p id="validation" role="status"></p>
+  </section>
+  <section>
+    <h2>3. Preview</h2>
+    <button id="preview">Preview sample records</button>
+    <div id="records"></div>
+  </section>
+  <section>
+    <h2>4. Correct a match</h2>
+    <select id="selector-pick" aria-label="Field selector"></select>
+    <input id="selector-text" type="text" maxlength="1024" aria-label="New selector" size="50">
+    <button id="repreview">Re-preview with this selector</button>
+  </section>
+  <section>
+    <h2>5. Accept</h2>
+    <button id="accept">Write the corrected job to its file</button>
+    <p id="accepted" role="status"></p>
+  </section>
+  <section>
+    <h2>6. Connect your app</h2>
+    <button id="connect">Show commands</button>
+    <pre id="commands"></pre>
+  </section>
+</main>
+<script src="/static/studio.js"></script>
+</body>
+</html>

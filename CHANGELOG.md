@@ -2,6 +2,16 @@
 
 All notable user-facing changes will be recorded here. No public release has been published.
 
+## 0.5.0 — not published (2026-11-11)
+
+Nothing from this project is published to PyPI. Versions 0.4 (Studio, MCP) and 0.5 (Hub step 1) land together; see [ADR 0020](docs/decisions/0020-studio-mcp-hub-minimal.md).
+
+### Added
+
+- `rastro mcp` serves job validate, preview and run, dataset records and recipe listing to agents over stdio MCP, behind the optional `mcp` extra and a workspace root (AGENT-002, AGENT-003, P-008).
+- `rastro recipe export` and `rastro recipe import` share recipes as bundles (recipe, schema, sample, expected records, hashes) verified offline before storage (HUB-001; see `docs/hub.md`).
+- `rastro studio` (optional `studio` extra) serves a loopback-only page to validate, preview, correct a selector, accept and copy connect commands for a job; see `docs/studio.md` (P-008).
+
 ## 0.3.0 — not published (2026-11-11)
 
 Nothing from this project is published to PyPI.
