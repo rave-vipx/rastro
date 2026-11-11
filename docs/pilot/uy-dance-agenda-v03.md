@@ -105,3 +105,12 @@ dates is inferred (the pages print none): the observation year, rolling forward 
 - **Repair retention:** recipes with `document:` fields skip relocation snapshots
   (`relocation_retention_skipped`), so Zitarrosa and Magnolio have no relocation repair yet.
 - **Consistency rules** on `starts_at` only cover SODRE and Tickantel rows (the others have no time).
+
+## First live hold (2026-11-11, 02:19 local)
+
+The first run after the v0.3 merge held SODRE: `after_observation` on `starts_at` found
+1 of 16 values before the observation time (a show the listing still shows after it started),
+and the job allowed 0. The gate worked as designed (stale rows kept, exit 3), but the
+rule was too strict for a venue listing. The live job now allows `max_violation_ratio = 0.25`;
+sale dates read as event dates put almost every value in the past, so that trap is still
+held. Rerun: SODRE 16, Sala Zitarrosa 20, Magnolio 12, Tickantel 3 created (51), 50 upcoming.

@@ -1,8 +1,7 @@
 # Working on Rastro
 
-Read `RASTRO_MASTER_SPEC.md` before implementation. The active milestone is **v0.2**;
-v0.1 is complete at release candidate `0.1.0rc1` (tag `v0.1.0rc1`, promoted to `main` on 2026-11-03),
-not published. `docs/roadmap.md` tracks milestone scope and unfinished requirements.
+Read `docs/roadmap.md` (the planning source) before implementation; `RASTRO_MASTER_SPEC.md` is reference only. The active milestone is **v0.3, closing** (0.3.0, not published).
+Work is done by a Claude agent team: one coordinator, one worker per slice in its own worktree, one reviewer. A cross-model review per cut is required only for changes to persistence, security, network/egress or CI; small docs-only changes need no external review.
 
 - Deliver one usable vertical slice at a time, with tests and documentation.
 - Keep domain code independent of adapters. Use Scrapling through the parser or acquisition boundary.

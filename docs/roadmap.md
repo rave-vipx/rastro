@@ -1,8 +1,24 @@
 # Roadmap and requirement coverage
 
-**v0.2 implementation delivered; evaluation partial — from known sources to a usable database** (specification 1.2, [ADR 0016](decisions/0016-dataset-outcome.md)). The product outcome: describe the data you need, name the sources you know, and get an updatable database for your application. First public case: an agenda of dance events in Uruguay (an example job; the engine stays domain-neutral).
+**v0.3 closing (2026-11-11): a self-maintaining event agenda, version 0.3.0, not published.** This roadmap is the planning source; the master spec is reference only. First public case: dance events in Uruguay (an example job; the engine stays domain-neutral).
 
 v0.1 remains the reference release. It is complete: `0.1.0rc1` is its release candidate, with M1–M4 implemented, the M5 technical evidence recorded, every section 18 acceptance criterion evidenced, and DIFF-001 partially demonstrated. Publication (namespace ownership, legal/trademark review, tag and Trusted Publishing) awaits maintainer approval through the release gates in issue #5; nothing has been published.
+
+## v0.3 close (2026-11-11)
+
+**Delivered:** the live Uruguay dance agenda from 4 known sources into a database (#65) and automatic recipe repair with a consistency gate (#66); numbers are in the [README](https://github.com/rave-vipx/rastro#readme). Version 0.3.0, not published, no release candidate.
+
+**Frozen until a real user asks (code stays):** model-assisted repair (Ollama, OpenAI-compatible adapters); the sealed recovery corpus and final v0.2 evaluation; Mock Lab and `benchmarks/product_task`; new sources needing robots exceptions or split-date parsing; the 2,230-line master spec as planning source.
+
+| Date | Signal | Action |
+| --- | --- | --- |
+| 2026-11-18 | Any week with more than 10 PRs and no user-visible change | Cut scope |
+| 2026-11-19 | Daily run has not completed 7 consecutive days unattended | Fix operation first |
+| 2026-11-30 | Nobody outside the team opened the agenda twice | Change the case or stop |
+| 2026-12-01 | v0.3 not available anywhere installable or viewable | Publish as is or archive |
+| 2026-12-15 | No real source breakage recorded (repaired or rejected) | Stop investing in repair |
+
+**Owner decisions pending:** promote `dev` to `main` so the schedule and page go live; share the agenda with 5 dancers.
 
 ## v0.1 milestones
 

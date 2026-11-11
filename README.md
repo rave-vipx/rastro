@@ -16,20 +16,24 @@
   <a href="https://github.com/rave-vipx/rastro/issues">Issues</a>
 </p>
 
-**Describe the data you need, name the sources you know, and get an updatable database for your application.**
+**An event agenda that keeps itself updated when the source pages change.**
 
-Rastro validates extracted fields, keeps their provenance, and updates a separate
-SQLite dataset without deleting valid records when a source fails. You can use a
-TOML job and the CLI, or the typed Python SDK. Models, browsers and paid services
-are optional; the example below needs none of them.
+Rastro turns web pages into validated records with field-level provenance, loads them into a SQLite dataset, and repairs its own extraction recipes when a page changes. The engine is generic: fields and rules live in the [example job](examples/uy-dance-agenda/), not in the library.
 
-The first public case is an agenda of dance events in Uruguay. Its fields and
-rules live in [the example](examples/uy-dance-agenda/), so the engine serves other
-projects. The offline sample works end to end; the [dated live pilot](docs/pilot/uy-dance-agenda.md)
-records limitations that still prevent a complete two-live-source agenda.
+> **v0.3.0, not published.** Nothing is on PyPI; install from source.
 
-> **`0.2.0rc1` release candidate — not yet published.** Rastro extracts supplied HTML or JSON, or permitted HTTP sources, using JSON-LD, CSS or JSON-pointer recipes. HTTP is an optional extra with destination controls, robots enforcement, and bounded asynchronous execution. SQLite recipe memory reuses validated strategies across restarts. Optional local Ollama assistance proposes recipes within strict budgets; every candidate is validated before activation. No PyPI release has been published by this project.
+## What works today
 
+- Live agenda (2026-11-08): 4 sources (SODRE, Sala Zitarrosa, Magnolio Sala, Tickantel), 54 records, 52 upcoming, spot-check 10/10, second run created 0. 8 of 52 rows are dance by keyword rule. Rerun on 2026-11-11: 51 records, 50 upcoming. See the [pilot](docs/pilot/uy-dance-agenda-v03.md).
+- Repair suite (synthetic pages modeled on real ones): structural breakages repaired automatically 5/11 before, 10/11 now (`jsonld_key_moved` still rejected), 0 wrong recipes promoted. Data traps: 6 held by the consistency gate, 2 rejected, 4 no candidates; silent wrong data 5 to 0. Not yet proven on a real live breakage.
+- Agenda page: <https://rave-vipx.github.io/rastro/agenda/>, refreshed daily at 08:00 Montevideo once this code is on `main`.
+
+## Limits
+
+- Multi-date cards keep only the first date.
+- Skipped sources: Passline and Entraste (robots rules), BNS and Sala del Museo (date split across nodes).
+- Dance classification is a keyword rule.
+- Model-assisted repair (Ollama, OpenAI-compatible) exists but is frozen, as are the sealed recovery corpus, Mock Lab and `benchmarks/product_task`.
 
 ## Drift and repair offline
 
@@ -240,22 +244,6 @@ For pages that need assistance, install the `ollama` extra and supply
 Ollama proposes declarative mappings and Rastro validates source evidence and the
 schema before remembering them. Calls, time, context, responses and concurrency are
 bounded. See the [optional intelligence guide](docs/intelligence.md).
-
-## What works today
-
-| Capability | Status |
-| --- | --- |
-| Typed Python SDK, JSON-LD and CSS extraction | Available |
-| Pydantic validation and per-field provenance | Available |
-| Explicit outcomes, input budgets, JSON logs and processing timings | Available |
-| Offline CLI demo, diagnostics, recipe validation | Available |
-| Job preview, approved SQLite load, stale-source report, JSON/JSONL export | Available; offline agenda proof above |
-| Optional HTTP acquisition, source policies and bounded async batches | Available |
-| SQLite recipe storage and deterministic reuse | Available |
-| Opt-in JSON-LD/microdata discovery and bounded local Ollama recipe generation | Available; live-model quality evidence pending |
-| Controlled repair and drift monitoring | Planned for v0.2 |
-| Repeat-load identity and failure retention | Available; scheduling planned for v0.3 |
-| Studio / community recipe Hub | Planned for v0.4 / v0.5 |
 
 ## Contribute
 
