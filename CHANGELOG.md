@@ -2,10 +2,13 @@
 
 All notable user-facing changes will be recorded here. No public release has been published.
 
-## Unreleased
+## 0.3.0 — not published (2026-11-11)
+
+Nothing from this project is published to PyPI.
 
 ### Added
 
+- Daily agenda workflow: the docs workflow refreshes the Uruguay dance agenda at 08:00 Montevideo, publishes it at https://rave-vipx.github.io/rastro/agenda/ and keeps a 30-day `agenda-evidence` artifact per run; it runs only once promoted to `main`.
 - Localized date and datetime job fields (`localized = true`) parse Spanish listing text using the job region's timezone; a datetime without a time fails explicitly. Relative links resolve against the source URL (DATA-005, JOB-002).
 - CSS field expressions may read one page-level node with the `document:` prefix (exactly one match, with provenance).
 - `rastro dataset export --format html`, plus `--sort-field`, `--upcoming` and `--timezone`; daily scheduling examples in `docs/scheduling.md` (SCHED-007, DATA-004).
