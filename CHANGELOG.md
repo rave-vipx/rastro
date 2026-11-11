@@ -2,6 +2,12 @@
 
 All notable user-facing changes will be recorded here. No public release has been published.
 
+## Unreleased
+
+### Added
+
+- `rastro recipe export` and `rastro recipe import` share recipes as bundles (recipe, schema, sample, expected records, hashes) verified offline before storage (HUB-001; see `docs/hub.md`).
+
 ## 0.3.0 — not published (2026-11-11)
 
 Nothing from this project is published to PyPI.
