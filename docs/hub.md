@@ -33,22 +33,23 @@ with a query string or fragment. Commit the directory to Git.
 ## Import
 
 ```console
-$ rastro recipe import ./my-recipe --store recipes.sqlite [--activate]
+$ rastro recipe import ./my-recipe --store recipes.sqlite
 ```
 
 Import treats the bundle as untrusted. It checks, in order: the directory is real
 and not a symlink; `format_version` is known; the file list is exactly the expected
 names; every file is a regular, size-bounded file whose SHA-256 matches; the recipe
 and schema validate; and the recipe, re-run offline on the sample, yields records
-equal to `expected.json`. Only then is the recipe stored, as a `candidate`, or as
-`active` with `--activate`, following the [lifecycle](recipe-lifecycle.md). It gets
+equal to `expected.json`. Only then is the recipe stored, always as a `candidate`, following the
+[lifecycle](recipe-lifecycle.md). Promote it with `rastro recipe promote`, which runs
+the full candidate gate; import never activates a recipe. It gets
 the next free version, so it never overwrites a stored version, and the key (source,
 schema, region, context) is the one your own job computes for the same source.
 
 Every failure exits with code 2 and a typed error (`BundleIntegrityError`,
 `BundleVersionError`, `BundleVerificationError`, all `ConfigurationError`) and leaves
 the store unchanged. Hashes detect corruption, not a malicious author: review a
-candidate and keep `--activate` for bundles you trust.
+candidate before you promote it.
 
 ## Limits
 

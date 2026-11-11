@@ -16,7 +16,6 @@ from pydantic import BaseModel, TypeAdapter, ValidationError
 
 from rastro.application.extraction import extract_document, validate_recipe
 from rastro.domain.job_fields import JobField, build_job_schema
-from rastro.domain.lifecycle import RecipeState
 from rastro.domain.memory import RecipeContext, RecipeKey, StoredRecipe
 from rastro.domain.models import ConfigurationError, Limits, Outcome, Recipe, Representation, Source
 from rastro.domain.recipe_bundle import (
@@ -61,7 +60,7 @@ def export_bundle(
     recipe = validate_recipe(schema, recipe, recipe.representation)
     document = _read_bounded(sample, limits.max_input_bytes(recipe.representation))
     result = extract_document(
-        document.decode("utf-8", errors="strict"),
+        _decode_sample(document, bundle=False),
         source=source,
         schema=schema,
         recipe=recipe,
@@ -99,11 +98,10 @@ def import_bundle(
     repository: RecipeRepository,
     parser_for: ParserFor,
     *,
-    activate: bool,
     at: datetime,
     limits: Limits | None = None,
 ) -> StoredRecipe:
-    """Verify a bundle offline, then store it as a candidate (or active with ``activate``)."""
+    """Verify a bundle offline, then store it as a candidate."""
     if not isinstance(repository, RecipeLifecycle):
         raise ConfigurationError("Importing recipes requires a lifecycle-aware repository")
     limits = limits or Limits()
@@ -120,16 +118,7 @@ def import_bundle(
         manifest.source, schema, manifest.context, representation=manifest.representation
     )
     version = repository.next_version(key)
-    stored = repository.save_candidate(key, _with_version(recipe, version), selected_index=0, at=at)
-    if activate:
-        stored = repository.transition(
-            key,
-            version,
-            RecipeState.ACTIVE,
-            reason="Imported from a verified recipe bundle",
-            at=at,
-        )
-    return stored
+    return repository.save_candidate(key, _with_version(recipe, version), selected_index=0, at=at)
 
 
 def _verify_replay(
@@ -142,7 +131,7 @@ def _verify_replay(
 ) -> None:
     sample = files[SAMPLE_FILES[manifest.representation]]
     result = extract_document(
-        sample.decode("utf-8", errors="replace"),
+        _decode_sample(sample, bundle=True),
         source=manifest.source,
         schema=schema,
         recipe=recipe,
@@ -193,7 +182,7 @@ def _read_bundle(directory: Path, limits: Limits) -> tuple[BundleManifest, dict[
 def _read_bounded(path: Path, cap: int, *, bundle: bool = False) -> bytes:
     error = BundleIntegrityError if bundle else ConfigurationError
     try:
-        descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+        descriptor = os.open(path, os.O_RDONLY | os.O_NONBLOCK | getattr(os, "O_NOFOLLOW", 0))
     except OSError as cause:
         raise error("File is missing, linked or unreadable") from cause
     with os.fdopen(descriptor, "rb") as handle:
@@ -203,6 +192,15 @@ def _read_bounded(path: Path, cap: int, *, bundle: bool = False) -> bytes:
     if len(data) > cap:
         raise error("File exceeds its size limit")
     return data
+
+
+def _decode_sample(data: bytes, *, bundle: bool) -> str:
+    try:
+        return data.decode("utf-8")
+    except UnicodeDecodeError as error:
+        raise (BundleIntegrityError if bundle else ConfigurationError)(
+            "The sample file is not valid UTF-8"
+        ) from error
 
 
 def _load_json(data: bytes) -> Any:

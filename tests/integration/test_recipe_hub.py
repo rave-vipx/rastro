@@ -96,21 +96,46 @@ def test_git_roundtrip_serves_the_recipe_without_the_author(exported, tmp_path, 
         encoding="utf-8",
     )
     shutil.copy(store, consumer / "b.sqlite")
-    assert (
-        main(["recipe", "import", str(clone), "--store", str(consumer / "b.sqlite"), "--activate"])
-        == 0
+    job_file = consumer / "job.toml"
+    job_file.write_text(
+        job_file.read_text(encoding="utf-8").replace(
+            "format_version = 1", "format_version = 1\nrecipe_version = 1"
+        ),
+        encoding="utf-8",
     )
-    capsys.readouterr()
     assert main(["job", "load", str(consumer / "job.toml")]) == 0
     loaded = json.loads(capsys.readouterr().out)
     assert loaded["sources"][0]["status"] == "success"
 
 
-def test_import_activate_serves_and_default_is_candidate(exported, tmp_path, capsys):
+def test_import_never_activates(exported, tmp_path, capsys):
     _, _, bundle = exported
-    store = tmp_path / "b.sqlite"
-    assert main(["recipe", "import", str(bundle), "--store", str(store), "--activate"]) == 0
-    assert json.loads(capsys.readouterr().out)["state"] == RecipeState.ACTIVE
+    assert main(["recipe", "import", str(bundle), "--store", str(tmp_path / "b.sqlite")]) == 0
+    assert json.loads(capsys.readouterr().out)["state"] == RecipeState.CANDIDATE
+    assert main(["recipe", "import", str(bundle), "--store", "x", "--activate"]) == 2
+
+
+def test_non_utf8_sample_is_rejected_on_export_and_import(exported, tmp_path, capsys):
+    _, job, bundle = exported
+    bad = tmp_path / "bad.html"
+    bad.write_bytes(b"\xff\xfe<html>")
+    args = ["recipe", "export", str(job), "--sample", str(bad), "--to", str(tmp_path / "o")]
+    assert main(args) == 2
+    assert "sample" in capsys.readouterr().err
+    data = b"\xff\xfe<html>"
+    (bundle / "sample.html").write_bytes(data)
+    manifest = json.loads((bundle / MANIFEST_FILE).read_text(encoding="utf-8"))
+    manifest["files"]["sample.html"] = sha256_hex(data)
+    rewrite_manifest(bundle, files=manifest["files"])
+    assert "sample" in import_error(bundle, tmp_path, capsys)[0]
+
+
+@pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="FIFOs are unavailable")
+def test_fifo_in_place_of_a_file_does_not_hang(exported, tmp_path, capsys):
+    _, _, bundle = exported
+    (bundle / "recipe.json").unlink()
+    os.mkfifo(bundle / "recipe.json")
+    assert "regular" in import_error(bundle, tmp_path, capsys)[0]
 
 
 @pytest.mark.parametrize("name", ["recipe.json", "expected.json", "sample.html", "schema.json"])

@@ -20,10 +20,11 @@ def add_commands(commands: argparse._SubParsersAction) -> None:  # type: ignore[
     export.add_argument("--sample", type=Path, required=True, help="Redistributable sample file")
     export.add_argument("--to", type=Path, required=True, help="Bundle directory")
     export.add_argument("--allow-absolute-paths", action="store_true")
-    imported = commands.add_parser("import", help="Verify a recipe bundle and store it")
+    imported = commands.add_parser(
+        "import", help="Verify a recipe bundle and store it as a candidate"
+    )
     imported.add_argument("directory", type=Path)
     imported.add_argument("--store", type=Path, required=True, help="Recipe SQLite file")
-    imported.add_argument("--activate", action="store_true", help="Serve it instead of a candidate")
 
 
 def hub_command(args: argparse.Namespace) -> int:
@@ -84,7 +85,6 @@ def _import(args: argparse.Namespace) -> int:
         args.directory,
         SQLiteRecipeRepository(args.store),
         _parser_for,
-        activate=args.activate,
         at=datetime.now(UTC),
     )
     print(
