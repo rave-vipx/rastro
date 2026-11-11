@@ -26,6 +26,7 @@ nav:
   - Overview: index.md
   - Getting started: getting-started.md
   - Declarative jobs: jobs.md
+  - MCP server: mcp.md
   - Dataset load and export: dataset.md
   - HTTP acquisition: acquisition.md
   - Recipe memory: memory.md
