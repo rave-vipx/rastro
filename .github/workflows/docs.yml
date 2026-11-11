@@ -3,6 +3,8 @@ name: Documentation
 on:
   push:
     branches: [main]
+  schedule:
+    - cron: '0 11 * * *' # 08:00 America/Montevideo (UTC-3)
   workflow_dispatch:
 
 permissions:
@@ -27,6 +29,59 @@ jobs:
           enable-cache: true
       - run: uv sync --locked --only-group docs
       - run: uv run --no-sync mkdocs build --strict
+      - name: Restore previous agenda dataset
+        continue-on-error: true
+        uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: agenda-run/agenda.sqlite
+          key: agenda-sqlite-${{ github.run_id }}
+          restore-keys: agenda-sqlite-
+      - name: Refresh Uruguay dance agenda
+        continue-on-error: true
+        run: |
+          mkdir -p agenda-run site/agenda
+          cp examples/uy-dance-agenda/job.toml agenda-run/
+          uv sync --locked --no-dev --extra http
+          RASTRO="$GITHUB_WORKSPACE/.venv/bin/rastro"
+          cd agenda-run
+          set +e
+          "$RASTRO" job load job.toml > load.log 2>&1
+          rc=$?
+          echo "load exit: $rc" | tee -a load.log
+          if [ -f agenda.sqlite ]; then
+            "$RASTRO" dataset status agenda.sqlite > status.json 2> status.err
+            "$RASTRO" dataset export agenda.sqlite --format html --sort-field starts_on --upcoming --timezone America/Montevideo > ../site/agenda/index.html
+            echo "export exit: $?" | tee -a load.log
+          else
+            echo "no dataset produced" > status.json
+          fi
+          {
+            echo "### Agenda refresh"
+            echo "Load exit code: \`$rc\` (0 ok, 1 failure, 2 config error, 3 partial)"
+            echo '```json'
+            cat status.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+      - name: Save agenda dataset
+        if: always() && hashFiles('agenda-run/agenda.sqlite') != ''
+        continue-on-error: true
+        uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: agenda-run/agenda.sqlite
+          key: agenda-sqlite-${{ github.run_id }}
+      - name: Upload agenda evidence
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: agenda-evidence
+          path: |
+            agenda-run/load.log
+            agenda-run/status.json
+            agenda-run/status.err
+          retention-days: 30
+          if-no-files-found: ignore
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: site
