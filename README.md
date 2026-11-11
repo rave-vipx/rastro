@@ -31,7 +31,6 @@ Rastro turns web pages into validated records with field-level provenance, loads
 
 - A listing card with several dates yields one record (the first date).
 - A date split across several page nodes cannot be read; sites whose robots rules refuse access are skipped, never bypassed.
-- Automatic repair is measured on synthetic pages, not yet on a real live breakage.
 - Model-assisted repair (Ollama, OpenAI-compatible) exists but is frozen, as are the sealed recovery corpus, Mock Lab and `benchmarks/product_task`.
 
 ## Drift and repair offline
