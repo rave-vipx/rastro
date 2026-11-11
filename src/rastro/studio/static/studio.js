@@ -1,7 +1,9 @@
 "use strict";
 // All source-derived text is set as plain text content; markup is never parsed.
 const $ = (id) => document.getElementById(id);
-const token = document.querySelector('meta[name="studio-token"]').content;
+// The token arrives in the URL fragment (never sent to the server); keep it in memory only.
+const token = new URLSearchParams(location.hash.slice(1)).get("token") || "";
+history.replaceState(null, "", location.pathname + location.search);
 let sha = null;
 let selectors = [];
 
@@ -120,7 +122,12 @@ async function connect() {
 }
 
 async function start() {
+  if (!token) {
+    show("listing", "Open the URL printed in the terminal (it carries the session token).");
+    return;
+  }
   const data = await api("/api/jobs");
+  if (data.truncated) show("listing", "Only the first 500 job files are listed.");
   show("root", `Root: ${data.root}`);
   for (const name of data.files) $("files").append(new Option(name, name));
 }

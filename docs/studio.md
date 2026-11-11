@@ -19,8 +19,9 @@ there is no Node build.
 
 ## The six steps
 
-1. **Job file.** Lists `.toml` and `.json` files below the root (four levels deep, symlinks
-   skipped).
+1. **Job file.** Lists `.toml` and `.json` files below the root (four levels deep). Symlinks, hidden
+   directories and vendor directories (`node_modules`, `__pycache__`, `venv`, `dist`, `build`,
+   `site`) are skipped; at most 500 files are listed and the page says when the list is cut.
 2. **Validate.** Parses and validates the job with the same rules as `rastro job validate`.
 3. **Preview.** Runs `rastro job preview` logic: sample records, and for every field the method,
    locator, validation status and whether it would be loaded. Rejected records show their
@@ -43,8 +44,12 @@ Studio is a local tool, not a server to expose.
 
 - Loopback only. Requests whose `Host` is not `127.0.0.1` or `localhost` are rejected (this
   also blocks DNS rebinding), and so is any request whose `Origin` is not local.
-- A random token is generated on every start and embedded in the served page. Every `POST`
-  needs it in `X-Studio-Token`.
+- A random token is generated on every start and printed once as
+  `http://127.0.0.1:PORT/#token=<token>`. The page reads it from the URL fragment (which the
+  browser never sends to the server), keeps it in memory and clears it from the address bar.
+  The served page does not contain it. Every `POST` needs it in `X-Studio-Token`. The token
+  stops other local users only as long as the terminal output stays private. Without it the page
+  asks you to open the URL printed in the terminal.
 - Paths are relative to the root, may not contain `..`, backslashes or NUL, must end in `.toml`
   or `.json`, and may not pass through symlinks. Files the job itself references follow the same
   containment rules as the CLI.

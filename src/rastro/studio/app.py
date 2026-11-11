@@ -142,12 +142,7 @@ class Studio:
                 raise _Refused(403, "token_required")
 
     async def page(self, request: Request) -> Response:
-        html = (STATIC / "index.html").read_text(encoding="utf-8")
-        return Response(
-            html.replace("__STUDIO_TOKEN__", self.token),
-            media_type="text/html",
-            headers=HEADERS,
-        )
+        return FileResponse(STATIC / "index.html", headers=HEADERS)
 
     async def asset(self, request: Request) -> Response:
         name = request.path_params["name"]
@@ -156,7 +151,8 @@ class Studio:
         return FileResponse(STATIC / name, headers=HEADERS)
 
     async def jobs(self, request: Request) -> Response:
-        return _json({"root": self.root.name, "files": files.list_job_files(self.root)})
+        found, truncated = files.list_job_files(self.root)
+        return _json({"root": self.root.name, "files": found, "truncated": truncated})
 
     async def validate(self, request: Request) -> Response:
         data = await _body(request)
