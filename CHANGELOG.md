@@ -7,6 +7,7 @@ All notable user-facing changes will be recorded here. No public release has bee
 ### Added
 
 - `rastro mcp` serves job validate, preview and run, dataset records and recipe listing to agents over stdio MCP, behind the optional `mcp` extra and a workspace root (AGENT-002, AGENT-003, P-008).
+- `rastro recipe export` and `rastro recipe import` share recipes as bundles (recipe, schema, sample, expected records, hashes) verified offline before storage (HUB-001; see `docs/hub.md`).
 
 ## 0.3.0 — not published (2026-11-11)
 

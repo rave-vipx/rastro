@@ -31,6 +31,7 @@ nav:
   - HTTP acquisition: acquisition.md
   - Recipe memory: memory.md
   - Recipe lifecycle: recipe-lifecycle.md
+  - Recipe hub (bundles): hub.md
   - Structural drift: drift.md
   - Semantic consistency: consistency.md
   - Recipe CI and repair: repair.md
