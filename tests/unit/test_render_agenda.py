@@ -3,7 +3,9 @@
 import runpy
 from datetime import UTC, datetime
 
-render = runpy.run_path("examples/uy-dance-agenda/render_agenda.py")["render"]
+_module = runpy.run_path("examples/uy-dance-agenda/render_agenda.py")
+render = _module["render"]
+flatten = _module["flatten"]
 NOW = datetime(2026, 11, 11, 15, 0, tzinfo=UTC)
 
 
@@ -56,3 +58,13 @@ def test_empty_input_message_and_header():
     assert "No hay funciones próximas." in page
     assert "Actualizado: miércoles 11 de noviembre, 12:00 (hora de Montevideo)" in page
     assert '<html lang="es">' in page
+
+
+def test_flatten_marks_unreadable_or_old_observation_stale():
+    today = NOW.date()
+    fields = {"title": "Obra"}
+    assert flatten({"fields": fields, "last_observed_at": "not a date"}, today)["stale"]
+    assert flatten({"fields": fields}, today)["stale"]
+    assert flatten({"fields": fields, "last_observed_at": "2020-01-01T00:00:00+00:00"}, today)["stale"]
+    fresh = flatten({"fields": fields, "last_observed_at": NOW.isoformat()}, today)
+    assert "stale" not in fresh

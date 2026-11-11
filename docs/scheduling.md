@@ -7,7 +7,9 @@ agenda every day at 11:00 UTC (08:00 in Montevideo), with no machine of yours in
 After building the docs it restores the previous `agenda.sqlite` from the Actions cache,
 runs `rastro job load` on `examples/uy-dance-agenda/job.toml`, exports the upcoming events
 as JSON and renders them with `examples/uy-dance-agenda/render_agenda.py` into a Spanish, phone-friendly page at `agenda/index.html` (with a "Solo baile" toggle), saves the dataset back to the cache and deploys the site.
-The refresh can never fail the docs deploy.
+It also refreshes on every push to `main`. The refresh step has its own 8-minute limit and
+cannot fail the docs deploy; if the export or render fails, `/agenda/` shows a short
+"no disponible" page until the next run.
 
 - Page: <https://rave-vipx.github.io/rastro/agenda/> (the page states when it was generated).
 - Evidence: each run uploads the `agenda-evidence` artifact (load log with the exit code,

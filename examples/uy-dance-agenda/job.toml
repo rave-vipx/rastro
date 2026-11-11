@@ -162,7 +162,8 @@ max_length = 3
 
 # Event datetimes must not be before the observation time (one hour of slack). Listings keep
 # a show that already started for a while (SODRE, 2026-11-11: 1 of 16), so a quarter may lie
-# in the past; sale dates read as event dates put almost all of them there.
+# in the past; sale dates read as event dates put almost all of them there. A source with
+# fewer than 4 rows (Tickantel) still holds when one of its shows has started.
 [[consistency]]
 kind = "after_observation"
 field = "starts_at"

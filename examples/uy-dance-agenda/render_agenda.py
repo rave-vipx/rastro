@@ -151,12 +151,13 @@ def render(rows: list[Row], generated_at: datetime) -> str:
 
 
 def flatten(record: Row, today: date) -> Row:
-    """Merge export fields with a stale flag (explicit, else not observed today)."""
+    """Export fields plus a stale flag: not observed today, or no readable observation time."""
     row = dict(record.get("fields") or {})
-    seen = record.get("last_observed_at")
-    if record.get("stale") or (
-        isinstance(seen, str) and datetime.fromisoformat(seen).astimezone(ZONE).date() < today
-    ):
+    try:
+        seen = datetime.fromisoformat(str(record.get("last_observed_at"))).astimezone(ZONE).date()
+    except ValueError:
+        seen = None
+    if seen is None or seen < today:
         row["stale"] = True
     return row
 

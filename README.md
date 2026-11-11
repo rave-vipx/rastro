@@ -24,7 +24,7 @@ Rastro turns web pages into validated records with field-level provenance, loads
 
 ## What works today
 
-- Live agenda (2026-11-08): 4 sources (SODRE, Sala Zitarrosa, Magnolio Sala, Tickantel), 54 records, 52 upcoming, spot-check 10/10, second run created 0. 8 of 52 rows are dance by keyword rule. See the [pilot](docs/pilot/uy-dance-agenda-v03.md).
+- Live agenda (2026-11-08): 4 sources (SODRE, Sala Zitarrosa, Magnolio Sala, Tickantel), 54 records, 52 upcoming, spot-check 10/10, second run created 0. 8 of 52 rows are dance by keyword rule. Rerun on 2026-11-11: 51 records, 50 upcoming. See the [pilot](docs/pilot/uy-dance-agenda-v03.md).
 - Repair suite (synthetic pages modeled on real ones): structural breakages repaired automatically 5/11 before, 10/11 now (`jsonld_key_moved` still rejected), 0 wrong recipes promoted. Data traps: 6 held by the consistency gate, 2 rejected, 4 no candidates; silent wrong data 5 to 0. Not yet proven on a real live breakage.
 - Agenda page: <https://rave-vipx.github.io/rastro/agenda/>, refreshed daily at 08:00 Montevideo once this code is on `main`.
 
