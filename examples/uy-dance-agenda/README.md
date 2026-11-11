@@ -71,6 +71,8 @@ uv run rastro job load examples/uy-dance-agenda/sample/job.toml
 uv run rastro dataset export examples/uy-dance-agenda/sample/agenda.sqlite --format html --sort-field starts_at --upcoming > agenda.html
 ```
 
+The public page <https://rave-vipx.github.io/rastro/agenda/> is that JSON export rendered by [`render_agenda.py`](render_agenda.py) (`python render_agenda.py export.json > index.html`): Spanish, phone-first, grouped by day, with a "Solo baile" filter.
+
 Load the live job into a dataset and export the upcoming agenda (run it from a scratch
 directory; `agenda.sqlite` is written next to the job file):
 
