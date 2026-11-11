@@ -6,7 +6,7 @@ The `Documentation` workflow (`.github/workflows/docs.yml`) refreshes the Urugua
 agenda every day at 11:00 UTC (08:00 in Montevideo), with no machine of yours involved.
 After building the docs it restores the previous `agenda.sqlite` from the Actions cache,
 runs `rastro job load` on `examples/uy-dance-agenda/job.toml`, exports the upcoming events
-as HTML to `agenda/index.html`, saves the dataset back to the cache and deploys the site.
+as JSON and renders them with `examples/uy-dance-agenda/render_agenda.py` into a Spanish, phone-friendly page at `agenda/index.html` (with a "Solo baile" toggle), saves the dataset back to the cache and deploys the site.
 The refresh can never fail the docs deploy.
 
 - Page: <https://rave-vipx.github.io/rastro/agenda/> (the page states when it was generated).

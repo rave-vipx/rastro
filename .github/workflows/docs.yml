@@ -50,7 +50,8 @@ jobs:
           echo "load exit: $rc" | tee -a load.log
           if [ -f agenda.sqlite ]; then
             "$RASTRO" dataset status agenda.sqlite > status.json 2> status.err
-            "$RASTRO" dataset export agenda.sqlite --format html --sort-field starts_on --upcoming --timezone America/Montevideo > ../site/agenda/index.html
+            "$RASTRO" dataset export agenda.sqlite --format json --sort-field starts_on --upcoming --timezone America/Montevideo > export.json
+            python3 "$GITHUB_WORKSPACE/examples/uy-dance-agenda/render_agenda.py" export.json > ../site/agenda/index.html
             echo "export exit: $?" | tee -a load.log
           else
             echo "no dataset produced" > status.json
