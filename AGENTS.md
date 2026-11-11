@@ -1,6 +1,6 @@
 # Working on Rastro
 
-Read `docs/roadmap.md` (the planning source) before implementation; `RASTRO_MASTER_SPEC.md` is reference only. The active milestone is **v0.3, closing** (0.3.0, not published).
+Read `docs/roadmap.md` (the planning source) before implementation; `RASTRO_MASTER_SPEC.md` is reference only. Milestones through **v0.5** are delivered (0.5.0, not published); new work waits for a real user request.
 Work is done by a Claude agent team: one coordinator, one worker per slice in its own worktree, one reviewer. A cross-model review per cut is required only for changes to persistence, security, network/egress or CI; small docs-only changes need no external review.
 
 - Deliver one usable vertical slice at a time, with tests and documentation.

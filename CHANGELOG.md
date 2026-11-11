@@ -2,7 +2,9 @@
 
 All notable user-facing changes will be recorded here. No public release has been published.
 
-## Unreleased
+## 0.5.0 — not published (2026-11-11)
+
+Nothing from this project is published to PyPI. Versions 0.4 (Studio, MCP) and 0.5 (Hub step 1) land together; see [ADR 0020](docs/decisions/0020-studio-mcp-hub-minimal.md).
 
 ### Added
 

@@ -1,8 +1,16 @@
 # Roadmap and requirement coverage
 
-**v0.3 closing (2026-11-11): a self-maintaining event agenda, version 0.3.0, not published.** This roadmap is the planning source; the master spec is reference only. First public case: dance events in Uruguay (an example job; the engine stays domain-neutral).
+**v0.5 delivered (2026-11-11): version 0.5.0, not published.** v0.4 (Studio, MCP) and v0.5 (Hub step 1) closed in one cut on top of v0.3. This roadmap is the planning source; the master spec is reference only. The engine is domain-neutral; the events example runs offline.
 
 v0.1 remains the reference release. It is complete: `0.1.0rc1` is its release candidate, with M1–M4 implemented, the M5 technical evidence recorded, every section 18 acceptance criterion evidenced, and DIFF-001 partially demonstrated. Publication (namespace ownership, legal/trademark review, tag and Trusted Publishing) awaits maintainer approval through the release gates in issue #5; nothing has been published.
+
+## v0.4 and v0.5 close (2026-11-11)
+
+**Delivered:** `rastro studio`, a loopback-only page over the same services (pick a job, validate, preview, correct one selector, accept, connect) (P-008); `rastro mcp`, a stdio MCP server for Claude Code with job validate/preview/load, dataset reads and recipe listing (AGENT-002, AGENT-003); `rastro recipe export`/`import`, Git-friendly recipe bundles verified offline before storage (HUB-001, first step). Minimal shapes and what was left out are in [ADR 0020](decisions/0020-studio-mcp-hub-minimal.md). Version 0.5.0, not published.
+
+**Not built (waits for a real user):** React/Vite Studio, a hosted Hub registry, recipe signing, MCP write tools (promote, rollback, repair), plus everything frozen at the v0.3 close below.
+
+**Owner decisions pending:** publish 0.5.0 (tag, PyPI; v0.1 gates in issue #5) or keep it unpublished. Nothing else on this roadmap is open.
 
 ## v0.3 close (2026-11-11)
 
@@ -16,7 +24,7 @@ v0.1 remains the reference release. It is complete: `0.1.0rc1` is its release ca
 | 2026-12-01 | v0.3 not available anywhere installable or viewable | Publish as is or archive |
 | 2026-12-15 | No real source breakage recorded (repaired or rejected) | Stop investing in repair |
 
-**Owner decisions pending:** publish 0.3.0 or keep it unpublished.
+**Owner decisions pending:** superseded by the v0.4/v0.5 close above.
 
 ## v0.1 milestones
 
@@ -165,8 +173,8 @@ Open: HtmlDuplicateElement performance on large targets; newcomer validation / u
 ## Later releases
 
 - **v0.3 — from an intent to reusable sources and recipes:** start from known sites and fields, sites only, or only a goal; source and field proposals backed by real records; pagination, JavaScript, sessions, per-domain concurrency and run recovery as the pilot requires; scheduling with the same job; freshness, coverage and cost per source; alerts.
-- **v0.4 — Studio:** the proven path done visually (describe, review samples, correct a match, accept a recipe, connect the application), starting with the screen pilot users needed most; MCP once a concrete integration consumes it.
-- **v0.5 — Hub:** reuse a recipe with its schema, redistributable sample, test and last-verified date, starting with Git export/import; first proof: a third party publishes a recipe and another application uses it without the author's help.
+- **v0.4 — Studio (delivered minimal, ADR 0020):** the proven path done visually (describe, review samples, correct a match, accept a recipe, connect the application), starting with the screen pilot users needed most; MCP once a concrete integration consumes it.
+- **v0.5 — Hub (step 1 delivered: Git export/import, ADR 0020):** reuse a recipe with its schema, redistributable sample, test and last-verified date, starting with Git export/import; first proof: a third party publishes a recipe and another application uses it without the author's help.
 
 See the [master specification](https://github.com/rave-vipx/rastro/blob/main/RASTRO_MASTER_SPEC.md) for the authoritative requirements and acceptance criteria.
 
