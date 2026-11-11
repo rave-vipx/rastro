@@ -14,7 +14,6 @@ import shlex
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlsplit
 
 from pydantic import ValidationError
 from pydantic_core import SchemaError
@@ -27,7 +26,7 @@ from starlette.responses import FileResponse, JSONResponse, Response
 from starlette.routing import Route
 
 from rastro.application.job_loader import load_job, validate_job_paths
-from rastro.application.job_preview import preview_job
+from rastro.application.job_preview import bounded_preview, preview_job
 from rastro.cli_errors import classify
 from rastro.domain.jobs import Job
 from rastro.domain.models import ConfigurationError, RastroError
@@ -59,12 +58,9 @@ def _json(payload: dict[str, Any], status: int = 200) -> JSONResponse:
 
 
 def _origin_ok(request: Request) -> bool:
+    """No Origin (same-origin GET, CLI clients) or exactly this Studio's own origin."""
     origin = request.headers.get("origin")
-    return origin is None or (urlsplit(origin).hostname or "") in {
-        "127.0.0.1",
-        "localhost",
-        "::1",
-    }
+    return origin is None or origin == f"http://{request.headers.get('host', '')}"
 
 
 async def _body(request: Request) -> dict[str, Any]:
@@ -171,7 +167,7 @@ class Studio:
         path, original, job, _ = self._edited(data)
         shown = await run_in_threadpool(preview_job, job, base_dir=path.parent)
         return _json(
-            {"ok": True, "sha256": files.digest(original), "preview": shown.model_dump(mode="json")}
+            {"ok": True, "sha256": files.digest(original), "preview": bounded_preview(shown)}
         )
 
     async def accept(self, request: Request) -> Response:

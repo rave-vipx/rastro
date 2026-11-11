@@ -15,7 +15,7 @@ from rastro.adapters.sqlite import SQLiteRecipeRepository
 from rastro.adapters.sqlite_dataset import SQLiteDatasetStore
 from rastro.application.dataset_load import stale_sources
 from rastro.application.job_loader import load_job
-from rastro.application.job_preview import preview_job_file
+from rastro.application.job_preview import bounded_preview, preview_job_file
 from rastro.application.job_summary import job_validation_summary
 from rastro.cli_dataset import load_job_file
 from rastro.cli_dataset_export import select_records
@@ -51,7 +51,7 @@ def job_validate(root: Path, path: str) -> dict[str, Any]:
 
 
 def job_preview(root: Path, path: str) -> dict[str, Any]:
-    return _plain(preview_job_file(_existing(root, path)))
+    return bounded_preview(preview_job_file(_existing(root, path)))
 
 
 def job_run(root: Path, path: str) -> dict[str, Any]:

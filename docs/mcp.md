@@ -19,7 +19,7 @@ Without the extra, `rastro mcp` exits non-zero and prints a `missing_extra` erro
 | Tool | Equivalent | Effect |
 | --- | --- | --- |
 | `job_validate(path)` | `rastro job validate` | Validates the job; reads no sources |
-| `job_preview(path)` | `rastro job preview --output json` | Runs the job, writes nothing |
+| `job_preview(path)` | `rastro job preview --output json` | Runs the job, writes nothing; at most 50 records per source, values cut to 500 characters, `truncated` says so |
 | `job_run(path)` | `rastro job load` | Runs the job and loads approved fields into its dataset |
 | `dataset_records(path, dataset?, sort_field?, upcoming?, timezone?, limit?)` | `rastro dataset export` | Reads a bounded page of records plus stale sources |
 | `recipe_list(path)` | `rastro recipe` history | Stored recipe versions and states per job source |

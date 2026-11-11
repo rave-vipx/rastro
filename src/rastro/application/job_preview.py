@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import unicodedata
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -181,3 +182,25 @@ def render_preview_table(preview: JobPreview) -> str:
         for record in source.records:
             lines += _record_lines(record)
     return "\n".join([*lines, "", "* identity field"])
+
+
+def bounded_preview(
+    preview: JobPreview, *, max_records: int = 50, max_chars: int = 500
+) -> dict[str, Any]:
+    """JSON form of a preview for agents and Studio: at most ``max_records`` records per
+    source and string values cut to ``max_chars``, with ``truncated`` saying so (AGENT-002)."""
+    payload: dict[str, Any] = preview.model_dump(mode="json")
+    truncated = False
+    for source in payload["sources"]:
+        if len(source["records"]) > max_records:
+            source["records"] = source["records"][:max_records]
+            truncated = True
+        for record in source["records"]:
+            for field in record["fields"]:
+                value = field["value"]
+                text = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
+                if len(text) > max_chars:
+                    field["value"] = text[:max_chars] + "…"
+                    truncated = True
+    payload["truncated"] = truncated
+    return payload

@@ -111,3 +111,52 @@ async def test_recipe_list_reports_versions_after_a_run(workspace: Path) -> None
     failed, listed = await _call(workspace, "recipe_list", path="jobs/job.toml")
     assert not failed and len(listed["sources"]) == 3
     assert any(item["serving_version"] for item in listed["sources"])
+
+
+_JOB_SUMMARY = {
+    "schema_fingerprint": "0" * 64,
+    "source_count": 1,
+    "succeeded": 1,
+    "partial": 0,
+    "failed": 0,
+    "records_accepted": 60,
+    "records_rejected": 0,
+    "status": "success",
+}
+
+
+def test_bounded_preview_caps_records_and_long_values() -> None:
+    """AGENT-002: agent and Studio previews are bounded and say when they were cut."""
+    from rastro.application.job_preview import bounded_preview
+    from rastro.domain.job_dataset import JobPreview
+
+    field = {
+        "name": "title",
+        "value": "x" * 900,
+        "validation": "valid",
+        "identity": True,
+        "loaded": True,
+    }
+    record = {"index": 0, "status": "accepted", "fields": [field]}
+    preview = JobPreview.model_validate(
+        {
+            "dataset": {
+                "name": "d",
+                "path": "d.sqlite",
+                "identity": ["title"],
+                "approve": ["title"],
+            },
+            "job": _JOB_SUMMARY,
+            "sources": [
+                {
+                    "source_url": "https://example.test/",
+                    "status": "success",
+                    "records": [dict(record, index=i) for i in range(60)],
+                }
+            ],
+        }
+    )
+    payload = bounded_preview(preview)
+    assert payload["truncated"] is True
+    assert len(payload["sources"][0]["records"]) == 50
+    assert len(payload["sources"][0]["records"][0]["fields"][0]["value"]) == 501
