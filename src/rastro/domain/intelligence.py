@@ -55,6 +55,11 @@ def _proposal(variant: type[Recipe]) -> type[RecipeProposal]:
         for name, info in variant.model_fields.items()
         if name not in _DEFINITION_ONLY
     }
+    # Model proposals map one expression per field; pointer lists are for hand-written recipes.
+    fields["fields"] = (
+        RecipeProposal.model_fields["fields"].annotation,
+        RecipeProposal.model_fields["fields"],
+    )
     # A proposal names its strategy explicitly; the variant default only aids construction.
     fields["strategy"] = (variant.model_fields["strategy"].annotation, ...)
     name = variant.__name__.removesuffix("Recipe") + "Proposal"

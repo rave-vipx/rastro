@@ -238,6 +238,26 @@ is CSS-only (`jsonld` and `json` mappings are unchanged), still requires `::text
 `::attr(name)`, and is not supported by relocation repair, which skips such recipes
 (`relocation_retention_skipped`). It cannot write constants: the value must exist on the page.
 
+### One record per value: `expand:`
+
+A card that lists several dates (or schedules) is ambiguous by default. Prefix exactly one
+field of a `css` recipe with `expand:` to turn the card into one record per matched value:
+
+```toml
+[sources.recipe.fields]
+title = "h2::text"
+starts_at = "expand:time::text"
+```
+
+Each record copies the card's other fields and goes through normal validation (for example
+`localized` dates). The evidence locator ends in `[value N]`, the index of that value. Include
+the expanded field in the dataset `identity` so each date is its own record. No match leaves
+the field missing (rejected when required), never an empty success. Expanded records count
+against `max_records` (`ResourceLimitError`). At most one field per recipe may expand, and it
+cannot be combined with `document:`. The drift probe measures it. Relocation repair does not support it: `job load` skips saving
+repair evidence (`relocation_retention_skipped`) and `rastro recipe repair` with a snapshot
+raises `ConfigurationError`.
+
 Whitespace-only text nodes are never matches, so `h6::text` over
 `<h6>MIE 11 NOV <span>19:00</span></h6>` reads `MIE 11 NOV` instead of reporting the blank text
 after the span as a second match. When a card lists several dates in sibling nodes, a selector

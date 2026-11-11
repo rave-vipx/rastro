@@ -123,7 +123,11 @@ def test_proposal_schema_is_derived_from_html_recipe_variants_and_unchanged():
         (JsonLdProposal, JsonLdRecipe, "item_type"),
     ):
         assert repr(proposal.model_fields[selector]) == repr(recipe.model_fields[selector])
-        assert repr(proposal.model_fields["fields"]) == repr(recipe.model_fields["fields"])
+        # Proposals keep one expression per field; JSON-LD pointer lists are hand-written only.
+        if recipe is CssRecipe:
+            assert repr(proposal.model_fields["fields"]) == repr(recipe.model_fields["fields"])
+        else:
+            assert proposal.model_fields["fields"].annotation == dict[str, str]
 
 
 @pytest.mark.parametrize(

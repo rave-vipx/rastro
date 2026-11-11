@@ -10,7 +10,7 @@ from rastro.adapters.scrapling import ScraplingParser, _parse_html, element_coun
 from rastro.adapters.structured import JsonParser
 from rastro.domain.drift import FieldStructure
 from rastro.domain.models import ConfigurationError, CssRecipe, Limits, Recipe, ResourceLimitError
-from rastro.domain.recipes import DOCUMENT_PREFIX
+from rastro.domain.recipes import DOCUMENT_PREFIX, EXPAND_PREFIX
 
 
 class ScraplingDriftProbe:
@@ -49,7 +49,7 @@ class ScraplingDriftProbe:
             count, shapes = 0, []
             # Pseudo-elements select values; fingerprint their owning element's structure.
             selectors = []
-            for tree in parse(selector.removeprefix(DOCUMENT_PREFIX)):
+            for tree in parse(selector.removeprefix(EXPAND_PREFIX).removeprefix(DOCUMENT_PREFIX)):
                 own_value = tree.canonical().startswith("::")
                 tree.pseudo_element = None
                 selectors.append(None if own_value else tree.canonical())

@@ -18,7 +18,7 @@ from rastro.domain.models import (
     Recipe,
     ResourceLimitError,
 )
-from rastro.domain.recipes import DOCUMENT_PREFIX
+from rastro.domain.recipes import DOCUMENT_PREFIX, EXPAND_PREFIX
 from rastro.ports.parser import Candidate, ParsedDocument
 
 
@@ -34,6 +34,7 @@ def _parse_html(html: str) -> Selector:
 
 def field_scope(expression: str, page: Selector, node: Selector) -> tuple[Selector, str]:
     """Return the element a CSS field expression is evaluated against, and its selector."""
+    expression = expression.removeprefix(EXPAND_PREFIX)
     if expression.startswith(DOCUMENT_PREFIX):
         return page, expression.removeprefix(DOCUMENT_PREFIX)
     return node, expression
@@ -83,6 +84,44 @@ def _objects(value: object, path: str = "") -> Iterator[tuple[dict[str, object],
                 yield current, locator
 
 
+def _node_candidates(
+    page: Selector, node: Selector, index: int, recipe: CssRecipe, max_records: int
+) -> list[Candidate]:
+    """One candidate per record node, or one per value of its single ``expand:`` field."""
+    values: dict[str, object] = {}
+    locators: dict[str, str] = {}
+    issues: list[Issue] = []
+    expanded: tuple[str, str, list[str]] | None = None
+    base = f"{recipe.record_selector} [match {index}] >> "
+    for field, selector in recipe.fields.items():
+        scope, css = field_scope(selector, page, node)
+        if selector.startswith(EXPAND_PREFIX):
+            found = [str(v) for v in scope.css(css).getall()]
+            if "::text" in css:
+                found = [v for v in found if v.strip()]
+            if len(found) > max_records:
+                raise ResourceLimitError("Record count exceeds max_records")
+            expanded = (field, selector, found)
+            continue
+        elements, matches = _matches(scope, css)
+        if elements > 1 or len(matches) > 1:
+            issues.append(Issue(code="ambiguous_match", record_index=index, field=field))
+        elif matches:
+            values[field] = str(matches[0]).strip()
+            locators[field] = f"{base}{selector}"
+    if expanded is None or not expanded[2]:
+        return [Candidate(values, locators, tuple(issues))]
+    field, selector, found = expanded
+    return [
+        Candidate(
+            {**values, field: value.strip()},
+            {**locators, field: f"{base}{selector} [value {i}]"},
+            tuple(issues),
+        )
+        for i, value in enumerate(found)
+    ]
+
+
 class ScraplingParser:
     """Translate parser output into bounded, declarative candidates."""
 
@@ -105,18 +144,16 @@ class ScraplingParser:
             raise ResourceLimitError("Record count exceeds max_records")
         candidates: list[Candidate] = []
         for index, node in enumerate(nodes):
-            values: dict[str, object] = {}
-            locators: dict[str, str] = {}
-            issues: list[Issue] = []
-            for field, selector in recipe.fields.items():
-                scope, css = field_scope(selector, page, node)
-                elements, matches = _matches(scope, css)
-                if elements > 1 or len(matches) > 1:
-                    issues.append(Issue(code="ambiguous_match", record_index=index, field=field))
-                elif matches:
-                    values[field] = str(matches[0]).strip()
-                    locators[field] = f"{recipe.record_selector} [match {index}] >> {selector}"
-            candidates.append(Candidate(values, locators, tuple(issues)))
+            for candidate in _node_candidates(page, node, index, recipe, limits.max_records):
+                # Issues point at the record position, which expand: shifts past the card.
+                position = len(candidates)
+                issues = tuple(
+                    issue.model_copy(update={"record_index": position})
+                    for issue in candidate.issues
+                )
+                candidates.append(Candidate(candidate.values, candidate.locators, issues))
+            if len(candidates) > limits.max_records:
+                raise ResourceLimitError("Record count exceeds max_records")
         return ParsedDocument(tuple(candidates))
 
     def _jsonld(self, page: Selector, recipe: JsonLdRecipe, limits: Limits) -> ParsedDocument:
@@ -145,10 +182,16 @@ class ScraplingParser:
                     continue
                 values: dict[str, object] = {}
                 locators: dict[str, str] = {}
-                for field, pointer in recipe.fields.items():
-                    value = resolve_pointer(item, pointer)
-                    if value is not MISSING:
-                        values[field] = value
-                        locators[field] = f"jsonld[{block_index}]#{path}{pointer}"
+                for field, mapping in recipe.fields.items():
+                    pointers = (mapping,) if isinstance(mapping, str) else mapping
+                    for position, pointer in enumerate(pointers, 1):
+                        value = resolve_pointer(item, pointer)
+                        # A JSON null falls through to the next pointer; the last one decides.
+                        if value is not MISSING and (
+                            value is not None or position == len(pointers)
+                        ):
+                            values[field] = value
+                            locators[field] = f"jsonld[{block_index}]#{path}{pointer}"
+                            break
                 candidates.append(Candidate(values, locators))
         return ParsedDocument(tuple(candidates), tuple(issues))

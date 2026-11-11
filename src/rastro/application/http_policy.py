@@ -9,6 +9,7 @@ from collections.abc import Mapping
 from datetime import UTC, datetime
 from email.message import Message
 from email.utils import parsedate_to_datetime
+from importlib import metadata
 from urllib.parse import urljoin, urlsplit
 
 from rastro.application.destinations import permitted_url
@@ -20,7 +21,15 @@ from rastro.domain.acquisition import (
 )
 from rastro.domain.models import LANGUAGE_TAG, Outcome, Representation, Source
 
-USER_AGENT = "Rastro/0.1 (+https://github.com/rave-vipx/rastro)"
+
+def _version() -> str:
+    try:
+        return metadata.version("rastro-engine")
+    except metadata.PackageNotFoundError:
+        return "0"
+
+
+USER_AGENT = f"Rastro/{_version()} (+https://github.com/rave-vipx/rastro)"
 REDIRECT_STATUSES = frozenset({301, 302, 303, 307, 308})
 TRANSIENT_STATUSES = frozenset({408, 425, 500, 502, 503, 504})
 

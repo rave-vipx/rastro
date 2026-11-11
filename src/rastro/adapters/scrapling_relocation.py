@@ -30,7 +30,7 @@ from rastro.domain.models import (
     ResourceLimitError,
     Source,
 )
-from rastro.domain.recipes import DOCUMENT_PREFIX
+from rastro.domain.recipes import DOCUMENT_PREFIX, EXPAND_PREFIX
 from rastro.domain.repair import (
     ElementFingerprint,
     RelocationSnapshot,
@@ -160,6 +160,8 @@ class ScraplingRelocation:
 
 
 def _expression(expression: str) -> tuple[str, str]:
+    if expression.startswith(EXPAND_PREFIX):
+        raise ConfigurationError("Relocation does not support expand fields")
     if expression.startswith(DOCUMENT_PREFIX):
         raise ConfigurationError("Relocation does not support document-scoped fields")
     match = _SUFFIX.fullmatch(expression)
