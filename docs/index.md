@@ -4,7 +4,7 @@
 
 Rastro converts supplied HTML or permitted web sources into validated Python records and explains where each observed field came from. Its long-term goal is reliable, continuously updated web datasets.
 
-**Status: pre-alpha; `0.2.0rc1` release candidate.** JSON-LD/CSS and structured JSON extraction, optional policy-aware HTTP acquisition with explicit egress profiles, SQLite recipe memory and bounded optional Ollama assistance are implemented. [Release evidence](release-evidence.md) and the [comparison](comparison.md) record what is and is not demonstrated. There is no published package release from this project yet.
+**Status: v0.3.0, not published.** An event agenda that keeps itself updated when the source pages change; see the [README](https://github.com/rave-vipx/rastro#readme) for results and limits.
 
 ## Start here
 
