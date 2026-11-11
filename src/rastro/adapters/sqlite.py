@@ -212,10 +212,23 @@ class SQLiteRecipeRepository:
                 delete_events(db, identity, version)
             return count
 
-    def prune(self, *, before: datetime) -> int:
+    def prune(self, *, before: datetime, keep_serving: bool = False, dry_run: bool = False) -> int:
+        """Delete versions last successful before ``before`` and return how many.
+
+        ``keep_serving`` spares active and degraded versions; ``dry_run`` only counts.
+        """
         cutoff = utc_timestamp(before)
-        with self._connection(write=True) as db:
-            count = db.execute("DELETE FROM recipes WHERE last_success_at < ?", (cutoff,)).rowcount
+        where = "last_success_at < ?" + (
+            " AND state NOT IN ('active', 'degraded')" if keep_serving else ""
+        )
+        with self._connection(write=not dry_run) as db:
+            if dry_run:
+                return int(
+                    db.execute(f"SELECT COUNT(*) FROM recipes WHERE {where}", (cutoff,)).fetchone()[
+                        0
+                    ]
+                )
+            count = db.execute(f"DELETE FROM recipes WHERE {where}", (cutoff,)).rowcount
             if count:
                 drop_orphan_events(db)
             return count

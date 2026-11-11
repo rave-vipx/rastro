@@ -895,7 +895,7 @@
     },
     "JsonLdRecipe": {
       "additionalProperties": false,
-      "description": "Map JSON-LD objects, optionally of one ``item_type``, with absolute JSON pointers.",
+      "description": "Map JSON-LD objects, optionally of one ``item_type``, with absolute JSON pointers.\n\nA field maps to one pointer or to 1..4 pointers; the first that resolves wins.",
       "properties": {
         "fallbacks": {
           "default": [],
@@ -908,7 +908,17 @@
         },
         "fields": {
           "additionalProperties": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ]
           },
           "maxProperties": 100,
           "minProperties": 1,

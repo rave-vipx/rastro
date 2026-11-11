@@ -18,6 +18,7 @@ from rastro.domain.json import POINTER
 from rastro.domain.sources import Contract, Representation
 
 DOCUMENT_PREFIX = "document:"  # CSS field evaluated against the page root, not the record
+MAX_POINTERS = 4  # JSON-LD fields may list 1..4 fallback pointers
 _SELECTORS = frozenset({"item_type", "record_selector", "record_path"})
 
 
@@ -93,10 +94,14 @@ class Recipe(StrategyUnion):
         # Fallback variants are typed per representation; only flatness needs checking.
         if any(item.fallbacks or item.version != self.version for item in self.fallbacks):
             raise ValueError("Fallbacks must be flat and share the recipe version")
-        for name, expression in self.fields.items():
-            if not name or len(name) > 256 or not expression or len(expression) > 1024:
+        for name, mapping in self.fields.items():
+            expressions = (mapping,) if isinstance(mapping, str) else mapping
+            if not name or len(name) > 256 or not 1 <= len(expressions) <= MAX_POINTERS:
                 raise ValueError("Field names and expressions must be nonempty and bounded")
-            self.check_expression(expression)
+            for expression in expressions:
+                if not expression or len(expression) > 1024:
+                    raise ValueError("Field names and expressions must be nonempty and bounded")
+                self.check_expression(expression)
         return self
 
     @staticmethod
@@ -125,9 +130,15 @@ class CssRecipe(Recipe):
 
 
 class JsonLdRecipe(Recipe):
-    """Map JSON-LD objects, optionally of one ``item_type``, with absolute JSON pointers."""
+    """Map JSON-LD objects, optionally of one ``item_type``, with absolute JSON pointers.
+
+    A field maps to one pointer or to 1..4 pointers; the first that resolves wins.
+    """
 
     strategy: Literal["jsonld"] = "jsonld"
+    fields: dict[str, str | tuple[str, ...]] = Field(  # type: ignore[assignment]
+        min_length=1, max_length=100
+    )
     fallbacks: tuple[HtmlRecipe, ...] = Field(default=(), max_length=3)
     item_type: str | None = Field(default=None, min_length=1, max_length=256)
     representation: ClassVar[Representation] = "html"

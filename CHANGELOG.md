@@ -2,6 +2,17 @@
 
 All notable user-facing changes will be recorded here. No public release has been published.
 
+## Unreleased
+
+### Added
+
+- `rastro recipe prune --store FILE --older-than DAYS [--dry-run]` deletes old recipe versions but never a serving one (REC-005).
+- A JSON-LD recipe field may list 1 to 4 JSON pointers; the first that resolves wins and the locator records it (SCR-*).
+
+### Fixed
+
+- The HTTP `User-Agent` reports the installed package version instead of a fixed `0.1` (ACQ-*).
+
 ## 0.5.0 — not published (2026-11-11)
 
 Nothing from this project is published to PyPI. Versions 0.4 (Studio, MCP) and 0.5 (Hub step 1) land together; see [ADR 0020](docs/decisions/0020-studio-mcp-hub-minimal.md).

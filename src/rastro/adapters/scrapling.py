@@ -145,10 +145,12 @@ class ScraplingParser:
                     continue
                 values: dict[str, object] = {}
                 locators: dict[str, str] = {}
-                for field, pointer in recipe.fields.items():
-                    value = resolve_pointer(item, pointer)
-                    if value is not MISSING:
-                        values[field] = value
-                        locators[field] = f"jsonld[{block_index}]#{path}{pointer}"
+                for field, mapping in recipe.fields.items():
+                    for pointer in (mapping,) if isinstance(mapping, str) else mapping:
+                        value = resolve_pointer(item, pointer)
+                        if value is not MISSING:
+                            values[field] = value
+                            locators[field] = f"jsonld[{block_index}]#{path}{pointer}"
+                            break
                 candidates.append(Candidate(values, locators))
         return ParsedDocument(tuple(candidates), tuple(issues))

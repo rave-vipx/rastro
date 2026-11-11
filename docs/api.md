@@ -47,7 +47,7 @@ base of three variants, selected by `strategy`:
 | Variant | `strategy` | Strategy-specific field | Field expressions |
 | --- | --- | --- | --- |
 | `CssRecipe` | `css` | required `record_selector` | CSS ending in `::text` or `::attr(name)` |
-| `JsonLdRecipe` | `jsonld` | optional `item_type` | absolute RFC 6901 pointers within each JSON-LD object |
+| `JsonLdRecipe` | `jsonld` | optional `item_type` | absolute RFC 6901 pointers within each JSON-LD object; a field may list 1 to 4 pointers and the first that resolves wins, recorded in the locator |
 | `JsonRecipe` | `json` | required `record_path` (RFC 6901, `""` is the document) | absolute RFC 6901 pointers from each record |
 
 ```python
