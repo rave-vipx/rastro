@@ -182,7 +182,9 @@ def _read_bundle(directory: Path, limits: Limits) -> tuple[BundleManifest, dict[
 def _read_bounded(path: Path, cap: int, *, bundle: bool = False) -> bytes:
     error = BundleIntegrityError if bundle else ConfigurationError
     try:
-        descriptor = os.open(path, os.O_RDONLY | os.O_NONBLOCK | getattr(os, "O_NOFOLLOW", 0))
+        descriptor = os.open(
+            path, os.O_RDONLY | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_NOFOLLOW", 0)
+        )
     except OSError as cause:
         raise error("File is missing, linked or unreadable") from cause
     with os.fdopen(descriptor, "rb") as handle:

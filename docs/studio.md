@@ -49,7 +49,7 @@ Studio is a local tool, not a server to expose.
   browser never sends to the server), keeps it in memory and clears it from the address bar.
   The served page does not contain it. Every `POST` needs it in `X-Studio-Token`. The token
   stops other local users only as long as the terminal output stays private. Without it the page
-  asks you to open the URL printed in the terminal.
+  asks you to open the URL printed in the terminal. Reloading the tab drops the token; reopen that URL.
 - Paths are relative to the root, may not contain `..`, backslashes or NUL, must end in `.toml`
   or `.json`, and may not pass through symlinks. Files the job itself references follow the same
   containment rules as the CLI.
