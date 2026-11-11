@@ -15,6 +15,7 @@ from rastro.application.jobs import run_job
 from rastro.application.success_samples import collect_successes
 from rastro.cli_dataset_export import html_export, select_records
 from rastro.domain.drift import StructuralSnapshot
+from rastro.domain.job_load import JobLoadResult
 from rastro.domain.models import ConfigurationError
 
 
@@ -43,17 +44,18 @@ def add_commands(subcommands: argparse._SubParsersAction, jobs: argparse._SubPar
             parser.add_argument("--timezone", default="UTC")
 
 
-def load_job_command(args: argparse.Namespace) -> int:
-    job = load_job(args.file, allow_absolute_paths=args.allow_absolute_paths)
+def load_job_file(file: Path, *, drift: bool, allow_absolute_paths: bool) -> JobLoadResult:
+    """Run a job and load its approved fields into the dataset; shared by the CLI and MCP."""
+    job = load_job(file, allow_absolute_paths=allow_absolute_paths)
     spec = job.dataset
     if spec is None:
         raise ConfigurationError("job load requires a [dataset] block in the job file")
     path = resolve_job_path(
-        spec.path, base_dir=args.file.parent, allow_absolute_paths=args.allow_absolute_paths
+        spec.path, base_dir=file.parent, allow_absolute_paths=allow_absolute_paths
     )
     # Preserve symlink components for the adapter's refusal, after containment validation.
     raw_path = (
-        Path(spec.path) if Path(spec.path).is_absolute() else args.file.parent.resolve() / spec.path
+        Path(spec.path) if Path(spec.path).is_absolute() else file.parent.resolve() / spec.path
     )
     store = SQLiteDatasetStore(
         raw_path,
@@ -61,11 +63,11 @@ def load_job_command(args: argparse.Namespace) -> int:
         near_match_fields=spec.match_fields,
         near_match_tolerance=timedelta(minutes=spec.match_tolerance_minutes or 30),
     )
-    if path in [args.file.resolve()]:
+    if path in [file.resolve()]:
         raise ConfigurationError("The dataset must be separate from the job file")
-    monitor = SQLiteDriftMonitor(raw_path, limits=job.limits) if args.drift else None
+    monitor = SQLiteDriftMonitor(raw_path, limits=job.limits) if drift else None
     capture: AbstractContextManager[dict[str, StructuralSnapshot]]
-    if args.drift:
+    if drift:
         from rastro.adapters.drift_probe import ScraplingDriftProbe
 
         capture = collect_snapshots(ScraplingDriftProbe())
@@ -73,10 +75,10 @@ def load_job_command(args: argparse.Namespace) -> int:
         capture = nullcontext({})
     from rastro.cli_repair_storage import serving_job
 
-    effective_job = serving_job(job, args.file.parent, args.allow_absolute_paths)
+    effective_job = serving_job(job, file.parent, allow_absolute_paths)
     with capture as snapshots, collect_successes() as successes:
         report = run_job(
-            effective_job, base_dir=args.file.parent, allow_absolute_paths=args.allow_absolute_paths
+            effective_job, base_dir=file.parent, allow_absolute_paths=allow_absolute_paths
         )
     loaded = load_results(
         spec,
@@ -105,6 +107,13 @@ def load_job_command(args: argparse.Namespace) -> int:
                 for source in loaded.sources
             )
         }
+    )
+    return loaded
+
+
+def load_job_command(args: argparse.Namespace) -> int:
+    loaded = load_job_file(
+        args.file, drift=args.drift, allow_absolute_paths=args.allow_absolute_paths
     )
     print(loaded.model_dump_json(indent=2))
     return int(loaded.exit_code)

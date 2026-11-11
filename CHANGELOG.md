@@ -2,6 +2,12 @@
 
 All notable user-facing changes will be recorded here. No public release has been published.
 
+## Unreleased
+
+### Added
+
+- `rastro mcp` serves job validate, preview and run, dataset records and recipe listing to agents over stdio MCP, behind the optional `mcp` extra and a workspace root (AGENT-002, AGENT-003, P-008).
+
 ## 0.3.0 — not published (2026-11-11)
 
 Nothing from this project is published to PyPI.
