@@ -124,7 +124,7 @@ signature, so existing ports continue to work.
 
 ## Source rules and failures
 
-Rastro identifies itself as `Rastro/0.1`, checks robots.txt for each source origin,
+Rastro identifies itself as `Rastro/<installed version>`, checks robots.txt for each source origin,
 and uses the same protected transport for robots and documents. Rules are reused
 only within one operation. A 404/410 robots response allows acquisition. Denials,
 HTML instead of robots text, malformed encoding, and server failures fail closed.

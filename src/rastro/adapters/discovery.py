@@ -59,7 +59,7 @@ class ScraplingDiscovery:
                 try:
                     add(
                         JsonLdRecipe(
-                            fields=mapping,
+                            fields={**mapping},
                             item_type=item_type if isinstance(item_type, str) else None,
                         )
                     )

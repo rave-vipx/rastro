@@ -84,7 +84,8 @@ def build_plan(body: str, recipe: Recipe, parser: DocumentParser, limits: Limits
 
 
 def _selectors(recipe: Recipe) -> Iterable[str]:
-    yield from recipe.fields.values()
+    for mapping in recipe.fields.values():
+        yield from (mapping,) if isinstance(mapping, str) else mapping
     for name in ("record_selector", "item_type", "record_path"):
         value = getattr(recipe, name, None)
         if isinstance(value, str):
