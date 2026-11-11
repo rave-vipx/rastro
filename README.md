@@ -30,7 +30,7 @@ Rastro turns web pages into validated records with field-level provenance, loads
 
 ## Limits
 
-- A listing card with several dates yields one record (the first date).
+- A listing card with several dates is ambiguous unless one field opts in with `expand:`, which yields one record per date (see `docs/jobs.md`); relocation repair refuses such recipes.
 - A date split across several page nodes cannot be read; sites whose robots rules refuse access are skipped, never bypassed.
 - Model-assisted repair (Ollama, OpenAI-compatible) exists but is frozen, as are the sealed recovery corpus, Mock Lab and `benchmarks/product_task`.
 

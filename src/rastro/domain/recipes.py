@@ -18,6 +18,7 @@ from rastro.domain.json import POINTER
 from rastro.domain.sources import Contract, Representation
 
 DOCUMENT_PREFIX = "document:"  # CSS field evaluated against the page root, not the record
+EXPAND_PREFIX = "expand:"  # CSS field whose every match becomes its own record
 _SELECTORS = frozenset({"item_type", "record_selector", "record_path"})
 
 
@@ -117,8 +118,18 @@ class CssRecipe(Recipe):
     record_selector: str = Field(min_length=1, max_length=1024)
     representation: ClassVar[Representation] = "html"
 
+    @model_validator(mode="after")
+    def check_expand(self) -> Self:
+        if sum(value.startswith(EXPAND_PREFIX) for value in self.fields.values()) > 1:
+            raise ValueError("At most one field can use the expand: prefix")
+        return self
+
     @staticmethod
     def check_expression(expression: str) -> None:
+        if expression.startswith(EXPAND_PREFIX):
+            expression = expression.removeprefix(EXPAND_PREFIX)
+            if expression.startswith(DOCUMENT_PREFIX):
+                raise ValueError("expand: cannot be combined with document:")
         expression = expression.removeprefix(DOCUMENT_PREFIX)
         if not re.search(r"::(?:text|attr\([^)]+\))$", expression):
             raise ValueError("CSS field mappings must end in ::text or ::attr(name)")
