@@ -65,6 +65,7 @@ def test_flatten_marks_unreadable_or_old_observation_stale():
     fields = {"title": "Obra"}
     assert flatten({"fields": fields, "last_observed_at": "not a date"}, today)["stale"]
     assert flatten({"fields": fields}, today)["stale"]
-    assert flatten({"fields": fields, "last_observed_at": "2020-01-01T00:00:00+00:00"}, today)["stale"]
+    old = {"fields": fields, "last_observed_at": "2020-01-01T00:00:00+00:00"}
+    assert flatten(old, today)["stale"]
     fresh = flatten({"fields": fields, "last_observed_at": NOW.isoformat()}, today)
     assert "stale" not in fresh
