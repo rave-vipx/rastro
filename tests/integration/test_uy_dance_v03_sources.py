@@ -1,4 +1,4 @@
-"""Offline proof that the live agenda job reads three venue pages (SYNC-002, DATA-004/005)."""
+"""Offline proof that one job reads three venue pages (SYNC-002, DATA-004/005)."""
 
 import json
 import shutil
@@ -11,28 +11,15 @@ from rastro.adapters.sqlite_dataset import SQLiteDatasetStore
 from rastro.cli import main
 
 EXAMPLE = Path(__file__).resolve().parents[2] / "examples" / "uy-dance-agenda"
-FIXTURES = {
-    "https://sodre.gub.uy/espectaculos/": "sodre-espectaculos.html",
-    "https://salazitarrosa.montevideo.gub.uy/programacion": "zitarrosa-programacion.html",
-    "https://magnoliosala.uy/": "magnolio-cartelera.html",
-}
-TICKANTEL = "https://tickantel.com.uy/"
+V03 = EXAMPLE / "sample" / "v03"
 
 
 @pytest.fixture
 def offline_job(tmp_path: Path) -> Path:
-    """The real job file with each venue page replaced by its synthetic copy."""
-    text = (EXAMPLE / "job.toml").read_text(encoding="utf-8")
-    for url, name in FIXTURES.items():
-        shutil.copyfile(EXAMPLE / "sample" / "v03" / name, tmp_path / name)
-        text = text.replace(
-            f'[[sources]]\nurl = "{url}"',
-            f'[[sources]]\nkind = "file"\npath = "{name}"\nurl = "{url}"',
-        )
-    start = text.index(f'[[sources]]\nurl = "{TICKANTEL}')
-    path = tmp_path / "job.toml"
-    path.write_text(text[:start] + text[text.index("[[fields]]") :], encoding="utf-8")
-    return path
+    """The offline three-venue job, copied with its synthetic pages."""
+    for item in V03.iterdir():
+        shutil.copyfile(item, tmp_path / item.name)
+    return tmp_path / "job.toml"
 
 
 def _load(job: Path, capsys: pytest.CaptureFixture[str]) -> dict:
@@ -50,10 +37,10 @@ def _records(job: Path) -> dict[str, list[dict]]:
     return by_venue
 
 
-def test_live_job_declares_dataset_and_new_schema(capsys: pytest.CaptureFixture[str]) -> None:
-    assert main(["job", "validate", str(EXAMPLE / "job.toml")]) == 0
+def test_offline_job_declares_dataset_and_new_schema(capsys: pytest.CaptureFixture[str]) -> None:
+    assert main(["job", "validate", str(V03 / "job.toml")]) == 0
     validated = json.loads(capsys.readouterr().out)
-    assert validated["source_count"] == 4
+    assert validated["source_count"] == 3
     assert {"starts_on", "starts_at", "category"} <= set(validated["fields"])
     dataset = validated["job"]["dataset"]
     assert dataset["identity"] == ["title", "venue", "starts_on"]
