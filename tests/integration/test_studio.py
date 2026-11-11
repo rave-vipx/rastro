@@ -61,6 +61,7 @@ def test_page_lists_validates_previews_and_connects(client: TestClient) -> None:
     page = client.get("/")
     assert page.status_code == 200
     assert "default-src 'none'" in page.headers["content-security-policy"]
+    assert client.headers["X-Studio-Token"] not in page.text
     assert "__STUDIO_TOKEN__" not in page.text
     assert client.get("/static/studio.js").status_code == 200
     assert client.get("/static/other.js").status_code == 404
@@ -249,6 +250,29 @@ def test_cli_serves_loopback_only(
     seen: dict[str, object] = {}
     monkeypatch.setattr(uvicorn, "run", lambda app, **kw: seen.update(kw))
     assert main(["studio", "--root", str(root), "--port", "9123"]) == 0
+    assert "http://127.0.0.1:9123/#token=" in capsys.readouterr().err
     assert seen["host"] == "127.0.0.1" and seen["port"] == 9123
     assert main(["studio", "--root", str(root), "--port", "0"]) != 0
     assert main(["studio", "--root", str(root / "nope")]) != 0
+
+
+def test_listing_skips_hidden_and_vendor_dirs_and_reports_truncation(
+    client: TestClient, root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    for name in (".git", "node_modules", "__pycache__", ".venv", "venv", "dist", "build", "site"):
+        (root / name).mkdir()
+        (root / name / "x.json").write_text("{}")
+    (root / "ok").mkdir()
+    (root / "ok" / "y.json").write_text("{}")
+    listing = client.get("/api/jobs").json()
+    assert listing["files"] == ["job.toml", "ok/y.json"] and listing["truncated"] is False
+    monkeypatch.setattr("rastro.studio.files.MAX_FILES", 1)
+    cut = client.get("/api/jobs").json()
+    assert cut["files"] == ["job.toml"] and cut["truncated"] is True
+
+
+def test_script_reads_token_from_fragment_only() -> None:
+    base = Path(__file__).parents[2] / "src/rastro/studio/static"
+    script = (base / "studio.js").read_text()
+    assert "location.hash" in script and "replaceState" in script
+    assert "studio-token" not in (base / "index.html").read_text()

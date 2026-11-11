@@ -13,6 +13,7 @@ from rastro.domain.models import ConfigurationError
 SUFFIXES = {".toml", ".json"}
 MAX_FILES = 500
 MAX_DEPTH = 4
+SKIPPED_DIRS = {"node_modules", "__pycache__", "venv", "dist", "build", "site"}
 
 
 def _safe_relative(raw: str) -> Path:
@@ -37,19 +38,29 @@ def resolve_in_root(root: Path, raw: str) -> Path:
     return current
 
 
-def list_job_files(root: Path) -> list[str]:
-    """Relative .toml/.json files below ``root`` (bounded, sorted, symlinks skipped)."""
+def _visible(name: str) -> bool:
+    return not name.startswith(".") and name not in SKIPPED_DIRS
+
+
+def list_job_files(root: Path) -> tuple[list[str], bool]:
+    """Relative .toml/.json files below ``root`` and whether the list was cut at the cap.
+
+    Hidden and vendor directories and symlinks are skipped; the walk is bounded.
+    """
     found: list[str] = []
     for directory, subdirs, names in os.walk(root, followlinks=False):
         depth = len(Path(directory).relative_to(root).parts)
         subdirs[:] = sorted(
-            d for d in subdirs if depth < MAX_DEPTH and not (Path(directory) / d).is_symlink()
+            d
+            for d in subdirs
+            if depth < MAX_DEPTH and _visible(d) and not (Path(directory) / d).is_symlink()
         )
         for name in sorted(names):
             path = Path(directory) / name
             if path.suffix.lower() in SUFFIXES and not path.is_symlink():
                 found.append(path.relative_to(root).as_posix())
-    return sorted(found)[:MAX_FILES]
+    found.sort()
+    return found[:MAX_FILES], len(found) > MAX_FILES
 
 
 def read_job_bytes(path: Path) -> bytes:

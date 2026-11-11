@@ -31,7 +31,8 @@ def studio_command(args: argparse.Namespace) -> int:
         return 2
     if not 1 <= args.port <= 65_535:
         raise ConfigurationError("Port must be between 1 and 65535")
-    app, _ = create_app(args.root)
-    print(f"Rastro Studio on http://{HOST}:{args.port}/  (Ctrl+C to stop)", file=sys.stderr)
+    app, token = create_app(args.root)
+    url = f"http://{HOST}:{args.port}/#token={token}"
+    print(f"Rastro Studio: open {url}  (Ctrl+C to stop)", file=sys.stderr)
     uvicorn.run(app, host=HOST, port=args.port, log_level="warning")
     return 0
