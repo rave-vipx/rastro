@@ -53,6 +53,7 @@ candidate before you promote it.
 
 ## Limits
 
+- Export also writes `.gitattributes` (`* -text`) so Git on Windows keeps the hashed bytes unchanged.
 - `--to` follows symlinks in its parent directories, like `cp`; only the final directory and the bundle files themselves refuse symlinks. Export to a directory you own.
 
 Metadata files are capped at 1 MiB and the sample at the job's input limit. The

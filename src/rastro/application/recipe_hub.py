@@ -89,6 +89,8 @@ def export_bundle(
         files={name: sha256_hex(data) for name, data in contents.items()},
     )
     contents[MANIFEST_FILE] = canonical_json(manifest.model_dump(mode="json"))
+    # Hashes cover exact bytes: keep Git (core.autocrlf on Windows) from rewriting them.
+    contents[GITATTRIBUTES] = b"* -text\n"
     _write_all(directory, contents)
     return manifest
 
@@ -154,6 +156,9 @@ def _with_version(recipe: Recipe, version: int) -> Recipe:
     return Recipe.model_validate(payload)
 
 
+GITATTRIBUTES = ".gitattributes"
+
+
 def _read_bundle(directory: Path, limits: Limits) -> tuple[BundleManifest, dict[str, bytes]]:
     if directory.is_symlink() or not directory.is_dir():
         raise BundleIntegrityError("Bundle path must be a real directory")
@@ -181,6 +186,8 @@ def _read_bundle(directory: Path, limits: Limits) -> tuple[BundleManifest, dict[
 
 def _read_bounded(path: Path, cap: int, *, bundle: bool = False) -> bytes:
     error = BundleIntegrityError if bundle else ConfigurationError
+    if path.is_symlink():  # O_NOFOLLOW does not exist on Windows
+        raise error("File is missing, linked or unreadable")
     try:
         descriptor = os.open(
             path, os.O_RDONLY | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_NOFOLLOW", 0)

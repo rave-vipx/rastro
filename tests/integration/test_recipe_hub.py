@@ -51,7 +51,14 @@ def import_error(bundle, tmp_path, capsys):
 def test_export_is_deterministic_and_complete(exported, tmp_path):
     folder, job, bundle = exported
     names = {p.name for p in bundle.iterdir()}
-    assert names == {"recipe.json", "schema.json", "sample.html", "expected.json", "bundle.json"}
+    assert names == {
+        "recipe.json",
+        "schema.json",
+        "sample.html",
+        "expected.json",
+        "bundle.json",
+        ".gitattributes",
+    }
     before = {p.name: p.read_bytes() for p in bundle.iterdir()}
     again = tmp_path / "again"
     sample = folder / "sodre-cartelera.html"
