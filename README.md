@@ -16,23 +16,21 @@
   <a href="https://github.com/rave-vipx/rastro/issues">Issues</a>
 </p>
 
-**An event agenda that keeps itself updated when the source pages change.**
+**Describe the data you need, name the sources you know, and get a database that keeps itself updated when the pages change.**
 
-Rastro turns web pages into validated records with field-level provenance, loads them into a SQLite dataset, and repairs its own extraction recipes when a page changes. The engine is generic: fields and rules live in the [example job](examples/uy-dance-agenda/), not in the library.
+Rastro turns web pages into validated records with field-level provenance, loads them into a SQLite dataset, and repairs its own extraction recipes when a page changes. The engine is generic: fields and rules live in a TOML job, not in the library; the [events example](examples/uy-dance-agenda/) runs offline on synthetic pages.
 
 > **v0.3.0, not published.** Nothing is on PyPI; install from source.
 
 ## What works today
 
-- Live agenda (2026-11-08): 4 sources (SODRE, Sala Zitarrosa, Magnolio Sala, Tickantel), 54 records, 52 upcoming, spot-check 10/10, second run created 0. 8 of 52 rows are dance by keyword rule. Rerun on 2026-11-11: 51 records, 50 upcoming. See the [pilot](docs/pilot/uy-dance-agenda-v03.md).
+- Multi-source load: one job reads several listing pages into one SQLite dataset; a second run creates nothing new, and a failing source keeps its last valid rows.
 - Repair suite (synthetic pages modeled on real ones): structural breakages repaired automatically 5/11 before, 10/11 now (`jsonld_key_moved` still rejected), 0 wrong recipes promoted. Data traps: 6 held by the consistency gate, 2 rejected, 4 no candidates; silent wrong data 5 to 0. Not yet proven on a real live breakage.
-- Agenda page: <https://rave-vipx.github.io/rastro/agenda/>, refreshed daily at 08:00 Montevideo once this code is on `main`.
 
 ## Limits
 
-- Multi-date cards keep only the first date.
-- Skipped sources: Passline and Entraste (robots rules), BNS and Sala del Museo (date split across nodes).
-- Dance classification is a keyword rule.
+- A listing card with several dates yields one record (the first date).
+- A date split across several page nodes cannot be read; sites whose robots rules refuse access are skipped, never bypassed.
 - Model-assisted repair (Ollama, OpenAI-compatible) exists but is frozen, as are the sealed recovery corpus, Mock Lab and `benchmarks/product_task`.
 
 ## Drift and repair offline
@@ -160,7 +158,7 @@ Connect an application with [the shipped SQL](examples/uy-dance-agenda/queries/u
 or the exported JSONL: each line includes values, field provenance, observation
 times, origins and `data_trust: untrusted_source_data`. Both Suite records retain
 uncertain-match warnings for review; differing Gala titles remain separate.
-See [dataset semantics and limits](docs/dataset.md) and the [pilot obstacles](docs/pilot/uy-dance-agenda.md).
+See [dataset semantics and limits](docs/dataset.md).
 
 ## A complete extraction
 

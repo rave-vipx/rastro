@@ -27,8 +27,6 @@ nav:
   - Getting started: getting-started.md
   - Declarative jobs: jobs.md
   - Dataset load and export: dataset.md
-  - Uruguay dance agenda pilot: pilot/uy-dance-agenda.md
-  - Uruguay dance agenda v0.3 pilot: pilot/uy-dance-agenda-v03.md
   - HTTP acquisition: acquisition.md
   - Recipe memory: memory.md
   - Recipe lifecycle: recipe-lifecycle.md

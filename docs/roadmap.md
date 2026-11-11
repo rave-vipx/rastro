@@ -6,19 +6,17 @@ v0.1 remains the reference release. It is complete: `0.1.0rc1` is its release ca
 
 ## v0.3 close (2026-11-11)
 
-**Delivered:** the live Uruguay dance agenda from 4 known sources into a database (#65) and automatic recipe repair with a consistency gate (#66); numbers are in the [README](https://github.com/rave-vipx/rastro#readme). Version 0.3.0, not published, no release candidate.
+**Delivered:** multi-source loads into a database with Spanish dates and HTML export (#65) and automatic recipe repair with a consistency gate (#66); numbers are in the [README](https://github.com/rave-vipx/rastro#readme). The live use-case test (Uruguay venues) runs outside the repository. Version 0.3.0, not published, no release candidate.
 
 **Frozen until a real user asks (code stays):** model-assisted repair (Ollama, OpenAI-compatible adapters); the sealed recovery corpus and final v0.2 evaluation; Mock Lab and `benchmarks/product_task`; new sources needing robots exceptions or split-date parsing; the 2,230-line master spec as planning source.
 
 | Date | Signal | Action |
 | --- | --- | --- |
 | 2026-11-18 | Any week with more than 10 PRs and no user-visible change | Cut scope |
-| 2026-11-19 | Daily run has not completed 7 consecutive days unattended | Fix operation first |
-| 2026-11-30 | Nobody outside the team opened the agenda twice | Change the case or stop |
 | 2026-12-01 | v0.3 not available anywhere installable or viewable | Publish as is or archive |
 | 2026-12-15 | No real source breakage recorded (repaired or rejected) | Stop investing in repair |
 
-**Owner decisions pending:** promote `dev` to `main` so the schedule and page go live; share the agenda with 5 dancers.
+**Owner decisions pending:** publish 0.3.0 or keep it unpublished.
 
 ## v0.1 milestones
 
@@ -86,7 +84,7 @@ Base for integration: `dev` (`31cbcde`). `staging` (`8f96d41`) is an ancestor of
 
 The v0.2 implementation is delivered for release-candidate preparation. Evaluation remains partial, with the following evidence and limits:
 
-1. **Pilot and preview:** [PR #59](https://github.com/rave-vipx/rastro/pull/59) records the [dance agenda pilot](pilot/uy-dance-agenda.md); [PR #55](https://github.com/rave-vipx/rastro/pull/55) adds the dataset block and preview (DATA-002, JOB-002).
+1. **Pilot and preview:** [PR #59](https://github.com/rave-vipx/rastro/pull/59) records the dance agenda pilot (report kept outside the repository); [PR #55](https://github.com/rave-vipx/rastro/pull/55) adds the dataset block and preview (DATA-002, JOB-002).
 2. **Known sources to a database:** [PR #56](https://github.com/rave-vipx/rastro/pull/56) adds the dataset store and [PR #61](https://github.com/rave-vipx/rastro/pull/61) delivers load, export, the example query and second-run proof (DATA-001–005, SYNC-002/003/005/006/008, COST-001) (SYNC-005 partial).
 3. **Drift and repair:** [PR #62](https://github.com/rave-vipx/rastro/pull/62) delivers drift, repair candidates, consistency and recipe CI (DRIFT-001–006, REPAIR-001–006, SCR-002, QUAL-005/006).
 4. **Product-task evaluation:** the [v0.2 comparison](comparison-v02.md) records partial DIFF-002 evidence and its limits. DIFF-002 is partial: human effort / minutes to a correct database were not measured (`human_minutes: null`); DIFF-001 sealed run not done: the recovery harness must be built first (see the first v0.3 task below). No sealed result is claimed.
@@ -95,7 +93,7 @@ The live pilot did not establish a complete two-source dataset. `0.2.0rc1` is no
 
 ### v0.3 candidates ranked by pilot evidence
 
-The [pilot observations](pilot/uy-dance-agenda.md#3-ranked-obstacles-for-v03-drift-acquisition-roadmap) lead this list; items 8–11 are earlier pilot-ranked acquisition items kept below the newer ones; the "Open" line lists operational follow-ups from the v0.2 implementation, not measured pilot rankings.
+The pilot observations lead this list; items 8–11 are earlier pilot-ranked acquisition items kept below the newer ones; the "Open" line lists operational follow-ups from the v0.2 implementation, not measured pilot rankings.
 
 **First v0.3 task (owner decision, 2026-11-08): build the recovery benchmark harness.** The DIFF-001 sealed run is still open because the runner in the [frozen protocol](recovery-benchmark.md#reproducibility) does not exist yet: `python -m benchmarks.recovery verify|run|verdict`, the five executors (`baseline_static`, `baseline_adapted` with its hashed fallback library, `rastro` through the public SDK, `always_alarm`, `never_alarm`), the `deny_all`/`approve_all` approvers, the Wilson-interval metrics, the C1–C8 verdict and the scenario-independence scan. Build and tune it on the development split only, with different authors for the baseline and the repair code, freeze the executor hashes, then run the sealed split once (ADR 0011). The sealed half has not been opened.
 

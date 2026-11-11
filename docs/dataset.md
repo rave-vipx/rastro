@@ -158,8 +158,8 @@ This run used the synthetic sample, cost $0 in external services and made no
 network or model calls. The sample now has observed synthetic `performance_id`
 values: a shared Candombe identity, distinct IDs for its two performances, and
 source-local IDs for uncertain Suite/Gala matches. These IDs are demonstration
-data, not claims about IDs available on the live sites. The live pilot job keeps
-its original schema. Never change a dataset's identity definition in place.
+data, not claims about IDs available on the live sites. The live pilot job is kept
+outside the repository. Never change a dataset's identity definition in place.
 
 Requires uv, SQLite's CLI and jq. From the repository root:
 

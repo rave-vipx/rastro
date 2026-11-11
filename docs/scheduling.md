@@ -1,30 +1,5 @@
 # Daily dataset and agenda (SCHED-007, DATA-004)
 
-## GitHub Actions (recommended)
-
-The `Documentation` workflow (`.github/workflows/docs.yml`) refreshes the Uruguay dance
-agenda every day at 11:00 UTC (08:00 in Montevideo), with no machine of yours involved.
-After building the docs it restores the previous `agenda.sqlite` from the Actions cache,
-runs `rastro job load` on `examples/uy-dance-agenda/job.toml`, exports the upcoming events
-as JSON and renders them with `examples/uy-dance-agenda/render_agenda.py` into a Spanish, phone-friendly page at `agenda/index.html` (with a "Solo baile" toggle), saves the dataset back to the cache and deploys the site.
-It also refreshes on every push to `main`. The refresh step has its own 8-minute limit and
-cannot fail the docs deploy; if the export or render fails, `/agenda/` shows a short
-"no disponible" page until the next run.
-
-- Page: <https://rave-vipx.github.io/rastro/agenda/> (the page states when it was generated).
-- Evidence: each run uploads the `agenda-evidence` artifact (load log with the exit code,
-  `rastro dataset status` output) for 30 days, and writes the exit code and source status
-  to the run summary. Exit 0 is success, 1 failure, 2 configuration error, 3 partial
-  success. A stale source (`stale_sources` in the status) shows that a site changed or
-  blocked the request; its previous rows stay in the page.
-- Scope: scheduled workflows only run from the default branch, so the refresh starts once
-  the workflow is on `main`. You can also start it by hand with "Run workflow".
-- Limits: the cache can be evicted (GitHub drops entries unused for 7 days), in which case
-  the dataset restarts empty and loses history; some sites may block GitHub runner IPs,
-  which appears as a stale source.
-
-## Local alternative
-
 Use the same job for each run. These examples run at 08:00 local time; replace
 absolute paths and the `rastro` executable path with your own. Both save the
 load report, its exit code, and export errors to a log. Exit 0 means success,

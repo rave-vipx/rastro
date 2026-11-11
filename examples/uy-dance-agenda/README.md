@@ -1,14 +1,10 @@
-# Uruguay Dance Agenda Pilot (`uy-dance-agenda`)
+# Events example (`uy-dance-agenda`)
 
-This directory contains the first public pilot job for Rastro (`COST-001`): feeding an agenda of dance events in Uruguay from two real public sources—a venue listings page (*cartelera*) and a ticket seller event page—together with a reproducible offline sample that uses synthetic HTML fixtures.
-
-Full pilot findings, live run counts, field coverage, and ranked v0.3 obstacles are documented in [`docs/pilot/uy-dance-agenda.md`](../../docs/pilot/uy-dance-agenda.md).
+An offline example job: event listings from synthetic copies of Uruguayan venue and ticket pages, loaded into one dataset. It shows how a job declares fields, sources, recipes and consistency rules, and it backs the integration tests. Nothing here touches the network. The live-site version of this case is an internal test kept outside the repository.
 
 ## Files
 
-- [`job.toml`](job.toml) — Declarative job with a `[dataset]` block (identity `title`, `venue`, `starts_on`) targeting four live Uruguayan sources. The v0.3 job reads SODRE, Sala Zitarrosa and Magnolio Sala listing pages plus the Tickantel event page; its schema (`starts_on` required, `starts_at` optional, both `localized`) differs from the two sample jobs. Synthetic copies of the three listing pages live in [`sample/v03/`](sample/v03/) and back `tests/integration/test_uy_dance_v03_sources.py`. Results: [`docs/pilot/uy-dance-agenda-v03.md`](../../docs/pilot/uy-dance-agenda-v03.md). The two source notes below describe the original v0.2 job:
-  1. **Venue listings page (`sodre.gub.uy`)**: `https://sodre.gub.uy/espectaculos/` (CSS recipe over `.item .cyg--info.espectaculo` cards with a visible-text fallback). On the live site, `<time class="cyg--dia">` omits the HTML5 `datetime` attribute and renders localized Spanish prose/ranges (`"12 al 14 NOV 2026 - 20 H"`), so the live run yields `0` accepted records (`status = "insufficient_evidence"`) from the venue source.
-  2. **Ticket seller event page (`tickantel.com.uy`)**: `https://tickantel.com.uy/ng/espectaculo/40021938/muestra-final-2026-area-tango-y-area-candombe` (JSON-LD `Event` recipe with a fallback for Tickantel's partial `PostalAddress`/`description` shape). Produces all `3` accepted records in the live run (`status = "success"`).
+- [`sample/v03/job.toml`](sample/v03/job.toml) — Three venue listing pages read from local files into one dataset (identity `title`, `venue`, `starts_on`; `starts_on` required, `starts_at` optional, both `localized` Spanish dates). Backs `tests/integration/test_uy_dance_v03_sources.py`.
 - [`sample/job.toml`](sample/job.toml) — Reproducible offline version of the same job pointing at synthetic local HTML files:
   - [`sample/sodre-cartelera.html`](sample/sodre-cartelera.html) — Synthetic venue listings page mimicking SODRE's `.item .cyg--info.espectaculo` DOM structure with invented dance events, adding ISO 8601 `datetime="..."` attributes and `<span class="cyg--ciudad">` nodes that the live site lacks so the venue recipe passes offline (`4` accepted records).
   - [`sample/tickantel-evento.html`](sample/tickantel-evento.html) — Synthetic ticket seller page mimicking Tickantel's `<script type="application/ld+json">` `@type = "Event"` array structure with invented dance events (`3` accepted records).
@@ -56,27 +52,8 @@ uv run rastro job validate examples/uy-dance-agenda/sample/v2/job.toml
 uv run rastro job run examples/uy-dance-agenda/sample/v2/job.toml --output json
 ```
 
-## Running Against Live Sources
-
-Validate and run the live pilot job (requires internet access; uses deterministic recipes with `inference_calls = 0` and `$0.00` external spend):
-
-```bash
-uv run rastro job validate examples/uy-dance-agenda/job.toml
-uv run rastro job run examples/uy-dance-agenda/job.toml --output json
-```
-
 Export the offline sample as an HTML agenda (SCHED-007, DATA-004):
 ```bash
 uv run rastro job load examples/uy-dance-agenda/sample/job.toml
 uv run rastro dataset export examples/uy-dance-agenda/sample/agenda.sqlite --format html --sort-field starts_at --upcoming > agenda.html
-```
-
-The public page <https://rave-vipx.github.io/rastro/agenda/> is that JSON export rendered by [`render_agenda.py`](render_agenda.py) (`python render_agenda.py export.json > index.html`): Spanish, phone-first, grouped by day, with a "Solo baile" filter.
-
-Load the live job into a dataset and export the upcoming agenda (run it from a scratch
-directory; `agenda.sqlite` is written next to the job file):
-
-```bash
-uv run rastro job load job.toml
-uv run rastro dataset export agenda.sqlite --format html --sort-field starts_on --upcoming > agenda.html
 ```

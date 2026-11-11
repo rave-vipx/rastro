@@ -1,7 +1,6 @@
-# Public dance events in Uruguay from venue listing pages (SODRE, Sala Zitarrosa,
-# Magnolio Sala) and a ticket seller event page (Tickantel), loaded into one dataset.
-# Venue pages without a time give `starts_on`; `starts_at` is filled only when the
-# page states a time. Rejected by robots on 2026-11-08, so not listed: Passline, Entraste.
+# Offline copy of an events job: three synthetic venue listing pages (modeled on real
+# Uruguayan venues) read from local files into one dataset. Used by tests and as a
+# multi-source example; no network.
 format_version = 1
 
 [region]
@@ -31,6 +30,8 @@ match_tolerance_minutes = 90
 match_fields = ["title", "venue", "starts_at"]
 
 [[sources]]
+kind = "file"
+path = "sodre-espectaculos.html"
 url = "https://sodre.gub.uy/espectaculos/"
 
 [sources.recipe]
@@ -50,6 +51,8 @@ starts_at = "time.cyg--dia:first-of-type::text"
 ticket_url = "a.cyg--btn::attr(href)"
 
 [[sources]]
+kind = "file"
+path = "zitarrosa-programacion.html"
 url = "https://salazitarrosa.montevideo.gub.uy/programacion"
 
 [sources.recipe]
@@ -67,6 +70,8 @@ starts_on = ".eventCard_date span::text"
 ticket_url = "::attr(href)"
 
 [[sources]]
+kind = "file"
+path = "magnolio-cartelera.html"
 url = "https://magnoliosala.uy/"
 
 [sources.recipe]
@@ -83,26 +88,6 @@ performers = "h5.evento--subtitulo::text"
 venue = "document:div.page--header-desk h1 span::text"
 starts_on = "h6.evento--fecha:first-of-type::text"
 ticket_url = "a.evento--a::attr(href)"
-
-[[sources]]
-url = "https://tickantel.com.uy/ng/espectaculo/40021938/muestra-final-2026-area-tango-y-area-candombe"
-
-[sources.recipe]
-version = 1
-strategy = "jsonld"
-item_type = "Event"
-require_evidence = true
-
-[sources.recipe.fields]
-title = "/name"
-performers = "/performer/name"
-venue = "/location/name"
-city = "/location/address/addressLocality"
-starts_on = "/startDate"
-starts_at = "/startDate"
-ticket_url = "/offers/url"
-price = "/offers/price"
-currency = "/offers/priceCurrency"
 
 [[fields]]
 name = "title"

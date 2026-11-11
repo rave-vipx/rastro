@@ -8,12 +8,15 @@ Nothing from this project is published to PyPI.
 
 ### Added
 
-- Daily agenda workflow: the docs workflow refreshes the Uruguay dance agenda at 08:00 Montevideo, publishes it at https://rave-vipx.github.io/rastro/agenda/ and keeps a 30-day `agenda-evidence` artifact per run; it runs only once promoted to `main`.
 - Localized date and datetime job fields (`localized = true`) parse Spanish listing text using the job region's timezone; a datetime without a time fails explicitly. Relative links resolve against the source URL (DATA-005, JOB-002).
 - CSS field expressions may read one page-level node with the `document:` prefix (exactly one match, with provenance).
 - `rastro dataset export --format html`, plus `--sort-field`, `--upcoming` and `--timezone`; daily scheduling examples in `docs/scheduling.md` (SCHED-007, DATA-004).
 - Automatic repair relocates a renamed or moved record container from the last successful snapshot, proposes an "old, new" selector union, and quarantines heterogeneous matches; measured on `benchmarks/repair_suite` (REPAIR-001, SCR-002).
-- The Uruguay agenda example loads four live sources; see `docs/pilot/uy-dance-agenda-v03.md` (52 upcoming events, spot-check 10/10, on 2026-11-08).
+- The events example adds an offline three-venue job (`examples/uy-dance-agenda/sample/v03/`).
+
+### Removed
+
+- Live-site pilot material (the live job, pilot reports and the agenda publication) moved out of the repository; it is an internal use-case test, not part of the engine.
 
 ### Fixed
 
@@ -52,7 +55,7 @@ Nothing from this project is published to PyPI.
 - DIFF-002 product-task comparison: one offline synthetic task; human effort unmeasured; see docs/comparison-v02.md.
 - DIFF-002 remains partial: human effort / minutes to a correct database were not measured (`human_minutes: null`); development-agent usage was not instrumented.
 - DIFF-001 sealed-corpus recovery evaluation has not been run; no recovery result is claimed. The release candidate has not been tagged or promoted.
-- The live pilot did not establish a complete two-source dataset; SODRE Spanish date text yielded zero live records, and sale dates can be confused with event dates. See the [pilot](docs/pilot/uy-dance-agenda.md).
+- The live pilot did not establish a complete two-source dataset; SODRE Spanish date text yielded zero live records, and sale dates can be confused with event dates. (Pilot report kept outside the repository.)
 - Live-source repair, retention pruning, drift calibration and heterogeneous relocation remain future work.
 
 ## 0.1.0rc1 — 2026-11-03

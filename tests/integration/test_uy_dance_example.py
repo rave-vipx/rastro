@@ -13,7 +13,7 @@ from rastro.cli import main
 
 ROOT = Path(__file__).resolve().parents[2]
 EXAMPLE_DIR = ROOT / "examples" / "uy-dance-agenda"
-LIVE_JOB = EXAMPLE_DIR / "job.toml"
+V03_JOB = EXAMPLE_DIR / "sample" / "v03" / "job.toml"
 SAMPLE_JOB = EXAMPLE_DIR / "sample" / "job.toml"
 SAMPLE_V2_JOB = EXAMPLE_DIR / "sample" / "v2" / "job.toml"
 
@@ -28,7 +28,7 @@ EXPECTED_FIELDS = [
     "currency",
 ]
 SAMPLE_FIELDS = [*EXPECTED_FIELDS, "performance_id"]
-LIVE_FIELDS = [
+V03_FIELDS = [
     "title",
     "performers",
     "category",
@@ -60,13 +60,13 @@ def test_uy_dance_jobs_validate_offline_with_stable_sample_schema(
     monkeypatch.setattr(httpx, "Client", _forbid_network)
 
     fingerprints: set[str] = set()
-    for job_path in (LIVE_JOB, SAMPLE_JOB, SAMPLE_V2_JOB):
+    for job_path in (V03_JOB, SAMPLE_JOB, SAMPLE_V2_JOB):
         code, validated = _run_cli(capsys, "job", "validate", str(job_path))
         assert code == 0
         assert validated["valid"] is True
         assert validated["format_version"] == 1
-        assert validated["source_count"] == (4 if job_path == LIVE_JOB else 2)
-        assert validated["fields"] == (LIVE_FIELDS if job_path == LIVE_JOB else SAMPLE_FIELDS)
+        assert validated["source_count"] == (3 if job_path == V03_JOB else 2)
+        assert validated["fields"] == (V03_FIELDS if job_path == V03_JOB else SAMPLE_FIELDS)
         assert validated["job"]["region"] == {
             "locale": "es-UY",
             "languages": ["es-UY", "es"],
@@ -74,7 +74,7 @@ def test_uy_dance_jobs_validate_offline_with_stable_sample_schema(
             "currency": "UYU",
             "egress": "direct",
         }
-        if job_path != LIVE_JOB:
+        if job_path != V03_JOB:
             fingerprints.add(validated["schema_fingerprint"])
 
     assert len(fingerprints) == 1
