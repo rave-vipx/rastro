@@ -28,6 +28,7 @@ nav:
   - Declarative jobs: jobs.md
   - MCP server: mcp.md
   - Dataset load and export: dataset.md
+  - Local Studio: studio.md
   - HTTP acquisition: acquisition.md
   - Recipe memory: memory.md
   - Recipe lifecycle: recipe-lifecycle.md
