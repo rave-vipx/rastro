@@ -44,3 +44,15 @@ def test_invalid_pointer_lists_are_rejected(mapping) -> None:
 def test_pointer_list_round_trips_through_json() -> None:
     recipe = JsonLdRecipe(fields={"price": ["/a", "/b"]})
     assert JsonLdRecipe.model_validate_json(recipe.model_dump_json()) == recipe
+
+
+def test_json_null_falls_through_to_the_next_pointer() -> None:
+    page = (
+        '<script type="application/ld+json">'
+        '{"@type": "Product", "name": null, "alternateName": "Notebook"}</script>'
+    )
+    recipe = JsonLdRecipe(item_type="Product", fields={"name": ["/name", "/alternateName"]})
+    candidate = ScraplingParser().parse(page, recipe, Limits()).candidates[0]
+    assert candidate.values == {"name": "Notebook"}
+    last_only = JsonLdRecipe(item_type="Product", fields={"name": ["/missing", "/name"]})
+    assert ScraplingParser().parse(page, last_only, Limits()).candidates[0].values == {"name": None}

@@ -43,3 +43,13 @@ def test_prune_requires_an_existing_store(tmp_path):
     missing = tmp_path / "none.db"
     assert main(["recipe", "prune", "--store", str(missing), "--older-than", "1"]) == 2
     assert not missing.exists()
+
+
+def test_prune_keeps_the_newest_version_so_numbers_are_never_reused(
+    tmp_path, source, schema, recipe
+):
+    """REC-005: even without keep_serving, the newest version of a key survives, so the
+    next saved recipe cannot take over a pruned version number."""
+    _, repo, key = _store(tmp_path, source, schema, recipe)
+    assert repo.prune(before=datetime.now(UTC)) == 1
+    assert [v.version for v in repo.history(key).versions] == [2]

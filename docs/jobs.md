@@ -254,8 +254,9 @@ Each record copies the card's other fields and goes through normal validation (f
 the expanded field in the dataset `identity` so each date is its own record. No match leaves
 the field missing (rejected when required), never an empty success. Expanded records count
 against `max_records` (`ResourceLimitError`). At most one field per recipe may expand, and it
-cannot be combined with `document:`. The drift probe measures it; relocation repair refuses
-it with a `ConfigurationError`.
+cannot be combined with `document:`. The drift probe measures it. Relocation repair does not support it: `job load` skips saving
+repair evidence (`relocation_retention_skipped`) and `rastro recipe repair` with a snapshot
+raises `ConfigurationError`.
 
 Whitespace-only text nodes are never matches, so `h6::text` over
 `<h6>MIE 11 NOV <span>19:00</span></h6>` reads `MIE 11 NOV` instead of reporting the blank text

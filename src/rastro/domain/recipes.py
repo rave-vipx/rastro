@@ -20,6 +20,7 @@ from rastro.domain.sources import Contract, Representation
 DOCUMENT_PREFIX = "document:"  # CSS field evaluated against the page root, not the record
 EXPAND_PREFIX = "expand:"  # CSS field whose every match becomes its own record
 MAX_POINTERS = 4  # JSON-LD fields may list 1..4 fallback pointers
+PointerList = Annotated[tuple[str, ...], Field(min_length=1, max_length=MAX_POINTERS)]
 _SELECTORS = frozenset({"item_type", "record_selector", "record_path"})
 
 
@@ -147,7 +148,7 @@ class JsonLdRecipe(Recipe):
     """
 
     strategy: Literal["jsonld"] = "jsonld"
-    fields: dict[str, str | tuple[str, ...]] = Field(  # type: ignore[assignment]
+    fields: dict[str, str | PointerList] = Field(  # type: ignore[assignment]
         min_length=1, max_length=100
     )
     fallbacks: tuple[HtmlRecipe, ...] = Field(default=(), max_length=3)

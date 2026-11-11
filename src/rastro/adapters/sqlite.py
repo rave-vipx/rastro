@@ -216,11 +216,14 @@ class SQLiteRecipeRepository:
         """Delete versions last successful before ``before`` and return how many.
 
         ``keep_serving`` spares active and degraded versions; ``dry_run`` only counts.
+        The highest version of each key is always kept, so a version number is never
+        issued twice for different recipes.
         """
         cutoff = utc_timestamp(before)
-        where = "last_success_at < ?" + (
-            " AND state NOT IN ('active', 'degraded')" if keep_serving else ""
-        )
+        where = (
+            "last_success_at < ? AND version < "
+            "(SELECT MAX(newest.version) FROM recipes AS newest WHERE newest.key = recipes.key)"
+        ) + (" AND state NOT IN ('active', 'degraded')" if keep_serving else "")
         with self._connection(write=not dry_run) as db:
             if dry_run:
                 return int(

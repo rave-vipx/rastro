@@ -85,7 +85,7 @@ def _objects(value: object, path: str = "") -> Iterator[tuple[dict[str, object],
 
 
 def _node_candidates(
-    page: Selector, node: Selector, index: int, recipe: CssRecipe
+    page: Selector, node: Selector, index: int, recipe: CssRecipe, max_records: int
 ) -> list[Candidate]:
     """One candidate per record node, or one per value of its single ``expand:`` field."""
     values: dict[str, object] = {}
@@ -99,6 +99,8 @@ def _node_candidates(
             found = [str(v) for v in scope.css(css).getall()]
             if "::text" in css:
                 found = [v for v in found if v.strip()]
+            if len(found) > max_records:
+                raise ResourceLimitError("Record count exceeds max_records")
             expanded = (field, selector, found)
             continue
         elements, matches = _matches(scope, css)
@@ -142,7 +144,14 @@ class ScraplingParser:
             raise ResourceLimitError("Record count exceeds max_records")
         candidates: list[Candidate] = []
         for index, node in enumerate(nodes):
-            candidates.extend(_node_candidates(page, node, index, recipe))
+            for candidate in _node_candidates(page, node, index, recipe, limits.max_records):
+                # Issues point at the record position, which expand: shifts past the card.
+                position = len(candidates)
+                issues = tuple(
+                    issue.model_copy(update={"record_index": position})
+                    for issue in candidate.issues
+                )
+                candidates.append(Candidate(candidate.values, candidate.locators, issues))
             if len(candidates) > limits.max_records:
                 raise ResourceLimitError("Record count exceeds max_records")
         return ParsedDocument(tuple(candidates))
@@ -174,9 +183,13 @@ class ScraplingParser:
                 values: dict[str, object] = {}
                 locators: dict[str, str] = {}
                 for field, mapping in recipe.fields.items():
-                    for pointer in (mapping,) if isinstance(mapping, str) else mapping:
+                    pointers = (mapping,) if isinstance(mapping, str) else mapping
+                    for position, pointer in enumerate(pointers, 1):
                         value = resolve_pointer(item, pointer)
-                        if value is not MISSING:
+                        # A JSON null falls through to the next pointer; the last one decides.
+                        if value is not MISSING and (
+                            value is not None or position == len(pointers)
+                        ):
                             values[field] = value
                             locators[field] = f"jsonld[{block_index}]#{path}{pointer}"
                             break

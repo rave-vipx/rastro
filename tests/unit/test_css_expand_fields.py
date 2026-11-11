@@ -59,3 +59,34 @@ def test_drift_probe_measures_expand_field():
 def test_relocation_refuses_expand_field():
     with pytest.raises(ConfigurationError, match="expand"):
         _expression("expand:time::text")
+
+
+def test_issue_record_index_counts_expanded_records_not_cards():
+    """DATA-004: after an expanded card, issues blame the right record position."""
+    from rastro import CssRecipe, Limits
+    from rastro.adapters.scrapling import ScraplingParser
+
+    html = (
+        "<ul><li><h2>Obra A</h2><time>1 DIC</time><time>2 DIC</time></li>"
+        "<li><h2>X</h2><h2>Y</h2><time>3 DIC</time></li></ul>"
+    )
+    recipe = CssRecipe(
+        record_selector="li", fields={"title": "h2::text", "date": "expand:time::text"}
+    )
+    parsed = ScraplingParser().parse(html, recipe, Limits())
+    assert [c.values.get("title") for c in parsed.candidates] == ["Obra A", "Obra A", None]
+    assert not parsed.candidates[1].issues
+    assert [i.record_index for i in parsed.candidates[2].issues] == [2]
+
+
+def test_expand_values_are_bounded_before_records_are_built():
+    """DATA-004: one card with too many values fails before building candidates."""
+    import pytest
+
+    from rastro import CssRecipe, Limits, ResourceLimitError
+    from rastro.adapters.scrapling import ScraplingParser
+
+    html = "<ul><li><h2>A</h2>" + "<time>d</time>" * 6 + "</li></ul>"
+    recipe = CssRecipe(record_selector="li", fields={"title": "h2::text", "d": "expand:time::text"})
+    with pytest.raises(ResourceLimitError):
+        ScraplingParser().parse(html, recipe, Limits(max_records=5))

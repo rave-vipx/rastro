@@ -144,7 +144,9 @@ holds the version's lifecycle state (`RecipeState`), which changes without chang
 the definition.
 
 Here `repository` is your `SQLiteRecipeRepository` instance. `prune` deletes every
-version whose last successful execution is strictly older than the aware timestamp.
+version whose last successful execution is strictly older than the aware timestamp,
+except the newest version of each key, so a version number is never reused. A dry run
+opens the store normally, so it may upgrade an older schema first.
 `SQLiteRecipeRepository.prune` also accepts `keep_serving=True` (spare active and
 degraded versions) and `dry_run=True` (count only). From the shell,
 `rastro recipe prune --store recipes.db --older-than 90 [--dry-run]` applies both
