@@ -159,6 +159,22 @@ from rastro import (
 
 `Job` (`format_version = 1`) loads from UTF-8 TOML or strict JSON via `parse_job` / `load_job`, builds a deterministic dynamic `JobRecord` Pydantic model (`build_job_schema`), and executes through `Rastro` / `Rastro.web` (`run_job`, `run_job_async`, `run_job_file`), returning `JobRunResult` (`schema_version = 1`, `data_trust = "untrusted_source_data"`). Published JSON Schemas (`job_json_schema()`, `job_run_json_schema()`) and `rastro job {validate,run,schema}` expose the same contract without Python code; see [declarative jobs](jobs.md).
 
+## Recipes from examples
+
+```python
+from rastro import FieldConfidence, Suggestion, SuggestionError, suggest
+```
+
+`suggest(html, schema, *, examples, url=None, records_min=2, limits=None)` builds a
+`CssRecipe` from a saved page and example values, runs it through the normal extraction
+pipeline and returns a `Suggestion` with `recipe`, `preview` (an `ExtractionResult`) and
+`confidence` (one `FieldConfidence` per schema field: `method` is `example`, `microdata` or
+`unmapped`, plus `selector`, `examples_matched`, `examples_total`, `records_with_value`,
+`ambiguous` and `note`). `schema` is a Pydantic model or a list of job field definitions.
+It is deterministic and offline. `SuggestionError` (a `ConfigurationError`) lists the
+examples that were not found or not reproduced. The CLI equivalents are `rastro suggest`
+and `rastro new`; see [recipes from examples](suggest.md).
+
 ## Results
 
 `ExtractionResult` contains:

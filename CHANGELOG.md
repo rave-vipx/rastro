@@ -6,6 +6,8 @@ All notable user-facing changes will be recorded here. No public release has bee
 
 ### Added
 
+- `rastro.suggest(html, schema, *, examples, url=None)` builds a verified CSS recipe from a saved page and one or two example values per field, deterministically and without AI; it returns `Suggestion` (`recipe`, `preview`, per-field `confidence`) or raises `SuggestionError` naming the examples it could not reproduce (INT-002, DISC-003, P-003).
+- `rastro suggest page.html --example FIELD=VALUE ...` prints the suggested recipe as JSON or a preview table; `rastro new job.toml --from page.html --example ...` writes a complete job file with conservatively typed fields, never overwriting an existing file (JOB-001, DISC-003).
 - A `css` recipe field prefixed `expand:` turns a card with several values into one record per value, with per-value provenance and `max_records` enforced; relocation repair refuses it (DATA-004, DATA-005, JOB-002).
 - `rastro recipe prune --store FILE --older-than DAYS [--dry-run]` deletes old recipe versions but never a serving one; `prune` always keeps the newest version of each key so version numbers are never reused (REC-005).
 - A JSON-LD recipe field may list 1 to 4 JSON pointers; the first that resolves wins and the locator records it; a JSON null falls through to the next pointer (INT-002, DATA-005).

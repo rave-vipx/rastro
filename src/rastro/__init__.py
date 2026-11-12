@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from rastro.adapters.sqlite import SQLiteRecipeRepository
 from rastro.application.engine import Rastro
 from rastro.application.jobs import load_job, run_job, run_job_async, run_job_file
+from rastro.application.suggest import suggest
 from rastro.domain.acquisition import AcquisitionPolicy, EgressProfile
 from rastro.domain.intelligence import InferencePolicy, ModelError, ModelRequest, RecipeProposal
 from rastro.domain.job_fields import (
@@ -80,6 +81,7 @@ from rastro.domain.models import (
     Source,
     schema_fingerprint,
 )
+from rastro.domain.suggest import FieldConfidence, Suggestion, SuggestionError
 from rastro.mocklab import (
     FixtureBundle,
     MockLabError,
@@ -130,6 +132,7 @@ __all__ = [
     "Evidence",
     "ExtractionRecord",
     "ExtractionResult",
+    "FieldConfidence",
     "FileJobSource",
     "FixtureBundle",
     "InferencePolicy",
@@ -183,6 +186,8 @@ __all__ = [
     "Source",
     "StoredRecipe",
     "StringField",
+    "Suggestion",
+    "SuggestionError",
     "SyntheticLabel",
     "UrlField",
     "UrlJobSource",
@@ -199,5 +204,6 @@ __all__ = [
     "run_job_async",
     "run_job_file",
     "schema_fingerprint",
+    "suggest",
     "verify_fixture",
 ]
