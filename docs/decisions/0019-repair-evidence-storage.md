@@ -20,7 +20,10 @@ a sanitized, verified Mock Lab `FixtureBundle` for historical replay. Other reci
 strategies retain the bundle without CSS fingerprints. Source binding includes regional
 context and query identity. Replay origins are explicitly relabeled to
 `https://fixture.invalid/`; the separate source digest preserves the original binding
-without retaining a sensitive source URL path in the fixture manifest. Approved
+without retaining a sensitive source URL path in the fixture manifest. Because relative
+URLs resolve against the source URL, the fixture's expected extraction is produced by
+re-extracting the original body at the relabeled origin; that run must keep the original
+outcome and per-record fields, so replay resolves exactly like the expected values. Approved
 extracted URLs remain values and are subject to Mock Lab's sensitive-data scan.
 
 Capture is scoped to `job load`, records the exact successful selected attempt, and
@@ -34,8 +37,10 @@ refusal. The recipe-memory schema and dataset `user_version` remain unchanged.
 ## Tradeoffs and verification
 
 Evidence retention follows the dataset write in a separate transaction. A refused sample
-or disk error may therefore follow an already committed valid dataset update; the CLI
-reports failure explicitly. Latest-per-key retention keeps evidence for earlier recipe
+or disk error may therefore follow an already committed valid dataset update. Since 0.6.0
+the load keeps its exit code and reports `evidence_retention_failed` in that source's
+`issues`, so the report never calls committed rows a failed load; the previous evidence
+for that key is kept. Latest-per-key retention keeps evidence for earlier recipe
 versions so rollback remains useful, but global history pruning is deferred. Recipe
 promotion and report persistence are also separate; an I/O failure cannot undo a committed
 promotion. All paths require trusted private parents, as in ADR 0017.
