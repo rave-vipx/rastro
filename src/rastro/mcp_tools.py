@@ -49,17 +49,19 @@ def _plain(model: Any) -> dict[str, Any]:
 
 
 def bounded(
-    payload: dict[str, Any], *, max_items: int = 50, max_chars: int = 500
+    payload: dict[str, Any], *, max_items: int = 50, max_chars: int = 500, max_keys: int = 100
 ) -> dict[str, Any]:
-    """Cap every list at ``max_items`` and every string at ``max_chars``; say so in
-    ``truncated`` (AGENT-002). Applied to tool outputs that can grow with the source."""
+    """Cap every list at ``max_items``, every object at ``max_keys`` keys and every string at
+    ``max_chars``, at any depth; say so in ``truncated`` (AGENT-002). Applied to tool outputs
+    that can grow with the source."""
     cut = False
 
     def walk(value: Any) -> Any:
         nonlocal cut
         if isinstance(value, dict):
-            return {key: walk(item) for key, item in value.items()}
-        if isinstance(value, list):
+            cut = cut or len(value) > max_keys
+            return {key: walk(item) for key, item in list(value.items())[:max_keys]}
+        if isinstance(value, list | tuple):
             cut = cut or len(value) > max_items
             return [walk(item) for item in value[:max_items]]
         if isinstance(value, str) and len(value) > max_chars:
@@ -107,16 +109,20 @@ def dataset_records(
         dataset = names[0]
     if dataset not in names:
         raise ConfigurationError("Dataset name does not exist in this file")
+    # The store reads at most Limits.max_records rows; sorting and the upcoming filter need
+    # them all, so the page is cut after selection (the store has no limit/offset query).
     records = select_records(store.records(dataset), sort_field, upcoming, timezone=timezone)
-    return {
-        "schema_version": 1,
-        "data_trust": "untrusted_source_data",
-        "dataset": dataset,
-        "total": len(records),
-        "truncated": len(records) > limit,
-        "records": [r.model_dump(mode="json") for r in records[:limit]],
-        "stale_sources": [s.model_dump(mode="json") for s in stale_sources(store, dataset)],
-    }
+    return bounded(
+        {
+            "schema_version": 1,
+            "data_trust": "untrusted_source_data",
+            "dataset": dataset,
+            "total": len(records),
+            "truncated": len(records) > limit,
+            "records": [r.model_dump(mode="json") for r in records[:limit]],
+            "stale_sources": [s.model_dump(mode="json") for s in stale_sources(store, dataset)],
+        }
+    )
 
 
 def source_url(item: JobSource) -> str:

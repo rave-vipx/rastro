@@ -48,7 +48,7 @@ The server sends this order to the client as its `instructions`:
 | `drift_status(path)` | none | Freshness of each source in the job's dataset, and the stale ones | read-only |
 | `recipe_list(path)` | none | Stored recipe versions and states per job source | read-only |
 | `recipe_history(path, source)` | none | Versions, serving version and lifecycle events of one source | read-only |
-| `recipe_repair(path, source, min_records?, min_completeness?)` | `rastro recipe repair --source N` | Stores and checks repair candidates | writes recipe memory |
+| `recipe_repair(path, source, min_records?, min_completeness?)` | `rastro recipe repair --source N` | Stores and checks repair candidates | destructive (may promote when the job opts in) |
 | `recipe_promote(path, source, version, reason, override_gates?)` | `rastro recipe promote` | Re-checks a candidate and makes it the serving recipe if it passes | destructive |
 | `recipe_apply(path, source)` | `rastro recipe apply` | Writes the serving recipe into the job file; the rest of the file is kept | destructive, idempotent |
 | `scrape_file(page_path, fields? + records?, recipe?, url?)` | none (`rastro.scrape` in Python) | One-off extraction from a workspace file | read-only |
@@ -86,8 +86,8 @@ checks were overridden. Rollback is not exposed; use `rastro recipe rollback`.
   paths are not allowed"), `..` escapes and symlinks are rejected. A job's own paths stay
   inside the job's directory, as in the command line.
 - Every argument has a JSON Schema with bounds (lengths, ranges, item counts).
-- Outputs that grow with the page are bounded: lists stop at 50 items and text at 500
-  characters, and `truncated` says when something was cut. `dataset_records` returns at most
+- Outputs that grow with the page are bounded: lists stop at 50 items, objects at 100 keys and text at
+  500 characters, and `truncated` says when something was cut. `dataset_records` returns at most
   200 records per call (`limit`, default 50).
 - Failures, including arguments that break the schema, are tool errors whose text is one JSON
   object: `{"error", "message", "location", "hint"}` (`hint` may be `null`). They never contain
