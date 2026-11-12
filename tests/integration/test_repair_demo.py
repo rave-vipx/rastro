@@ -26,7 +26,7 @@ def test_repair_demo_succeeds_under_future_wall_clock(tmp_path, capsys, offline_
         # The documented script owns its clock pin, independently of pytest fixtures.
         demo["run_demo"](tmp_path / "sample")
     output = capsys.readouterr().out
-    readme = Path("README.md").read_text(encoding="utf-8")
+    readme = Path("examples/uy-dance-agenda/README.md").read_text(encoding="utf-8")
     section = readme.split("## Drift and repair offline", 1)[1]
     expected = section.split("```text\n", 1)[1].split("```", 1)[0]
     assert output == expected
