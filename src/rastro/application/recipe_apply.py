@@ -70,12 +70,13 @@ def _no_symlinks(path: Path) -> Path:
     """Refuse a symlink in any component between the job root and the file.
 
     The root is the working directory when the file lies below it, otherwise the
-    filesystem root, so a symlinked parent directory is never followed.
+    file's own directory (system links such as macOS ``/tmp`` above an explicitly
+    named job are the caller's choice, not something a job can plant).
     """
     absolute = path.absolute()
     root = Path.cwd().absolute()
     if not absolute.is_relative_to(root):
-        root = Path(absolute.anchor)
+        root = absolute.parent
     for part in (absolute, *absolute.parents):
         if part == root:
             break

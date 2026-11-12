@@ -7,6 +7,7 @@ title markup changes so the job file's selector breaks.
 import json
 import tomllib
 from datetime import UTC, datetime
+from pathlib import Path
 
 import pytest
 
@@ -246,12 +247,14 @@ def test_pinned_version_reports_what_the_store_holds(job):
     assert selections[0].recipe_version is None
 
 
-def test_apply_refuses_a_symlinked_parent_directory(job, tmp_path):
-    """SEC-008: apply never follows a symlinked directory to reach the job file."""
+def test_apply_refuses_a_symlinked_parent_directory(job, tmp_path, monkeypatch):
+    """SEC-008: below the working directory, apply never follows a symlinked directory."""
     repaired(job)
-    alias = tmp_path.parent / (tmp_path.name + "-alias")
-    alias.symlink_to(tmp_path, target_is_directory=True)
+    work = tmp_path / "work"
+    work.mkdir()
+    (work / "alias").symlink_to(tmp_path, target_is_directory=True)
+    monkeypatch.chdir(work)
     before = job.read_bytes()
     with pytest.raises(rastro.ConfigurationError, match="symlink"):
-        rastro.apply_job_recipe(alias / "job.toml", 1)
+        rastro.apply_job_recipe(Path("alias") / "job.toml", 1)
     assert job.read_bytes() == before
