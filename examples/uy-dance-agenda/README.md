@@ -80,7 +80,7 @@ rastro job load job.json --drift
 exit=0 status=success stale=0 drift=none,none fields=
 Mock Lab: moved and renamed title nodes (seed=42)
 rastro job load job.json --drift
-exit=3 status=partial_success stale=1 drift=structural_drift,none fields=city,currency,performance_id,performers,price,starts_at,ticket_url,title,venue
+exit=3 status=partial_success stale=1 drift=structural_drift,none fields=*,city,currency,performance_id,performers,price,starts_at,ticket_url,title,venue
 rastro recipe repair job.json --source 1
 exit=3 decisions=quarantine,reject consistency=consistent,not_assessed
 Configured repair.min_records=4 (was 5)
