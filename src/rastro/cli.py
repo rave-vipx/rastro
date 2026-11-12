@@ -30,7 +30,7 @@ from rastro.cli_errors import UsageError, classify
 from rastro.cli_recipe import add_commands as add_recipe_commands
 from rastro.cli_recipe import recipe_command
 from rastro.cli_studio import add_command as add_studio_command
-from rastro.cli_studio import studio_command
+from rastro.cli_studio import missing_extra, studio_command
 from rastro.domain.job_dataset import job_preview_json_schema
 from rastro.domain.job_load import job_load_json_schema
 
@@ -144,8 +144,7 @@ def _mcp_command(args: argparse.Namespace) -> int:
     try:
         from rastro.adapters.mcp_server import serve
     except ImportError:
-        message = "The MCP server needs the optional extra: pip install 'rastro-engine[mcp]'"
-        print(json.dumps({"error": "missing_extra", "message": message}), file=sys.stderr)
+        print(json.dumps(missing_extra("mcp", "The MCP server")), file=sys.stderr)
         return int(JobExitCode.CONFIG_ERROR)
     if not args.root.is_dir():
         raise RastroError("--root must be an existing directory")

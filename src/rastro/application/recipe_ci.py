@@ -29,16 +29,19 @@ def evaluate_candidate(
     rules: Sequence[ConsistencyRule] = (),
     history: History | None = None,
     policy: RepairPolicy | None = None,
+    allow_fallbacks: bool = False,
 ) -> CandidateEvaluation:
     """Replay historical fixtures and generated invariants; never save candidate data.
 
     Historical comparisons require identical validated values and proven fields,
     allowing changed locators/version numbers. Current semantics use pre-write history.
     No declared consistency rules means the semantic gate is inapplicable, not passed.
+    ``allow_fallbacks`` admits a recipe with fallbacks: only for adopting a verified
+    shared recipe on a store with nothing serving, where every gate still applies.
     """
     policy = policy or RepairPolicy()
     recipe = validate_recipe(schema, candidate.recipe, candidate.recipe.representation)
-    if not recipe.require_evidence or recipe.fallbacks:
+    if not recipe.require_evidence or (recipe.fallbacks and not allow_fallbacks):
         raise ConfigurationError("Recipe CI requires evidence and a single candidate")
     if len(fixtures) > 32:
         raise ConfigurationError("Recipe CI accepts at most 32 historical fixtures")

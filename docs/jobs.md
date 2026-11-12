@@ -293,8 +293,11 @@ value, method and locator provenance, validation outcome and `loaded` flag (`tru
 record was accepted, the field is in `approve` and the source actually supplied it; an optional
 field the recipe did not observe shows `validation = "not_observed"` and is never loaded). Rejected records appear with their reason
 codes; the pipeline never keeps rejected values, so none are shown. It writes nothing: no dataset
-file and no recipe memory, so a job that sets `recipe_memory` is refused (exit code `2`) until a
-read-only recipe lookup exists. It requires a `[dataset]` block (exit code `2` otherwise) and shares the exit codes below.
+file and no recipe memory. For a job that sets `recipe_memory`, the store is opened read-only
+and never created or upgraded: each source uses the stored serving recipe when its version is
+higher than the job file's recipe, otherwise the job file's recipe. If the store file does not
+exist yet, the job file's recipe is used. A store written by an older release must be upgraded
+first by any writing command, such as `rastro job load`. It requires a `[dataset]` block (exit code `2` otherwise) and shares the exit codes below.
 Table cells escape control characters. JSON output carries `data_trust = "untrusted_source_data"`
 and follows [`docs/schemas/job-preview.schema.json`](schemas/job-preview.schema.json)
 (`rastro job schema --target preview`).

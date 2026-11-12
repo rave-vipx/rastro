@@ -136,7 +136,18 @@ async def _evaluate_source(
     from rastro.adapters.scrapling_relocation import ScraplingRelocation
     from rastro.adapters.structured import JsonDiscovery, JsonParser
 
-    source, key, previous = context.source(index)
+    if args.recipe_command == "promote":
+        source, key = context.locate(index)
+        stored = context.repository.get(key, version=args.version)
+        if stored is None or stored.metadata.state != RecipeState.CANDIDATE:
+            raise ConfigurationError("Only a stored candidate may be promoted")
+        serving = context.repository.get(key)
+        # A fresh store (an imported bundle) has nothing serving: compare with itself.
+        previous = serving.validated_recipe if serving else stored.validated_recipe
+        adopting = serving is None
+    else:
+        source, key, previous = context.source(index)
+        stored, adopting = None, False
     document = await context.document(index, source)
     snapshot, fixtures = context.fixtures(source, previous)
     limits = context.job.limits or Limits()
@@ -158,14 +169,15 @@ async def _evaluate_source(
             rules=context.job.consistency,
             history=history,
             policy=policy,
+            allow_fallbacks=adopting,
         )
 
-    if args.recipe_command == "promote":
-        stored = context.repository.get(key, version=args.version)
-        if stored is None or stored.metadata.state != RecipeState.CANDIDATE:
-            raise ConfigurationError("Only a stored candidate may be promoted")
+    if stored is not None:  # promote
         # Explicit approval enables promotion, but cannot bypass the CI gates.
-        policy = policy.model_copy(update={"auto_promote": True})
+        update: dict[str, object] = {"auto_promote": True}
+        if adopting:  # No history yet; the import already replayed the bundle's records.
+            update["min_historical_fixtures"] = 0
+        policy = policy.model_copy(update=update)
         candidate = RepairCandidate(
             recipe=stored.recipe, origin="discovery", rationale="Operator review"
         )

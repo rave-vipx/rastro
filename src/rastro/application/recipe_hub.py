@@ -8,6 +8,7 @@ import json
 import os
 import stat
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any
@@ -95,6 +96,14 @@ def export_bundle(
     return manifest
 
 
+@dataclass(frozen=True)
+class ImportedRecipe:
+    """The stored version an import produced, and whether it already existed."""
+
+    stored: StoredRecipe
+    reused: bool
+
+
 def import_bundle(
     directory: Path,
     repository: RecipeRepository,
@@ -102,8 +111,12 @@ def import_bundle(
     *,
     at: datetime,
     limits: Limits | None = None,
-) -> StoredRecipe:
-    """Verify a bundle offline, then store it as a candidate."""
+) -> ImportedRecipe:
+    """Verify a bundle offline, then store it as a candidate.
+
+    A definition equal to a version already stored for the same key is reused, not
+    duplicated, whatever that version's lifecycle state.
+    """
     if not isinstance(repository, RecipeLifecycle):
         raise ConfigurationError("Importing recipes requires a lifecycle-aware repository")
     limits = limits or Limits()
@@ -119,8 +132,13 @@ def import_bundle(
     key = RecipeKey.for_source(
         manifest.source, schema, manifest.context, representation=manifest.representation
     )
+    for status in repository.history(key).versions:
+        existing = repository.get(key, version=status.version)
+        if existing is not None and existing.recipe == _with_version(recipe, status.version):
+            return ImportedRecipe(existing, reused=True)
     version = repository.next_version(key)
-    return repository.save_candidate(key, _with_version(recipe, version), selected_index=0, at=at)
+    stored = repository.save_candidate(key, _with_version(recipe, version), selected_index=0, at=at)
+    return ImportedRecipe(stored, reused=False)
 
 
 def _verify_replay(

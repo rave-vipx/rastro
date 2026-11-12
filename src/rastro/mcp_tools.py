@@ -8,7 +8,7 @@ are rejected. Results are JSON-ready dicts. Source values stay labelled untruste
 from __future__ import annotations
 
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 
 from rastro.adapters.sqlite import SQLiteRecipeRepository
@@ -31,6 +31,8 @@ DEFAULT_RECORDS = 50
 def _inside(root: Path, raw: str) -> Path:
     if not isinstance(raw, str) or not raw:
         raise ConfigurationError("A workspace-relative path is required")
+    if any(p.is_absolute() or p.drive for p in (PurePosixPath(raw), PureWindowsPath(raw))):
+        raise ConfigurationError("Absolute paths are not allowed; use a workspace-relative path")
     return safe_path(raw, root, False)
 
 

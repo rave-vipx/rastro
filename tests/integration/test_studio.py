@@ -242,7 +242,9 @@ def test_cli_without_extra_fails_clearly(
 ) -> None:
     monkeypatch.setitem(sys.modules, "uvicorn", None)
     assert main(["studio"]) == 2
-    assert "missing_extra" in capsys.readouterr().err
+    error = json.loads(capsys.readouterr().err)
+    assert error["error"] == "missing_extra" and error["message"]
+    assert error["hint"] == "pip install 'rastro-engine[studio]'"
 
 
 def test_cli_serves_loopback_only(
@@ -261,13 +263,17 @@ def test_cli_serves_loopback_only(
 def test_listing_skips_hidden_and_vendor_dirs_and_reports_truncation(
     client: TestClient, root: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """P-008: only TOML job files are listed; reports and other TOML files are not."""
     for name in (".git", "node_modules", "__pycache__", ".venv", "venv", "dist", "build", "site"):
         (root / name).mkdir()
         (root / name / "x.json").write_text("{}")
     (root / "ok").mkdir()
-    (root / "ok" / "y.json").write_text("{}")
+    (root / "ok" / "y.toml").write_text("format_version = 2\n")  # invalid jobs stay listed
+    (root / "repair-report-1.json").write_text('{"schema_version": 1}')
+    (root / "pyproject.toml").write_text('[project]\nname = "x"\n')
+    (root / "broken.toml").write_text("format_version = [\n")
     listing = client.get("/api/jobs").json()
-    assert listing["files"] == ["job.toml", "ok/y.json"] and listing["truncated"] is False
+    assert listing["files"] == ["job.toml", "ok/y.toml"] and listing["truncated"] is False
     monkeypatch.setattr("rastro.studio.files.MAX_FILES", 1)
     cut = client.get("/api/jobs").json()
     assert cut["files"] == ["job.toml"] and cut["truncated"] is True
@@ -278,3 +284,13 @@ def test_script_reads_token_from_fragment_only() -> None:
     script = (base / "studio.js").read_text()
     assert "location.hash" in script and "replaceState" in script
     assert "studio-token" not in (base / "index.html").read_text()
+
+
+def test_preview_of_a_memory_job_writes_nothing(client: TestClient, root: Path) -> None:
+    """DATA-002, P-008: Studio previews recipe_memory jobs without creating the store."""
+    job = root / "job.toml"
+    memory = 'format_version = 1\nrecipe_memory = "r.sqlite"'
+    job.write_text(job.read_text().replace("format_version = 1", memory))
+    shown = post(client, "/api/preview", {"file": "job.toml"}).json()
+    assert shown["ok"] and shown["preview"]["sources"][0]["records"][0]["status"] == "accepted"
+    assert not (root / "r.sqlite").exists() and not (root / "agenda.sqlite").exists()

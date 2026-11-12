@@ -13,19 +13,24 @@ rastro studio --root path/to/jobs --port 8765
 ```
 
 `--root` defaults to the current directory and `--port` to 8765. Studio always binds
-`127.0.0.1`. Without the extra, `rastro studio` prints a `missing_extra` error and exits with
-code 2. The page is one HTML file plus one script and one stylesheet shipped in the package;
+`127.0.0.1`. Without the extra, `rastro studio` exits with code 2 and prints a JSON error on
+stderr: `{"error": "missing_extra", "message": ..., "location": null, "hint": "pip install
+'rastro-engine[studio]'"}`. The page is one HTML file plus one script and one stylesheet shipped in the package;
 there is no Node build.
 
 ## The six steps
 
-1. **Job file.** Lists `.toml` and `.json` files below the root (four levels deep). Symlinks, hidden
+1. **Job file.** Lists the `.toml` job files below the root (four levels deep): files with a
+   top-level `format_version`, valid or not, so a broken job still shows its errors. Repair reports,
+   `pyproject.toml` and other TOML or JSON files are not listed. Symlinks, hidden
    directories and vendor directories (`node_modules`, `__pycache__`, `venv`, `dist`, `build`,
    `site`) are skipped; at most 500 files are listed and the page says when the list is cut.
 2. **Validate.** Parses and validates the job with the same rules as `rastro job validate`.
 3. **Preview.** Runs `rastro job preview` logic: sample records, and for every field the method,
    locator, validation status and whether it would be loaded. Rejected records show their
-   reasons. A preview needs a `[dataset]` block and writes nothing. A job with URL sources
+   reasons. A preview needs a `[dataset]` block and writes nothing; a job with
+   `recipe_memory` reads its recipe store without changing it, as `rastro job preview` does.
+   A job with URL sources
    fetches them under its own acquisition policy, exactly as the CLI does.
 4. **Correct a match.** Choose a field mapping from a recipe, edit its selector and preview again.
    Nothing is written yet.
