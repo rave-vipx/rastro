@@ -113,3 +113,11 @@ def migrate(db: sqlite3.Connection) -> None:
         db.rollback()
         raise
     db.commit()
+
+
+def check_current(db: sqlite3.Connection) -> None:
+    """Accept only a file already at ``SCHEMA_VERSION``; read-only access never migrates."""
+    if _markers(db) != (SCHEMA_VERSION, APPLICATION_ID):
+        raise RecipeStorageError(
+            "Recipe storage needs an upgrade; run a writing command such as 'rastro job load'"
+        )

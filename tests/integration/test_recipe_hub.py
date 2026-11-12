@@ -89,6 +89,7 @@ def test_git_roundtrip_serves_the_recipe_without_the_author(exported, tmp_path, 
         "schema_version": 1,
         "state": "candidate",
         "version": 1,
+        "reused": False,
     }
     # Consumer job: its own file, its own empty store, the bundle's sample.
     consumer = tmp_path / "consumer"
