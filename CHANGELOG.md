@@ -2,24 +2,15 @@
 
 All notable user-facing changes are recorded here. The project follows [Semantic Versioning](docs/stability.md) from 0.6.0. Versions before 0.6.0 were never published to a package registry.
 
-## 0.6.0 — unreleased
+## 0.6.0 — 2026-11-12
 
-First public release candidate of `rastro-engine` on PyPI. Entries under "Unreleased" below are folded into this section when the release is cut.
+First public release of `rastro-engine` on PyPI: one-call typed scraping with `rastro.scrape`, selectors suggested from example values, verified self-repair, a complete MCP server for AI agents and a local Studio GUI.
 
 ### Added
 
 - Tag-triggered release workflow: builds the sdist and wheel, checks them with `twine check --strict`, verifies the tag matches the package version, smoke-tests the installed wheel, publishes to PyPI through Trusted Publishing with attestations and creates the GitHub release from this changelog (P-009, Release Evidence).
 - CI `package` job installs the built wheel with and without the `http`, `mcp` and `studio` extras and runs the CLI smoke checks (P-006, Release Evidence).
 - `docs/stability.md` defines the public surface and the deprecation policy; `docs/ai-agents.md` and a root `llms.txt` describe how AI agents use Rastro (AGENT-001, AGENT-002, AGENT-003).
-
-### Changed
-
-- Package classifier is `Development Status :: 4 - Beta`; README rewritten for external users.
-
-## Unreleased
-
-### Added
-
 - Studio is a complete local GUI: a new-scraper wizard (pick a saved page, give example values, review the suggested recipe with per-field confidence, create the job file), Extract (writes nothing) and Load into dataset with recipe origin and version per source, health with stale status and optional drift, repair proposals with an old-versus-new selector diff and gate results, promotion with a recorded reason (overriding failed gates warns and records it), writing the serving recipe back to the job file, and a paginated dataset browser with stale markers and JSON or HTML download. JSON job files are listed next to TOML ones. Every new action is a token-protected, exact-origin POST confined to the Studio folder; file edits carry the file digest. The app is split into per-area routers and the page into dependency-free ES modules, with light and dark themes (P-008, INT-002, JOB-001, DATA-001, DATA-004, REPAIR-002-005, REC-006).
 - `rastro.scrape(target, schema, ...)` and `rastro.scrape_async` extract HTML text, a file or a URL into validated Pydantic models in one call; `rastro.css("...")` declares a field's selector on the model, `__records__` or `records=` selects records, and `ExtractionResult.items` lists the validated instances (INT-001, INT-002, REC-003).
 - `scrape(..., memory="recipes.db")` remembers the working recipe and a sanitized success sample; when the remembered recipe stops matching, `repair="propose"` (default) stores gated offline repair candidates and `repair="auto"` promotes one that passes every gate and returns its result. `ExtractionResult.repair` describes what happened; it is omitted from serialized output when no repair ran, and `job-run.schema.json` gains the optional field. Before promotion, relocated fields must keep their retained values' type and shape and must not take another field's values (`value_shape_changed`, `value_type_changed`, `value_matches_other_field`); an identical stored candidate is reused instead of adding a version (REC-001, REC-006, REPAIR-001-005, SCR-002).
@@ -39,19 +30,19 @@ First public release candidate of `rastro-engine` on PyPI. Entries under "Unrele
 - The MCP server covers the whole job lifecycle: `job_extract` (like `rastro job run`, no dataset write), `job_load` (with `drift`), `drift_status`, `recipe_history`, `recipe_repair` (proposes; promotes only when the job sets `[repair] auto_promote = true`), `recipe_promote` (requires a reason), `recipe_apply`, `suggest_recipe`, `job_new` (never overwrites) and `scrape_file` (one-off extraction from a workspace file, no network). Tools declare bounded JSON Schema inputs and read-only/destructive/idempotent hints, outputs are bounded with `truncated`, and the server sends workflow `instructions` (AGENT-002, AGENT-003, REPAIR-002-005, REC-006, INT-002, JOB-001).
 - `rastro new --allow-partial` writes a job even when the recipe preview is only a partial success; `Suggestion.status` reports the preview outcome (JOB-001, INT-002).
 
-
 ### Security
 
 - Studio requires the session token on every `/api` request, reads included (job and page lists, connect commands); the page and its static files stay public. Saving a selector and writing a serving recipe compare the expected digest with the bytes being replaced inside the write step, so a file changed after the check fails with `file_changed` instead of being overwritten. Dataset pages and downloads cut field and identity values longer than 2,000 characters and mark the record `truncated` (P-008, SEC-008, DATA-004, REC-006).
 
 ### Changed
 
+- Package classifier is `Development Status :: 4 - Beta`; README rewritten for external users.
 - MCP `recipe_repair` declares `destructiveHint: true`, because a job with `[repair] auto_promote = true` lets it change the serving recipe; `dataset_records` output is bounded like the other tools, and every MCP output also caps objects at 100 keys with `truncated` (AGENT-002).
 - With `recipe_memory`, `job run`, `job load`, `run_job` and `run_job_file` use the serving recipe in memory when its version is higher than the job file's recipe version, so a promoted repair applies to the next run. Previously `job run` kept the stale file recipe and `job load` used memory whenever it had a serving recipe; see ADR 0021 (REC-006).
 - Repair completeness counts optional fields only as often as the stored success samples filled them, so an optional field that is legitimately empty in some records no longer quarantines a correct repair (QUAL-006).
 - Code that imported `rastro.cli_dataset.load_job_file`, `rastro.cli_repair_context` or `rastro.cli_repair_storage` should use `rastro.load_job_file` and the other public functions; those internal modules moved under `rastro.application`.
 - `rastro recipe import` reuses a stored version whose recipe equals the bundle's, and its JSON output gains `"reused": true|false` (HUB-001).
-- Studio lists only `.toml` job files (with a top-level `format_version`); repair reports and other TOML or JSON files are no longer shown (P-008).
+- Studio lists only job files (`.toml` or `.json` with a top-level `format_version`); repair reports and other files are no longer shown (P-008).
 - MCP `job_run` is renamed `job_load`, matching `rastro job load` (it writes the dataset); `job_run` stays as a deprecated alias until 0.7.0. Use `job_extract` for the `rastro job run` behaviour. MCP tool errors, including argument validation errors, are always `{"error", "message", "location", "hint"}`; the `mcp` extra now requires `mcp>=1.10` (AGENT-002, AGENT-003).
 - `rastro studio` and `rastro mcp` report a missing optional extra as `{"error": "missing_extra", "message", "location": null, "hint": "pip install 'rastro-engine[<extra>]'"}` (P-008, AGENT-002).
 - A job `[dataset]` without `match_fields` now matches records on its `identity` fields only and flags no uncertain matches; previously it assumed event fields named `title`, `venue` and `start_time`. To keep near matching, declare `match_fields` explicitly. Errors in `match_fields`, `identity` and `approve` now report their TOML key as `location` (DATA-004, AGENT-001).
@@ -71,7 +62,7 @@ First public release candidate of `rastro-engine` on PyPI. Entries under "Unrele
 - The HTTP `User-Agent` reports the installed package version instead of a fixed `0.1` (transparent contact metadata, ADR 0002).
 - File targets of `rastro.scrape` are opened non-blocking, so a FIFO is refused instead of hanging (SEC-005).
 - Job runs, loads and previews refuse a symlinked `recipe_memory` path; run and load open a current-schema store read-only while choosing recipes, and a pinned `recipe_version` is reported only when the store holds it (SEC-008, REC-006).
-- `rastro recipe apply` refuses a symlink in any directory between the working directory (or filesystem root) and the job file, and atomic writes sync the parent directory on POSIX (SEC-008).
+- `rastro recipe apply` refuses a symlink in any directory between the working directory (or, for a job outside it, the job's own directory) and the job file, and atomic writes sync the parent directory on POSIX (SEC-008).
 
 ## 0.5.0 — not published (2026-11-11)
 
