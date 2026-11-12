@@ -198,9 +198,13 @@ def test_request_bodies_are_bounded_and_must_be_objects(client: TestClient) -> N
 
 
 def test_source_content_is_rendered_as_text_only() -> None:
-    script = (Path(__file__).parents[2] / "src/rastro/studio/static/studio.js").read_text()
-    assert "innerHTML" not in script and "insertAdjacentHTML" not in script
-    assert "document.write" not in script and "eval(" not in script
+    scripts = sorted((Path(__file__).parents[2] / "src/rastro/studio/static").glob("*.js"))
+    assert len(scripts) >= 4
+    for path in scripts:
+        script = path.read_text()
+        assert "innerHTML" not in script and "insertAdjacentHTML" not in script, path
+        assert "document.write" not in script and "eval(" not in script, path
+        assert "outerHTML" not in script and "://" not in script, path  # no external code
 
 
 def test_json_job_is_edited_and_roundtrips(root: Path) -> None:
@@ -294,3 +298,15 @@ def test_preview_of_a_memory_job_writes_nothing(client: TestClient, root: Path) 
     shown = post(client, "/api/preview", {"file": "job.toml"}).json()
     assert shown["ok"] and shown["preview"]["sources"][0]["records"][0]["status"] == "accepted"
     assert not (root / "r.sqlite").exists() and not (root / "agenda.sqlite").exists()
+
+
+def test_listing_includes_json_jobs_only_with_format_version(
+    client: TestClient, root: Path
+) -> None:
+    """P-008: JSON job files are listed like TOML ones; other JSON files are not."""
+    (root / "job2.json").write_text('{"format_version": 1, "sources": []}')
+    (root / "data.json").write_text('{"records": []}')
+    (root / "list.json").write_text("[1, 2]")
+    (root / "deep.json").write_text("[" * 100_000 + "]" * 100_000)
+    (root / "broken.json").write_text("{")
+    assert client.get("/api/jobs").json()["files"] == ["job.toml", "job2.json"]
