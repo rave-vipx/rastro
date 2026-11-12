@@ -214,3 +214,32 @@ def test_auto_promotes_a_previously_proposed_candidate(tmp_path):
     assert healed.status == Outcome.SUCCESS and healed.repair.promoted
     assert healed.repair.promoted_version == healed.recipe_version == 2
     assert SQLiteRecipeRepository(memory).next_version(_key()) == 3
+
+
+class Item(BaseModel):
+    __records__: ClassVar[str] = "div.product"
+    name: Annotated[str, rastro.css("h3.name::text")]
+    price: Annotated[str, rastro.css("span.price::text")]
+    stock: Annotated[str | None, rastro.css("span.stock::text")] = None
+
+
+def _shop(css_class, missing_stock=None):
+    cards = "".join(
+        f'<div class="{css_class}"><h3 class="name">Lamp {i}</h3>'
+        f'<span class="price">{10 + i}.00</span>'
+        + ("" if i == missing_stock else f'<span class="stock">{i} left</span>')
+        + "</div>"
+        for i in range(3)
+    )
+    return f"<html><body><main>{cards}</main></body></html>"
+
+
+@pytest.mark.parametrize("missing", [0, 1])
+def test_auto_heals_when_one_record_lacks_an_optional_field(tmp_path, missing):
+    """REPAIR-001, SCR-002: an absent optional child does not block relocation."""
+    memory = tmp_path / "recipes.db"
+    assert _scrape(_shop("product"), memory, "auto", Item).status == Outcome.SUCCESS
+    healed = _scrape(_shop("item-card", missing), memory, "auto", Item)
+    assert healed.repair is not None and healed.repair.promoted
+    assert healed.status == Outcome.SUCCESS
+    assert [item.stock for item in healed.items].count(None) == 1

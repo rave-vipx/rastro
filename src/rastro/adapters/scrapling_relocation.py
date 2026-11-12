@@ -20,6 +20,7 @@ from rastro.adapters.scrapling_container import (
     container_selector,
     field_supported,
     relocate_matches,
+    template_record,
 )
 from rastro.domain.models import (
     ConfigurationError,
@@ -115,8 +116,8 @@ class ScraplingRelocation:
                 record_selector = f"{record_selector}, {new}"
         if not records:
             return ()
-        # shortcut: one template record, expand when heterogeneous-template fixtures require it.
-        record = records[0]
+        # One template record: the most common shape, so a row missing an optional child
+        record = template_record(records)  # does not become the template.
         selected = {
             field: _css(record, _expression(expr)[0]) for field, expr in recipe.fields.items()
         }

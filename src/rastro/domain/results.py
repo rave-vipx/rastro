@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
-from typing import Any, Literal
+from typing import Literal
 
-from pydantic import BaseModel, Field, SerializerFunctionWrapHandler, model_serializer
+from pydantic import BaseModel, Field
 
 from rastro.domain.recipes import Recipe
 from rastro.domain.sources import EGRESS_NAME, Contract
@@ -23,12 +23,22 @@ class Outcome(StrEnum):
     INSUFFICIENT_EVIDENCE = "insufficient_evidence"
 
 
+def _absent(value: object) -> bool:
+    return value is None
+
+
 class Issue(Contract):
-    """Safe diagnostics: no input values or user-supplied validation messages."""
+    """Safe diagnostics: no input values or user-supplied validation messages.
+
+    ``message`` names Pydantic's built-in error type and message (for example
+    ``int_parsing: Input should be a valid integer``); custom validator text is
+    never included. It is omitted from serialized output when absent.
+    """
 
     code: str
     record_index: int | None = None
     field: str | None = None
+    message: str | None = Field(default=None, max_length=512, exclude_if=_absent)
 
 
 class Evidence(Contract):
@@ -114,15 +124,8 @@ class ExtractionResult[T: BaseModel](Contract):
     records: tuple[ExtractionRecord[T], ...]
     issues: tuple[Issue, ...]
     metrics: Metrics
-    repair: SelfRepair | None = None
-
-    @model_serializer(mode="wrap")
-    def _omit_absent_repair(self, handler: SerializerFunctionWrapHandler) -> Any:
-        # Results without a repair serialize byte-for-byte as they did before the field.
-        data = handler(self)
-        if isinstance(data, dict) and data.get("repair") is None:
-            data.pop("repair", None)
-        return data
+    # Results without a repair serialize byte-for-byte as they did before the field.
+    repair: SelfRepair | None = Field(default=None, exclude_if=_absent)
 
     @property
     def items(self) -> list[T]:

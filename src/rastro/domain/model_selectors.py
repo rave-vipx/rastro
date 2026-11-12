@@ -1,19 +1,20 @@
 """CSS selectors declared on Pydantic model fields, turned into a recipe (INT-001, REC-003).
 
 ``Annotated[str, css("h3::text")]`` keeps the selector next to the field it fills.
-The marker never changes the JSON Schema; it only resolves relative links on URL fields.
+The marker never changes the JSON Schema; it strips text and resolves relative links.
 """
 
 from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
+from functools import partial
 from typing import Any, cast
 
 from pydantic import BaseModel, GetCoreSchemaHandler, ValidationError
 from pydantic_core import CoreSchema, core_schema
 
-from rastro.domain.job_field_values import relative_url
+from rastro.domain.job_field_values import relative_url, strip_text
 from rastro.domain.recipes import CssRecipe
 from rastro.domain.sources import ConfigurationError
 
@@ -24,8 +25,10 @@ WHOLE_DOCUMENT = ":root"  # one record: the page itself
 class CssSelector:
     """A field's CSS expression ending in ``::text`` or ``::attr(name)``.
 
-    On URL-typed fields it also resolves root- or dot-relative links against the
-    page URL before validation; other fields validate exactly as declared.
+    Before validation, text is stripped of surrounding whitespace (NBSP included).
+    Blank text in a field that does not accept ``None`` is a validation error, as in
+    jobs; a nullable field keeps ``""``. On URL-typed fields root- or dot-relative
+    links resolve against the page URL.
     """
 
     selector: str
@@ -34,9 +37,22 @@ class CssSelector:
         self, source: Any, handler: GetCoreSchemaHandler
     ) -> CoreSchema:
         schema = handler(source)
-        if not _accepts_url(schema):
-            return schema
-        return core_schema.with_info_before_validator_function(relative_url, schema)
+        if _accepts_url(schema):
+            schema = core_schema.with_info_before_validator_function(relative_url, schema)
+        strip = partial(strip_text, required=not _accepts_none(schema))
+        return core_schema.no_info_before_validator_function(strip, schema)
+
+
+def _accepts_none(schema: CoreSchema) -> bool:
+    kind = schema.get("type")
+    if kind in {"nullable", "none"}:
+        return True
+    if kind in {"default", "function-wrap", "function-before", "function-after"}:
+        return _accepts_none(cast(CoreSchema, schema["schema"]))
+    if kind == "union":
+        choices = schema["choices"]
+        return any(_accepts_none(item[0] if isinstance(item, tuple) else item) for item in choices)
+    return False
 
 
 def _accepts_url(schema: CoreSchema) -> bool:

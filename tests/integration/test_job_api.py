@@ -404,3 +404,13 @@ def test_recipe_help_describes_every_subcommand(capsys):
     for name in ("repair", "promote", "rollback", "compare", "apply", "show", "prune"):
         assert name in out
     assert "Print a stored recipe version" in out
+
+
+def test_container_rename_relocates_with_a_card_missing_its_optional_field(job):
+    """REPAIR-001, SCR-002: rows that omit an optional child stay one homogeneous container."""
+    assert rastro.load_job_file(job).job.status == "success"
+    renamed = board().replace('class="card"', 'class="job-card"')
+    (job.parent / "board.html").write_text(renamed, encoding="utf-8")
+    report = rastro.repair_job_source(job, 1, auto_promote=True)
+    (source,) = report.sources
+    assert source.promoted_version == 2, source.model_dump_json(indent=2)

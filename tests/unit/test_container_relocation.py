@@ -35,8 +35,9 @@ NEW = BEFORE.replace('class="dance"', 'class="event card"')
 
 
 def extract(html, recipe=RECIPE):
+    schema = Product if "name" in recipe.fields else Event
     return extract_document(
-        html, source=SOURCE, schema=Event, recipe=recipe, parser=ScraplingParser(), limits=Limits()
+        html, source=SOURCE, schema=schema, recipe=recipe, parser=ScraplingParser(), limits=Limits()
     )
 
 
@@ -178,3 +179,111 @@ def test_record_selector_evidence_is_ambiguous_by_default():
         evidence=(RepairEvidence(field="record_selector", match_count=2),),
     )
     assert candidate.ambiguous
+
+
+class Product(BaseModel):
+    name: str
+    price: str
+    stock: str | None = None
+
+
+PRODUCT_RECIPE = CssRecipe(
+    record_selector="div.product",
+    fields={"name": "h3.name::text", "price": "span.price::text", "stock": "span.stock::text"},
+)
+
+
+def _catalogue(css_class, missing_stock=None):
+    cards = []
+    for i in range(3):
+        stock = "" if i == missing_stock else f'<span class="stock">{i} left</span>'
+        cards.append(
+            f'<div class="{css_class}"><h3 class="name">Lamp {i}</h3>'
+            f'<span class="price">{10 + i}.00</span>{stock}</div>'
+        )
+    return "<html><body><main>" + "".join(cards) + "</main></body></html>"
+
+
+def _product_verdicts(html, before=None):
+    before = before or _catalogue("product")
+    result = extract_document(
+        before,
+        source=SOURCE,
+        schema=Product,
+        recipe=PRODUCT_RECIPE,
+        parser=ScraplingParser(),
+        limits=Limits(),
+    )
+    snapshot = ScraplingRelocation().capture(
+        before, source=SOURCE, recipe=PRODUCT_RECIPE, result=result, limits=Limits()
+    )
+    candidates = ScraplingRelocation().relocate(html, PRODUCT_RECIPE, snapshot, Limits())
+    fixture = build_fixture(
+        before,
+        source=SOURCE,
+        schema=Product,
+        recipe=PRODUCT_RECIPE,
+        result=result,
+        synthetic_count=0,
+    )
+    return [
+        evaluate_candidate(
+            c,
+            html,
+            source=SOURCE,
+            schema=Product,
+            parser=ScraplingParser(),
+            limits=Limits(),
+            observed_at=datetime(2026, 11, 8, tzinfo=UTC),
+            fixtures=(fixture,),
+            policy=RepairPolicy(auto_promote=True),
+        ).decision
+        for c in candidates
+    ]
+
+
+@pytest.mark.parametrize("missing", [0, 1, 2])
+def test_a_record_without_an_optional_child_still_relocates(missing):
+    """REPAIR-001, SCR-002: absent optional children do not make rows heterogeneous."""
+    assert _product_verdicts(_catalogue("item-card", missing)) == ["promote"]
+
+
+def test_optional_child_missing_before_and_after_relocates():
+    """REPAIR-001, SCR-002: the snapshot itself may come from a row set with gaps."""
+    before = _catalogue("product", 1)
+    assert _product_verdicts(_catalogue("item-card", 2), before) == ["promote"]
+
+
+def test_a_promo_decoy_beside_rows_missing_optional_children_is_refused():
+    """REPAIR-002: the optional-child tolerance must not admit a decoy container."""
+    html = _catalogue("item-card", 1).replace(
+        "</main>",
+        '<article class="promo"><h3 class="name">50% OFF</h3>'
+        '<span class="price">0.00</span><a>Buy</a></article></main>',
+    )
+    before = _catalogue("product")
+    result = extract_document(
+        before,
+        source=SOURCE,
+        schema=Product,
+        recipe=PRODUCT_RECIPE,
+        parser=ScraplingParser(),
+        limits=Limits(),
+    )
+    snapshot = ScraplingRelocation().capture(
+        before, source=SOURCE, recipe=PRODUCT_RECIPE, result=result, limits=Limits()
+    )
+    candidates = ScraplingRelocation().relocate(html, PRODUCT_RECIPE, snapshot, Limits())
+    for candidate in candidates:
+        names = [r.data.name for r in extract(html, candidate.recipe).records]
+        assert "50% OFF" not in names
+
+
+def test_a_same_class_row_with_extra_children_stays_ambiguous():
+    """REPAIR-002: tolerance covers omitted children only, never extra ones."""
+    html = _catalogue("item-card", 1).replace(
+        "</main>",
+        '<div class="item-card"><img src="ad.png"><h3 class="name">Sponsored</h3>'
+        '<span class="price">0.00</span><a>Buy</a></div></main>',
+    )
+    assert all(v in {"quarantine", "reject"} for v in _product_verdicts(html))

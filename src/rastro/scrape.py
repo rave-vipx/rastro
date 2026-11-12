@@ -101,6 +101,8 @@ async def scrape_async[T: BaseModel](
     recipe that stops matching is repaired offline: ``"propose"`` stores a gated
     candidate, ``"auto"`` also promotes it when every gate passes, ``"off"`` does neither.
     """
+    if not (isinstance(schema, type) and issubclass(schema, BaseModel)):
+        raise ConfigurationError("schema must be a Pydantic model class")
     if repair not in _REPAIR_MODES:
         raise ConfigurationError("repair must be 'off', 'propose' or 'auto'")
     if recipe is not None and (records is not None or fields):

@@ -83,7 +83,12 @@ def container_evidence(
 
 
 def homogeneous(page: Selector, relocated: list[Selector], selected: list[Selector]) -> bool:
-    """Check selected rows and competing same-class containers elsewhere on the page."""
+    """Check selected rows and competing same-class containers elsewhere on the page.
+
+    Every container needs the same ancestor path and classes. Its children must be
+    the rows' most common child sequence, or that sequence with some children left
+    out (an absent optional field). Extra or reordered children stay heterogeneous.
+    """
     first = relocated[0]._root
     classes = set(first.get("class", "").split())
     competitors = [
@@ -91,12 +96,30 @@ def homogeneous(page: Selector, relocated: list[Selector], selected: list[Select
         for node in page._root.iter(first.tag)
         if not classes or classes.intersection(node.get("class", "").split())
     ]
-    shape = (_path(first), tuple(child.tag for child in first), classes)
+    rows = [*(n._root for n in relocated), *(n._root for n in selected)]
+    template = _children(template_record([*relocated, *selected])._root)
     return all(
-        (_path(node), tuple(child.tag for child in node), set(node.get("class", "").split()))
-        == shape
-        for node in [*(n._root for n in relocated), *(n._root for n in selected), *competitors]
+        _path(node) == _path(first)
+        and set(node.get("class", "").split()) == classes
+        and _omits_only(_children(node), template)
+        for node in [*rows, *competitors]
     )
+
+
+def template_record(records: list[Selector]) -> Selector:
+    """The first record with the most common child sequence; ties prefer more children."""
+    shapes = [_children(record._root) for record in records]
+    best = max(shapes, key=lambda shape: (shapes.count(shape), len(shape)))
+    return records[shapes.index(best)]
+
+
+def _children(node: Any) -> tuple[str, ...]:
+    return tuple(child.tag for child in node if isinstance(child.tag, str))
+
+
+def _omits_only(shape: tuple[str, ...], template: tuple[str, ...]) -> bool:
+    remaining = iter(template)
+    return all(tag in remaining for tag in shape)
 
 
 def field_supported(matches: list[Selector], fingerprint: ElementFingerprint) -> bool:
