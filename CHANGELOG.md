@@ -152,9 +152,10 @@ Release candidate tagged on `main`; not published to any package registry. Final
 - `OpenAICompatibleModel(token_limit="max_completion_tokens", temperature=None)` for OpenAI reasoning models that reject `max_tokens` and sampling parameters (AI-005, AI-007).
 - "Choosing or writing a model provider" documentation with provider examples and the custom `ModelPort` contract.
 
-## 0.1.0 — release candidate (not yet tagged or published)
+## Before 0.1.0rc1 — prepared as 0.1.0 (2026-10-30), never tagged
 
-First Rastro Engine release candidate: schema-first, verifiable extraction with
+These entries were drafted as `0.1.0` and shipped in the `0.1.0rc1` tag above; `0.1.0` itself
+was never tagged. First Rastro Engine release candidate: schema-first, verifiable extraction with
 optional policy-aware HTTP acquisition, structured JSON responses, explicit egress
 profiles, SQLite recipe memory and optional bounded Ollama assistance. A release
 date, tag and registry publication await maintainer approval.

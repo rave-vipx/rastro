@@ -51,13 +51,13 @@ for card in page.css("li.job"):
 **Rastro:**
 
 ```python
-from typing import Annotated
+from typing import Annotated, ClassVar
 from pydantic import BaseModel, HttpUrl
 import rastro
 
 
 class Offer(BaseModel):
-    __records__ = "li.job"
+    __records__: ClassVar[str] = "li.job"
     title: Annotated[str, rastro.css("h3::text")]
     url: Annotated[HttpUrl, rastro.css("a::attr(href)")]
 
