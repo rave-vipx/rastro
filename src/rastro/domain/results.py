@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SerializerFunctionWrapHandler, model_serializer
 
 from rastro.domain.recipes import Recipe
 from rastro.domain.sources import EGRESS_NAME, Contract
@@ -72,6 +72,29 @@ class RecipeAttempt(Contract):
     status: Outcome
 
 
+class RepairProposal(Contract):
+    """One stored repair candidate and the gate decision recipe CI gave it."""
+
+    version: int
+    decision: Literal["promote", "quarantine", "reject"]
+    reasons: tuple[str, ...]
+    changed_fields: tuple[str, ...]
+
+
+class SelfRepair(Contract):
+    """What offline self-repair did after a remembered recipe stopped matching.
+
+    ``promoted`` is true only when a candidate passed every gate, became the serving
+    recipe and produced this result. ``candidates`` lists every stored proposal.
+    """
+
+    mode: Literal["propose", "auto"]
+    previous_version: int
+    promoted: bool = False
+    promoted_version: int | None = None
+    candidates: tuple[RepairProposal, ...] = ()
+
+
 class ExtractionResult[T: BaseModel](Contract):
     learned_recipe: Recipe | None = None
     recipe_version: int | None = None
@@ -91,3 +114,17 @@ class ExtractionResult[T: BaseModel](Contract):
     records: tuple[ExtractionRecord[T], ...]
     issues: tuple[Issue, ...]
     metrics: Metrics
+    repair: SelfRepair | None = None
+
+    @model_serializer(mode="wrap")
+    def _omit_absent_repair(self, handler: SerializerFunctionWrapHandler) -> Any:
+        # Results without a repair serialize byte-for-byte as they did before the field.
+        data = handler(self)
+        if isinstance(data, dict) and data.get("repair") is None:
+            data.pop("repair", None)
+        return data
+
+    @property
+    def items(self) -> list[T]:
+        """The validated model instances, in record order; empty when nothing validated."""
+        return [record.data for record in self.records]

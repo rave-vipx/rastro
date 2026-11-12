@@ -24,6 +24,7 @@ theme:
     - content.code.copy
 nav:
   - Overview: index.md
+  - Quickstart: quickstart.md
   - Getting started: getting-started.md
   - Declarative jobs: jobs.md
   - MCP server: mcp.md

@@ -1,5 +1,37 @@
 # API and result contracts
 
+## `scrape`
+
+```python
+rastro.scrape(target, schema, *, records=None, fields=None, recipe=None, url=None,
+              memory=None, repair="propose", locale="en-US", limits=None)
+await rastro.scrape_async(...)  # same arguments
+rastro.css(selector)            # Annotated[...] marker for model fields
+```
+
+`scrape` is the one-call entry point; [Quickstart](quickstart.md) walks through it.
+It returns the same `ExtractionResult[YourModel]` as `Rastro`, and
+`result.items` lists the validated model instances.
+
+| Argument | Behavior |
+| --- | --- |
+| `target` | HTML text, a `pathlib.Path` (bounded UTF-8 read, symlinks refused) or an `http(s)://` URL. A URL needs the `http` extra (`ImportError` names `pip install 'rastro-engine[http]'` otherwise), is fetched once, and only its host is allowed. |
+| `schema` | A Pydantic model. Fields annotated with `rastro.css("...::text")` or `rastro.css("...::attr(name)")` form a `CssRecipe`. |
+| `records` | Record selector; else the model's `__records__` class variable; else the whole document (`:root`) is one record. |
+| `fields` | Per-field selectors that override or extend the model's markers. |
+| `recipe` | Any `Recipe`, used unchanged; cannot be combined with `records` or `fields`. |
+| `url` | Page URL for relative links and provenance. Default `https://localhost/` for text and files; a URL target is its own URL. |
+| `memory` | Path to a recipe database. A successful recipe is remembered; a sanitized success sample goes to `<name>.samples<suffix>` next to it. |
+| `repair` | `"off"`, `"propose"` or `"auto"`; applies only with `memory` when a remembered recipe fails structurally (no records with `missing_data`, `invalid_data` or `insufficient_evidence`). |
+| `locale`, `limits` | `Source.locale` and `Limits` for this call. |
+
+With no selectors and no `recipe`, exact-name JSON-LD and microdata discovery is
+tried; if it finds nothing, `ConfigurationError` asks for `rastro.css(...)`,
+`fields=` or `rastro.suggest`. Memory is keyed by page URL, regional context,
+schema and the declared selectors, so editing a selector starts a fresh history.
+`scrape` raises `ConfigurationError` inside a running event loop; use
+`scrape_async` there.
+
 ## `Rastro`
 
 ```python
@@ -171,6 +203,8 @@ from rastro import (
 - `metrics`: `acquisition_method` (`provided_html`, `provided_json`, or `http`), input bytes, candidate/accepted/rejected and validated-field counts, extraction/validation/total seconds, plus HTTP acquisition/transfer metrics, `inference_calls` and `inference_seconds`.
 - `recipe_version`, `recipe_reused`, and ordered `recipe_attempts` (index/origin/outcome), plus `learned_recipe` for newly validated successful recipes.
 - For HTTP: sanitized `requested_url`, last `http_status`, optional `retry_after_seconds`, and `metrics.egress` (the egress profile name; never the proxy URL or credentials).
+- `repair`: `None` unless `scrape` ran a self-repair. Then a `SelfRepair` with `mode` (`propose` or `auto`), `previous_version`, `promoted`, `promoted_version` and `candidates`: one `RepairProposal` per stored candidate with its `version`, gate `decision` (`promote`, `quarantine` or `reject`), `reasons` and `changed_fields`. When `promoted` is true, the rest of the result comes from the promoted recipe. The key is omitted from serialized output when it is `None`.
+- `items` (property, not serialized): the validated model instances from `records`, in order.
 
 The schema fingerprint does not hash Python validators; custom validator changes require a new `RecipeContext.schema_revision` for memory isolation. Metrics count accepted and rejected **candidates**; malformed metadata blocks are reported separately and do not count as candidates. With explicit fallbacks, counts and parsing/validation timings sum all attempts; records/issues describe the final attempt. `storage_seconds` isolates repository I/O. Offline timings measure local processing. HTTP adds separate network and acquisition durations. Inference metrics include queue wait and model-candidate validation; see the [budget semantics](intelligence.md#budgets-and-outcomes).
 
@@ -190,7 +224,7 @@ If all records fail and both ambiguity and validation issues exist, the summary 
 
 Each observed field has a sanitized source URL, observation timestamp, recipe version, extraction method, and locator. JSON-LD locators identify the script index and JSON pointer; JSON locators give the absolute pointer in the response; CSS locators identify the record selector, match index, and field selector. Pydantic defaults have no source evidence. A custom validator may normalize or transform a value; evidence refers to the original observation path, not an independent proof of the transformed value.
 
-No raw HTML or excerpt is retained. User values and custom validator messages are omitted from diagnostics. Accepted data is intentionally returned to the caller and may be sensitive. URLs can also contain sensitive information in paths. Apply your own access and retention policy.
+No raw HTML or excerpt is retained, except that `scrape(..., memory=...)` and job repair keep one sanitized copy of the last successful page for repair testing. User values and custom validator messages are omitted from diagnostics. Accepted data is intentionally returned to the caller and may be sensitive. URLs can also contain sensitive information in paths. Apply your own access and retention policy.
 
 ### Exceptions
 

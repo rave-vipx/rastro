@@ -215,6 +215,17 @@
           "title": "Records",
           "type": "array"
         },
+        "repair": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SelfRepair"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "requested_url": {
           "anyOf": [
             {
@@ -686,6 +697,96 @@
         "status"
       ],
       "title": "RecipeAttempt",
+      "type": "object"
+    },
+    "RepairProposal": {
+      "additionalProperties": false,
+      "description": "One stored repair candidate and the gate decision recipe CI gave it.",
+      "properties": {
+        "changed_fields": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Changed Fields",
+          "type": "array"
+        },
+        "decision": {
+          "enum": [
+            "promote",
+            "quarantine",
+            "reject"
+          ],
+          "title": "Decision",
+          "type": "string"
+        },
+        "reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Reasons",
+          "type": "array"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "version",
+        "decision",
+        "reasons",
+        "changed_fields"
+      ],
+      "title": "RepairProposal",
+      "type": "object"
+    },
+    "SelfRepair": {
+      "additionalProperties": false,
+      "description": "What offline self-repair did after a remembered recipe stopped matching.\n\n``promoted`` is true only when a candidate passed every gate, became the serving\nrecipe and produced this result. ``candidates`` lists every stored proposal.",
+      "properties": {
+        "candidates": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/RepairProposal"
+          },
+          "title": "Candidates",
+          "type": "array"
+        },
+        "mode": {
+          "enum": [
+            "propose",
+            "auto"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "previous_version": {
+          "title": "Previous Version",
+          "type": "integer"
+        },
+        "promoted": {
+          "default": false,
+          "title": "Promoted",
+          "type": "boolean"
+        },
+        "promoted_version": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Promoted Version"
+        }
+      },
+      "required": [
+        "mode",
+        "previous_version"
+      ],
+      "title": "SelfRepair",
       "type": "object"
     }
   },

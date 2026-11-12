@@ -60,6 +60,7 @@ from rastro.domain.memory import (
     RecipeStorageError,
     StoredRecipe,
 )
+from rastro.domain.model_selectors import css
 from rastro.domain.models import (
     ConfigurationError,
     CssRecipe,
@@ -80,6 +81,7 @@ from rastro.domain.models import (
     Source,
     schema_fingerprint,
 )
+from rastro.domain.results import RepairProposal, SelfRepair
 from rastro.mocklab import (
     FixtureBundle,
     MockLabError,
@@ -91,6 +93,7 @@ from rastro.mocklab import (
 )
 from rastro.ports.model import ModelPort
 from rastro.ports.recipes import RecipeLifecycle, RecipeRepository
+from rastro.scrape import scrape, scrape_async
 
 if TYPE_CHECKING:
     from rastro.adapters.ollama import OllamaModel as OllamaModel
@@ -176,10 +179,12 @@ __all__ = [
     "RecipeState",
     "RecipeStorageError",
     "RegionalContext",
+    "RepairProposal",
     "Representation",
     "ResourceLimitError",
     "SQLiteRecipeRepository",
     "SanitizationError",
+    "SelfRepair",
     "Source",
     "StoredRecipe",
     "StringField",
@@ -190,6 +195,7 @@ __all__ = [
     "__version__",
     "build_fixture",
     "build_job_schema",
+    "css",
     "job_json_schema",
     "job_run_json_schema",
     "load_fixture",
@@ -199,5 +205,7 @@ __all__ = [
     "run_job_async",
     "run_job_file",
     "schema_fingerprint",
+    "scrape",
+    "scrape_async",
     "verify_fixture",
 ]
