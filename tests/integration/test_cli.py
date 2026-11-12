@@ -8,10 +8,11 @@ from rastro.cli import main
 
 
 def test_demo_is_executable_and_offline(capsys):
+    """AGENT-001: decimals stay exact JSON strings, as in every other JSON output."""
     assert main(["demo"]) == 0
     result = json.loads(capsys.readouterr().out)
     assert result["status"] == "success"
-    assert result["records"][0]["data"]["price"] == 12.5
+    assert result["records"][0]["data"]["price"] == "12.5"
 
 
 def test_verbose_logging_is_json_on_stderr(capsys):

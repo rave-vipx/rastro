@@ -18,6 +18,7 @@ All notable user-facing changes will be recorded here. No public release has bee
 
 - Job field values are stripped of surrounding whitespace (NBSP included) before validation; a blank required value is a validation error instead of a successful `""` (QUAL-002, QUAL-004, JOB-001).
 - `rastro job load` no longer exits 2 after writing rows when a field holds a relative URL: the retained repair fixture now replays exactly. A repair-evidence retention failure after the rows are committed is reported as `evidence_retention_failed` on that source, with the load's exit code unchanged (DATA-001, REPAIR-002, SCR-002).
+- `rastro demo` prints its price as an exact decimal string (`"12.5"`), like every other JSON output (AGENT-001).
 - The HTTP `User-Agent` reports the installed package version instead of a fixed `0.1` (transparent contact metadata, ADR 0002).
 
 ## 0.5.0 — not published (2026-11-11)
