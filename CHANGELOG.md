@@ -1,6 +1,20 @@
 # Changelog
 
-All notable user-facing changes will be recorded here. No public release has been published.
+All notable user-facing changes are recorded here. The project follows [Semantic Versioning](docs/stability.md) from 0.6.0. Versions before 0.6.0 were never published to a package registry.
+
+## 0.6.0 — unreleased
+
+First public release candidate of `rastro-engine` on PyPI. Entries under "Unreleased" below are folded into this section when the release is cut.
+
+### Added
+
+- Tag-triggered release workflow: builds the sdist and wheel, checks them with `twine check --strict`, verifies the tag matches the package version, smoke-tests the installed wheel, publishes to PyPI through Trusted Publishing with attestations and creates the GitHub release from this changelog (P-009, Release Evidence).
+- CI `package` job installs the built wheel with and without the `http`, `mcp` and `studio` extras and runs the CLI smoke checks (P-006, Release Evidence).
+- `docs/stability.md` defines the public surface and the deprecation policy; `docs/ai-agents.md` and a root `llms.txt` describe how AI agents use Rastro (AGENT-001, AGENT-002, AGENT-003).
+
+### Changed
+
+- Package classifier is `Development Status :: 4 - Beta`; README rewritten for external users.
 
 ## Unreleased
 

@@ -126,10 +126,46 @@ jobs:
       - run: uv export --locked --all-extras --no-dev --no-emit-project --format requirements-txt --output-file "$RUNNER_TEMP/rastro-runtime.txt"
       - run: uv run --no-sync pip-audit --require-hashes -r "$RUNNER_TEMP/rastro-runtime.txt"
 
+  package:
+    name: Package install (with and without extras)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: '0.13.1'
+          python-version: '3.12'
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv build
+      - run: uv run --no-sync twine check --strict dist/*
+      - name: Smoke-test the wheel without extras
+        working-directory: ${{ runner.temp }}
+        run: |
+          uv venv "$RUNNER_TEMP/core"
+          uv pip install --python "$RUNNER_TEMP/core/bin/python" "$GITHUB_WORKSPACE"/dist/*.whl
+          "$RUNNER_TEMP/core/bin/rastro" --version
+          "$RUNNER_TEMP/core/bin/rastro" demo
+          "$RUNNER_TEMP/core/bin/python" -c 'import rastro'
+          "$RUNNER_TEMP/core/bin/python" -c 'import importlib.util as u; assert all(u.find_spec(m) is None for m in ("curl_cffi", "mcp", "starlette"))'
+      - name: Smoke-test the wheel with the http, mcp and studio extras
+        working-directory: ${{ runner.temp }}
+        run: |
+          uv venv "$RUNNER_TEMP/extras"
+          for wheel in "$GITHUB_WORKSPACE"/dist/*.whl; do
+            uv pip install --python "$RUNNER_TEMP/extras/bin/python" "${wheel}[http,mcp,studio]"
+          done
+          "$RUNNER_TEMP/extras/bin/rastro" --version
+          "$RUNNER_TEMP/extras/bin/rastro" demo
+          "$RUNNER_TEMP/extras/bin/python" -c 'import curl_cffi, mcp, starlette, uvicorn, rastro'
+
   gate:
     name: CI required
     if: always()
-    needs: [quality, tests, audit]
+    needs: [quality, tests, audit, package]
     runs-on: ubuntu-latest
     timeout-minutes: 1
     steps:
@@ -138,4 +174,5 @@ jobs:
           QUALITY: ${{ needs.quality.result }}
           TESTS: ${{ needs.tests.result }}
           AUDIT: ${{ needs.audit.result }}
-        run: test "$QUALITY" = success && test "$TESTS" = success && test "$AUDIT" = success
+          PACKAGE: ${{ needs.package.result }}
+        run: test "$QUALITY" = success && test "$TESTS" = success && test "$AUDIT" = success && test "$PACKAGE" = success

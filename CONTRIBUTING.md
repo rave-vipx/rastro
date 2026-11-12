@@ -1,6 +1,6 @@
 # Contributing to Rastro
 
-Thanks for helping make web data more reliable. Rastro is in development toward v0.1; the public API may change before a stable release.
+Thanks for helping make web data more reliable. Rastro is in beta. The public surface and its deprecation policy are defined in the [stability policy](docs/stability.md).
 
 ## Find a useful change
 
