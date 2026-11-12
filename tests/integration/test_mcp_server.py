@@ -58,7 +58,25 @@ READ_ONLY = {
     "suggest_recipe",
     "scrape_file",
 }
-DESTRUCTIVE = {"job_load", "job_run", "recipe_promote", "recipe_apply"}
+DESTRUCTIVE = {"job_load", "job_run", "recipe_repair", "recipe_promote", "recipe_apply"}
+# (readOnlyHint, destructiveHint, idempotentHint, openWorldHint) per tool (AGENT-002).
+HINTS = {
+    "job_validate": (True, None, True, False),
+    "job_preview": (True, None, True, True),
+    "job_extract": (False, False, False, True),
+    "job_load": (False, True, False, True),
+    "job_run": (False, True, False, True),
+    "dataset_records": (True, None, True, False),
+    "drift_status": (True, None, True, False),
+    "recipe_list": (True, None, True, False),
+    "recipe_history": (True, None, True, False),
+    "recipe_repair": (False, True, False, True),
+    "recipe_promote": (False, True, False, True),
+    "recipe_apply": (False, True, True, False),
+    "suggest_recipe": (True, None, True, False),
+    "job_new": (False, False, False, False),
+    "scrape_file": (True, None, True, False),
+}
 
 
 @pytest.mark.asyncio
@@ -72,6 +90,16 @@ async def test_lists_every_tool_with_annotations_and_instructions(workspace: Pat
     assert set(tools) == TOOLS
     assert {n for n, t in tools.items() if t.annotations.readOnlyHint} == READ_ONLY
     assert {n for n, t in tools.items() if t.annotations.destructiveHint} == DESTRUCTIVE
+    hints = {
+        name: (
+            t.annotations.readOnlyHint,
+            t.annotations.destructiveHint,
+            t.annotations.idempotentHint,
+            t.annotations.openWorldHint,
+        )
+        for name, t in tools.items()
+    }
+    assert hints == HINTS
     assert tools["job_run"].description.startswith("Deprecated: use job_load")
     for tool in tools.values():
         properties = tool.inputSchema["properties"]
@@ -244,3 +272,35 @@ def test_bounded_preview_caps_records_and_long_values() -> None:
     assert payload["truncated"] is True
     assert len(payload["sources"][0]["records"]) == 50
     assert len(payload["sources"][0]["records"][0]["fields"][0]["value"]) == 501
+
+
+def test_bounded_caps_dict_size_at_every_depth() -> None:
+    """AGENT-002: wide objects are cut like long lists, including nested ones."""
+    from rastro.mcp_tools import bounded
+
+    wide = {f"k{i}": i for i in range(150)}
+    payload = bounded({"a": [{"b": wide}]}, max_keys=100)
+    assert len(payload["a"][0]["b"]) == 100 and payload["truncated"] is True
+    top = bounded(dict(wide), max_keys=100)
+    assert len(top) == 101 and top["truncated"] is True  # 100 keys plus the flag
+    assert bounded({"x": {"y": 1}})["truncated"] is False
+
+
+@pytest.mark.asyncio
+async def test_dataset_records_values_are_bounded(
+    workspace: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """AGENT-002: long stored values are cut and flagged."""
+    await _call(workspace, "job_load", path="jobs/job.toml")
+    from rastro import mcp_tools
+
+    original = mcp_tools.bounded
+    seen: list[bool] = []
+
+    def spy(payload: dict[str, Any], **kwargs: Any) -> dict[str, Any]:
+        seen.append(True)
+        return original(payload, max_chars=5, **kwargs)
+
+    monkeypatch.setattr(mcp_tools, "bounded", spy)
+    failed, data = await _call(workspace, "dataset_records", path="jobs/agenda.sqlite", limit=1)
+    assert not failed and seen and data["truncated"] is True

@@ -58,6 +58,11 @@ LOAD = ToolAnnotations(
 EXTRACT = ToolAnnotations(
     readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=True
 )
+# recipe_repair stores candidates and, when the job sets [repair] auto_promote = true, can
+# change the serving recipe; the hint is static, so it is declared destructive.
+REPAIR = ToolAnnotations(
+    readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=True
+)
 PROMOTE = ToolAnnotations(
     readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=True
 )
@@ -172,7 +177,7 @@ def _register_recipes(server: FastMCP, workspace: Path) -> None:
         """Versions, serving version and lifecycle events of one source's recipe."""
         return await _call(mcp_lifecycle.recipe_history, workspace, path, source)  # type: ignore[no-any-return]
 
-    @server.tool(annotations=EXTRACT)
+    @server.tool(annotations=REPAIR)
     async def recipe_repair(
         path: Path_,
         source: SourceIndex,
