@@ -242,3 +242,32 @@ def test_header_row_outside_thead_falls_back_to_partial_success():
     found = rastro.suggest(html, Offer, examples=[{"title": "Analyst", "salary": "95"}])
     assert found.preview.status is Outcome.PARTIAL_SUCCESS
     assert len(found.preview.records) == 2
+
+
+class Priced(BaseModel):
+    name: str
+    price: Decimal
+
+
+PRICED = """<ul><li class="p"><b>Teclado mecánico</b><span>59.90 EUR</span></li>
+<li class="p"><b>Ratón</b><span>19.00 EUR</span></li></ul>"""
+
+
+def test_type_failure_blames_only_the_field_whose_page_value_fails_the_schema():
+    """B3: found on the page but not valid for the type is not 'not reproduced' (INT-003)."""
+    with pytest.raises(SuggestionError) as caught:
+        rastro.suggest(PRICED, Priced, examples=[{"name": "Teclado mecánico", "price": "59.90"}])
+    message = str(caught.value)
+    assert "'price'" in message and "'name'" not in message
+    assert "Decimal" in message
+    assert "9 characters" in message and "59.90" not in message
+    assert "BeforeValidator" in message and "string field" in message
+    assert "not found" not in message
+
+
+def test_partial_result_notes_fields_whose_page_values_fail_the_schema():
+    html = PRICED.replace("19.00 EUR", "n/a").replace("59.90 EUR", "59.90")
+    found = rastro.suggest(html, Priced, examples=[{"name": "Teclado mecánico", "price": "59.90"}])
+    assert found.status is Outcome.PARTIAL_SUCCESS
+    assert "fail the schema type" in found.confidence["price"].note
+    assert "schema type" not in found.confidence["name"].note

@@ -70,7 +70,9 @@ def test_new_writes_a_typed_job_that_validates_and_runs(page, tmp_path, capsys):
     args = ["new", str(job), "--from", str(page), "--url", URL, *EXAMPLES]
     assert main([*args, "--dataset", "offers.sqlite", "--identity", "title"]) == 0
     capsys.readouterr()
-    data = tomllib.loads(job.read_text(encoding="utf-8"))
+    text = job.read_text(encoding="utf-8")
+    assert "rastro job run" in text and "no writes" in text and "rastro job load" in text
+    data = tomllib.loads(text)
     types = {item["name"]: item["type"] for item in data["fields"]}
     assert types == {"title": "string", "salary": "integer", "link": "url", "posted": "date"}
     assert data["sources"] == [{"kind": "file", "path": "page.html", "url": URL}]

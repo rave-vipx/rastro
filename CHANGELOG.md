@@ -54,6 +54,7 @@ First public release of `rastro-engine` on PyPI: one-call typed scraping with `r
 
 ### Fixed
 
+- `rastro.suggest` tells a value the selector found but the schema type rejects (for example "59.90 EUR" for a `Decimal` field) apart from a value that was not reproduced: `SuggestionError` names only the failing field, its type and the page text's length and shape, and suggests a string field or a `BeforeValidator`; partial results note such fields in `confidence`. The comment written by `rastro new` says `rastro job run` previews without writing and, with a dataset, points to `rastro job load` (INT-002, INT-003, DISC-003).
 - `rastro job load` names a dataset folder that does not exist (`location: "dataset.path"`) instead of `Dataset operation failed`; the Studio wizard stores the dataset path relative to the job file and refuses a missing folder or a path outside the job's folder (DATA-001, P-008).
 - The MCP tools reject an absolute path such as `/etc/passwd` as an absolute path instead of reporting a symlink (AGENT-002).
 - Job field values are stripped of surrounding whitespace (NBSP included) before validation; a blank required value is a validation error instead of a successful `""` (QUAL-002, QUAL-004, JOB-001).

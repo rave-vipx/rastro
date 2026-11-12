@@ -13,6 +13,12 @@ from typing import Any, overload
 from pydantic import BaseModel, TypeAdapter, ValidationError
 
 from rastro.application.engine import Rastro
+from rastro.application.suggest_diagnosis import (
+    HINT,
+    example_type_failures,
+    raw_rows,
+    record_type_failures,
+)
 from rastro.domain.job_fields import JobField, build_job_schema
 from rastro.domain.models import (
     ConfigurationError,
@@ -126,6 +132,8 @@ def _verify[T: BaseModel](
     client = Rastro(limits=limits)
     fallback: Suggestion[T] | None = None
     missing: list[str] = []
+    type_errors: list[str] = []
+    names = tuple(model.model_fields)
     for candidate in candidates:
         unmapped = sorted(required - set(candidate.recipe.fields))
         if unmapped:
@@ -134,18 +142,26 @@ def _verify[T: BaseModel](
         result = client.extract_html(html, source=source, schema=model, recipe=candidate.recipe)
         missing = _unreproduced(examples, result, source.url)
         if missing:
+            rows = raw_rows(client, html, source, candidate.recipe, names)
+            type_errors = type_errors or example_type_failures(model, rows, examples, source)
             continue
-        found = Suggestion[T](
-            recipe=candidate.recipe,
-            preview=result,
-            confidence=_confidence(candidate.confidence, examples, result),
-        )
+        notes = _confidence(candidate.confidence, examples, result)
+        if result.status is not Outcome.SUCCESS:
+            rows = raw_rows(client, html, source, candidate.recipe, names)
+            for name, note in record_type_failures(model, rows, source).items():
+                notes[name] = notes[name].model_copy(update={"note": note})
+        found = Suggestion[T](recipe=candidate.recipe, preview=result, confidence=notes)
         if result.status is Outcome.SUCCESS:
             return found
         if fallback is None and result.status is Outcome.PARTIAL_SUCCESS:
             fallback = found
     if fallback is not None:
         return fallback
+    if type_errors:
+        raise SuggestionError(
+            "The examples were found and the selectors work, but the page values fail the "
+            f"schema type: {'; '.join(type_errors)}. Fix: {HINT}"
+        )
     raise SuggestionError("No candidate recipe reproduced the examples: " + ", ".join(missing))
 
 
