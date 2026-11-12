@@ -40,6 +40,11 @@ def load_job_file(
     )
     if resolved == file.resolve():
         raise ConfigurationError("The dataset must be separate from the job file")
+    if not resolved.parent.is_dir():
+        raise ConfigurationError(
+            f"Dataset folder does not exist: {spec.path} (paths are relative to the job file)",
+            location="dataset.path",
+        )
     # Preserve symlink components for the adapter's refusal, after containment validation.
     raw_path = (
         Path(spec.path) if Path(spec.path).is_absolute() else file.parent.resolve() / spec.path

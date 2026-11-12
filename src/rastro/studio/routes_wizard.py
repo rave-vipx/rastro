@@ -94,6 +94,15 @@ def routes(studio: Studio) -> list[Route]:
         identity = data.get("identity", [])
         if not isinstance(identity, list) or not all(isinstance(i, str) for i in identity):
             raise Refused(400, "invalid_identity")
+        dataset = optional_text(data, "dataset")
+        if dataset is not None:
+            # Job paths are relative to the job file: the dataset lives in the job's
+            # folder or below it, in a folder that already exists.
+            wanted = (target.parent / dataset).resolve()
+            if not wanted.is_relative_to(target.parent.resolve()):
+                raise Refused(400, "dataset_outside_job_folder")
+            if not wanted.parent.is_dir():
+                raise Refused(400, "dataset_folder_missing")
         written = await run_in_threadpool(
             lambda: new_job(
                 target,
@@ -101,7 +110,7 @@ def routes(studio: Studio) -> list[Route]:
                 examples=_examples(data),
                 url=optional_text(data, "url"),
                 records_min=integer(data, "records_min", 1, 1000, default=2),
-                dataset=optional_text(data, "dataset"),
+                dataset=dataset,
                 identity=tuple(identity),
             )
         )

@@ -111,6 +111,23 @@ def test_create_requires_identity_with_a_dataset(client: TestClient, root: Path)
     assert not (root / "pages/a.toml").exists()
 
 
+@pytest.mark.parametrize(
+    ("dataset", "code"),
+    [
+        ("../outside.sqlite", "dataset_outside_job_folder"),
+        ("missing/a.sqlite", "dataset_folder_missing"),
+    ],
+)
+def test_create_refuses_a_dataset_the_job_could_not_open(
+    client: TestClient, root: Path, dataset: str, code: str
+) -> None:
+    """DATA-001: the dataset path is relative to the job file and its folder must exist."""
+    body = {"file": "pages/a.toml", "page": "pages/agenda.html", "examples": EXAMPLES}
+    answer = post(client, "/api/create", {**body, "dataset": dataset, "identity": ["title"]})
+    assert answer.status_code == 400 and code in json.dumps(answer.json())
+    assert not (root / "pages/a.toml").exists()
+
+
 def test_extract_writes_nothing_and_load_fills_the_dataset(client: TestClient, root: Path) -> None:
     """DATA-001, REC-006: extract is read-only; load writes the dataset and reports origins."""
     create(client, dataset="agenda.sqlite", identity=["title"])

@@ -73,3 +73,20 @@ def test_cli_reports_missing_extras_with_the_helper(capsys, monkeypatch, argv, m
     monkeypatch.setitem(sys.modules, module, None)
     assert main(argv) == 2
     assert _envelope(capsys) == missing_extra_error(extra)
+
+
+def test_job_load_names_a_missing_dataset_folder(tmp_path, capsys):
+    """DATA-001: a dataset folder that does not exist is named, with its TOML key."""
+    (tmp_path / "page.html").write_text("<ul><li><h3>A</h3></li><li><h3>B</h3></li></ul>")
+    job = tmp_path / "job.toml"
+    job.write_text(
+        'format_version = 1\n[recipe]\nstrategy = "css"\nrecord_selector = "li"\n'
+        '[recipe.fields]\nt = "h3::text"\n'
+        '[dataset]\nname = "d"\npath = "nested/d.sqlite"\nidentity = ["t"]\n'
+        '[[sources]]\nkind = "file"\npath = "page.html"\nurl = "https://x.example/"\n'
+        '[[fields]]\nname = "t"\ntype = "string"\n'
+    )
+    assert main(["job", "load", str(job)]) == 2
+    payload = _envelope(capsys)
+    assert payload["location"] == "dataset.path"
+    assert "nested/d.sqlite" in payload["message"]
