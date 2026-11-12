@@ -31,13 +31,71 @@ async def _call(root: Path, tool: str, **arguments: Any) -> tuple[bool, Any]:
     return result.isError, json.loads(text) if not result.isError else text
 
 
+TOOLS = {
+    "job_validate",
+    "job_preview",
+    "job_extract",
+    "job_load",
+    "job_run",
+    "dataset_records",
+    "drift_status",
+    "recipe_list",
+    "recipe_history",
+    "recipe_repair",
+    "recipe_promote",
+    "recipe_apply",
+    "suggest_recipe",
+    "job_new",
+    "scrape_file",
+}
+READ_ONLY = {
+    "job_validate",
+    "job_preview",
+    "dataset_records",
+    "drift_status",
+    "recipe_list",
+    "recipe_history",
+    "suggest_recipe",
+    "scrape_file",
+}
+DESTRUCTIVE = {"job_load", "job_run", "recipe_promote", "recipe_apply"}
+
+
 @pytest.mark.asyncio
-async def test_lists_the_five_tools(workspace: Path) -> None:
+async def test_lists_every_tool_with_annotations_and_instructions(workspace: Path) -> None:
+    """AGENT-002: names, hints and the server workflow text are what clients rely on."""
     async with create_connected_server_and_client_session(
         build_server(workspace)._mcp_server
     ) as client:
-        names = {tool.name for tool in (await client.list_tools()).tools}
-    assert names == {"job_validate", "job_preview", "job_run", "dataset_records", "recipe_list"}
+        tools = {tool.name: tool for tool in (await client.list_tools()).tools}
+        instructions = (await client.initialize()).instructions or ""
+    assert set(tools) == TOOLS
+    assert {n for n, t in tools.items() if t.annotations.readOnlyHint} == READ_ONLY
+    assert {n for n, t in tools.items() if t.annotations.destructiveHint} == DESTRUCTIVE
+    assert tools["job_run"].description.startswith("Deprecated: use job_load")
+    for tool in tools.values():
+        properties = tool.inputSchema["properties"]
+        assert properties.get("path", properties.get("page_path"))["maxLength"] == 1024
+    order = [
+        "suggest_recipe",
+        "job_new",
+        "job_extract",
+        "job_load",
+        "drift_status",
+        "recipe_repair",
+        "recipe_promote",
+        "recipe_apply",
+    ]
+    positions = [instructions.index(name) for name in order]
+    assert positions == sorted(positions)
+
+
+@pytest.mark.asyncio
+async def test_deprecated_job_run_still_loads_the_dataset(workspace: Path) -> None:
+    """AGENT-003: the old name keeps working for one minor release."""
+    failed, loaded = await _call(workspace, "job_run", path="jobs/job.toml")
+    assert not failed and loaded["sources"]
+    assert (workspace / "jobs" / "agenda.sqlite").exists()
 
 
 @pytest.mark.asyncio
@@ -49,7 +107,7 @@ async def test_validate_preview_run_then_read_records(workspace: Path) -> None:
     assert not failed and preview["data_trust"] == "untrusted_source_data"
     assert not (workspace / "jobs" / "agenda.sqlite").exists()
 
-    failed, loaded = await _call(workspace, "job_run", path="jobs/job.toml")
+    failed, loaded = await _call(workspace, "job_load", path="jobs/job.toml")
     assert not failed and loaded["sources"]
 
     failed, data = await _call(workspace, "dataset_records", path="jobs/agenda.sqlite", limit=2)
@@ -64,7 +122,7 @@ async def test_paths_outside_the_workspace_are_rejected(workspace: Path, path: s
     failed, text = await _call(workspace, "job_validate", path=path)
     assert failed
     error = json.loads(text[text.index("{") :])
-    assert error["error"] in {"configuration_error", "invalid_job"}
+    assert error["error"] in {"configuration_error", "invalid_job", "validation_error"}
     assert "Traceback" not in text and str(workspace) not in text
 
 
@@ -116,7 +174,7 @@ async def test_errors_carry_no_source_content(workspace: Path) -> None:
 async def test_dataset_limit_is_bounded_and_missing_file_is_an_error(workspace: Path) -> None:
     failed, _ = await _call(workspace, "dataset_records", path="jobs/nope.sqlite")
     assert failed
-    await _call(workspace, "job_run", path="jobs/job.toml")
+    await _call(workspace, "job_load", path="jobs/job.toml")
     failed, text = await _call(workspace, "dataset_records", path="jobs/agenda.sqlite", limit=999)
     assert failed and "limit" in text
 
@@ -133,7 +191,7 @@ async def test_recipe_list_reports_versions_after_a_run(workspace: Path) -> None
     failed, empty = await _call(workspace, "recipe_list", path="jobs/job.toml")
     assert not failed and empty["sources"] == []
     assert not (workspace / "jobs" / "memory.sqlite").exists()
-    await _call(workspace, "job_run", path="jobs/job.toml")
+    await _call(workspace, "job_load", path="jobs/job.toml")
     failed, listed = await _call(workspace, "recipe_list", path="jobs/job.toml")
     assert not failed and len(listed["sources"]) == 3
     assert any(item["serving_version"] for item in listed["sources"])

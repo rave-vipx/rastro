@@ -36,14 +36,22 @@ exits with code `2` and a `missing_extra` error on stderr.
 
 | Tool | Equivalent CLI | Effect |
 | --- | --- | --- |
+| `suggest_recipe(page_path, examples, url?)` | `rastro suggest` | Suggests a CSS recipe from a saved page and example values, with preview rows |
+| `job_new(path, page_path, examples, ...)` | `rastro new` | Writes a new job file; never overwrites |
 | `job_validate(path)` | `rastro job validate` | Validates a job file; reads no sources |
-| `job_preview(path)` | `rastro job preview --output json` | Runs the job and writes nothing; bounded sample per source |
-| `job_run(path)` | `rastro job load` | Runs the job and loads approved fields into its dataset |
+| `job_preview(path)` | `rastro job preview --output json` | Runs the job and writes nothing |
+| `job_extract(path)` | `rastro job run` | Runs the job and returns its records; writes no dataset |
+| `job_load(path, drift?)` | `rastro job load` | Runs the job and loads approved fields into its dataset |
 | `dataset_records(path, ...)` | `rastro dataset export` | A bounded page of records plus stale sources |
-| `recipe_list(path)` | recipe history | Stored recipe versions and their states per source |
+| `drift_status(path)` | none | Freshness of each source in the job's dataset |
+| `recipe_list(path)` / `recipe_history(path, source)` | none | Stored recipe versions, states and lifecycle events |
+| `recipe_repair(path, source, ...)` | `rastro recipe repair` | Proposes and checks repair candidates |
+| `recipe_promote(path, source, version, reason, ...)` | `rastro recipe promote` | Activates a candidate that passes every check |
+| `recipe_apply(path, source)` | `rastro recipe apply` | Writes the serving recipe back into the job file |
+| `scrape_file(page_path, fields or recipe, ...)` | none | Extracts once from a saved page, without a job |
 
-Recipe promotion, rollback and repair are deliberately not exposed over MCP; a person runs them
-with the CLI. Details and limits: [MCP server](mcp.md).
+`job_run` is a deprecated alias of `job_load`. The server also sends a short workflow guide to
+the client. Details, safety hints and limits: [MCP server](mcp.md).
 
 ## Use the JSON command line
 
@@ -100,7 +108,8 @@ text. `location` is the dotted path of the first invalid field, or `null`. The f
   pacing and request budgets. Rastro adds no network capability of its own over MCP.
 - **Secrets are referenced, not written.** Jobs name environment variables (`*_env` fields);
   validation output replaces them with `"<redacted>"`.
-- **Prefer preview before load.** `job_preview` writes nothing; `job_run` writes the dataset and
-  recipe memory.
+- **Prefer preview before load.** `job_preview` writes nothing; `job_extract` writes no dataset;
+  `job_load` writes the dataset and recipe memory. Check each tool's `readOnlyHint` and
+  `destructiveHint` before calling it.
 
 See also the [stability policy](stability.md) for what an agent can rely on across releases.

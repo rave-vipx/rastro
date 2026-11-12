@@ -48,7 +48,7 @@ These may change in any release without notice:
 
 - `rastro.adapters.*`, `rastro.application.*`, `rastro.domain.*`, `rastro.ports.*` and
   `rastro.mocklab.*` when imported by module path. Use the names re-exported from `rastro`.
-- `rastro.cli_*` and `rastro.mcp_tools` modules. Use the `rastro` command or the public API.
+- `rastro.cli_*`, `rastro.mcp_tools`, `rastro.mcp_lifecycle` and `rastro.mcp_authoring` modules. Use the `rastro` command or the public API.
 - `rastro.studio.*` internals, including its HTTP routes and page assets. Studio's behavior in the
   browser is documented, its internal API is not.
 - Log messages and their structure (`--verbose`), the wording of human-readable messages, and
