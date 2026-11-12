@@ -15,7 +15,7 @@ from typing import Any
 from rastro.application.active_recipes import source_key
 from rastro.application.atomic_files import write_atomic
 from rastro.application.job_loader import load_job
-from rastro.application.recipe_toml import recipe_table, replace_recipe
+from rastro.application.recipe_toml import add_source_recipe, recipe_table, replace_recipe
 from rastro.application.repair_context import safe_path
 from rastro.domain.jobs import MAX_JOB_BYTES, Job, parse_job
 from rastro.domain.models import ConfigurationError, Recipe, ResourceLimitError
@@ -60,15 +60,13 @@ def write_serving_recipe(
     declared = item.recipe or job.recipe
     if declared is None:
         raise ConfigurationError("The job file has no recipe for this source to update")
-    location = source - 1 if item.recipe is not None else None
-    if location is None and sum(s.recipe is None for s in job.sources) > 1:
-        raise ConfigurationError(
-            "Several sources share the job recipe; give this source its own recipe first"
-        )
+    # A job recipe shared with other sources stays for them; this source gets its own.
+    shared = item.recipe is None and sum(s.recipe is None for s in job.sources) > 1
+    location = source - 1 if item.recipe is not None or shared else None
     if declared == recipe:
         return AppliedRecipe(file, source, recipe.version, changed=False)
     raw = _read(file)
-    text = _rewrite(raw, file.suffix.lower(), recipe, location)
+    text = _rewrite(raw, file.suffix.lower(), recipe, location, add=shared)
     _verify(job, text, file.suffix.lower(), recipe, location)
     write_atomic(file, text.encode("utf-8"), expected_digest=expected_digest)
     return AppliedRecipe(file, source, recipe.version, changed=True)
@@ -118,11 +116,19 @@ def _read(file: Path) -> str:
         raise ConfigurationError("Job file must be valid UTF-8") from None
 
 
-def _rewrite(text: str, suffix: str, recipe: Recipe, location: int | None) -> str:
+def _rewrite(
+    text: str, suffix: str, recipe: Recipe, location: int | None, *, add: bool = False
+) -> str:
     if suffix == ".toml":
+        if add and location is not None:
+            return add_source_recipe(text, recipe, source=location)
         return replace_recipe(text, recipe, source=location)
     data = json.loads(text)
     holder = data if location is None else data["sources"][location]
+    if not isinstance(holder, dict):
+        raise ConfigurationError(
+            "Write this source as an object with url or path before applying its recipe"
+        )
     holder["recipe"] = recipe_table(recipe)
     return json.dumps(data, indent=2, ensure_ascii=False) + "\n"
 

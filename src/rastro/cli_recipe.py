@@ -17,16 +17,27 @@ from rastro.cli_prune import prune_command
 from rastro.domain.models import ConfigurationError
 from rastro.domain.recipe_compare import RecipeComparison, RepairReport
 
+_HELP = {
+    "repair": "Propose, evaluate and store repair candidates for broken sources",
+    "promote": "Re-check a stored candidate on the current page and activate it if it passes",
+    "rollback": "Make a version that served before active again",
+    "compare": "Show which fields and selectors differ between two stored versions",
+    "apply": "Write the serving recipe from recipe_memory back into the job file",
+    "show": "Print a stored recipe version as JSON (read-only)",
+}
+
 
 def add_commands(subcommands: argparse._SubParsersAction) -> None:  # type: ignore[type-arg]
-    parser = subcommands.add_parser(
-        "recipe", help="Repair, promote, roll back, compare or apply recipes"
+    summary = (
+        "Manage stored recipes: repair, promote, rollback, compare, apply, show, prune, "
+        "export and import"
     )
+    parser = subcommands.add_parser("recipe", help=summary, description=summary)
     commands = parser.add_subparsers(dest="recipe_command", required=True)
     add_hub_commands(commands)
     add_prune_commands(commands)
-    for name in ("repair", "promote", "rollback", "compare", "apply"):
-        command = commands.add_parser(name)
+    for name in ("repair", "promote", "rollback", "compare", "apply", "show"):
+        command = commands.add_parser(name, help=_HELP[name], description=_HELP[name])
         command.add_argument("file", type=Path)
         command.add_argument(
             "--source",
@@ -44,6 +55,8 @@ def add_commands(subcommands: argparse._SubParsersAction) -> None:  # type: igno
                 action="store_true",
                 help="Activate a quarantined candidate; requires --reason",
             )
+        if name == "show":
+            command.add_argument("--version", type=int, help="Stored version (default: serving)")
         if name == "compare":
             command.add_argument("--from-version", type=int, required=True)
             command.add_argument("--to-version", type=int, required=True)
@@ -73,6 +86,24 @@ def recipe_command(args: argparse.Namespace) -> int:
         )
         return 0
     context = RepairContext.load(args.file, args.allow_absolute_paths)
+    if args.recipe_command == "show":
+        _, key = context.locate(args.source)
+        stored = context.repository.get(key, version=args.version)
+        if stored is None:
+            raise ConfigurationError("No stored recipe for this source and version")
+        print(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "source_index": args.source,
+                    "version": stored.recipe.version,
+                    "state": str(stored.metadata.state),
+                    "recipe": stored.recipe.model_dump(mode="json"),
+                },
+                indent=2,
+            )
+        )
+        return 0
     if args.recipe_command == "compare":
         _, key, _ = context.source(args.source)
         old, new = (

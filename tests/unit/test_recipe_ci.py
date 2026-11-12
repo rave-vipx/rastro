@@ -56,7 +56,31 @@ def test_ambiguous_evaluation_is_quarantined():
         limits=Limits(),
         observed_at=datetime(2026, 11, 7, tzinfo=UTC),
     )
+    # REPAIR-005: ambiguity never hides a hard failure; the evaluator rejects first.
+    assert evaluation.decision == "reject"
+
+
+def test_ambiguous_but_valid_evaluation_is_quarantined():
+    candidate = RepairCandidate(
+        recipe=CssRecipe(
+            record_selector="article", require_evidence=True, fields={"title": "h2::text"}
+        ),
+        origin="scrapling_relocation",
+        rationale="Tied nodes",
+        evidence=(RepairEvidence(field="title", match_count=2),),
+    )
+    evaluation = evaluate_candidate(
+        candidate,
+        "<article><h2>A</h2></article>",
+        source=Source(url="https://example.com/"),
+        schema=Item,
+        parser=ScraplingParser(),
+        limits=Limits(),
+        observed_at=datetime(2026, 11, 7, tzinfo=UTC),
+        policy=RepairPolicy(auto_promote=True),
+    )
     assert evaluation.decision == "quarantine"
+    assert "ambiguous_evidence" in evaluation.reasons
 
 
 def test_recipe_comparison_is_machine_readable():

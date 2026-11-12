@@ -9,7 +9,14 @@ from pydantic import BaseModel
 from rastro.application.consistency import History, evaluate_consistency
 from rastro.application.extraction import extract_document, validate_recipe
 from rastro.domain.consistency import ConsistencyReport, ConsistencyRule
-from rastro.domain.models import ConfigurationError, Limits, Outcome, Source, schema_fingerprint
+from rastro.domain.models import (
+    ConfigurationError,
+    Issue,
+    Limits,
+    Outcome,
+    Source,
+    schema_fingerprint,
+)
 from rastro.domain.recipe_compare import CandidateEvaluation, RegressionCheck, RepairPolicy
 from rastro.domain.repair import RepairCandidate
 from rastro.mocklab.bundle import FixtureBundle
@@ -91,7 +98,13 @@ def evaluate_candidate(
         historical_passed=sum(check.passed for check in historical),
         indicators=indicators,
         regressions=(*historical, *generated),
+        blocking=() if decision != "reject" else _blocking(current.issues),
     )
+
+
+def _blocking(issues: Sequence[Issue]) -> tuple[Issue, ...]:
+    """Record-level issues (index, field, code) that block the candidate; at most 20."""
+    return tuple(issues[:20])
 
 
 def _sample_rates(schema: type[BaseModel], fixtures: Sequence[FixtureBundle]) -> dict[str, float]:
@@ -152,15 +165,15 @@ def _decide(
     has_rules: bool,
     policy: RepairPolicy,
 ) -> tuple[Literal["promote", "quarantine", "reject"], tuple[str, ...]]:
-    if candidate.ambiguous:
-        return "quarantine", ("ambiguous_evidence",)
+    # Hard failures come first, so repair and promote reach the same verdict whether or
+    # not ambiguity evidence is available; ambiguity is a quarantine reason only.
     if (
         status != Outcome.SUCCESS
         or not all(c.passed for c in (*historical, *generated))
         or (has_rules and indicators.verdict == "inconsistent")
     ):
         return "reject", ("validation_or_regression_failed",)
-    reasons = []
+    reasons = ["ambiguous_evidence"] if candidate.ambiguous else []
     if len(historical) < policy.min_historical_fixtures:
         reasons.append("insufficient_history")
     if count < policy.min_records:
