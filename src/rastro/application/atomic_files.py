@@ -23,5 +23,17 @@ def write_atomic(path: Path, data: bytes) -> None:
             handle.flush()
             os.fsync(handle.fileno())
         os.replace(temp, path)
+        fsync_directory(path.parent)
     finally:
         temp.unlink(missing_ok=True)
+
+
+def fsync_directory(directory: Path) -> None:
+    """Make a rename durable by syncing its directory; a no-op where unsupported (Windows)."""
+    if os.name != "posix":
+        return
+    fd = os.open(directory, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)

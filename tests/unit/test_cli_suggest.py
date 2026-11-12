@@ -124,3 +124,38 @@ def test_new_rejects_unsafe_field_names(page, tmp_path, capsys):
     job = tmp_path / "job.toml"
     assert main(["new", str(job), "--from", str(page), "--example", "bad name=x"]) == 2
     assert not job.exists()
+
+
+def test_new_refuses_a_partial_preview_unless_allowed(tmp_path, capsys):
+    """JOB-001: `rastro new` writes a job only when its recipe preview fully succeeds."""
+    page = tmp_path / "page.html"
+    page.write_text(
+        "<li class='o'><b>A</b><i>12</i></li><li class='o'><b>B</b><i>7</i></li>"
+        "<li class='o'><b>C</b></li>",
+        encoding="utf-8",
+    )
+    job = tmp_path / "job.toml"
+    command = ["new", str(job), "--from", str(page), "--example", "name=A", "--example", "n=12"]
+    assert main(command) == 2
+    error = capsys.readouterr().err
+    assert "partial_success" in error and "--allow-partial" in error
+    assert not job.exists()
+    assert main([*command, "--allow-partial"]) == 0
+    assert job.exists()
+
+
+def test_suggestion_status_reports_the_preview_outcome():
+    """INT-002: suggest returns a partial preview with an explicit status."""
+    from rastro import suggest
+    from rastro.domain.job_fields import StringField
+
+    html = (
+        "<li class='o'><b>A</b><i>12</i></li><li class='o'><b>B</b><i>7</i></li>"
+        "<li class='o'><b>C</b></li>"
+    )
+    found = suggest(
+        html,
+        [StringField(name="name"), StringField(name="n")],
+        examples=[{"name": "A", "n": "12"}],
+    )
+    assert found.status == "partial_success"

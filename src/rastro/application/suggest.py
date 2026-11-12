@@ -60,7 +60,7 @@ def suggest[T: BaseModel](
     url: str | None = None,
     records_min: int = 2,
     limits: Limits | None = None,
-    suggester: RecipeSuggester | None = None,
+    _suggester: RecipeSuggester | None = None,
 ) -> Suggestion[T]: ...
 @overload
 def suggest(
@@ -71,7 +71,7 @@ def suggest(
     url: str | None = None,
     records_min: int = 2,
     limits: Limits | None = None,
-    suggester: RecipeSuggester | None = None,
+    _suggester: RecipeSuggester | None = None,
 ) -> Suggestion[BaseModel]: ...
 def suggest(
     html: str,
@@ -81,7 +81,7 @@ def suggest(
     url: str | None = None,
     records_min: int = 2,
     limits: Limits | None = None,
-    suggester: RecipeSuggester | None = None,
+    _suggester: RecipeSuggester | None = None,
 ) -> Suggestion[Any]:
     """Build, verify and return a CSS recipe that reproduces every example on ``html``."""
     model = schema_model(schema)
@@ -96,6 +96,8 @@ def suggest(
     if unknown:
         raise ConfigurationError(f"Example fields are not in the schema: {', '.join(unknown)}")
     source = Source(url=url or LOCAL_URL)
+    # ``_suggester`` is a private test seam, not part of the public signature.
+    suggester = _suggester
     if suggester is None:
         from rastro.adapters.scrapling_suggest import ScraplingSuggester
 

@@ -28,7 +28,7 @@ from rastro.domain.job_fields import (
 )
 from rastro.domain.job_sources import FileJobSource, validate_job_path_syntax
 from rastro.domain.jobs import parse_job
-from rastro.domain.models import ConfigurationError, CssRecipe, Limits, Source
+from rastro.domain.models import ConfigurationError, CssRecipe, Limits, Outcome, Source
 from rastro.domain.suggest import Example, Suggestion, check_examples, infer_field_type
 
 _TYPED = {"integer": IntegerField, "decimal": DecimalField, "date": DateField, "url": UrlField}
@@ -43,8 +43,13 @@ def new_job(
     records_min: int = 2,
     dataset: str | None = None,
     identity: Sequence[str] = (),
+    allow_partial: bool = False,
 ) -> Path:
-    """Write a new TOML job at ``path``; never overwrite an existing file."""
+    """Write a new TOML job at ``path``; never overwrite an existing file.
+
+    The suggested recipe's preview must succeed; ``allow_partial=True`` writes a job whose
+    preview is only a partial success.
+    """
     if path.suffix != ".toml":
         raise ConfigurationError("The new job file must end in .toml")
     if path.exists() or path.is_symlink():
@@ -64,6 +69,15 @@ def new_job(
         ) from None
     source = FileJobSource(path=page_path, url=url)
     found = suggest(html, fields, examples=checked, url=url, records_min=records_min)
+    if found.status != Outcome.SUCCESS and not allow_partial:
+        issues = ", ".join(
+            sorted({f"{i.code}:{i.field}" if i.field else i.code for i in found.preview.issues})
+        )
+        raise ConfigurationError(
+            f"The suggested recipe's preview is {found.status}, not success"
+            + (f" ({issues})" if issues else "")
+            + "; add examples, or pass --allow-partial to write the job anyway"
+        )
     typed = _typed_fields(html, fields, checked, found, Source(url=source.resolved_source_url()))
     text = render_job(typed, found.recipe, source, dataset=dataset, identity=identity)
     parse_job(text, format="toml")

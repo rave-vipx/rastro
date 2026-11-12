@@ -216,3 +216,19 @@ def test_url_targets_without_the_http_extra_name_the_install(monkeypatch):
     monkeypatch.setitem(sys.modules, "curl_cffi", None)
     with pytest.raises(ImportError, match=r"pip install 'rastro-engine\[http\]'"):
         rastro.scrape("https://acme.example/", Offer)
+
+
+@pytest.mark.parametrize("target", ["page.html", "./data/page.html", "C:\\pages\\a.htm"])
+def test_filename_strings_are_refused_with_a_path_hint(target):
+    """INT-001: a filename passed as str is not silently parsed as HTML."""
+    with pytest.raises(ConfigurationError, match=r"pathlib\.Path"):
+        rastro.scrape(target, Offer)
+
+
+@pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="needs POSIX FIFOs")
+def test_fifo_targets_are_refused_without_blocking(tmp_path):
+    """SEC-005: opening a FIFO with no writer must not hang."""
+    fifo = tmp_path / "pipe.html"
+    os.mkfifo(fifo)
+    with pytest.raises(ConfigurationError, match="regular file"):
+        rastro.scrape(fifo, Offer)

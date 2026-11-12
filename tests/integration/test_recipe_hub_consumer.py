@@ -72,3 +72,24 @@ def test_adoption_still_runs_the_gates_on_the_consumer_page(exported, tmp_path, 
     assert main([*promote, "--reason", "Reviewed shared bundle"]) != 0
     capsys.readouterr()
     assert main(["job", "load", str(job)]) != 0
+
+
+def test_reimport_after_retirement_stores_a_new_candidate(exported, tmp_path):  # noqa: F811
+    """HUB-001, REC-005: an equal but retired version is not reused by import."""
+    from datetime import UTC, datetime
+
+    from rastro.adapters.sqlite import SQLiteRecipeRepository
+    from rastro.application.recipe_hub import import_bundle
+    from rastro.cli_hub import _parser_for
+    from rastro.domain.lifecycle import RecipeState
+
+    _, _, bundle = exported
+    repository = SQLiteRecipeRepository(tmp_path / "b.sqlite")
+    now = datetime.now(UTC)
+    first = import_bundle(bundle, repository, _parser_for, at=now)
+    assert import_bundle(bundle, repository, _parser_for, at=now).reused is True
+    key = first.stored.key
+    repository.transition(key, 1, RecipeState.RETIRED, reason="Rejected", at=now)
+    again = import_bundle(bundle, repository, _parser_for, at=now)
+    assert again.reused is False
+    assert (again.stored.recipe.version, again.stored.metadata.state) == (2, "candidate")

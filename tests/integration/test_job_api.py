@@ -211,3 +211,47 @@ def test_override_never_activates_a_rejected_candidate(job):
     assert report.sources[0].comparisons[0].evaluation.decision == "reject"
     assert report.sources[0].promoted_version is None
     assert repository.get(key).recipe.version == 1
+
+
+def test_symlinked_recipe_memory_is_refused_by_run_load_and_preview(job, capsys):
+    """SEC-008: recipe_memory is never opened through a symlink."""
+    assert rastro.load_job_file(job).job.status == "success"
+    real = job.parent / "real.sqlite"
+    (job.parent / "recipes.sqlite").rename(real)
+    (job.parent / "recipes.sqlite").symlink_to(real)
+    with pytest.raises(rastro.ConfigurationError, match="symlink"):
+        rastro.run_job_file(job)
+    with pytest.raises(rastro.ConfigurationError, match="symlink"):
+        rastro.load_job_file(job)
+    assert main(["job", "preview", str(job)]) == 2
+    assert "symlink" in capsys.readouterr().err
+
+
+def test_pinned_version_reports_what_the_store_holds(job):
+    """REC-006: a pinned recipe_version is reported only when the store has it."""
+    from rastro.application.active_recipes import active_job
+
+    assert rastro.load_job_file(job).job.status == "success"
+    loaded = rastro.load_job(job)
+    pinned = loaded.model_copy(
+        update={
+            "recipe_version": 1,
+            "sources": tuple(s.model_copy(update={"recipe": None}) for s in loaded.sources),
+        }
+    )
+    _, selections = active_job(pinned, base_dir=job.parent, allow_absolute_paths=False)
+    assert (selections[0].recipe_origin, selections[0].recipe_version) == ("memory", 1)
+    missing = pinned.model_copy(update={"recipe_version": 9})
+    _, selections = active_job(missing, base_dir=job.parent, allow_absolute_paths=False)
+    assert selections[0].recipe_version is None
+
+
+def test_apply_refuses_a_symlinked_parent_directory(job, tmp_path):
+    """SEC-008: apply never follows a symlinked directory to reach the job file."""
+    repaired(job)
+    alias = tmp_path.parent / (tmp_path.name + "-alias")
+    alias.symlink_to(tmp_path, target_is_directory=True)
+    before = job.read_bytes()
+    with pytest.raises(rastro.ConfigurationError, match="symlink"):
+        rastro.apply_job_recipe(alias / "job.toml", 1)
+    assert job.read_bytes() == before

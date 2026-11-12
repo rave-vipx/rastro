@@ -90,7 +90,6 @@ from rastro.domain.models import (
 from rastro.domain.recipe_compare import (
     CandidateEvaluation,
     RecipeComparison,
-    RepairPolicy,
     RepairReport,
     SourceRepair,
 )
@@ -199,7 +198,6 @@ __all__ = [
     "RecipeState",
     "RecipeStorageError",
     "RegionalContext",
-    "RepairPolicy",
     "RepairProposal",
     "RepairReport",
     "Representation",

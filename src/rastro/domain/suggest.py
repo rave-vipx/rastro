@@ -16,7 +16,7 @@ from urllib.parse import urljoin
 from pydantic import BaseModel, Field
 
 from rastro.domain.job_fields import JobFieldType
-from rastro.domain.models import ConfigurationError, Contract, CssRecipe, ExtractionResult
+from rastro.domain.models import ConfigurationError, Contract, CssRecipe, ExtractionResult, Outcome
 
 MAX_EXAMPLES = 20
 MAX_EXAMPLE_CHARS = 1_000
@@ -46,6 +46,11 @@ class Suggestion[T: BaseModel](Contract):
     recipe: CssRecipe
     preview: ExtractionResult[T]
     confidence: dict[str, FieldConfidence]
+
+    @property
+    def status(self) -> Outcome:
+        """The preview outcome; anything but ``success`` means the recipe is incomplete."""
+        return self.preview.status
 
 
 def normalize_text(value: str) -> str:

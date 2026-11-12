@@ -43,10 +43,7 @@ def write_serving_recipe(
     path: str | Path, source: int, *, allow_absolute_paths: bool = False
 ) -> AppliedRecipe:
     """``apply_job_recipe`` with the applied version and whether the file changed."""
-    file = Path(path)
-    if file.is_symlink():
-        raise ConfigurationError("Recipe command paths must not contain symlinks")
-    file = file.parent.resolve() / file.name
+    file = _no_symlinks(Path(path))
     job = load_job(file, allow_absolute_paths=allow_absolute_paths)
     if not 1 <= source <= len(job.sources):
         raise ConfigurationError("Source index is outside the job sources")
@@ -67,6 +64,24 @@ def write_serving_recipe(
     _verify(job, text, file.suffix.lower(), recipe, location)
     write_atomic(file, text.encode("utf-8"))
     return AppliedRecipe(file, source, recipe.version, changed=True)
+
+
+def _no_symlinks(path: Path) -> Path:
+    """Refuse a symlink in any component between the job root and the file.
+
+    The root is the working directory when the file lies below it, otherwise the
+    filesystem root, so a symlinked parent directory is never followed.
+    """
+    absolute = path.absolute()
+    root = Path.cwd().absolute()
+    if not absolute.is_relative_to(root):
+        root = Path(absolute.anchor)
+    for part in (absolute, *absolute.parents):
+        if part == root:
+            break
+        if part.is_symlink():
+            raise ConfigurationError("Recipe command paths must not contain symlinks")
+    return absolute
 
 
 def _serving(job: Job, base: Path, source: int, allow: bool) -> Recipe:
