@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from rastro.application.recipe_hub import export_bundle, import_bundle
-from rastro.cli_repair_context import safe_path
+from rastro.application.repair_context import safe_path
 from rastro.domain.jobs import FileJobSource
 from rastro.domain.memory import RecipeKey
 from rastro.domain.models import ConfigurationError, Representation

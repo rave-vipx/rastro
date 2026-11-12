@@ -20,6 +20,10 @@ class LoadedSource(Contract):
         default=None, exclude_if=lambda v: v is None
     )
     issues: tuple[Issue, ...] = Field(default=(), exclude_if=lambda v: not v)
+    recipe_origin: Literal["job", "memory"] | None = Field(
+        default=None, exclude_if=lambda v: v is None
+    )
+    recipe_version: int | None = Field(default=None, exclude_if=lambda v: v is None)
 
 
 class StaleSource(SourceStatus):

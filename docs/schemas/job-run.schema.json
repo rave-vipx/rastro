@@ -687,6 +687,44 @@
       ],
       "title": "RecipeAttempt",
       "type": "object"
+    },
+    "RecipeSelection": {
+      "additionalProperties": false,
+      "description": "Which recipe one job source used: the job file's, or the serving one in recipe memory.\n\n``memory`` covers a stored serving recipe newer than the job file's, a pinned\n``recipe_version``, and sources without a recipe in the job file (memory lookup or\nlearning). ``recipe_version`` is ``None`` only when no recipe existed before the run.",
+      "properties": {
+        "recipe_origin": {
+          "enum": [
+            "job",
+            "memory"
+          ],
+          "title": "Recipe Origin",
+          "type": "string"
+        },
+        "recipe_version": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Recipe Version"
+        },
+        "source_index": {
+          "minimum": 1,
+          "title": "Source Index",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "source_index",
+        "recipe_origin"
+      ],
+      "title": "RecipeSelection",
+      "type": "object"
     }
   },
   "$id": "https://rave-vipx.github.io/rastro/schemas/job-run.schema.json",
@@ -701,6 +739,14 @@
     },
     "job": {
       "$ref": "#/$defs/JobSummary"
+    },
+    "recipes": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/RecipeSelection"
+      },
+      "title": "Recipes",
+      "type": "array"
     },
     "results": {
       "items": {

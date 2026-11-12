@@ -159,6 +159,33 @@ from rastro import (
 
 `Job` (`format_version = 1`) loads from UTF-8 TOML or strict JSON via `parse_job` / `load_job`, builds a deterministic dynamic `JobRecord` Pydantic model (`build_job_schema`), and executes through `Rastro` / `Rastro.web` (`run_job`, `run_job_async`, `run_job_file`), returning `JobRunResult` (`schema_version = 1`, `data_trust = "untrusted_source_data"`). Published JSON Schemas (`job_json_schema()`, `job_run_json_schema()`) and `rastro job {validate,run,schema}` expose the same contract without Python code; see [declarative jobs](jobs.md).
 
+## Datasets and recipe repair
+
+```python
+from rastro import (
+    JobLoadResult,
+    RecipeSelection,
+    RepairReport,
+    apply_job_recipe,
+    load_job_file,
+    promote_job_recipe,
+    repair_job_source,
+)
+```
+
+| Function | Returns | What it does |
+| --- | --- | --- |
+| `load_job_file(path, *, drift=False, allow_absolute_paths=False)` | `JobLoadResult` | Runs the job and loads approved fields into its `[dataset]` (`rastro job load`). |
+| `repair_job_source(path, source, *, min_records=None, min_completeness=None, auto_promote=None)` | `RepairReport` | Proposes and evaluates repair candidates for one source (`rastro recipe repair`). |
+| `promote_job_recipe(path, source, version, *, reason, override_gates=False)` | `RepairReport` | Re-evaluates a stored candidate and activates it when it passes; `override_gates=True` activates a quarantined one (`rastro recipe promote`). |
+| `apply_job_recipe(path, source)` | `Path` | Writes the serving recipe of a source back into the job file (`rastro recipe apply`). |
+
+`source` is one-based. `RepairReport` has `schema_version = 1`, a `run_id` and one
+`SourceRepair` per source with its `comparisons` and `promoted_version`. `JobRunResult.recipes`
+lists one `RecipeSelection` (`source_index`, `recipe_origin`, `recipe_version`) per source;
+`JobLoadResult` sources carry the same `recipe_origin` and `recipe_version`. See
+[recipe repair](repair.md) for the gates and the rule that picks the recipe.
+
 ## Results
 
 `ExtractionResult` contains:

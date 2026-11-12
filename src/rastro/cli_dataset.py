@@ -1,21 +1,13 @@
-"""Dataset CLI composition: store wiring, load, JSON/JSONL export and stale status."""
+"""Dataset CLI: job load, JSON/JSONL/HTML export and stale status."""
 
 import argparse
 import json
-from contextlib import AbstractContextManager, nullcontext
-from datetime import timedelta
 from pathlib import Path
 
 from rastro.adapters.sqlite_dataset import SQLiteDatasetStore
-from rastro.adapters.sqlite_drift import SQLiteDriftMonitor
-from rastro.application.dataset_load import load_results, stale_sources
-from rastro.application.drift import collect_snapshots
-from rastro.application.job_loader import load_job, resolve_job_path
-from rastro.application.jobs import run_job
-from rastro.application.success_samples import collect_successes
+from rastro.application.dataset_load import stale_sources
+from rastro.application.job_dataset import load_job_file
 from rastro.cli_dataset_export import html_export, select_records
-from rastro.domain.drift import StructuralSnapshot
-from rastro.domain.job_load import JobLoadResult
 from rastro.domain.models import ConfigurationError
 
 
@@ -42,73 +34,6 @@ def add_commands(subcommands: argparse._SubParsersAction, jobs: argparse._SubPar
             parser.add_argument("--sort-field")
             parser.add_argument("--upcoming", action="store_true")
             parser.add_argument("--timezone", default="UTC")
-
-
-def load_job_file(file: Path, *, drift: bool, allow_absolute_paths: bool) -> JobLoadResult:
-    """Run a job and load its approved fields into the dataset; shared by the CLI and MCP."""
-    job = load_job(file, allow_absolute_paths=allow_absolute_paths)
-    spec = job.dataset
-    if spec is None:
-        raise ConfigurationError("job load requires a [dataset] block in the job file")
-    path = resolve_job_path(
-        spec.path, base_dir=file.parent, allow_absolute_paths=allow_absolute_paths
-    )
-    # Preserve symlink components for the adapter's refusal, after containment validation.
-    raw_path = (
-        Path(spec.path) if Path(spec.path).is_absolute() else file.parent.resolve() / spec.path
-    )
-    store = SQLiteDatasetStore(
-        raw_path,
-        limits=job.limits,
-        near_match_fields=spec.match_fields,
-        near_match_tolerance=timedelta(minutes=spec.match_tolerance_minutes or 30),
-    )
-    if path in [file.resolve()]:
-        raise ConfigurationError("The dataset must be separate from the job file")
-    monitor = SQLiteDriftMonitor(raw_path, limits=job.limits) if drift else None
-    capture: AbstractContextManager[dict[str, StructuralSnapshot]]
-    if drift:
-        from rastro.adapters.drift_probe import ScraplingDriftProbe
-
-        capture = collect_snapshots(ScraplingDriftProbe())
-    else:
-        capture = nullcontext({})
-    from rastro.cli_repair_storage import serving_job
-
-    effective_job = serving_job(job, file.parent, allow_absolute_paths)
-    with capture as snapshots, collect_successes() as successes:
-        report = run_job(
-            effective_job, base_dir=file.parent, allow_absolute_paths=allow_absolute_paths
-        )
-    loaded = load_results(
-        spec,
-        [f.name for f in job.fields],
-        report,
-        store,
-        rules=job.consistency,
-        monitor=monitor,
-        snapshots=snapshots,
-    )
-    from rastro.cli_repair_storage import retain_successes
-
-    held_urls = {
-        s.source_url
-        for s in loaded.sources
-        if s.consistency is not None and s.consistency.verdict == "inconsistent"
-    }
-    for result in report.results:
-        if result.source_url in held_urls:
-            successes.pop(result.job_id, None)
-    issues = retain_successes(raw_path, spec.name, job.build_schema(), report, successes)
-    loaded = loaded.model_copy(
-        update={
-            "sources": tuple(
-                source.model_copy(update={"issues": issues.get(source.source_url, ())})
-                for source in loaded.sources
-            )
-        }
-    )
-    return loaded
 
 
 def load_job_command(args: argparse.Namespace) -> int:

@@ -49,14 +49,41 @@ def evaluate(recipe=RECIPE, **kwargs):
     )
 
 
-def test_measured_completeness_threshold_and_opt_in():
-    assert evaluate(policy=RepairPolicy(auto_promote=True)).reasons == (
-        "completeness_below_threshold",
+def test_optional_field_absent_in_success_sample_does_not_lower_completeness():
+    """QUAL-006: an optional field the success sample never filled is not counted."""
+    result = evaluate(policy=RepairPolicy(auto_promote=True))
+    assert result.indicators.completeness == 1.0
+    assert result.decision == "promote"
+    assert evaluate(policy=RepairPolicy()).reasons == ("automatic_promotion_disabled",)
+
+
+def test_optional_field_filled_in_success_sample_still_gates_completeness():
+    """QUAL-006: losing an optional value the success sample had stays below threshold."""
+    body = "<article><h2>Hello</h2><p>More</p></article>"
+    sampled = CssRecipe(
+        record_selector="article",
+        fields={"title": "h2::text", "extra": "p::text"},
+        require_evidence=True,
     )
-    assert (
-        evaluate(policy=RepairPolicy(auto_promote=True, min_completeness=0.5)).decision == "promote"
+    result = extract_document(
+        body, source=SOURCE, schema=Item, recipe=sampled, parser=ScraplingParser(), limits=Limits()
     )
-    assert evaluate(policy=RepairPolicy(min_completeness=0.5)).decision == "quarantine"
+    sample = build_fixture(
+        body, source=SOURCE, schema=Item, recipe=sampled, result=result, synthetic_count=0
+    )
+    evaluation = evaluate_candidate(
+        RepairCandidate(recipe=sampled, origin="discovery", rationale="Current page lost extra"),
+        BODY,
+        source=SOURCE,
+        schema=Item,
+        parser=ScraplingParser(),
+        limits=Limits(),
+        observed_at=NOW,
+        fixtures=(sample,),
+        policy=RepairPolicy(auto_promote=True),
+    )
+    assert evaluation.indicators.completeness == 0.5
+    assert "completeness_below_threshold" in evaluation.reasons
 
 
 def test_unassessable_consistency_does_not_pass():

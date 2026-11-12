@@ -1,4 +1,4 @@
-"""Repair evidence composition at the CLI edge."""
+"""Retain successful extractions as repair evidence: fixtures and relocation snapshots."""
 
 from pathlib import Path
 from typing import Any
@@ -9,7 +9,6 @@ from rastro.adapters.scrapling_relocation import ScraplingRelocation
 from rastro.adapters.sqlite_relocation import SQLiteRelocationStore
 from rastro.application.success_samples import SuccessfulSample
 from rastro.domain.job_results import JobRunResult
-from rastro.domain.jobs import Job
 from rastro.domain.models import (
     ConfigurationError,
     CssRecipe,
@@ -79,29 +78,3 @@ def retain_successes(
             dataset, sample.source, fixture, snapshot, observed_at=sample.result.completed_at
         )
     return issues
-
-
-def serving_job(job: Job, base: Path, allow: bool) -> Job:
-    """Dataset loads use the lifecycle's serving recipe after the first successful load."""
-    if job.recipe_memory is None or job.recipe_version is not None:
-        return job
-    from rastro.adapters.sqlite import SQLiteRecipeRepository
-    from rastro.cli_repair_context import safe_path
-    from rastro.domain.jobs import FileJobSource
-    from rastro.domain.memory import RecipeKey
-
-    path = safe_path(job.recipe_memory, base, allow)
-    if not path.exists():
-        return job
-    repository = SQLiteRecipeRepository(path)
-    schema = job.build_schema()
-    sources = []
-    for item in job.sources:
-        url = item.resolved_source_url() if isinstance(item, FileJobSource) else item.url
-        source = (item.region or job.region).to_source(url)
-        key = RecipeKey.for_source(source, schema, job.context, representation=item.representation)
-        serving = repository.get(key)
-        sources.append(
-            item.model_copy(update={"recipe": None if serving else item.recipe or job.recipe})
-        )
-    return job.model_copy(update={"sources": tuple(sources), "recipe": None})

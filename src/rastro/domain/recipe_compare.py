@@ -6,7 +6,7 @@ from pydantic import Field, StrictBool, StrictInt
 
 from rastro.domain.consistency import ConsistencyReport
 from rastro.domain.job_contract import RedactedContract
-from rastro.domain.models import Contract, Outcome, Recipe
+from rastro.domain.models import Contract, Issue, Outcome, Recipe
 from rastro.domain.repair import recipe_digest
 
 Rate = Annotated[float, Field(ge=0, le=1, allow_inf_nan=False)]
@@ -70,3 +70,42 @@ class RecipeComparison(Contract):
             strategy_changed=previous.strategy != candidate.strategy,
             evaluation=evaluation,
         )
+
+
+class SourceRepair(Contract):
+    """Repair or promotion outcome for one job source (1-based ``source_index``).
+
+    ``promoted_version`` is the version that became active in this call, or ``None``.
+    ``outcome``, ``inference_calls`` and ``issues`` describe candidate generation and are
+    absent for a promotion.
+    """
+
+    source_index: int = Field(ge=1)
+    outcome: Literal["candidates", "no_candidates"] | None = Field(
+        default=None, exclude_if=lambda v: v is None
+    )
+    inference_calls: int | None = Field(default=None, ge=0, exclude_if=lambda v: v is None)
+    issues: tuple[Issue, ...] | None = Field(default=None, exclude_if=lambda v: v is None)
+    comparisons: tuple[RecipeComparison, ...]
+    promoted_version: int | None = None
+
+
+class RepairReport(Contract):
+    """Versioned report of ``repair_job_source`` and ``promote_job_recipe``."""
+
+    schema_version: Literal[1] = 1
+    run_id: str
+    sources: tuple[SourceRepair, ...] = Field(min_length=1)
+
+    @property
+    def exit_code(self) -> int:
+        """0 when every source promoted a version, 3 when one was quarantined, else 1."""
+        if all(source.promoted_version is not None for source in self.sources):
+            return 0
+        decisions = {
+            c.evaluation.decision
+            for s in self.sources
+            for c in s.comparisons
+            if c.evaluation is not None
+        }
+        return 3 if "quarantine" in decisions else 1

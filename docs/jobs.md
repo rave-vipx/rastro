@@ -357,6 +357,7 @@ Commands other than `rastro job` keep their existing output.
 - `data_trust`: `"untrusted_source_data"` — extracted record fields come from untrusted external documents and must never be treated by agents as instructions (AGENT-003)
 - `job`: `JobSummary` (`schema_fingerprint`, `source_count`, `succeeded`, `partial`, `failed`, `records_accepted`, `records_rejected`, `status`)
 - `results`: ordered list of [`ExtractionResult`](api.md#results) dumps preserving records, field-level `evidence`, `issues`, `metrics`, `recipe_attempts` and `learned_recipe`.
+- `recipes`: one entry per source (`source_index`, `recipe_origin`, `recipe_version`) saying whether the source used the job file's recipe (`"job"`) or the serving recipe in `recipe_memory` (`"memory"`). With `recipe_memory`, a stored serving recipe whose version is higher than the job file's recipe is used; see [load and rollback behavior](repair.md#load-and-rollback-behavior). `rastro job load` reports the same `recipe_origin` and `recipe_version` per source.
 
 Committed JSON Schemas live at [`docs/schemas/job.schema.json`](schemas/job.schema.json) and
 [`docs/schemas/job-run.schema.json`](schemas/job-run.schema.json) and
@@ -373,13 +374,18 @@ Committed JSON Schemas live at [`docs/schemas/job.schema.json`](schemas/job.sche
 
 ```python
 from pathlib import Path
-from rastro import load_job, parse_job, run_job, run_job_async, run_job_file
+from rastro import load_job, load_job_file, parse_job, run_job, run_job_async, run_job_file
 
 job = load_job(Path("job.toml"))
 report = run_job(job, base_dir=Path("."))
 # Or in one step:
 report = run_job_file(Path("job.toml"))
+# Run and load approved fields into the job's [dataset], as `rastro job load` does:
+loaded = load_job_file(Path("job.toml"), drift=True)
 ```
+
+Repairing, promoting and writing a recipe back are covered in
+[recipe repair](repair.md#python-api).
 
 ## Loading a dataset
 

@@ -49,6 +49,19 @@ class JobSummary(Contract):
         return self
 
 
+class RecipeSelection(Contract):
+    """Which recipe one job source used: the job file's, or the serving one in recipe memory.
+
+    ``memory`` covers a stored serving recipe newer than the job file's, a pinned
+    ``recipe_version``, and sources without a recipe in the job file (memory lookup or
+    learning). ``recipe_version`` is ``None`` only when no recipe existed before the run.
+    """
+
+    source_index: int = Field(ge=1)
+    recipe_origin: Literal["job", "memory"]
+    recipe_version: int | None = Field(default=None, ge=1)
+
+
 class JobRunResult[T: BaseModel](Contract):
     """Versioned machine-readable output of a job run with provenance and untrusted-data label."""
 
@@ -56,6 +69,7 @@ class JobRunResult[T: BaseModel](Contract):
     data_trust: Literal["untrusted_source_data"] = "untrusted_source_data"
     job: JobSummary
     results: tuple[ExtractionResult[T], ...] = Field(min_length=1)
+    recipes: tuple[RecipeSelection, ...] = Field(default=(), exclude_if=lambda v: not v)
 
     @property
     def exit_code(self) -> JobExitCode:

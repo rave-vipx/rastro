@@ -34,6 +34,8 @@ def evaluate_candidate(
 
     Historical comparisons require identical validated values and proven fields,
     allowing changed locators/version numbers. Current semantics use pre-write history.
+    Completeness counts required fields, plus optional fields as often as the stored
+    success samples had a value for them.
     No declared consistency rules means the semantic gate is inapplicable, not passed.
     """
     policy = policy or RepairPolicy()
@@ -53,6 +55,7 @@ def evaluate_candidate(
         declared_fields=tuple(schema.model_fields),
         history=history,
         rejected=current.metrics.rejected,
+        expected_rates=_sample_rates(schema, fixtures),
     )
     historical = tuple(
         _replay(candidate, fixture, schema, parser, limits, i) for i, fixture in enumerate(fixtures)
@@ -86,6 +89,20 @@ def evaluate_candidate(
         indicators=indicators,
         regressions=(*historical, *generated),
     )
+
+
+def _sample_rates(schema: type[BaseModel], fixtures: Sequence[FixtureBundle]) -> dict[str, float]:
+    """Optional fields count toward completeness only as often as success samples filled them.
+
+    Required fields keep the strict default rate of 1.0. Without samples, optional fields
+    are not counted (QUAL-006).
+    """
+    rows = [r.data for fixture in fixtures for r in fixture.expected.records]
+    return {
+        name: (sum(row.get(name) not in (None, "") for row in rows) / len(rows) if rows else 0.0)
+        for name, field in schema.model_fields.items()
+        if not field.is_required()
+    }
 
 
 def _replay(

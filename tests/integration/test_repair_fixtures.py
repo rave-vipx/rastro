@@ -7,8 +7,8 @@ import pytest
 
 from rastro.adapters.structured import JsonParser
 from rastro.application.extraction import extract_document
+from rastro.application.repair_context import RepairContext
 from rastro.cli import main
-from rastro.cli_repair_context import RepairContext
 from rastro.domain.models import ConfigurationError, Limits, Source
 from rastro.mocklab.fixtures import build_fixture
 

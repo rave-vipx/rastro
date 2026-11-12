@@ -9,6 +9,16 @@ All notable user-facing changes will be recorded here. No public release has bee
 - A `css` recipe field prefixed `expand:` turns a card with several values into one record per value, with per-value provenance and `max_records` enforced; relocation repair refuses it (DATA-004, DATA-005, JOB-002).
 - `rastro recipe prune --store FILE --older-than DAYS [--dry-run]` deletes old recipe versions but never a serving one; `prune` always keeps the newest version of each key so version numbers are never reused (REC-005).
 - A JSON-LD recipe field may list 1 to 4 JSON pointers; the first that resolves wins and the locator records it; a JSON null falls through to the next pointer (INT-002, DATA-005).
+- Public Python API for datasets and repair: `rastro.load_job_file`, `rastro.repair_job_source`, `rastro.promote_job_recipe` and `rastro.apply_job_recipe`, with the `RepairReport`, `SourceRepair` and `RecipeSelection` result types (DATA-001, REPAIR-002–006, REC-006).
+- `rastro recipe apply job.toml --source N` writes the serving recipe from `recipe_memory` back into the job file; TOML text outside that recipe's tables is kept, the write is atomic and refuses symlinks (REC-006).
+- `rastro recipe promote --override-gates --reason "..."` activates a quarantined candidate; the lifecycle history records `gates overridden: <reason>`. Rejected candidates are never activated (REPAIR-005).
+- Job run and load reports state per source whether the job file's recipe or the serving recipe in memory was used (`recipes` / `recipe_origin`, `recipe_version`); the published job-run and job-load JSON Schemas are updated (REC-006).
+
+### Changed
+
+- With `recipe_memory`, `job run`, `job load`, `run_job` and `run_job_file` use the serving recipe in memory when its version is higher than the job file's recipe version, so a promoted repair applies to the next run. Previously `job run` kept the stale file recipe and `job load` used memory whenever it had a serving recipe; see ADR 0021 (REC-006).
+- Repair completeness counts optional fields only as often as the stored success samples filled them, so an optional field that is legitimately empty in some records no longer quarantines a correct repair (QUAL-006).
+- Code that imported `rastro.cli_dataset.load_job_file`, `rastro.cli_repair_context` or `rastro.cli_repair_storage` should use `rastro.load_job_file` and the other public functions; those internal modules moved under `rastro.application`.
 
 ### Fixed
 

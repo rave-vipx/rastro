@@ -428,6 +428,34 @@
           "default": null,
           "title": "Next Action"
         },
+        "recipe_origin": {
+          "anyOf": [
+            {
+              "enum": [
+                "job",
+                "memory"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Recipe Origin"
+        },
+        "recipe_version": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Recipe Version"
+        },
         "source_url": {
           "title": "Source Url",
           "type": "string"

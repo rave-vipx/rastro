@@ -45,6 +45,8 @@ distinguished by these sanitized fixtures.
 rastro job load job.toml --drift
 rastro recipe repair job.toml --source 1
 rastro recipe promote job.toml --source 1 --version 2 --reason "Reviewed CI report"
+rastro recipe promote job.toml --source 1 --version 2 --override-gates --reason "Checked by hand"
+rastro recipe apply job.toml --source 1
 rastro recipe compare job.toml --source 1 --from-version 1 --to-version 2
 rastro recipe rollback job.toml --source 1 --version 1 --reason "Restore previous recipe"
 ```
@@ -60,11 +62,43 @@ The job's base directory is resolved first, permitting OS aliases such as macOS 
 the job file itself and paths within that base still refuse symlinks. Reports and the
 offline demo use UTF-8 independently of the locale.
 
+`recipe apply` writes the serving recipe of one source from `recipe_memory` back into the
+job file and prints `{"schema_version": 1, "path", "source_index", "recipe_version",
+"changed"}`. In a TOML file only that source's recipe tables (`[sources.recipe]`, its
+`fields` and `fallbacks`) are rewritten, in a canonical layout; every other line, comment
+included, stays as it was. Comments inside the recipe tables are lost. JSON files are
+rewritten with two-space indentation. The result is reparsed and must equal the old job
+except for that recipe, or nothing is written. The file is replaced atomically and
+symlinks are refused. A recipe written inline (`recipe = { ... }`), split by other tables,
+or shared through a job-level `recipe` by several sources is refused with exit code 2;
+update it by hand. When the file already holds the serving recipe, `changed` is `false`
+and the file is not touched.
+
 Exit codes: **0** means every selected source promoted a candidate (other proposals
 may have been rejected); **3** means a candidate remains quarantined; **1** means
 at least one selected source had no promotion and no candidate was quarantined; **2** means a typed usage,
 configuration, storage or resource error. Compare and rollback return 0 on success.
 Errors are JSON on stderr, as for job commands.
+
+## Python API
+
+The same steps are available from Python. Source indexes are one-based, as on the
+command line; configuration problems raise `ConfigurationError`.
+
+```python
+import rastro
+
+loaded = rastro.load_job_file("job.toml")  # JobLoadResult
+report = rastro.repair_job_source("job.toml", 1)  # RepairReport
+report.sources[0].promoted_version  # None unless a version became active
+rastro.promote_job_recipe("job.toml", 1, 2, reason="Reviewed CI report")
+rastro.promote_job_recipe("job.toml", 1, 2, reason="Checked by hand", override_gates=True)
+rastro.apply_job_recipe("job.toml", 1)  # writes the serving recipe back
+```
+
+`repair_job_source` accepts `min_records`, `min_completeness` and `auto_promote` to
+override the job's `[repair]` values for one call. `RepairReport.exit_code` follows the
+command's exit codes.
 
 ## What CI measures
 
@@ -83,6 +117,11 @@ writing recipes or dataset records:
 4. Declared consistency rules use dataset history read **before** any candidate
    snapshot could be applied. Completeness, structural validity and semantic
    confidence remain separate, measured indicators, compared with configured minima.
+   Completeness counts every required field, and each optional field only as often as
+   the stored success samples had a value for it: an optional `salary` that was empty in
+   one of five sample cards needs a value in four of five current cards. An optional
+   field the samples never filled is not counted. Required fields must be filled in
+   every record.
 
 Every candidate is evaluated. Ambiguous candidates remain quarantined. If multiple
 candidates pass, all are quarantined as competing proposals. A unique passing candidate
@@ -90,7 +129,11 @@ may promote only with `auto_promote = true`. Rejected versions become retired; q
 versions stay in lifecycle state `candidate`. Neither state serves unpinned extraction.
 `recipe promote` re-runs CI on fresh evidence and explicitly enables promotion; it does
 not bypass history, semantic or configured threshold gates. A malformed or now-failing
-candidate cannot be approved through this command.
+candidate cannot be approved through this command. `--override-gates` lets a person
+activate a candidate that CI quarantined (for example, too few current records); it
+requires an explicit `--reason`, which the lifecycle history records as
+`gates overridden: <reason>`. A rejected candidate (failed validation, regression or an
+inconsistent semantic check) is never activated, with or without the flag.
 Proposals identical to the active mapping after evidence/fallback normalization are
 discarded before version allocation. If none remain, repair reports `no_candidates`.
 
@@ -102,13 +145,19 @@ indicators, explicit no-candidate outcomes and bounded model issue/call counts.
 
 ## Load and rollback behavior
 
-For dataset loads with recipe memory, explicit job recipes bootstrap a missing context.
-Once that context has a serving recipe, `job load` uses it. Thus promotion and rollback
-affect the next load even when the bootstrap recipe remains in the job. `job run` and
-the SDK retain their existing explicit-recipe precedence. An explicitly pinned
-`recipe_version` retains its existing behavior.
+With `recipe_memory`, the job file's recipe bootstraps a missing context. After that,
+`job run`, `job load`, `run_job` and `run_job_file` use the serving recipe in memory
+when its version is **higher** than the job file's recipe `version`; otherwise the job
+file's recipe is used. A promoted repair therefore applies to the next run without
+editing the job file, and `recipe apply` makes the file match it. Editing a recipe by
+hand works as before: give it a version above the stored ones. Each run and load report
+says which recipe each source used (`recipe_origin` is `"job"` or `"memory"`, with
+`recipe_version`). An explicitly pinned `recipe_version` keeps its existing behavior.
+See [ADR 0021](decisions/0021-serving-recipe-over-job-file.md).
 
-Rollback can target only a version that previously served. It restores the recipe;
+Rollback can target only a version that previously served. Because the newer version
+wins, rolling back below the job file's recipe version has no effect on runs until you
+run `recipe apply` (which writes the rolled-back recipe into the file). It restores the recipe;
 it does not rewind or delete dataset observations. Repair and promotion never call
 `apply_snapshot`, so failed repairs cannot delete or replace dataset records.
 A subsequent successful load updates observed fields through the ordinary dataset path.

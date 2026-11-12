@@ -6,6 +6,7 @@ import asyncio
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from rastro.application.active_recipes import active_job
 from rastro.application.job_loader import (
     PreparedJob,
     load_job,
@@ -59,7 +60,32 @@ async def run_job_async(
     acquisition: AcquisitionPort | None = None,
     model: ModelPort | None = None,
 ) -> JobRunResult[Any]:
-    """Execute a validated job asynchronously through the public Rastro SDK."""
+    """Execute a validated job asynchronously through the public Rastro SDK.
+
+    With ``recipe_memory``, a stored serving recipe newer than the job file's is used;
+    ``JobRunResult.recipes`` reports the recipe each source used.
+    """
+    active, selections = active_job(
+        job, base_dir=base_dir, allow_absolute_paths=allow_absolute_paths
+    )
+    report = await _run_active_async(
+        active,
+        base_dir=base_dir,
+        allow_absolute_paths=allow_absolute_paths,
+        acquisition=acquisition,
+        model=model,
+    )
+    return report.model_copy(update={"recipes": selections})
+
+
+async def _run_active_async(
+    job: Job,
+    *,
+    base_dir: Path | None,
+    allow_absolute_paths: bool,
+    acquisition: AcquisitionPort | None,
+    model: ModelPort | None,
+) -> JobRunResult[Any]:
     prepared = prepare_job(
         job,
         base_dir=base_dir,
@@ -99,7 +125,32 @@ def run_job(
     acquisition: AcquisitionPort | None = None,
     model: ModelPort | None = None,
 ) -> JobRunResult[Any]:
-    """Run a validated job; uses synchronous extraction when offline and model-free."""
+    """Run a validated job; uses synchronous extraction when offline and model-free.
+
+    With ``recipe_memory``, a stored serving recipe newer than the job file's is used;
+    ``JobRunResult.recipes`` reports the recipe each source used.
+    """
+    active, selections = active_job(
+        job, base_dir=base_dir, allow_absolute_paths=allow_absolute_paths
+    )
+    report = _run_active(
+        active,
+        base_dir=base_dir,
+        allow_absolute_paths=allow_absolute_paths,
+        acquisition=acquisition,
+        model=model,
+    )
+    return report.model_copy(update={"recipes": selections})
+
+
+def _run_active(
+    job: Job,
+    *,
+    base_dir: Path | None,
+    allow_absolute_paths: bool,
+    acquisition: AcquisitionPort | None,
+    model: ModelPort | None,
+) -> JobRunResult[Any]:
     if (
         any(isinstance(item, UrlJobSource) for item in job.sources)
         or job.discover_recipes
@@ -108,7 +159,7 @@ def run_job(
     ):
         with asyncio.Runner(loop_factory=asyncio.SelectorEventLoop) as runner:
             return runner.run(
-                run_job_async(
+                _run_active_async(
                     job,
                     base_dir=base_dir,
                     allow_absolute_paths=allow_absolute_paths,

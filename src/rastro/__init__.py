@@ -6,7 +6,10 @@ from typing import TYPE_CHECKING
 
 from rastro.adapters.sqlite import SQLiteRecipeRepository
 from rastro.application.engine import Rastro
+from rastro.application.job_dataset import load_job_file
+from rastro.application.job_repair import promote_job_recipe, repair_job_source
 from rastro.application.jobs import load_job, run_job, run_job_async, run_job_file
+from rastro.application.recipe_apply import apply_job_recipe
 from rastro.domain.acquisition import AcquisitionPolicy, EgressProfile
 from rastro.domain.intelligence import InferencePolicy, ModelError, ModelRequest, RecipeProposal
 from rastro.domain.job_fields import (
@@ -22,6 +25,7 @@ from rastro.domain.job_fields import (
     UrlField,
     build_job_schema,
 )
+from rastro.domain.job_load import JobLoadResult, LoadedSource
 from rastro.domain.job_providers import (
     JobModelProvider,
     OllamaProvider,
@@ -33,6 +37,7 @@ from rastro.domain.job_results import (
     JobRunResult,
     JobRunStatus,
     JobSummary,
+    RecipeSelection,
     job_run_json_schema,
 )
 from rastro.domain.jobs import (
@@ -80,6 +85,13 @@ from rastro.domain.models import (
     Source,
     schema_fingerprint,
 )
+from rastro.domain.recipe_compare import (
+    CandidateEvaluation,
+    RecipeComparison,
+    RepairPolicy,
+    RepairReport,
+    SourceRepair,
+)
 from rastro.mocklab import (
     FixtureBundle,
     MockLabError,
@@ -121,6 +133,7 @@ def __getattr__(name: str) -> object:
 __all__ = [
     "AcquisitionPolicy",
     "BooleanField",
+    "CandidateEvaluation",
     "ConfigurationError",
     "CssRecipe",
     "DateField",
@@ -139,6 +152,7 @@ __all__ = [
     "JobExitCode",
     "JobField",
     "JobFieldType",
+    "JobLoadResult",
     "JobModelProvider",
     "JobRecordData",
     "JobRunResult",
@@ -152,6 +166,7 @@ __all__ = [
     "LifecycleHistory",
     "LifecycleTransitionError",
     "Limits",
+    "LoadedSource",
     "Metrics",
     "MockLabError",
     "ModelError",
@@ -165,6 +180,7 @@ __all__ = [
     "RastroError",
     "Recipe",
     "RecipeAttempt",
+    "RecipeComparison",
     "RecipeConflictError",
     "RecipeContext",
     "RecipeKey",
@@ -173,14 +189,18 @@ __all__ = [
     "RecipeNotFoundError",
     "RecipeProposal",
     "RecipeRepository",
+    "RecipeSelection",
     "RecipeState",
     "RecipeStorageError",
     "RegionalContext",
+    "RepairPolicy",
+    "RepairReport",
     "Representation",
     "ResourceLimitError",
     "SQLiteRecipeRepository",
     "SanitizationError",
     "Source",
+    "SourceRepair",
     "StoredRecipe",
     "StringField",
     "SyntheticLabel",
@@ -188,13 +208,17 @@ __all__ = [
     "UrlJobSource",
     "VersionStatus",
     "__version__",
+    "apply_job_recipe",
     "build_fixture",
     "build_job_schema",
     "job_json_schema",
     "job_run_json_schema",
     "load_fixture",
     "load_job",
+    "load_job_file",
     "parse_job",
+    "promote_job_recipe",
+    "repair_job_source",
     "run_job",
     "run_job_async",
     "run_job_file",
