@@ -129,13 +129,34 @@ second.repair.candidates[0].changed_fields  # ('title',)
 Run it with `python examples/self_repair.py`. See
 [`examples/self_repair.py`](https://github.com/rave-vipx/rastro/blob/main/examples/self_repair.py).
 
-!!! warning "Review automatic repairs"
-    The gates check that the candidate yields complete, valid records on the
-    current page and reproduces the retained sample exactly. They cannot know
-    what a field *means*: a relocated selector can pick a different element
-    that still validates. Use `"propose"` when a wrong value costs more than a
-    failed run, and review candidates with the
-    [recipe lifecycle](recipe-lifecycle.md) commands.
+### What `"auto"` guarantees
+
+A candidate is promoted only when all of these hold:
+
+- it yields complete, valid records on the current page, with evidence for
+  every required field and no rejected records;
+- replayed on the retained sample, it reproduces the sample's records exactly;
+- for every field whose selector changed, the new values keep the field's
+  shape: the same JSON types; for text, a length within 3x of the sample's
+  median, a similar mix of digits, letters and other characters, and the same
+  use of an `http(s)://` prefix;
+- those values are not taken only from another field's sample values (a title
+  relocated onto the city text fails with `value_matches_other_field`);
+- it is the only candidate that passes.
+
+A failed check is listed in `result.repair.candidates[i].reasons`
+(`value_shape_changed`, `value_type_changed`, `value_matches_other_field`,
+`insufficient_history`, ...) and `"auto"` then behaves like `"propose"`.
+
+The limits: the checks compare shapes, not meaning. A relocated field can
+still pick a different element whose values look alike (one product name
+instead of another), and a field missing from the sample is not shape-checked.
+Use `"propose"` when a wrong value costs more than a failed run, and review
+candidates with the [recipe lifecycle](recipe-lifecycle.md) commands.
+
+A candidate identical to one already stored is reused under its existing
+version, so repeated failing runs do not pile up versions. Running `"auto"`
+later promotes that stored candidate if it now passes every check.
 
 Editing a field's selector in your model starts a fresh recipe history, so your
 own changes always win over a remembered repair. To start over, delete

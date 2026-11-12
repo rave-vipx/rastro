@@ -179,3 +179,38 @@ def test_discovered_recipes_are_remembered_and_reused(tmp_path):
     second = rastro.scrape(html, Product, memory=memory)
     assert first.status == second.status == Outcome.SUCCESS
     assert not first.recipe_reused and second.recipe_reused
+
+
+def test_auto_refuses_a_relocation_onto_another_fields_values(tmp_path):
+    memory = tmp_path / "recipes.db"
+    _scrape(V1, memory, "auto")
+    no_titles = V1.replace('<h3 class="title">Engineer</h3>', "").replace(
+        '<h3 class="title">Designer</h3>', ""
+    )
+    failed = _scrape(no_titles, memory, "auto")
+    assert failed.items == [] and failed.repair is not None
+    assert not failed.repair.promoted
+    (candidate,) = failed.repair.candidates
+    assert candidate.decision == "quarantine"
+    assert "value_matches_other_field" in candidate.reasons
+    assert SQLiteRecipeRepository(memory).get(_key()).recipe.version == 1
+
+
+def test_propose_reuses_an_identical_stored_candidate(tmp_path):
+    memory = tmp_path / "recipes.db"
+    _scrape(V1, memory)
+    first = _scrape(V2, memory)
+    second = _scrape(V2, memory)
+    assert [c.version for c in first.repair.candidates] == [2]
+    assert [c.version for c in second.repair.candidates] == [2]
+    assert SQLiteRecipeRepository(memory).next_version(_key()) == 3
+
+
+def test_auto_promotes_a_previously_proposed_candidate(tmp_path):
+    memory = tmp_path / "recipes.db"
+    _scrape(V1, memory)
+    _scrape(V2, memory)
+    healed = _scrape(V2, memory, "auto")
+    assert healed.status == Outcome.SUCCESS and healed.repair.promoted
+    assert healed.repair.promoted_version == healed.recipe_version == 2
+    assert SQLiteRecipeRepository(memory).next_version(_key()) == 3

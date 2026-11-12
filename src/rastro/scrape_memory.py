@@ -3,8 +3,9 @@
 The recipe database holds versions and their lifecycle. A sibling samples file
 (``recipes.samples.db`` next to ``recipes.db``) keeps the latest sanitized success
 per page and recipe, which repair replays as a regression gate. Repair is
-deterministic: relocation, declared fallbacks and exact-name discovery. It never
-calls a model and never fetches anything.
+deterministic: relocation, declared fallbacks and exact-name discovery, gated by
+recipe CI plus a value-shape check against the sample. It never calls a model
+and never fetches anything. An identical stored candidate is reused, not duplicated.
 """
 
 from __future__ import annotations
@@ -18,8 +19,8 @@ from pydantic import BaseModel
 
 from rastro.adapters.sqlite import SQLiteRecipeRepository
 from rastro.application.recipe_ci import evaluate_candidate
-from rastro.application.recipe_repair import repair_candidates
 from rastro.application.repair_candidates import RepairCandidateGenerator
+from rastro.application.self_repair import gate_values, store_candidates
 from rastro.application.success_samples import SuccessfulSample
 from rastro.domain.memory import RecipeKey
 from rastro.domain.models import (
@@ -32,7 +33,7 @@ from rastro.domain.models import (
     Source,
     schema_fingerprint,
 )
-from rastro.domain.recipe_compare import CandidateEvaluation, RepairPolicy
+from rastro.domain.recipe_compare import CandidateEvaluation, RecipeComparison, RepairPolicy
 from rastro.domain.repair import RepairCandidate
 from rastro.domain.results import RepairProposal, SelfRepair
 
@@ -110,8 +111,10 @@ class ScrapeMemory:
         policy = RepairPolicy(auto_promote=mode == "auto")
         now = datetime.now(UTC)
 
+        history = [record.data for fixture in fixtures for record in fixture.expected.records]
+
         def evaluate(candidate: RepairCandidate) -> CandidateEvaluation:
-            return evaluate_candidate(
+            evaluation = evaluate_candidate(
                 candidate,
                 document,
                 source=source,
@@ -122,16 +125,25 @@ class ScrapeMemory:
                 fixtures=fixtures,
                 policy=policy,
             )
+            return gate_values(
+                evaluation,
+                candidate,
+                previous=previous,
+                document=document,
+                source=source,
+                schema=schema,
+                parser=parser,
+                limits=self._limits,
+                history=history,
+            )
 
-        comparisons = await asyncio.to_thread(
-            repair_candidates,
-            generated.candidates,
-            previous=previous,
-            key=key,
-            lifecycle=self.repository,
-            evaluate=evaluate,
-            at=now,
-        )
+        def persist() -> tuple[RecipeComparison, ...]:
+            evaluated = [(c, evaluate(c)) for c in generated.candidates]
+            return store_candidates(
+                evaluated, previous=previous, key=key, lifecycle=self.repository, at=now
+            )
+
+        comparisons = await asyncio.to_thread(persist)
         proposals = tuple(
             RepairProposal(
                 version=item.candidate_version,
