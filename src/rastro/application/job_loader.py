@@ -99,6 +99,24 @@ def validate_job_paths(
     return file_paths, memory_path
 
 
+def recipe_memory_path(
+    job: Job, *, base_dir: Path | None, allow_absolute_paths: bool = False
+) -> Path | None:
+    """The contained ``recipe_memory`` path; refuses symlinks, like the dataset store."""
+    if job.recipe_memory is None:
+        return None
+    resolved = resolve_job_path(
+        job.recipe_memory, base_dir=base_dir, allow_absolute_paths=allow_absolute_paths
+    )
+    raw = Path(job.recipe_memory)
+    if not raw.is_absolute():
+        assert base_dir is not None  # resolve_job_path requires it for relative paths
+        raw = base_dir.resolve() / raw
+    if any(part.is_symlink() for part in (raw, *raw.parents)):
+        raise ConfigurationError("recipe_memory paths must not contain symlinks")
+    return resolved
+
+
 def load_job(path: str | Path, *, allow_absolute_paths: bool = False) -> Job:
     """Load a `.toml` or `.json` job file and verify path containment against its directory."""
     file_path = Path(path)

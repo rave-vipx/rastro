@@ -213,7 +213,9 @@ from rastro import (
 | `apply_job_recipe(path, source)` | `Path` | Writes the serving recipe of a source back into the job file (`rastro recipe apply`). |
 
 `source` is one-based. `RepairReport` has `schema_version = 1`, a `run_id` and one
-`SourceRepair` per source with its `comparisons` and `promoted_version`. `JobRunResult.recipes`
+`SourceRepair` per source with its `comparisons` (each a `RecipeComparison` with an
+optional `CandidateEvaluation`) and `promoted_version`. Repair thresholds are set in the
+job's `[repair]` table, not through a Python policy object. `JobRunResult.recipes`
 lists one `RecipeSelection` (`source_index`, `recipe_origin`, `recipe_version`) per source;
 `JobLoadResult` sources carry the same `recipe_origin` and `recipe_version`. See
 [recipe repair](repair.md) for the gates and the rule that picks the recipe.
@@ -226,7 +228,8 @@ from rastro import FieldConfidence, Suggestion, SuggestionError, suggest
 
 `suggest(html, schema, *, examples, url=None, records_min=2, limits=None)` builds a
 `CssRecipe` from a saved page and example values, runs it through the normal extraction
-pipeline and returns a `Suggestion` with `recipe`, `preview` (an `ExtractionResult`) and
+pipeline and returns a `Suggestion` with `recipe`, `preview` (an `ExtractionResult`), `status` (the
+preview outcome; check it is `success` before trusting the recipe) and
 `confidence` (one `FieldConfidence` per schema field: `method` is `example`, `microdata` or
 `unmapped`, plus `selector`, `examples_matched`, `examples_total`, `records_with_value`,
 `ambiguous` and `note`). `schema` is a Pydantic model or a list of job field definitions.

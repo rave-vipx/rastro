@@ -37,6 +37,7 @@ First public release candidate of `rastro-engine` on PyPI. Entries under "Unrele
 - `SQLiteRecipeRepository(path, read_only=True)` reads an existing store without creating, migrating or writing it (DATA-002).
 - `rastro recipe promote` adopts an imported candidate on a store with nothing serving, so export, import, promote and `job load` work on a fresh store; the candidate gate still runs on the job's own page (HUB-001, REC-006).
 - The MCP server covers the whole job lifecycle: `job_extract` (like `rastro job run`, no dataset write), `job_load` (with `drift`), `drift_status`, `recipe_history`, `recipe_repair` (proposes; promotes only when the job sets `[repair] auto_promote = true`), `recipe_promote` (requires a reason), `recipe_apply`, `suggest_recipe`, `job_new` (never overwrites) and `scrape_file` (one-off extraction from a workspace file, no network). Tools declare bounded JSON Schema inputs and read-only/destructive/idempotent hints, outputs are bounded with `truncated`, and the server sends workflow `instructions` (AGENT-002, AGENT-003, REPAIR-002-005, REC-006, INT-002, JOB-001).
+- `rastro new --allow-partial` writes a job even when the recipe preview is only a partial success; `Suggestion.status` reports the preview outcome (JOB-001, INT-002).
 
 ### Changed
 
@@ -49,6 +50,11 @@ First public release candidate of `rastro-engine` on PyPI. Entries under "Unrele
 - MCP `job_run` is renamed `job_load`, matching `rastro job load` (it writes the dataset); `job_run` stays as a deprecated alias until 0.7.0. Use `job_extract` for the `rastro job run` behaviour. MCP tool errors, including argument validation errors, are always `{"error", "message", "location", "hint"}`; the `mcp` extra now requires `mcp>=1.10` (AGENT-002, AGENT-003).
 - `rastro studio` and `rastro mcp` report a missing optional extra as `{"error": "missing_extra", "message", "location": null, "hint": "pip install 'rastro-engine[<extra>]'"}` (P-008, AGENT-002).
 - A job `[dataset]` without `match_fields` now matches records on its `identity` fields only and flags no uncertain matches; previously it assumed event fields named `title`, `venue` and `start_time`. To keep near matching, declare `match_fields` explicitly. Errors in `match_fields`, `identity` and `approve` now report their TOML key as `location` (DATA-004, AGENT-001).
+- `rastro new` refuses (exit 2, listing the preview issues) when the suggested recipe's preview is not a full success; pass `--allow-partial` to write it anyway (JOB-001).
+- `rastro.scrape("page.html", ...)` raises `ConfigurationError` asking for `pathlib.Path(...)` instead of parsing the filename as HTML (INT-001).
+- `rastro recipe import` reuses only an equal candidate or serving version; an equal retired version gets a new candidate version (HUB-001, REC-005).
+- The recipe-version conflict error names the next free version to set in the job file (REC-006, ADR 0021).
+- `RepairPolicy` is no longer exported from `rastro`; repair thresholds stay in the job's `[repair]` table. The `suggest` test seam is now the private `_suggester` keyword.
 
 ### Fixed
 
@@ -58,6 +64,9 @@ First public release candidate of `rastro-engine` on PyPI. Entries under "Unrele
 - Every CLI error on `stderr` now has `error`, `message` and `location`, plus an optional `hint`. Commands other than `rastro job` used to print only `{"error": "invalid_input", "hint": ...}`. `rastro dataset export` and `status` on a missing file name the missing path. `rastro studio` and `rastro mcp` without their extra print `missing_extra` with the `pip install` command in `hint` (it used to be in `message` for `mcp`) (AGENT-001, DATA-003).
 - `rastro demo` prints its price as an exact decimal string (`"12.5"`), like every other JSON output (AGENT-001).
 - The HTTP `User-Agent` reports the installed package version instead of a fixed `0.1` (transparent contact metadata, ADR 0002).
+- File targets of `rastro.scrape` are opened non-blocking, so a FIFO is refused instead of hanging (SEC-005).
+- Job runs, loads and previews refuse a symlinked `recipe_memory` path; run and load open a current-schema store read-only while choosing recipes, and a pinned `recipe_version` is reported only when the store holds it (SEC-008, REC-006).
+- `rastro recipe apply` refuses a symlink in any directory between the working directory (or filesystem root) and the job file, and atomic writes sync the parent directory on POSIX (SEC-008).
 
 ## 0.5.0 — not published (2026-11-11)
 

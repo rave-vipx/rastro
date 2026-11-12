@@ -31,6 +31,11 @@ def add_commands(subcommands: argparse._SubParsersAction) -> None:  # type: igno
     _add_example_options(new)
     new.add_argument("--dataset", help="Dataset path for approved records, relative to the job")
     new.add_argument("--identity", action="append", default=[], help="Record key field")
+    new.add_argument(
+        "--allow-partial",
+        action="store_true",
+        help="Write the job even if the recipe preview is only a partial success",
+    )
 
 
 def _add_example_options(parser: argparse.ArgumentParser) -> None:
@@ -88,6 +93,7 @@ def new_command(args: argparse.Namespace) -> int:
         records_min=args.records_min,
         dataset=args.dataset,
         identity=tuple(args.identity),
+        allow_partial=args.allow_partial,
     )
     print(json.dumps({"schema_version": 1, "created": str(path)}))
     return 0

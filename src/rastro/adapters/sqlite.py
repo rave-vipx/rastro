@@ -130,7 +130,11 @@ class SQLiteRecipeRepository:
                 return self._read(db, key, identity, recipe.version)
             # Compare validated definitions so new optional defaults do not conflict with M3 JSON.
             if Recipe.model_validate_json(existing[0]) != recipe:
-                raise RecipeConflictError("Recipe definition changed; increment its version")
+                free = next_version(db, identity)
+                raise RecipeConflictError(
+                    f"Recipe version {recipe.version} is already stored with another "
+                    f"definition; set the recipe version to {free} or higher"
+                )
             db.execute(
                 "UPDATE recipes SET "
                 "selected_index = CASE WHEN ? >= last_success_at "

@@ -12,7 +12,7 @@ from pathlib import Path
 
 import rastro
 from rastro.application.active_recipes import memory_wins
-from rastro.application.job_loader import resolve_job_path
+from rastro.application.job_loader import recipe_memory_path
 from rastro.domain.jobs import FileJobSource, Job
 from rastro.domain.memory import RecipeKey
 from rastro.domain.models import ConfigurationError, Recipe
@@ -30,9 +30,8 @@ def read_only_job(job: Job, *, base_dir: Path, allow_absolute_paths: bool = Fals
     """Return ``job`` with per-source recipes resolved from a read-only store, and no memory."""
     if job.recipe_memory is None:
         return job
-    path = resolve_job_path(
-        job.recipe_memory, base_dir=base_dir, allow_absolute_paths=allow_absolute_paths
-    )
+    path = recipe_memory_path(job, base_dir=base_dir, allow_absolute_paths=allow_absolute_paths)
+    assert path is not None
     repository = rastro.SQLiteRecipeRepository(path, read_only=True) if path.is_file() else None
     if repository is None and job.recipe_version is not None:
         raise ConfigurationError("recipe_version needs an existing recipe_memory file")
