@@ -26,7 +26,7 @@ from rastro import (
 from rastro.application.job_preview import preview_job_file, render_preview_table
 from rastro.application.job_summary import job_validation_summary
 from rastro.cli_dataset import add_commands, dataset_command, load_job_command
-from rastro.cli_errors import UsageError, classify
+from rastro.cli_errors import UsageError, classify, missing_extra_error
 from rastro.cli_recipe import add_commands as add_recipe_commands
 from rastro.cli_recipe import recipe_command
 from rastro.cli_studio import add_command as add_studio_command
@@ -144,8 +144,7 @@ def _mcp_command(args: argparse.Namespace) -> int:
     try:
         from rastro.adapters.mcp_server import serve
     except ImportError:
-        message = "The MCP server needs the optional extra: pip install 'rastro-engine[mcp]'"
-        print(json.dumps({"error": "missing_extra", "message": message}), file=sys.stderr)
+        print(json.dumps(missing_extra_error("mcp")), file=sys.stderr)
         return int(JobExitCode.CONFIG_ERROR)
     if not args.root.is_dir():
         raise RastroError("--root must be an existing directory")
@@ -228,8 +227,12 @@ def main(argv: list[str] | None = None) -> int:
     except (OSError, ValueError, ValidationError, SchemaError, RastroError) as error:
         if args.command in {"job", "recipe"}:
             return _report_job_error(error)
-        hint = "Check input, recipe, and resource limits"
-        print(json.dumps({"error": "invalid_input", "hint": hint}), file=sys.stderr)
+        payload = {
+            "hint": "Check input, recipe, and resource limits",
+            **classify(error),
+            "error": "invalid_input",
+        }
+        print(json.dumps(payload), file=sys.stderr)
         return int(JobExitCode.CONFIG_ERROR)
     except Exception as error:
         if args.command not in {"job", "recipe"}:

@@ -18,6 +18,7 @@ All notable user-facing changes will be recorded here. No public release has bee
 
 - Job field values are stripped of surrounding whitespace (NBSP included) before validation; a blank required value is a validation error instead of a successful `""` (QUAL-002, QUAL-004, JOB-001).
 - `rastro job load` no longer exits 2 after writing rows when a field holds a relative URL: the retained repair fixture now replays exactly. A repair-evidence retention failure after the rows are committed is reported as `evidence_retention_failed` on that source, with the load's exit code unchanged (DATA-001, REPAIR-002, SCR-002).
+- Every CLI error on `stderr` now has `error`, `message` and `location`, plus an optional `hint`. Commands other than `rastro job` used to print only `{"error": "invalid_input", "hint": ...}`. `rastro dataset export` and `status` on a missing file name the missing path. `rastro studio` and `rastro mcp` without their extra print `missing_extra` with the `pip install` command in `hint` (it used to be in `message` for `mcp`) (AGENT-001, DATA-003).
 - `rastro demo` prints its price as an exact decimal string (`"12.5"`), like every other JSON output (AGENT-001).
 - The HTTP `User-Agent` reports the installed package version instead of a fixed `0.1` (transparent contact metadata, ADR 0002).
 

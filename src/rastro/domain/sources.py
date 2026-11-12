@@ -86,12 +86,13 @@ class RastroError(Exception):
     """Base class for explicit configuration and resource-limit errors.
 
     ``location`` optionally names the configuration key at fault, such as
-    ``dataset.match_fields``; it never contains input values.
+    ``dataset.match_fields``, and ``hint`` a next step; neither contains input values.
     """
 
-    def __init__(self, *args: object, location: str | None = None) -> None:
+    def __init__(self, *args: object, location: str | None = None, hint: str | None = None) -> None:
         super().__init__(*args)
         self.location = location
+        self.hint = hint
 
 
 class LocatedValueError(ValueError):

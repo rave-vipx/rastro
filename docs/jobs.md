@@ -340,6 +340,7 @@ option) use the same format:
   the rest.
 - `location`: dotted path of the first invalid field, for example
   `fields.0.string.pattern` (union members appear by tag), or `null` when no field applies.
+- `hint` (optional): a suggested next step, such as the command to run.
 
 | `error` | Meaning |
 | --- | --- |
@@ -353,7 +354,13 @@ option) use the same format:
 | `file_error` | The operating system refused to read a file. |
 | `internal_error` | Unexpected failure. Run with `--verbose` for a traceback on `stderr`. |
 
-Commands other than `rastro job` keep their existing output.
+Other commands use the same envelope. Their input errors use the code `invalid_input`
+with a specific `message` (for example `Dataset file not found: agenda.sqlite` from
+`rastro dataset export`), and a missing optional dependency uses `missing_extra`:
+
+```json
+{"error": "missing_extra", "message": "This command needs the optional 'studio' extra", "location": null, "hint": "pip install 'rastro-engine[studio]'"}
+```
 
 ## Machine-readable output and JSON Schemas
 
