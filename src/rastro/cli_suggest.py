@@ -70,7 +70,7 @@ def suggest_command(args: argparse.Namespace) -> int:
             "Example field names must start with a letter and use letters, digits or _"
         ) from None
     found = suggest(html, fields, examples=examples, url=args.url, records_min=args.records_min)
-    payload = _payload(found)
+    payload = suggestion_payload(found)
     if args.output == "json":
         print(json.dumps(payload, indent=2))
     else:
@@ -93,7 +93,7 @@ def new_command(args: argparse.Namespace) -> int:
     return 0
 
 
-def _payload(found: Suggestion[Any]) -> dict[str, Any]:
+def suggestion_payload(found: Suggestion[Any]) -> dict[str, Any]:
     rows = [record.data.model_dump(mode="json") for record in found.preview.records]
     return {
         "schema_version": 1,

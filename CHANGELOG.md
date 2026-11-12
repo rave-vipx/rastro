@@ -35,6 +35,7 @@ First public release candidate of `rastro-engine` on PyPI. Entries under "Unrele
 - `rastro job preview`, Studio preview and the MCP `job_preview` tool work for jobs with `recipe_memory`: the store is opened read-only (never created or upgraded) and a stored serving recipe newer than the job file's recipe is used (DATA-002, REC-001, P-008, AGENT-002).
 - `SQLiteRecipeRepository(path, read_only=True)` reads an existing store without creating, migrating or writing it (DATA-002).
 - `rastro recipe promote` adopts an imported candidate on a store with nothing serving, so export, import, promote and `job load` work on a fresh store; the candidate gate still runs on the job's own page (HUB-001, REC-006).
+- The MCP server covers the whole job lifecycle: `job_extract` (like `rastro job run`, no dataset write), `job_load` (with `drift`), `drift_status`, `recipe_history`, `recipe_repair` (proposes; promotes only when the job sets `[repair] auto_promote = true`), `recipe_promote` (requires a reason), `recipe_apply`, `suggest_recipe`, `job_new` (never overwrites) and `scrape_file` (one-off extraction from a workspace file, no network). Tools declare bounded JSON Schema inputs and read-only/destructive/idempotent hints, outputs are bounded with `truncated`, and the server sends workflow `instructions` (AGENT-002, AGENT-003, REPAIR-002-005, REC-006, INT-002, JOB-001).
 
 ### Changed
 
@@ -43,6 +44,7 @@ First public release candidate of `rastro-engine` on PyPI. Entries under "Unrele
 - Code that imported `rastro.cli_dataset.load_job_file`, `rastro.cli_repair_context` or `rastro.cli_repair_storage` should use `rastro.load_job_file` and the other public functions; those internal modules moved under `rastro.application`.
 - `rastro recipe import` reuses a stored version whose recipe equals the bundle's, and its JSON output gains `"reused": true|false` (HUB-001).
 - Studio lists only `.toml` job files (with a top-level `format_version`); repair reports and other TOML or JSON files are no longer shown (P-008).
+- MCP `job_run` is renamed `job_load`, matching `rastro job load` (it writes the dataset); `job_run` stays as a deprecated alias until 0.7.0. Use `job_extract` for the `rastro job run` behaviour. MCP tool errors, including argument validation errors, are always `{"error", "message", "location", "hint"}`; the `mcp` extra now requires `mcp>=1.10` (AGENT-002, AGENT-003).
 - `rastro studio` and `rastro mcp` report a missing optional extra as `{"error": "missing_extra", "message", "location": null, "hint": "pip install 'rastro-engine[<extra>]'"}` (P-008, AGENT-002).
 - A job `[dataset]` without `match_fields` now matches records on its `identity` fields only and flags no uncertain matches; previously it assumed event fields named `title`, `venue` and `start_time`. To keep near matching, declare `match_fields` explicitly. Errors in `match_fields`, `identity` and `approve` now report their TOML key as `location` (DATA-004, AGENT-001).
 
