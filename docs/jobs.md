@@ -169,6 +169,12 @@ All field types accept `required = true` (default) or `required = false` (nullab
 to `None` when omitted by a recipe). Constraints from another type (such as `ge` on `string`)
 are rejected during validation.
 
+Extracted text values of every type have surrounding whitespace, including non-breaking
+spaces, removed before validation, so `min_length`, `pattern` and number or date parsing see
+the real value. A required field whose value is blank is a validation error, never an empty
+success. A blank value for an optional field stays an empty string, so `min_length = 1` still
+rejects it.
+
 ### Strict job definitions, lax extracted values
 
 The job file itself is parsed strictly. Booleans must be TOML/JSON booleans, integers must be
