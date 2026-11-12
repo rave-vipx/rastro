@@ -19,7 +19,7 @@ from mcp.server.fastmcp.exceptions import ToolError
 from mcp.types import ToolAnnotations
 from pydantic import Field
 
-from rastro import mcp_authoring, mcp_lifecycle, mcp_tools
+from rastro import __version__, mcp_authoring, mcp_lifecycle, mcp_tools
 from rastro.cli_errors import classify
 
 INSTRUCTIONS = """\
@@ -105,6 +105,7 @@ def build_server(root: Path) -> FastMCP:
     """Create the server; every path argument is resolved inside ``root``."""
     workspace = root.resolve()
     server = _RastroMCP("rastro", instructions=INSTRUCTIONS)
+    server._mcp_server.version = __version__  # serverInfo: Rastro's version, not the library's
     _register_jobs(server, workspace)
     _register_recipes(server, workspace)
     _register_authoring(server, workspace)
@@ -239,10 +240,12 @@ def _register_authoring(server: FastMCP, workspace: Path) -> None:
         examples: Examples,
         url: Url | None = None,
         dataset: Path_ | None = None,
-        identity: Annotated[list[FieldName], Field(max_length=20)] | None = None,
+        identity: FieldName | Annotated[list[FieldName], Field(max_length=20)] | None = None,
+        recipe_memory: Path_ | None = None,
     ) -> dict[str, Any]:
         """Create a new .toml job from a saved page (in the job's directory) and examples.
-        Refuses to overwrite. dataset requires identity fields."""
+        Refuses to overwrite. dataset requires identity (a field name or a list).
+        recipe_memory names a recipe store next to the job; it enables recipe_repair."""
         return await _call(  # type: ignore[no-any-return]
             mcp_authoring.job_new,
             workspace,
@@ -252,6 +255,7 @@ def _register_authoring(server: FastMCP, workspace: Path) -> None:
             url=url,
             dataset=dataset,
             identity=identity or (),
+            recipe_memory=recipe_memory,
         )
 
     @server.tool(annotations=READ)

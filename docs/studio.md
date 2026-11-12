@@ -35,6 +35,8 @@ The page has two views, **Jobs** and **New scraper**, switched with the buttons 
 3. **Create the job.** Name the job file (for example `pages/events.toml`). It must be in an
    existing folder, next to the page, and must not exist yet: Studio never overwrites a file.
    To store records, give a dataset file name and tick at least one **Record key** field.
+   To repair the recipe later, also give a **Recipe memory file** (for example
+   `recipes.sqlite`).
    Studio then opens the new job in the Jobs view.
 
 ### Work with a job (Jobs)
@@ -91,7 +93,8 @@ The page has two views, **Jobs** and **New scraper**, switched with the buttons 
 Studio is a local tool, not a server to expose.
 
 - Loopback only. Requests whose `Host` is not `127.0.0.1` or `localhost` are rejected (this
-  also blocks DNS rebinding), and so is any request whose `Origin` is not local.
+  also blocks DNS rebinding), and so is any request whose `Origin` is not this Studio's.
+  A `POST` without an `Origin` header is refused (browsers always send it).
 - A random token is generated on every start and printed once as
   `http://127.0.0.1:PORT/#token=<token>`. The page reads it from the URL fragment (which the
   browser never sends to the server), keeps it in memory and clears it from the address bar.

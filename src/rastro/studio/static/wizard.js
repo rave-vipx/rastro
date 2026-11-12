@@ -88,8 +88,10 @@ async function createJob(app) {
   const file = $("new-file").value.trim();
   if (!file) throw new Error("name the job file");
   const dataset = $("new-dataset").value.trim();
+  const memory = $("new-memory").value.trim();
   const made = await api("/api/create", {
     ...body, file, dataset: dataset || null, identity: dataset ? body.identity : [],
+    recipe_memory: memory || null,
   });
   show("create-status", `Created ${made.file}. Opening it…`, "good");
   await app.refreshJobs(made.file);

@@ -38,7 +38,7 @@ The server sends this order to the client as its `instructions`:
 | Tool | CLI equivalent | Effect | Hints |
 | --- | --- | --- | --- |
 | `suggest_recipe(page_path, examples, url?)` | `rastro suggest` | Verified CSS recipe, per-field confidence and preview rows | read-only |
-| `job_new(path, page_path, examples, url?, dataset?, identity?)` | `rastro new` | Writes a new `.toml` job; refuses to overwrite | writes |
+| `job_new(path, page_path, examples, url?, dataset?, identity?, recipe_memory?)` | `rastro new` | Writes a new `.toml` job; refuses to overwrite | writes |
 | `job_validate(path)` | `rastro job validate` | Validates the job; reads no sources | read-only |
 | `job_preview(path)` | `rastro job preview --output json` | Runs the job, writes nothing (recipe memory is read-only) | read-only |
 | `job_extract(path)` | `rastro job run` | Runs the job and returns its records; writes no dataset | writes recipe memory only |
@@ -74,7 +74,9 @@ checks were overridden. Rollback is not exposed; use `rastro recipe rollback`.
 
 - `suggest_recipe` and `job_new` take `examples`: 1 to 20 records mapping field names to text
   as it appears on the page.
-- `job_new` needs the page inside the new job file's directory; `dataset` requires `identity`.
+- `job_new` needs the page inside the new job file's directory; `dataset` requires `identity`
+  (a field name or a list). `recipe_memory` names a recipe store relative to the job, in a
+  folder that already exists; without it `recipe_repair` refuses the job.
 - `scrape_file` takes either `fields` (field name to selector ending in `::text` or
   `::attr(name)`, plus an optional `records` selector) or a full `recipe` object.
 - `url` is only the address the page came from, used for relative links. These tools never

@@ -56,7 +56,8 @@ def job_new(
     *,
     url: str | None = None,
     dataset: str | None = None,
-    identity: Sequence[str] = (),
+    identity: str | Sequence[str] = (),
+    recipe_memory: str | None = None,
 ) -> dict[str, Any]:
     """Write a new job file from a saved page and examples; refuses to overwrite."""
     new_job(
@@ -65,7 +66,8 @@ def job_new(
         examples=examples,
         url=url,
         dataset=dataset,
-        identity=tuple(identity),
+        identity=(identity,) if isinstance(identity, str) else tuple(identity),
+        recipe_memory=recipe_memory,
     )
     return {"schema_version": 1, "created": path}
 

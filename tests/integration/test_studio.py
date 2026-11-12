@@ -36,6 +36,7 @@ def root(tmp_path: Path) -> Path:
 def serving(app: Starlette, base_url: str) -> Iterator[TestClient]:
     """In-process client; only the event loop's private wake-up socket is allowed to open."""
     client = TestClient(app, base_url=base_url)
+    client.headers["Origin"] = base_url  # browsers send Origin on every POST
     with pytest.MonkeyPatch.context() as patch:
         patch.setattr(socket, "socket", _ORIGINAL_SOCKET)
         client.__enter__()
@@ -190,6 +191,12 @@ def _check_local(local: TestClient, token: str) -> None:
     assert (
         local.post("/api/validate", json=body, headers={"X-Studio-Token": token}).status_code == 200
     )
+    # A mutating request without Origin is refused even with the token; GETs stay allowed.
+    del local.headers["Origin"]
+    assert (
+        local.post("/api/validate", json=body, headers={"X-Studio-Token": token}).status_code == 403
+    )
+    assert local.get("/api/jobs", headers={"X-Studio-Token": token}).status_code == 200
 
 
 def test_request_bodies_are_bounded_and_must_be_objects(client: TestClient) -> None:

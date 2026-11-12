@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import Sequence
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 
 from pydantic import ValidationError
@@ -44,11 +44,13 @@ def new_job(
     dataset: str | None = None,
     identity: Sequence[str] = (),
     allow_partial: bool = False,
+    recipe_memory: str | None = None,
 ) -> Path:
     """Write a new TOML job at ``path``; never overwrite an existing file.
 
     The suggested recipe's preview must succeed; ``allow_partial=True`` writes a job whose
-    preview is only a partial success.
+    preview is only a partial success. ``recipe_memory`` names a recipe store relative to
+    the job file, in a folder that already exists; it enables repair and promotion.
     """
     if path.suffix != ".toml":
         raise ConfigurationError("The new job file must end in .toml")
@@ -56,6 +58,8 @@ def new_job(
         raise ConfigurationError("Job file already exists; refusing to overwrite it")
     if dataset is not None and not identity:
         raise ConfigurationError("--dataset requires --identity naming the record key fields")
+    if recipe_memory is not None:
+        _check_memory(recipe_memory, path.parent, dataset)
     page_path = _relative(page, path.parent)
     html = _read_local_source(page, Limits().max_html_bytes, "html")
     checked = check_examples(examples)
@@ -79,11 +83,31 @@ def new_job(
             + "; add examples, or pass --allow-partial to write the job anyway"
         )
     typed = _typed_fields(html, fields, checked, found, Source(url=source.resolved_source_url()))
-    text = render_job(typed, found.recipe, source, dataset=dataset, identity=identity)
+    text = render_job(
+        typed,
+        found.recipe,
+        source,
+        dataset=dataset,
+        identity=identity,
+        recipe_memory=recipe_memory,
+    )
     parse_job(text, format="toml")
     with path.open("x", encoding="utf-8") as handle:
         handle.write(text)
     return path
+
+
+def _check_memory(memory: str, base: Path, dataset: str | None) -> None:
+    try:
+        validate_job_path_syntax(memory)
+    except ValueError:
+        raise ConfigurationError("recipe_memory must be a file name relative to the job") from None
+    if PurePosixPath(memory).is_absolute() or PureWindowsPath(memory).anchor:
+        raise ConfigurationError("recipe_memory must be a file name relative to the job")
+    if memory == dataset:
+        raise ConfigurationError("recipe_memory must be a different file from the dataset")
+    if not (base / memory).parent.is_dir():
+        raise ConfigurationError("The recipe_memory folder must already exist")
 
 
 def _relative(page: Path, base: Path) -> str:
@@ -134,11 +158,13 @@ def render_job(
     *,
     dataset: str | None = None,
     identity: Sequence[str] = (),
+    recipe_memory: str | None = None,
 ) -> str:
     """TOML text for a one-source job; field names are validated identifiers."""
     lines = [
         "# Created by `rastro new`. Review the recipe, then run: rastro job run <this file>",
         "format_version = 1",
+        *([f"recipe_memory = {_quote(recipe_memory)}"] if recipe_memory is not None else []),
         "",
         "[recipe]",
         'strategy = "css"',

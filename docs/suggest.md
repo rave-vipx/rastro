@@ -64,13 +64,15 @@ rastro suggest careers.html \
 ```bash
 rastro new careers.toml --from careers.html --url https://acme.example/careers \
   --example title="Senior Dev" --example salary=120 \
-  --dataset offers.sqlite --identity title
+  --dataset offers.sqlite --identity title --recipe-memory recipes.sqlite
 ```
 
 `rastro new` writes a complete [job file](jobs.md) with the suggested recipe, a
 file source pointing at the saved page and one field per example key. It never
 overwrites an existing file, and the page must be in the same directory as the
 job file or below it. `--dataset` needs at least one `--identity` field.
+`--recipe-memory FILE` adds a recipe store (relative to the job, in a folder that
+already exists), which `rastro recipe repair`, `promote` and `apply` need.
 
 Field types are inferred from the example values, conservatively:
 

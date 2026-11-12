@@ -32,6 +32,11 @@ def add_commands(subcommands: argparse._SubParsersAction) -> None:  # type: igno
     new.add_argument("--dataset", help="Dataset path for approved records, relative to the job")
     new.add_argument("--identity", action="append", default=[], help="Record key field")
     new.add_argument(
+        "--recipe-memory",
+        metavar="FILE",
+        help="Recipe store relative to the job, enabling repair (folder must exist)",
+    )
+    new.add_argument(
         "--allow-partial",
         action="store_true",
         help="Write the job even if the recipe preview is only a partial success",
@@ -93,6 +98,7 @@ def new_command(args: argparse.Namespace) -> int:
         records_min=args.records_min,
         dataset=args.dataset,
         identity=tuple(args.identity),
+        recipe_memory=args.recipe_memory,
         allow_partial=args.allow_partial,
     )
     print(json.dumps({"schema_version": 1, "created": str(path)}))
