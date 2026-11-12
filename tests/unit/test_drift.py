@@ -43,10 +43,10 @@ def test_drift_score_is_deterministic_and_explained():
     )
     first = assess_drift(baseline, current)
     assert first == assess_drift(baseline, current)
-    assert first.score == 0.75
+    assert first.score == 1.0  # Total failure after success adds extraction_failed.
     assert first.risk == "high"
     assert first.verdict == "structural_drift"
-    assert {s.field for s in first.signals} == {"starts_at"}
+    assert {s.field for s in first.signals} == {"starts_at", "*"}
     assert all(s.explanation and s.dataset_effect for s in first.signals)
     assert first.thresholds.high == 0.5
 

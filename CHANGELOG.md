@@ -54,6 +54,7 @@ First public release of `rastro-engine` on PyPI: one-call typed scraping with `r
 
 ### Fixed
 
+- `rastro job load --drift` reports a total extraction failure (for example a record selector that no longer matches) on a source that succeeded before as `risk: high`, `score: 1.0` with an `extraction_failed` signal on field `*`, instead of `low`/`0.0` when the earlier success was loaded without `--drift`; `job-load.schema.json` gains the indicator (DRIFT-002, DRIFT-004).
 - `rastro job load` names a dataset folder that does not exist (`location: "dataset.path"`) instead of `Dataset operation failed`; the Studio wizard stores the dataset path relative to the job file and refuses a missing folder or a path outside the job's folder (DATA-001, P-008).
 - The MCP tools reject an absolute path such as `/etc/passwd` as an absolute path instead of reporting a symlink (AGENT-002).
 - Job field values are stripped of surrounding whitespace (NBSP included) before validation; a blank required value is a validation error instead of a successful `""` (QUAL-002, QUAL-004, JOB-001).

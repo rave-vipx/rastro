@@ -270,7 +270,8 @@
         "fallback_used",
         "subtree_fingerprint",
         "field_coverage",
-        "validation_failure_rate"
+        "validation_failure_rate",
+        "extraction_failed"
       ],
       "type": "string"
     },

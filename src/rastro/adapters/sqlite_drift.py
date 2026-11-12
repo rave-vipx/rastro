@@ -8,7 +8,7 @@ from pathlib import Path
 from rastro.adapters.sqlite_dataset import SQLiteDatasetStore
 from rastro.adapters.sqlite_dataset_schema import connection, safe
 from rastro.adapters.structured import load_json
-from rastro.domain.dataset import DatasetStorageError
+from rastro.domain.dataset import DatasetStorageError, SourceStatus
 from rastro.domain.drift import DriftAssessment, DriftThresholds, StructuralSnapshot, assess_drift
 from rastro.domain.job_sources import validate_job_path_syntax
 from rastro.domain.memory import utc_timestamp
@@ -118,7 +118,10 @@ class SQLiteDriftMonitor:
             if last is not None and observed < last:
                 raise DatasetStorageError("Out-of-order drift observation")
             assessment = assess_drift(
-                self._baseline(db, dataset, snapshot), snapshot, thresholds=self._thresholds
+                self._baseline(db, dataset, snapshot),
+                snapshot,
+                thresholds=self._thresholds,
+                previously_succeeded=_previously_succeeded(db, dataset, snapshot),
             )
             payload = assessment.model_dump_json()
             load_json(payload, self._limits)
@@ -133,3 +136,22 @@ class SQLiteDriftMonitor:
                 ),
             )
             return assessment
+
+
+def _previously_succeeded(
+    db: sqlite3.Connection, dataset: str, snapshot: StructuralSnapshot
+) -> bool:
+    """The dataset recorded a success for this source before this run, with or without drift."""
+    has_sources = db.execute(
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'dataset_sources'"
+    ).fetchone()
+    if not has_sources:
+        return False
+    row = db.execute(
+        "SELECT payload FROM dataset_sources WHERE dataset = ? AND source = ?",
+        (dataset, snapshot.source_url),
+    ).fetchone()
+    if row is None:
+        return False
+    status = SourceStatus.model_validate_json(row[0])
+    return status.last_success is not None and status.last_success < snapshot.observed_at
