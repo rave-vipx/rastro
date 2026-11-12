@@ -110,7 +110,8 @@ def test_path_targets_are_bounded_utf8_regular_files(tmp_path):
         rastro.scrape(page, Offer)
     with pytest.raises(ConfigurationError, match="cannot be opened"):
         rastro.scrape(tmp_path / "missing.html", Offer)
-    with pytest.raises(ConfigurationError, match="regular file"):
+    # POSIX opens a directory and refuses it as irregular; Windows cannot open it at all.
+    with pytest.raises(ConfigurationError, match=r"regular file|cannot be opened"):
         rastro.scrape(tmp_path, Offer)
 
 

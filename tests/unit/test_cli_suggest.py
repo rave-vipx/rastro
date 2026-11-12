@@ -54,7 +54,8 @@ def test_suggest_table_never_prints_raw_control_characters(page, capsys):
     assert main(["suggest", str(page), "--output", "table", *EXAMPLES[:4]]) == 0
     out = capsys.readouterr().out
     assert "\x1b" not in out
-    assert "Analyst\\x1b[31m | 95" in out
+    # libxml2 builds differ: the control character is either escaped or dropped by the parser.
+    assert "Analyst\\x1b[31m | 95" in out or "Analyst[31m | 95" in out
 
 
 def test_suggest_failure_is_one_json_error(page, capsys):

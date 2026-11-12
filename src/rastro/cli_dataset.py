@@ -47,7 +47,7 @@ def load_job_command(args: argparse.Namespace) -> int:
 def dataset_command(args: argparse.Namespace) -> int:
     if not args.path.exists():
         raise ConfigurationError(
-            f"Dataset file not found: {args.path}",
+            f"Dataset file not found: {args.path.as_posix()}",
             location="path",
             hint="Create it with `rastro job load <job file>` or check the path",
         )
