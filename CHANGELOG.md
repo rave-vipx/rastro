@@ -30,6 +30,8 @@ First public release of `rastro-engine` on PyPI: one-call typed scraping with `r
 - The MCP server covers the whole job lifecycle: `job_extract` (like `rastro job run`, no dataset write), `job_load` (with `drift`), `drift_status`, `recipe_history`, `recipe_repair` (proposes; promotes only when the job sets `[repair] auto_promote = true`), `recipe_promote` (requires a reason), `recipe_apply`, `suggest_recipe`, `job_new` (never overwrites) and `scrape_file` (one-off extraction from a workspace file, no network). Tools declare bounded JSON Schema inputs and read-only/destructive/idempotent hints, outputs are bounded with `truncated`, and the server sends workflow `instructions` (AGENT-002, AGENT-003, REPAIR-002-005, REC-006, INT-002, JOB-001).
 - `rastro new --recipe-memory FILE`, MCP `job_new(recipe_memory=...)` and the Studio wizard's "Recipe memory file" add `recipe_memory` to the new job, so a job created without the command line can be repaired; MCP `job_new` accepts `identity` as a field name or a list (JOB-001, REC-006, AGENT-003, P-008).
 - `rastro new --allow-partial` writes a job even when the recipe preview is only a partial success; `Suggestion.status` reports the preview outcome (JOB-001, INT-002).
+- `rastro recipe show job.toml --source N [--version V]` prints a stored recipe version as JSON, read-only; `recipe compare` reports `changed_settings` (such as `record_selector`); `rastro recipe --help` describes every subcommand (REC-006).
+- Rejected repair candidates report `blocking` issues: record index, field and issue code, never values (REPAIR-002).
 
 ### Security
 
@@ -54,6 +56,9 @@ First public release of `rastro-engine` on PyPI: one-call typed scraping with `r
 - `rastro recipe import` reuses only an equal candidate or serving version; an equal retired version gets a new candidate version (HUB-001, REC-005).
 - The recipe-version conflict error names the next free version to set in the job file (REC-006, ADR 0021).
 - `RepairPolicy` is no longer exported from `rastro`; repair thresholds stay in the job's `[repair]` table. The `suggest` test seam is now the private `_suggester` keyword.
+- `recipe repair` and `recipe promote` share one evaluator: hard validation, replay or consistency failures reject before ambiguity is considered, and a rejection from either command retires the version with a `Recipe CI: reject` lifecycle event. `--override-gates` bypasses quarantine thresholds only; on a rejected candidate it exits 2 with an error that says so (REPAIR-002, REPAIR-005).
+- `recipe repair` reuses a stored candidate (or a still-rejected retired version) with the same definition instead of allocating a new version each run (REC-006).
+- `recipe apply` on a job whose sources share the job-level recipe adds a `[sources.recipe]` table for the repaired source only, instead of refusing (REC-006).
 
 ### Fixed
 

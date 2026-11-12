@@ -196,6 +196,20 @@ async def _promote(
     evaluation = evidence.evaluate(
         RepairCandidate(recipe=stored.recipe, origin="discovery", rationale="Operator review")
     )
+    if evaluation.decision == "reject":
+        # Same rule as repair: a rejected candidate is retired with a lifecycle event.
+        context.repository.transition(
+            evidence.key,
+            version,
+            RecipeState.RETIRED,
+            reason="Recipe CI: reject",
+            at=datetime.now(UTC),
+        )
+        if override_gates:
+            raise ConfigurationError(
+                "--override-gates bypasses quarantine thresholds, never a validation or "
+                "regression failure; the candidate was rejected and retired" + _describe(evaluation)
+            )
     promoted = evaluation.decision == "promote" or (
         override_gates and evaluation.decision == "quarantine"
     )
@@ -209,6 +223,25 @@ async def _promote(
         comparisons=(RecipeComparison.between(evidence.previous, stored.recipe, evaluation),),
         promoted_version=version if promoted else None,
     )
+
+
+def _describe(evaluation: CandidateEvaluation) -> str:
+    """Blocking record issues as ``record N field: code`` text; never source values."""
+    items = [
+        " ".join(
+            part
+            for part in (
+                f"record {issue.record_index}" if issue.record_index is not None else "",
+                issue.field or "",
+            )
+            if part
+        )
+        + f": {issue.code}"
+        for issue in evaluation.blocking
+    ]
+    failed = [check.name for check in evaluation.regressions if not check.passed]
+    detail = "; ".join(items + failed)
+    return f" ({detail})" if detail else ""
 
 
 async def _repair_source(context: RepairContext, index: int, policy: RepairPolicy) -> SourceRepair:

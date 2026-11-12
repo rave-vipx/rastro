@@ -39,6 +39,11 @@ class CandidateEvaluation(Contract):
     historical_passed: int = Field(ge=0)
     indicators: ConsistencyReport
     regressions: tuple[RegressionCheck, ...]
+    # Why current records failed: record index, field and issue code; never values.
+    blocking: tuple[Issue, ...] = Field(default=(), exclude_if=lambda v: not v)
+
+
+_SETTINGS = ("record_selector", "record_path", "item_type", "require_evidence")
 
 
 class RecipeComparison(Contract):
@@ -48,6 +53,8 @@ class RecipeComparison(Contract):
     previous_digest: str
     candidate_digest: str
     changed_fields: tuple[str, ...]
+    # Recipe-level locators that changed, e.g. ``record_selector`` (field names excluded).
+    changed_settings: tuple[str, ...] = ()
     strategy_changed: bool
     evaluation: CandidateEvaluation | None = None
 
@@ -66,6 +73,11 @@ class RecipeComparison(Contract):
                     for name in previous.fields.keys() | candidate.fields.keys()
                     if previous.fields.get(name) != candidate.fields.get(name)
                 )
+            ),
+            changed_settings=tuple(
+                name
+                for name in _SETTINGS
+                if getattr(previous, name, None) != getattr(candidate, name, None)
             ),
             strategy_changed=previous.strategy != candidate.strategy,
             evaluation=evaluation,

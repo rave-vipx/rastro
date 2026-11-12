@@ -88,8 +88,8 @@ rastro recipe repair job.json --source 1
 exit=0 decisions=promote,reject consistency=consistent,not_assessed
 rastro job load job.json --drift
 exit=0 status=success stale=0 drift=structural_drift,none fields=performance_id,title
-rastro recipe compare job.json --from-version 1 --to-version 4
-exit=0 schema_version=1 versions=1->4 changed=title
+rastro recipe compare job.json --from-version 1 --to-version 2
+exit=0 schema_version=1 versions=1->2 changed=title
 rastro recipe rollback job.json --version 1
 exit=0 state=active version=1
 rastro job load job.json --drift

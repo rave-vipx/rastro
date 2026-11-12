@@ -183,7 +183,11 @@ def test_heterogeneous_containers_remain_ambiguous():
     candidate = candidate_for(changed)
     assert candidate.evidence[0].match_count == 2
     assert candidate.ambiguous
-    assert evaluate(candidate, changed).decision == "quarantine"
+    # The promo card has no matching fields, so the candidate fails validation: rejected,
+    # never activated. Ambiguity alone (valid fields) quarantines.
+    evaluation = evaluate(candidate, changed)
+    assert evaluation.decision == "reject"
+    assert evaluation.blocking
 
 
 def test_container_evidence_fits_with_one_hundred_observed_fields():

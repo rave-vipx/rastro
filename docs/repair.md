@@ -51,6 +51,7 @@ rastro recipe promote job.toml --source 1 --version 2 --reason "Reviewed CI repo
 rastro recipe promote job.toml --source 1 --version 2 --override-gates --reason "Checked by hand"
 rastro recipe apply job.toml --source 1
 rastro recipe compare job.toml --source 1 --from-version 1 --to-version 2
+rastro recipe show job.toml --source 1 --version 2
 rastro recipe rollback job.toml --source 1 --version 1 --reason "Restore previous recipe"
 ```
 
@@ -72,9 +73,10 @@ job file and prints `{"schema_version": 1, "path", "source_index", "recipe_versi
 included, stays as it was. Comments inside the recipe tables are lost. JSON files are
 rewritten with two-space indentation. The result is reparsed and must equal the old job
 except for that recipe, or nothing is written. The file is replaced atomically and
-symlinks are refused. A recipe written inline (`recipe = { ... }`), split by other tables,
-or shared through a job-level `recipe` by several sources is refused with exit code 2;
-update it by hand. When the file already holds the serving recipe, `changed` is `false`
+symlinks are refused. When several sources share the job-level `recipe`, apply adds a
+`[sources.recipe]` table to the repaired source only; the other sources keep the shared
+recipe. A recipe written inline (`recipe = { ... }`) or split by other tables is refused
+with exit code 2; update it by hand. When the file already holds the serving recipe, `changed` is `false`
 and the file is not touched.
 
 Exit codes: **0** means every selected source promoted a candidate (other proposals
@@ -126,7 +128,15 @@ writing recipes or dataset records:
    field the samples never filled is not counted. Required fields must be filled in
    every record.
 
-Every candidate is evaluated. Ambiguous candidates remain quarantined. If multiple
+Every candidate is evaluated, by the same evaluator for `recipe repair` and
+`recipe promote`, so both reach the same verdict on the same page and samples. Hard failures
+come first: a candidate whose current records fail validation, a historical replay or a
+declared consistency rule is **rejected**, and the report's `blocking` list names each
+failing record (`record_index`, `field`, issue `code`, never values). Rejection retires the
+version with a lifecycle event (`Recipe CI: reject`), from either command. Ambiguous
+candidates that otherwise validate remain quarantined (`ambiguous_evidence`). A proposal equal
+to a stored candidate reuses that version, and one equal to a retired version that is rejected
+again reuses it too, so repeated repair runs do not allocate new versions. If multiple
 candidates pass, all are quarantined as competing proposals. A unique passing candidate
 may promote only with `auto_promote = true`. Rejected versions become retired; quarantined
 versions stay in lifecycle state `candidate`. Neither state serves unpinned extraction.
@@ -135,13 +145,17 @@ not bypass history, semantic or configured threshold gates. A malformed or now-f
 candidate cannot be approved through this command. `--override-gates` lets a person
 activate a candidate that CI quarantined (for example, too few current records); it
 requires an explicit `--reason`, which the lifecycle history records as
-`gates overridden: <reason>`. A rejected candidate (failed validation, regression or an
-inconsistent semantic check) is never activated, with or without the flag.
+`gates overridden: <reason>`. The override bypasses quarantine thresholds only, never a
+hard validation failure: a rejected candidate (failed validation, regression or an
+inconsistent semantic check) is retired, and with the flag the command exits 2 with an error
+that says so and lists the blocking records. `recipe promote` is the human review that
+ambiguity asks for: it has no relocation evidence, so `ambiguous_evidence` is not re-checked.
 Proposals identical to the active mapping after evidence/fallback normalization are
 discarded before version allocation. If none remain, repair reports `no_candidates`.
 
 `RecipeComparison` has `schema_version = 1`, old/new versions and canonical recipe
-digests, changed field names, strategy-change status and an optional `CandidateEvaluation`.
+digests, changed field names, changed recipe settings (`changed_settings`, such as
+`record_selector`), strategy-change status and an optional `CandidateEvaluation`.
 It omits page values and selector text. See the [comparison schema](schemas/recipe-comparison.schema.json).
 A repair report contains one comparison per proposed version, generated checks, measured
 indicators, explicit no-candidate outcomes and bounded model issue/call counts.
@@ -184,7 +198,7 @@ selected if the derived selector expands beyond those matches. Homogeneous listi
 containers—sharing the same parent path, child-tag sequence and class token set, with no
 competing same-class or classless same-tag containers of another shape on the page—pass to
 recipe CI; any heterogeneous, extra or unverified single-container match is marked
-ambiguous and quarantined, even when its fields validate. Promotion still requires the
+ambiguous and quarantined when its fields validate, and rejected when they do not. Promotion still requires the
 ordinary history, evidence and configured CI gates.
 
 If no container candidate is available, repair tries declared fallbacks, discovery and

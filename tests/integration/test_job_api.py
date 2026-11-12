@@ -208,10 +208,57 @@ def test_override_never_activates_a_rejected_candidate(job):
         update={"version": 2, "fields": {"job_id": "::attr(data-id)", "title": "main::text"}}
     )
     repository.save_candidate(key, wrong, selected_index=0, at=datetime.now(UTC))
-    report = rastro.promote_job_recipe(job, 1, 2, reason="Force it", override_gates=True)
-    assert report.sources[0].comparisons[0].evaluation.decision == "reject"
-    assert report.sources[0].promoted_version is None
+    with pytest.raises(rastro.ConfigurationError, match="never a validation"):
+        rastro.promote_job_recipe(job, 1, 2, reason="Force it", override_gates=True)
     assert repository.get(key).recipe.version == 1
+    assert repository.get(key, version=2).metadata.state == "retired"
+    assert repository.history(key).events[-1].reason == "Recipe CI: reject"
+
+
+BLANK_TITLE = '<article class="card" data-id="job-6"><h2 class="new-title">  </h2></article>'
+
+
+def test_repair_and_promote_agree_and_repeated_repairs_reuse_the_version(job, capsys):
+    """REPAIR-002/005, REC-006: one evaluator for repair and promote; a rejection retires
+    the version with an event, names the blocking record and field, and a second repair of
+    the same definition allocates no new version."""
+    assert rastro.load_job_file(job).job.status == "success"
+    broken = board("new-title", wrap=True).replace("</section>", BLANK_TITLE + "</section>")
+    (job.parent / "board.html").write_text(broken, encoding="utf-8")
+    first = rastro.repair_job_source(job, 1, auto_promote=True)
+    (comparison,) = first.sources[0].comparisons
+    evaluation = comparison.evaluation
+    assert evaluation.decision == "reject"
+    assert evaluation.reasons == ("validation_or_regression_failed",)
+    assert any(i.record_index == 5 and i.field == "title" for i in evaluation.blocking)
+    repository, key = history(job)
+    version = comparison.candidate_version
+    assert repository.get(key, version=version).metadata.state == "retired"
+    second = rastro.repair_job_source(job, 1, auto_promote=True)
+    assert [c.candidate_version for c in second.sources[0].comparisons] == [version]
+    assert repository.next_version(key) == version + 1
+    assert main(["recipe", "promote", str(job), "--version", str(version), "--reason", "x"]) == 2
+    assert "Only a stored candidate" in capsys.readouterr().err
+
+
+def test_promote_rejects_like_repair_and_retires(job):
+    """REPAIR-005: promote reaches repair's verdict for the same candidate and page."""
+    assert rastro.load_job_file(job).job.status == "success"
+    repository, key = history(job)
+    recipe = rastro.load_job(job).sources[0].recipe
+    candidate = recipe.model_copy(
+        update={"version": 2, "fields": {**recipe.fields, "title": "h2.new-title::text"}}
+    )
+    repository.save_candidate(key, candidate, selected_index=0, at=datetime.now(UTC))
+    broken = board("new-title").replace("</main>", BLANK_TITLE + "</main>")
+    (job.parent / "board.html").write_text(broken, encoding="utf-8")
+    report = rastro.promote_job_recipe(job, 1, 2, reason="x")
+    evaluation = report.sources[0].comparisons[0].evaluation
+    assert (evaluation.decision, evaluation.reasons) == (
+        "reject",
+        ("validation_or_regression_failed",),
+    )
+    assert repository.get(key, version=2).metadata.state == "retired"
 
 
 def test_symlinked_recipe_memory_is_refused_by_run_load_and_preview(job, capsys):
@@ -258,3 +305,102 @@ def test_apply_refuses_a_symlinked_parent_directory(job, tmp_path, monkeypatch):
     with pytest.raises(rastro.ConfigurationError, match="symlink"):
         rastro.apply_job_recipe(Path("alias") / "job.toml", 1)
     assert job.read_bytes() == before
+
+
+SHARED = """# Two boards share one job recipe.
+format_version = 1
+recipe_memory = "recipes.sqlite"
+
+[dataset]
+name = "jobs"
+path = "jobs.sqlite"
+identity = ["job_id"]
+
+[recipe]
+version = 1
+strategy = "css"
+record_selector = "article.card"
+require_evidence = true
+
+[recipe.fields]
+job_id = "::attr(data-id)"
+title = "h2.title::text"
+salary = "span.salary::text"
+
+[[sources]]
+kind = "file"
+path = "board.html"
+url = "https://example.test/jobs"
+
+[[sources]]
+kind = "file"
+path = "other.html"
+url = "https://example.test/other"
+
+# Fields follow.
+[[fields]]
+name = "job_id"
+type = "string"
+
+[[fields]]
+name = "title"
+type = "string"
+
+[[fields]]
+name = "salary"
+type = "string"
+required = false
+"""
+
+
+def test_apply_gives_one_source_of_a_shared_recipe_its_own_table(tmp_path, capsys):
+    """REC-006: apply writes [sources.recipe] for the repaired source; the others keep the
+    shared job recipe."""
+    (tmp_path / "board.html").write_text(board(), encoding="utf-8")
+    (tmp_path / "other.html").write_text(board(), encoding="utf-8")
+    job = tmp_path / "job.toml"
+    job.write_text(SHARED, encoding="utf-8")
+    assert rastro.load_job_file(job).job.status == "success"
+    break_title(job)
+    assert rastro.repair_job_source(job, 1, auto_promote=True).sources[0].promoted_version == 2
+    rastro.apply_job_recipe(job, 1)
+    text = job.read_text(encoding="utf-8")
+    assert text.startswith(SHARED.split("[[sources]]")[0])
+    assert text.endswith(SHARED[SHARED.index("# Fields follow.") :])
+    applied = rastro.load_job(job)
+    assert applied.sources[0].recipe.version == 2
+    assert applied.sources[1].recipe is None
+    assert applied.recipe.fields["title"] == "h2.title::text"
+    result = rastro.run_job_file(job)
+    assert [s.recipe_origin for s in result.recipes] == ["job", "job"]
+    assert result.job.status == "success"
+
+
+def test_recipe_show_and_compare_report_record_selector_changes(job, capsys):
+    """REC-006: show prints a stored version read-only; compare lists changed settings."""
+    assert rastro.load_job_file(job).job.status == "success"
+    repository, key = history(job)
+    recipe = rastro.load_job(job).sources[0].recipe
+    moved = recipe.model_copy(update={"version": 2, "record_selector": "main article.card"})
+    repository.save_candidate(key, moved, selected_index=0, at=datetime.now(UTC))
+    capsys.readouterr()
+    assert main(["recipe", "show", str(job), "--version", "2"]) == 0
+    shown = json.loads(capsys.readouterr().out)
+    assert (shown["version"], shown["state"]) == (2, "candidate")
+    assert shown["recipe"]["record_selector"] == "main article.card"
+    assert main(["recipe", "show", str(job)]) == 0
+    assert json.loads(capsys.readouterr().out)["version"] == 1
+    command = ["recipe", "compare", str(job), "--from-version", "1", "--to-version", "2"]
+    assert main(command) == 0
+    compared = json.loads(capsys.readouterr().out)
+    assert compared["changed_fields"] == []
+    assert compared["changed_settings"] == ["record_selector"]
+
+
+def test_recipe_help_describes_every_subcommand(capsys):
+    with pytest.raises(SystemExit):
+        main(["recipe", "--help"])
+    out = capsys.readouterr().out
+    for name in ("repair", "promote", "rollback", "compare", "apply", "show", "prune"):
+        assert name in out
+    assert "Print a stored recipe version" in out

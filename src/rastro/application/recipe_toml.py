@@ -38,6 +38,44 @@ def replace_recipe(text: str, recipe: Recipe, *, source: int | None) -> str:
     return "".join([*lines[:start], *rendered, *lines[end:]])
 
 
+def add_source_recipe(text: str, recipe: Recipe, *, source: int) -> str:
+    """Return ``text`` with a new ``[sources.recipe]`` block at the end of that source."""
+    lines = text.splitlines(keepends=True)
+    end = _source_end(lines, source)
+    rendered = _render("sources.recipe", recipe_table(recipe), array=False)
+    before = lines[:end]
+    if before and not before[-1].endswith("\n"):
+        before[-1] += "\n"
+    return "".join([*before, "\n", *rendered, *lines[end:]])
+
+
+def _source_end(lines: list[str], source: int) -> int:
+    """End of the ``[[sources]]`` block ``source`` and its subtables; comments stay after."""
+    sources_seen, start, end, in_string = -1, None, len(lines), False
+    for number, line in enumerate(lines):
+        if (line.count('"""') + line.count("'''")) % 2:
+            in_string = not in_string
+        match = None if in_string else _HEADER.match(line.rstrip("\r\n"))
+        if match is None:
+            continue
+        path = tuple(part.strip() for part in match.group(2).split("."))
+        is_source = match.group(1) == "[[" and path == ("sources",)
+        if is_source:
+            sources_seen += 1
+        if start is None and is_source and sources_seen == source:
+            start = number
+        elif start is not None and (is_source or path[0] != "sources" or len(path) == 1):
+            end = number
+            break
+    if start is None:
+        raise ConfigurationError(
+            "The source is not written as a [[sources]] table; update the recipe by hand"
+        )
+    while end > start + 1 and (not lines[end - 1].strip() or lines[end - 1].lstrip()[:1] == "#"):
+        end -= 1
+    return end
+
+
 def _region(lines: list[str], prefix: tuple[str, ...], source: int | None) -> tuple[int, int]:
     """Line span of the one contiguous run of recipe tables; trailing comments stay outside."""
     spans: list[list[int]] = []
