@@ -34,12 +34,14 @@ class SQLiteDatasetStore:
         self,
         path: str | Path,
         *,
-        near_match_fields: tuple[str, str, str] = ("title", "venue", "start_time"),
+        near_match_fields: tuple[str, str, str] | None = ("title", "venue", "start_time"),
         near_match_tolerance: timedelta = timedelta(minutes=30),
         limits: Limits | None = None,
     ) -> None:
         self._path = Path(validate_job_path_syntax(str(path))).absolute()
-        if near_match_tolerance < timedelta(0) or len(near_match_fields) != 3:
+        if near_match_tolerance < timedelta(0) or (
+            near_match_fields is not None and len(near_match_fields) != 3
+        ):
             raise DatasetStorageError("Invalid near-match configuration")
         self._match_fields, self._tolerance, self._limits = (
             near_match_fields,
@@ -189,7 +191,9 @@ class SQLiteDatasetStore:
         for key, record in incoming.items():
             for other_key, other in tuple(rows.items()):
                 for origin in other.origins.values():
-                    if near_match(record, origin, self._match_fields, self._tolerance):
+                    if self._match_fields is not None and near_match(
+                        record, origin, self._match_fields, self._tolerance
+                    ):
                         pair = sorted(
                             (record, origin), key=lambda r: (r.key.model_dump_json(), r.source_url)
                         )

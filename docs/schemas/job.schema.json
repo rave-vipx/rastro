@@ -281,26 +281,29 @@
           "type": "array"
         },
         "match_fields": {
-          "default": [
-            "title",
-            "venue",
-            "start_time"
-          ],
-          "maxItems": 3,
-          "minItems": 3,
-          "prefixItems": [
+          "anyOf": [
             {
-              "type": "string"
+              "maxItems": 3,
+              "minItems": 3,
+              "prefixItems": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "type": "array"
             },
             {
-              "type": "string"
-            },
-            {
-              "type": "string"
+              "type": "null"
             }
           ],
-          "title": "Match Fields",
-          "type": "array"
+          "default": null,
+          "title": "Match Fields"
         },
         "match_tolerance_minutes": {
           "anyOf": [

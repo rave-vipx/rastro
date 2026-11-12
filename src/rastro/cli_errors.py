@@ -43,7 +43,9 @@ def _validation_payload(error: ValidationError) -> tuple[str, str | None]:
         message = first["msg"].removeprefix("Value error, ")
     if len(items) > 1:
         message = f"{message} (and {len(items) - 1} more validation errors)"
-    return message, _location(first["loc"])
+    cause = error.errors(include_url=False, include_input=False)[0].get("ctx", {}).get("error")
+    location = getattr(cause, "location", None)
+    return message, location if isinstance(location, str) else _location(first["loc"])
 
 
 def classify(error: BaseException) -> dict[str, Any]:
@@ -67,7 +69,7 @@ def classify(error: BaseException) -> dict[str, Any]:
     elif isinstance(error, ResourceLimitError):
         code, message = "resource_limit", str(error)
     elif isinstance(error, RastroError):
-        message = str(error) or message
+        message, location = str(error) or message, error.location
     elif isinstance(error, OSError):
         code, message = "file_error", f"File could not be read: {error.strerror or 'I/O error'}"
     elif isinstance(error, ValueError):

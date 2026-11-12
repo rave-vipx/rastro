@@ -145,9 +145,9 @@ trusted private location. Both commands infer the dataset name if the file conta
 one, otherwise require `--dataset NAME`. Unknown names and missing files fail.
 
 The optional `[dataset].match_fields = ["title", "venue", "starts_at"]` names two
-exact normalized labels and an aware time for near matching. Its default remains
-`["title", "venue", "start_time"]`, matching the store API; this configuration
-keeps application-specific field names out of the engine. Explicit match fields
+exact normalized labels and an aware time for near matching. Without it, a job
+matches records on its `identity` fields only: equal identities share one record and no
+uncertain match is flagged, whatever the fields are called. Explicit match fields
 must be distinct, declared and approved; invalid settings fail before extraction. Set
 `match_tolerance_minutes` to the allowed time difference. Near matches retain both
 records and origins. Differing titles are not matched heuristically.

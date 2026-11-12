@@ -83,7 +83,23 @@ class Limits(Contract):
 
 
 class RastroError(Exception):
-    """Base class for explicit configuration and resource-limit errors."""
+    """Base class for explicit configuration and resource-limit errors.
+
+    ``location`` optionally names the configuration key at fault, such as
+    ``dataset.match_fields``; it never contains input values.
+    """
+
+    def __init__(self, *args: object, location: str | None = None) -> None:
+        super().__init__(*args)
+        self.location = location
+
+
+class LocatedValueError(ValueError):
+    """A validator failure that names its configuration key for machine-readable errors."""
+
+    def __init__(self, message: str, *, location: str) -> None:
+        super().__init__(message)
+        self.location = location
 
 
 class ConfigurationError(RastroError):

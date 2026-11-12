@@ -394,5 +394,7 @@ Use `rastro job load job.toml` to write approved observed fields, then
 `rastro dataset export agenda.sqlite --format jsonl` to consume them.
 The load report schema is available with `rastro job schema --target load`.
 `[dataset].match_fields` optionally names the two labels and aware timestamp used
-for uncertain cross-source comparisons; it defaults to `title`, `venue`, `start_time`.
+for uncertain cross-source comparisons. Without it, records are matched on `identity`
+only and no uncertain match is flagged. A misspelled name is reported with
+`"location": "dataset.match_fields"`.
 See [dataset usage and the executed offline sequence](dataset.md#load-inspect-and-export-a-job).

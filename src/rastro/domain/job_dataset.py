@@ -15,6 +15,7 @@ from rastro.domain.job_contract import RedactedContract
 from rastro.domain.job_results import JobExitCode, JobSummary
 from rastro.domain.job_sources import validate_job_path_syntax
 from rastro.domain.models import ConfigurationError, Contract, Outcome
+from rastro.domain.sources import LocatedValueError
 
 JOB_PREVIEW_SCHEMA_ID = "https://rave-vipx.github.io/rastro/schemas/job-preview.schema.json"
 DATASET_NAME = r"^[a-z][a-z0-9_]{0,63}$"
@@ -27,7 +28,12 @@ class DatasetSpec(RedactedContract):
     path: StrictStr = Field(min_length=1, max_length=1024)
     identity: tuple[StrictStr, ...] = Field(min_length=1, max_length=8)
     approve: tuple[StrictStr, ...] | None = Field(default=None, min_length=1, max_length=100)
-    match_fields: tuple[StrictStr, StrictStr, StrictStr] = ("title", "venue", "start_time")
+    match_fields: tuple[StrictStr, StrictStr, StrictStr] | None = None
+    """Two labels and an aware time for uncertain cross-source matches.
+
+    Unset, records are matched on ``identity`` only: equal identities share one record and
+    no near match is flagged. No domain-specific field names are assumed.
+    """
     match_tolerance_minutes: StrictInt | None = Field(default=None, ge=1, le=10_080)
 
     @field_validator("path")
@@ -41,22 +47,26 @@ class DatasetSpec(RedactedContract):
 
     def check_against(self, declared: Sequence[str]) -> None:
         """Reject identity or approve entries that are not declared target fields."""
-        if "match_fields" in self.model_fields_set:
+        if self.match_fields is not None:
+            where = "dataset.match_fields"
             if len(set(self.match_fields)) != len(self.match_fields):
-                raise ConfigurationError("dataset.match_fields must not repeat a field")
+                raise ConfigurationError(f"{where} must not repeat a field", location=where)
             if not set(self.match_fields) <= set(declared):
-                raise ConfigurationError("dataset.match_fields must name declared fields")
+                raise ConfigurationError(f"{where} must name declared fields", location=where)
             if not set(self.match_fields) <= set(self.approved_fields(declared)):
-                raise ConfigurationError("dataset.match_fields must be listed in approve")
+                raise ConfigurationError(f"{where} must be listed in approve", location=where)
         known = set(declared)
         approve = self.approved_fields(declared)
         for label, names in (("identity", self.identity), ("approve", approve)):
+            where = f"dataset.{label}"
             if len(set(names)) != len(names):
-                raise ValueError(f"dataset.{label} must not repeat a field")
+                raise LocatedValueError(f"{where} must not repeat a field", location=where)
             if any(name not in known for name in names):
-                raise ValueError(f"dataset.{label} must name declared fields")
+                raise LocatedValueError(f"{where} must name declared fields", location=where)
         if not set(self.identity) <= set(approve):
-            raise ValueError("dataset.identity must be listed in approve")
+            raise LocatedValueError(
+                "dataset.identity must be listed in approve", location="dataset.identity"
+            )
 
 
 class PreviewField(Contract):
