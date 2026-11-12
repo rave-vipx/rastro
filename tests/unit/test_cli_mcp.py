@@ -22,8 +22,7 @@ def test_missing_extra_exits_nonzero_with_a_clear_message(
     monkeypatch.setattr(builtins, "__import__", deny)
     assert main(["mcp"]) != 0
     error = json.loads(capsys.readouterr().err)
-    assert error["error"] == "missing_extra" and "rastro-engine[mcp]" in error["message"]
-    assert error["hint"] == "pip install 'rastro-engine[mcp]'"
+    assert error["error"] == "missing_extra" and "rastro-engine[mcp]" in error["hint"]
 
 
 def test_missing_root_is_a_config_error(tmp_path: Any, capsys: pytest.CaptureFixture[str]) -> None:

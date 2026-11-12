@@ -169,6 +169,12 @@ All field types accept `required = true` (default) or `required = false` (nullab
 to `None` when omitted by a recipe). Constraints from another type (such as `ge` on `string`)
 are rejected during validation.
 
+Extracted text values of every type have surrounding whitespace, including non-breaking
+spaces, removed before validation, so `min_length`, `pattern` and number or date parsing see
+the real value. A required field whose value is blank is a validation error, never an empty
+success. A blank value for an optional field stays an empty string, so `min_length = 1` still
+rejects it.
+
 ### Strict job definitions, lax extracted values
 
 The job file itself is parsed strictly. Booleans must be TOML/JSON booleans, integers must be
@@ -337,6 +343,7 @@ option) use the same format:
   the rest.
 - `location`: dotted path of the first invalid field, for example
   `fields.0.string.pattern` (union members appear by tag), or `null` when no field applies.
+- `hint` (optional): a suggested next step, such as the command to run.
 
 | `error` | Meaning |
 | --- | --- |
@@ -350,7 +357,13 @@ option) use the same format:
 | `file_error` | The operating system refused to read a file. |
 | `internal_error` | Unexpected failure. Run with `--verbose` for a traceback on `stderr`. |
 
-Commands other than `rastro job` keep their existing output.
+Other commands use the same envelope. Their input errors use the code `invalid_input`
+with a specific `message` (for example `Dataset file not found: agenda.sqlite` from
+`rastro dataset export`), and a missing optional dependency uses `missing_extra`:
+
+```json
+{"error": "missing_extra", "message": "This command needs the optional 'studio' extra", "location": null, "hint": "pip install 'rastro-engine[studio]'"}
+```
 
 ## Machine-readable output and JSON Schemas
 
@@ -391,5 +404,7 @@ Use `rastro job load job.toml` to write approved observed fields, then
 `rastro dataset export agenda.sqlite --format jsonl` to consume them.
 The load report schema is available with `rastro job schema --target load`.
 `[dataset].match_fields` optionally names the two labels and aware timestamp used
-for uncertain cross-source comparisons; it defaults to `title`, `venue`, `start_time`.
+for uncertain cross-source comparisons. Without it, records are matched on `identity`
+only and no uncertain match is flagged. A misspelled name is reported with
+`"location": "dataset.match_fields"`.
 See [dataset usage and the executed offline sequence](dataset.md#load-inspect-and-export-a-job).

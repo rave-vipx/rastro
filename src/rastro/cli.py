@@ -26,11 +26,11 @@ from rastro import (
 from rastro.application.job_preview import preview_job_file, render_preview_table
 from rastro.application.job_summary import job_validation_summary
 from rastro.cli_dataset import add_commands, dataset_command, load_job_command
-from rastro.cli_errors import UsageError, classify
+from rastro.cli_errors import UsageError, classify, missing_extra_error
 from rastro.cli_recipe import add_commands as add_recipe_commands
 from rastro.cli_recipe import recipe_command
 from rastro.cli_studio import add_command as add_studio_command
-from rastro.cli_studio import missing_extra, studio_command
+from rastro.cli_studio import studio_command
 from rastro.cli_suggest import add_commands as add_suggest_commands
 from rastro.cli_suggest import new_command, suggest_command
 from rastro.domain.job_dataset import job_preview_json_schema
@@ -150,7 +150,7 @@ def _mcp_command(args: argparse.Namespace) -> int:
     try:
         from rastro.adapters.mcp_server import serve
     except ImportError:
-        print(json.dumps(missing_extra("mcp", "The MCP server")), file=sys.stderr)
+        print(json.dumps(missing_extra_error("mcp")), file=sys.stderr)
         return int(JobExitCode.CONFIG_ERROR)
     if not args.root.is_dir():
         raise RastroError("--root must be an existing directory")
@@ -237,8 +237,12 @@ def main(argv: list[str] | None = None) -> int:
     except (OSError, ValueError, ValidationError, SchemaError, RastroError) as error:
         if args.command in _JSON_ERRORS:
             return _report_job_error(error)
-        hint = "Check input, recipe, and resource limits"
-        print(json.dumps({"error": "invalid_input", "hint": hint}), file=sys.stderr)
+        payload = {
+            "hint": "Check input, recipe, and resource limits",
+            **classify(error),
+            "error": "invalid_input",
+        }
+        print(json.dumps(payload), file=sys.stderr)
         return int(JobExitCode.CONFIG_ERROR)
     except Exception as error:
         if args.command not in _JSON_ERRORS:

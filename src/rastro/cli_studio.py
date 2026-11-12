@@ -7,20 +7,10 @@ import json
 import sys
 from pathlib import Path
 
+from rastro.application.errors import missing_extra_error
 from rastro.domain.models import ConfigurationError
 
 HOST = "127.0.0.1"
-
-
-def missing_extra(extra: str, feature: str) -> dict[str, object]:
-    """Shared error envelope for an optional extra that is not installed."""
-    hint = f"pip install 'rastro-engine[{extra}]'"
-    return {
-        "error": "missing_extra",
-        "message": f"{feature} needs the optional '{extra}' extra: {hint}",
-        "location": None,
-        "hint": hint,
-    }
 
 
 def add_command(subcommands: argparse._SubParsersAction) -> None:  # type: ignore[type-arg]
@@ -35,7 +25,7 @@ def studio_command(args: argparse.Namespace) -> int:
 
         from rastro.studio.app import create_app
     except ImportError:
-        print(json.dumps(missing_extra("studio", "Rastro Studio")), file=sys.stderr)
+        print(json.dumps(missing_extra_error("studio")), file=sys.stderr)
         return 2
     if not 1 <= args.port <= 65_535:
         raise ConfigurationError("Port must be between 1 and 65535")
