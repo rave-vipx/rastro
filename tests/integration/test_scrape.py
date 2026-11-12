@@ -233,3 +233,29 @@ def test_fifo_targets_are_refused_without_blocking(tmp_path):
     os.mkfifo(fifo)
     with pytest.raises(ConfigurationError, match="regular file"):
         rastro.scrape(fifo, Offer)
+
+
+def test_blank_required_text_is_a_validation_issue_not_an_empty_success():
+    """QUAL-004: a whitespace-only required value is missing, as in jobs."""
+    html = HTML.replace("<h3>Engineer</h3>", "<h3> &nbsp; </h3>")
+    result = rastro.scrape(html, Offer, url="https://acme.example/careers")
+    assert result.status == Outcome.PARTIAL_SUCCESS
+    assert [item.title for item in result.items] == ["Designer"]
+    assert [(i.record_index, i.field) for i in result.issues] == [(0, "title")]
+
+
+def test_non_model_schemas_are_rejected():
+    """INT-001: the schema must be a Pydantic model class."""
+    for schema in (dict, Offer(title="x", url="https://a.example/")):
+        with pytest.raises(ConfigurationError, match="schema must be a Pydantic model class"):
+            rastro.scrape(HTML, schema)  # type: ignore[arg-type]
+
+
+def test_issues_carry_a_sanitized_message_without_the_input_value():
+    """P-005: issues explain the validation failure but never echo source values."""
+    html = HTML.replace(">100<", ">secret-salary<")
+    result = rastro.scrape(html, Offer, url="https://acme.example/careers")
+    (issue,) = result.issues
+    assert issue.field == "salary" and issue.message
+    assert "int_parsing" in issue.message
+    assert "secret" not in issue.model_dump_json()

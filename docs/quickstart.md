@@ -31,9 +31,12 @@ class Offer(BaseModel):
     salary: Annotated[int | None, rastro.css(".salary::text")] = None
 ```
 
-The selectors are metadata. They do not change the model's validation or JSON
-Schema, except that a URL field resolves `/path`, `./path` and `../path` links
-against the page URL.
+The selectors do not change the model's JSON Schema. Before validation, a
+marked field's text is stripped of surrounding whitespace (non-breaking spaces
+included), exactly as in declarative jobs. Blank text in a field that cannot be
+`None` (such as `title: str`) is a validation issue, never an empty string; a
+field typed `str | None` keeps `""` when the element is present but blank. A URL
+field also resolves `/path`, `./path` and `../path` links against the page URL.
 
 ## 2. Scrape
 
@@ -63,7 +66,7 @@ for offer in result.items:  # validated Offer instances
 `url=` is the page address used for relative links and provenance. For strings
 and files it defaults to `https://localhost/`; for a URL target it is the target.
 
-Failures stay explicit. If a required field is missing, `result.status` says
+Failures stay explicit. If a required field is missing or blank, `result.status` says
 so (for example `invalid_data`), `result.items` is empty and `result.issues`
 names the field. Rastro never returns an empty success.
 

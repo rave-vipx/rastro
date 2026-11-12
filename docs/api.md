@@ -16,7 +16,7 @@ It returns the same `ExtractionResult[YourModel]` as `Rastro`, and
 | Argument | Behavior |
 | --- | --- |
 | `target` | HTML text, a `pathlib.Path` (bounded UTF-8 read, symlinks refused) or an `http(s)://` URL. A URL needs the `http` extra (`ImportError` names `pip install 'rastro-engine[http]'` otherwise), is fetched once, and only its host is allowed. |
-| `schema` | A Pydantic model. Fields annotated with `rastro.css("...::text")` or `rastro.css("...::attr(name)")` form a `CssRecipe`. |
+| `schema` | A Pydantic model class (anything else raises `ConfigurationError`). Fields annotated with `rastro.css("...::text")` or `rastro.css("...::attr(name)")` form a `CssRecipe`; their text is stripped (NBSP included) before validation, and blank text in a field that cannot be `None` is a validation issue, as in jobs. |
 | `records` | Record selector; else the model's `__records__` class variable; else the whole document (`:root`) is one record. |
 | `fields` | Per-field selectors that override or extend the model's markers. |
 | `recipe` | Any `Recipe`, used unchanged; cannot be combined with `records` or `fields`. |
@@ -245,7 +245,7 @@ and `rastro new`; see [recipes from examples](suggest.md).
 - Source URL with query/fragment removed, locale, and timezone metadata.
 - A SHA-256 fingerprint of the schema's canonical JSON Schema.
 - `records`: validated Pydantic models with a dictionary of evidence keyed by observed field name.
-- `issues`: safe categories, candidate indices, and field names where applicable. `missing_evidence` is reported once for each field that lacks evidence: an observed value without a locator, or a missing required field when `require_evidence` is set.
+- `issues`: safe categories, candidate indices, and field names where applicable. A `validation_error` issue may carry `message`: Pydantic's built-in error type and message (for example `int_parsing: Input should be a valid integer, unable to parse string as an integer`). It never contains the input value or a custom validator's text, and is omitted from serialized output when absent. `missing_evidence` is reported once for each field that lacks evidence: an observed value without a locator, or a missing required field when `require_evidence` is set.
 - `metrics`: `acquisition_method` (`provided_html`, `provided_json`, or `http`), input bytes, candidate/accepted/rejected and validated-field counts, extraction/validation/total seconds, plus HTTP acquisition/transfer metrics, `inference_calls` and `inference_seconds`.
 - `recipe_version`, `recipe_reused`, and ordered `recipe_attempts` (index/origin/outcome), plus `learned_recipe` for newly validated successful recipes.
 - For HTTP: sanitized `requested_url`, last `http_status`, optional `retry_after_seconds`, and `metrics.egress` (the egress profile name; never the proxy URL or credentials).

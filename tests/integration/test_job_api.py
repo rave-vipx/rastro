@@ -258,3 +258,13 @@ def test_apply_refuses_a_symlinked_parent_directory(job, tmp_path, monkeypatch):
     with pytest.raises(rastro.ConfigurationError, match="symlink"):
         rastro.apply_job_recipe(Path("alias") / "job.toml", 1)
     assert job.read_bytes() == before
+
+
+def test_container_rename_relocates_with_a_card_missing_its_optional_field(job):
+    """REPAIR-001, SCR-002: rows that omit an optional child stay one homogeneous container."""
+    assert rastro.load_job_file(job).job.status == "success"
+    renamed = board().replace('class="card"', 'class="job-card"')
+    (job.parent / "board.html").write_text(renamed, encoding="utf-8")
+    report = rastro.repair_job_source(job, 1, auto_promote=True)
+    (source,) = report.sources
+    assert source.promoted_version == 2, source.model_dump_json(indent=2)

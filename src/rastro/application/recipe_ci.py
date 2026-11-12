@@ -94,15 +94,23 @@ def evaluate_candidate(
     )
 
 
-def _sample_rates(schema: type[BaseModel], fixtures: Sequence[FixtureBundle]) -> dict[str, float]:
-    """Optional fields count toward completeness only as often as success samples filled them.
+_OPTIONAL_SHARE = 0.5
 
+
+def _sample_rates(schema: type[BaseModel], fixtures: Sequence[FixtureBundle]) -> dict[str, float]:
+    """Optional fields need half the fill rate the success samples showed.
+
+    An optional value may thin out (one card without a stock label) but cannot vanish.
     Required fields keep the strict default rate of 1.0. Without samples, optional fields
     are not counted (QUAL-006).
     """
     rows = [r.data for fixture in fixtures for r in fixture.expected.records]
     return {
-        name: (sum(row.get(name) not in (None, "") for row in rows) / len(rows) if rows else 0.0)
+        name: (
+            _OPTIONAL_SHARE * sum(row.get(name) not in (None, "") for row in rows) / len(rows)
+            if rows
+            else 0.0
+        )
         for name, field in schema.model_fields.items()
         if not field.is_required()
     }

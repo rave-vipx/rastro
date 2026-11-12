@@ -99,3 +99,19 @@ def test_relative_links_resolve_only_on_url_fields():
     assert item.label == "/not-a-link"
     assert str(item.href) == "https://acme.example/jobs/1"
     assert str(item.other) == "https://acme.example/x"
+
+
+def test_marked_text_is_stripped_and_blank_required_text_is_invalid():
+    """QUAL-004: scrape treats blank text like jobs do: required blank fails, NBSP included."""
+    from pydantic import ValidationError
+
+    class Card(BaseModel):
+        name: Annotated[str, rastro.css("h3::text")]
+        note: Annotated[str | None, rastro.css("p::text")] = None
+        count: Annotated[int, rastro.css("b::text")] = 0
+
+    card = Card.model_validate({"name": "\xa0 Lamp \n", "note": " \xa0", "count": " 3 "})
+    assert (card.name, card.note, card.count) == ("Lamp", "", 3)
+    with pytest.raises(ValidationError) as error:
+        Card.model_validate({"name": " \xa0\t"})
+    assert error.value.errors()[0]["loc"] == ("name",)

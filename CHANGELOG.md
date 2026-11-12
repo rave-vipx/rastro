@@ -8,6 +8,7 @@ First public release of `rastro-engine` on PyPI: one-call typed scraping with `r
 
 ### Added
 
+- `Issue.message` (optional) gives Pydantic's built-in error type and message for `validation_error` issues, never the input value or custom validator text; it is omitted from serialized output when absent, and the job-run and job-load JSON Schemas gain the field (P-005).
 - Tag-triggered release workflow: builds the sdist and wheel, checks them with `twine check --strict`, verifies the tag matches the package version, smoke-tests the installed wheel, publishes to PyPI through Trusted Publishing with attestations and creates the GitHub release from this changelog (P-009, Release Evidence).
 - CI `package` job installs the built wheel with and without the `http`, `mcp` and `studio` extras and runs the CLI smoke checks (P-006, Release Evidence).
 - `docs/stability.md` defines the public surface and the deprecation policy; `docs/ai-agents.md` and a root `llms.txt` describe how AI agents use Rastro (AGENT-001, AGENT-002, AGENT-003).
@@ -54,6 +55,9 @@ First public release of `rastro-engine` on PyPI: one-call typed scraping with `r
 
 ### Fixed
 
+- Self-repair (`rastro.scrape` and `rastro recipe repair`) relocates a renamed record container when some records lack an optional child, such as one card without a stock label: rows may omit children of the most common row shape, while extra children, other classes or other paths still count as different containers. Optional fields now need half the fill rate the success sample showed instead of the same rate (REPAIR-001, REPAIR-002, SCR-002, QUAL-006).
+- `rastro.scrape` strips text in `rastro.css` fields like jobs do (NBSP included); a whitespace-only value in a required field is a validation issue instead of an empty string (QUAL-004).
+- `rastro.scrape` raises `ConfigurationError` when `schema` is not a Pydantic model class (INT-001).
 - `rastro job load` names a dataset folder that does not exist (`location: "dataset.path"`) instead of `Dataset operation failed`; the Studio wizard stores the dataset path relative to the job file and refuses a missing folder or a path outside the job's folder (DATA-001, P-008).
 - The MCP tools reject an absolute path such as `/etc/passwd` as an absolute path instead of reporting a symlink (AGENT-002).
 - Job field values are stripped of surrounding whitespace (NBSP included) before validation; a blank required value is a validation error instead of a successful `""` (QUAL-002, QUAL-004, JOB-001).
