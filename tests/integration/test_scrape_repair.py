@@ -6,7 +6,7 @@ import pytest
 from pydantic import BaseModel
 
 import rastro
-import rastro.repair_evidence as repair_evidence
+import rastro.application.repair_storage as repair_storage
 import rastro.scrape_memory as scrape_memory
 from rastro import Outcome, RecipeKey, RecipeState, Source, SQLiteRecipeRepository
 from rastro.domain.dataset import DatasetStorageError
@@ -154,10 +154,10 @@ def test_a_sample_that_cannot_be_kept_is_reported_not_fatal(tmp_path, monkeypatc
     def refuse(*args, **kwargs):
         raise DatasetStorageError("Dataset operation failed")
 
-    monkeypatch.setattr(repair_evidence, "retain_sample", refuse)
+    monkeypatch.setattr(repair_storage, "retain_sample", refuse)
     result = _scrape(V1, tmp_path / "recipes.db")
     assert result.status == Outcome.SUCCESS
-    assert [issue.code for issue in result.issues] == ["repair_sample_not_retained"]
+    assert [issue.code for issue in result.issues] == ["evidence_retention_failed"]
 
 
 def test_memory_paths_refuse_symlinks(tmp_path):

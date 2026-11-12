@@ -3,8 +3,8 @@
 import pytest
 from test_recipe_cli import setup_sample
 
+from rastro.application.repair_context import RepairContext, safe_path
 from rastro.cli import main
-from rastro.cli_repair_context import RepairContext, safe_path
 from rastro.domain.models import ConfigurationError
 
 pytestmark = pytest.mark.usefixtures("offline_cli_loop")

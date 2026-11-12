@@ -39,10 +39,14 @@ def evaluate_consistency(
     declared_fields: Sequence[str] = (),
     history: History | None = None,
     rejected: int = 0,
+    expected_rates: Mapping[str, float] | None = None,
 ) -> ConsistencyReport:
     """Score candidate ``records`` (field -> JSON value) against ``rules``.
 
     ``rejected`` counts candidates that failed validation, for the structural indicator.
+    ``expected_rates`` caps the completeness each declared field must reach: a field is
+    complete when its share of filled records reaches its expected rate (default 1.0),
+    and a field with an expected rate of 0 is not counted.
     """
     if observed_at.tzinfo is None:
         raise ValueError("observed_at must be timezone-aware")
@@ -58,7 +62,7 @@ def evaluate_consistency(
     total = len(records) + rejected
     return ConsistencyReport(
         records=len(records),
-        completeness=_completeness(records, declared_fields),
+        completeness=_completeness(records, declared_fields, expected_rates or {}),
         structural_validity=_round(len(records) / total) if total else None,
         semantic_confidence=min(scored) if scored else None,
         verdict=verdict,
@@ -198,11 +202,16 @@ def _unassessable(rule: ConsistencyRule, threshold: float, why: str) -> RuleResu
     )
 
 
-def _completeness(records: Sequence[Record], declared: Sequence[str]) -> float | None:
-    if not records or not declared:
-        return None
-    present = sum(1 for r in records for name in declared if r.get(name) not in (None, ""))
-    return _round(present / (len(records) * len(declared)))
+def _completeness(
+    records: Sequence[Record], declared: Sequence[str], expected: Mapping[str, float]
+) -> float | None:
+    scores = []
+    for name in declared:
+        rate = expected.get(name, 1.0)
+        if records and rate > 0:
+            filled = sum(1 for r in records if r.get(name) not in (None, "")) / len(records)
+            scores.append(min(1.0, filled / rate))
+    return _round(sum(scores) / len(scores)) if scores else None
 
 
 def _instant(value: Any) -> datetime | None:

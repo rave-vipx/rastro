@@ -52,6 +52,14 @@ class RepairContext:
         return cls(job, job.build_schema(), SQLiteRecipeRepository(memory), dataset, base, allow)
 
     def source(self, index: int) -> tuple[Source, RecipeKey, Recipe]:
+        source, key = self.locate(index)
+        stored = self.repository.get(key)
+        if stored is None:
+            raise ConfigurationError("Load a successful recipe before repairing this source")
+        return source, key, stored.validated_recipe
+
+    def locate(self, index: int) -> tuple[Source, RecipeKey]:
+        """The configured source and its recipe key; reads no recipe."""
         if not 1 <= index <= len(self.job.sources):
             raise ConfigurationError("Source index is outside the job sources")
         item = self.job.sources[index - 1]
@@ -60,10 +68,7 @@ class RepairContext:
         key = RecipeKey.for_source(
             source, self.schema, self.job.context, representation=item.representation
         )
-        stored = self.repository.get(key)
-        if stored is None:
-            raise ConfigurationError("Load a successful recipe before repairing this source")
-        return source, key, stored.validated_recipe
+        return source, key
 
     def fixtures(
         self, source: Source, recipe: Recipe

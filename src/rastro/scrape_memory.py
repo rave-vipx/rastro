@@ -61,12 +61,13 @@ class ScrapeMemory:
 
     def retain(self, schema: type[BaseModel], sample: SuccessfulSample) -> tuple[Issue, ...]:
         """Keep the latest success; a sample that cannot be kept is reported, not fatal."""
-        from rastro.repair_evidence import retain_sample
+        from rastro.application.repair_storage import retain_sample
 
         try:
-            return retain_sample(self.samples, SAMPLES_DATASET, schema, sample)
+            skipped = retain_sample(self.samples, SAMPLES_DATASET, schema, sample)
         except RastroError:
-            return (Issue(code="repair_sample_not_retained"),)
+            return (Issue(code="evidence_retention_failed"),)
+        return (Issue(code="relocation_retention_skipped"),) if skipped else ()
 
     async def repair(
         self,

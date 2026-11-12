@@ -45,6 +45,30 @@ equal to `expected.json`. Only then is the recipe stored, always as a `candidate
 the full candidate gate; import never activates a recipe. It gets
 the next free version, so it never overwrites a stored version, and the key (source,
 schema, region, context) is the one your own job computes for the same source.
+Importing a bundle whose recipe equals a version already stored for that key stores
+nothing new: the output reports that version with `"reused": true`.
+
+```console
+{"schema_version": 1, "state": "candidate", "version": 1, "reused": false}
+```
+
+## Adopt a shared recipe
+
+A consumer job needs `recipe_memory`, a `[dataset]` and no recipe of its own for that
+source. Import the bundle into the job's store, promote the candidate, then load:
+
+```console
+$ rastro recipe import ./my-recipe --store recipes.sqlite
+$ rastro recipe promote job.toml --source 1 --version 1 --reason "Reviewed shared recipe"
+$ rastro job load job.toml
+```
+
+When nothing serves yet for that source, promotion needs no earlier load. It still runs
+the candidate gate on your job's own source page: the recipe must extract it cleanly,
+with evidence for every required field and no rejected records. Two gate details differ
+because there is no history yet: the minimum number of historical fixtures does not
+apply (the import already replayed the bundle's expected records), and a recipe with
+fallbacks is accepted. A candidate that fails the gate stays a candidate.
 
 Every failure exits with code 2 and a typed error (`BundleIntegrityError`,
 `BundleVersionError`, `BundleVerificationError`, all `ConfigurationError`) and leaves

@@ -69,6 +69,32 @@ async def test_paths_outside_the_workspace_are_rejected(workspace: Path, path: s
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("path", ["/etc/passwd", "C:\\Windows\\job.toml", "C:/x.toml"])
+async def test_absolute_paths_are_named_as_such(workspace: Path, path: str) -> None:
+    """AGENT-002: an absolute path is refused as absolute, not as a symlink."""
+    failed, text = await _call(workspace, "job_validate", path=path)
+    assert failed
+    error = json.loads(text[text.index("{") :])
+    assert "Absolute paths are not allowed" in error["message"]
+
+
+@pytest.mark.asyncio
+async def test_preview_of_a_memory_job_writes_nothing(workspace: Path) -> None:
+    """DATA-002, AGENT-002: job_preview works for recipe_memory jobs and creates no store."""
+    job = workspace / "jobs" / "job.toml"
+    job.write_text(
+        job.read_text(encoding="utf-8").replace(
+            "format_version = 1", 'format_version = 1\nrecipe_memory = "recipes.sqlite"', 1
+        ),
+        encoding="utf-8",
+    )
+    failed, preview = await _call(workspace, "job_preview", path="jobs/job.toml")
+    assert not failed and preview["sources"]
+    assert not (workspace / "jobs" / "recipes.sqlite").exists()
+    assert not (workspace / "jobs" / "agenda.sqlite").exists()
+
+
+@pytest.mark.asyncio
 async def test_symlink_escape_is_rejected(workspace: Path, tmp_path_factory: Any) -> None:
     outside = tmp_path_factory.mktemp("outside") / "job.toml"
     shutil.copyfile(workspace / "jobs" / "job.toml", outside)

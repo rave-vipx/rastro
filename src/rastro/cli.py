@@ -26,13 +26,18 @@ from rastro import (
 from rastro.application.job_preview import preview_job_file, render_preview_table
 from rastro.application.job_summary import job_validation_summary
 from rastro.cli_dataset import add_commands, dataset_command, load_job_command
-from rastro.cli_errors import UsageError, classify
+from rastro.cli_errors import UsageError, classify, missing_extra_error
 from rastro.cli_recipe import add_commands as add_recipe_commands
 from rastro.cli_recipe import recipe_command
 from rastro.cli_studio import add_command as add_studio_command
 from rastro.cli_studio import studio_command
+from rastro.cli_suggest import add_commands as add_suggest_commands
+from rastro.cli_suggest import new_command, suggest_command
 from rastro.domain.job_dataset import job_preview_json_schema
 from rastro.domain.job_load import job_load_json_schema
+
+# Commands whose errors are reported as one JSON object on stderr.
+_JSON_ERRORS = frozenset({"job", "recipe", "suggest", "new"})
 
 
 class _ArgumentParser(argparse.ArgumentParser):
@@ -108,6 +113,7 @@ def _build_parser() -> argparse.ArgumentParser:
     add_commands(subcommands, job_commands)
     add_recipe_commands(subcommands)
     add_studio_command(subcommands)
+    add_suggest_commands(subcommands)
     return parser
 
 
@@ -144,8 +150,7 @@ def _mcp_command(args: argparse.Namespace) -> int:
     try:
         from rastro.adapters.mcp_server import serve
     except ImportError:
-        message = "The MCP server needs the optional extra: pip install 'rastro-engine[mcp]'"
-        print(json.dumps({"error": "missing_extra", "message": message}), file=sys.stderr)
+        print(json.dumps(missing_extra_error("mcp")), file=sys.stderr)
         return int(JobExitCode.CONFIG_ERROR)
     if not args.root.is_dir():
         raise RastroError("--root must be an existing directory")
@@ -162,6 +167,10 @@ def _dispatch(args: argparse.Namespace) -> int:
         return dataset_command(args)
     if args.command == "studio":
         return studio_command(args)
+    if args.command == "suggest":
+        return suggest_command(args)
+    if args.command == "new":
+        return new_command(args)
     if args.command == "doctor":
         print(
             json.dumps(
@@ -203,7 +212,7 @@ def _report_job_error(error: BaseException) -> int:
 
 
 def _is_job_command(argv: list[str]) -> bool:
-    return next((item for item in argv if not item.startswith("-")), None) in {"job", "recipe"}
+    return next((item for item in argv if not item.startswith("-")), None) in _JSON_ERRORS
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -226,13 +235,17 @@ def main(argv: list[str] | None = None) -> int:
     try:
         return _dispatch(args)
     except (OSError, ValueError, ValidationError, SchemaError, RastroError) as error:
-        if args.command in {"job", "recipe"}:
+        if args.command in _JSON_ERRORS:
             return _report_job_error(error)
-        hint = "Check input, recipe, and resource limits"
-        print(json.dumps({"error": "invalid_input", "hint": hint}), file=sys.stderr)
+        payload = {
+            "hint": "Check input, recipe, and resource limits",
+            **classify(error),
+            "error": "invalid_input",
+        }
+        print(json.dumps(payload), file=sys.stderr)
         return int(JobExitCode.CONFIG_ERROR)
     except Exception as error:
-        if args.command not in {"job", "recipe"}:
+        if args.command not in _JSON_ERRORS:
             raise
         if handler is not None:
             logger.exception("Unexpected error while handling a job command")

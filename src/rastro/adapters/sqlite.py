@@ -29,7 +29,7 @@ from rastro.adapters.sqlite_records import (
     find_serving,
     insert_candidate,
 )
-from rastro.adapters.sqlite_schema import migrate
+from rastro.adapters.sqlite_schema import check_current, migrate
 from rastro.domain.lifecycle import RecipeState, plan_creation, plan_rollback, plan_transition
 from rastro.domain.lifecycle_history import LifecycleHistory
 from rastro.domain.memory import (
@@ -48,26 +48,36 @@ class SQLiteRecipeRepository:
     The file and its parent directory must be trusted and private. No URL, HTML,
     extracted record or JSON Schema document is stored. Call from a worker thread
     when using this synchronous port in asynchronous applications.
+
+    ``read_only=True`` opens an existing, current-schema file with SQLite ``mode=ro``:
+    it never creates, migrates or writes the file, and every write fails.
     """
 
-    def __init__(self, path: str | Path, *, timeout: float = 5.0) -> None:
+    def __init__(self, path: str | Path, *, timeout: float = 5.0, read_only: bool = False) -> None:
         if not str(path) or str(path) == ":memory:" or str(path).startswith("file:"):
             raise ConfigurationError("Recipe memory requires a filesystem path")
         if not math.isfinite(timeout) or not 0 < timeout <= 30:
             raise ConfigurationError("Storage timeout must be between 0 and 30 seconds")
         self._path = Path(path).absolute()
         self._timeout = timeout
+        self._read_only = read_only
+
+    def _connect(self) -> sqlite3.Connection:
+        if self._read_only:
+            uri = f"{self._path.as_uri()}?mode=ro"
+            return sqlite3.connect(uri, timeout=self._timeout, isolation_level=None, uri=True)
+        return sqlite3.connect(self._path, timeout=self._timeout, isolation_level=None)
 
     @contextmanager
     def _connection(self, *, write: bool = False) -> Iterator[sqlite3.Connection]:
+        if write and self._read_only:
+            raise RecipeStorageError("Recipe storage is open read-only")
         try:
-            with closing(
-                sqlite3.connect(self._path, timeout=self._timeout, isolation_level=None)
-            ) as db:
+            with closing(self._connect()) as db:
                 db.setlimit(sqlite3.SQLITE_LIMIT_LENGTH, 1_000_000)
                 db.execute("PRAGMA trusted_schema = OFF")
                 db.execute("PRAGMA secure_delete = ON")
-                migrate(db)
+                (check_current if self._read_only else migrate)(db)
                 db.execute("BEGIN IMMEDIATE" if write else "BEGIN")
                 try:
                     yield db
