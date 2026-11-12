@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import os
 import secrets
 from pathlib import Path
@@ -9,8 +10,22 @@ from pathlib import Path
 from rastro.domain.models import ConfigurationError
 
 
-def write_atomic(path: Path, data: bytes) -> None:
-    """Replace ``path`` through a same-directory temp file; never follows symlinks."""
+class FileChangedError(ConfigurationError):
+    """The file no longer holds the bytes the caller based its edit on."""
+
+
+def _digest_now(path: Path) -> str:
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+    with os.fdopen(os.open(path, flags), "rb") as handle:
+        return hashlib.sha256(handle.read()).hexdigest()
+
+
+def write_atomic(path: Path, data: bytes, *, expected_digest: str | None = None) -> None:
+    """Replace ``path`` through a same-directory temp file; never follows symlinks.
+
+    With ``expected_digest`` (sha256 hex), the bytes being replaced are read right before
+    the replace and must match it, or ``FileChangedError`` is raised and nothing changes.
+    """
     if path.is_symlink():
         raise ConfigurationError("Symbolic links are not followed")
     mode = path.stat().st_mode & 0o777
@@ -22,6 +37,8 @@ def write_atomic(path: Path, data: bytes) -> None:
             handle.write(data)
             handle.flush()
             os.fsync(handle.fileno())
+        if expected_digest is not None and _digest_now(path) != expected_digest:
+            raise FileChangedError("The file changed since it was read; reload it and retry")
         os.replace(temp, path)
         fsync_directory(path.parent)
     finally:

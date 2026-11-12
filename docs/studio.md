@@ -51,7 +51,8 @@ The page has two views, **Jobs** and **New scraper**, switched with the buttons 
    `recipe_memory` reads its recipe store without changing it. Choose a field mapping, edit its
    selector and preview again; **Save to job file** writes the corrected job. The edited job is
    validated first, the write is atomic, and the request carries the digest of the file you
-   opened: if the file changed meanwhile, saving fails with `file_changed`. TOML comments and
+   opened: if the file changed meanwhile, even a moment before the write, saving fails with
+   `file_changed` and the file is left as it is. TOML comments and
    layout are kept because only the one selector text is replaced; if that text is not unique
    in the file, Studio refuses and asks you to edit by hand. JSON jobs are rewritten with
    two-space indentation.
@@ -77,9 +78,10 @@ The page has two views, **Jobs** and **New scraper**, switched with the buttons 
      as `rastro recipe apply` does, keeping the rest of the file. It carries the file digest
      like saving a selector.
 5. **Dataset.** Shows the stored records 25 at a time with **Previous page** and **Next page**,
-   when each was last seen, and a stale marker for records from stale sources. Long values are
-   shortened to 500 characters. **Download JSON** and **Download HTML** produce the same files
-   as `rastro dataset export`, for datasets of up to 5,000 records (use the command line for
+   when each was last seen, and a stale marker for records from stale sources. Values longer than
+   2,000 characters are shortened and the record is marked `truncated`, on the page and in
+   downloads. **Download JSON** and **Download HTML** produce the same records as
+   `rastro dataset export` (with that shortening), for datasets of up to 5,000 records (use the command line for
    larger ones). Values come from the source pages: treat them as untrusted data.
 6. **Connect your app.** Shows the `rastro job run`, `job load` and `dataset export` commands and
    the `run_job_file` call for that job. Run them from the root directory.
@@ -93,7 +95,8 @@ Studio is a local tool, not a server to expose.
 - A random token is generated on every start and printed once as
   `http://127.0.0.1:PORT/#token=<token>`. The page reads it from the URL fragment (which the
   browser never sends to the server), keeps it in memory and clears it from the address bar.
-  The served page does not contain it. Every `POST` needs it in `X-Studio-Token`. The token
+  The served page does not contain it. Every `/api` request, reads included, needs it in
+  `X-Studio-Token`; only the page itself and its scripts and stylesheet load without it. The token
   stops other local users only as long as the terminal output stays private. Without it the page
   asks you to open the URL printed in the terminal. Reloading the tab drops the token; reopen that URL.
 - Every action that changes something (create, save, load, repair, promote, write) is a `POST`

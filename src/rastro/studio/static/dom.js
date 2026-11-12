@@ -3,8 +3,9 @@ export const $ = (id) => document.getElementById(id);
 export const state = { token: "", file: "", sha: null };
 
 export async function api(path, body) {
+  // Every API call, reads included, carries the session token.
   const options = body === undefined
-    ? {}
+    ? { headers: { "X-Studio-Token": state.token } }
     : {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-Studio-Token": state.token },
