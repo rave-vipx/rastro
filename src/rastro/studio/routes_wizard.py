@@ -5,6 +5,7 @@ Calls ``suggest`` and the ``rastro new`` job writer; nothing is fetched (INT-002
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from pydantic import ValidationError
@@ -94,15 +95,8 @@ def routes(studio: Studio) -> list[Route]:
         identity = data.get("identity", [])
         if not isinstance(identity, list) or not all(isinstance(i, str) for i in identity):
             raise Refused(400, "invalid_identity")
-        dataset = optional_text(data, "dataset")
-        if dataset is not None:
-            # Job paths are relative to the job file: the dataset lives in the job's
-            # folder or below it, in a folder that already exists.
-            wanted = (target.parent / dataset).resolve()
-            if not wanted.is_relative_to(target.parent.resolve()):
-                raise Refused(400, "dataset_outside_job_folder")
-            if not wanted.parent.is_dir():
-                raise Refused(400, "dataset_folder_missing")
+        dataset = _beside(target, optional_text(data, "dataset"), "dataset")
+        memory = _beside(target, optional_text(data, "recipe_memory"), "recipe_memory")
         written = await run_in_threadpool(
             lambda: new_job(
                 target,
@@ -112,6 +106,7 @@ def routes(studio: Studio) -> list[Route]:
                 records_min=integer(data, "records_min", 1, 1000, default=2),
                 dataset=dataset,
                 identity=tuple(identity),
+                recipe_memory=memory,
             )
         )
         rel = written.relative_to(studio.root).as_posix()
@@ -123,3 +118,16 @@ def routes(studio: Studio) -> list[Route]:
         studio.route("/api/suggest", suggested, post=True),
         studio.route("/api/create", create, post=True),
     ]
+
+
+def _beside(target: Path, name: str | None, key: str) -> str | None:
+    """Job paths are relative to the job file: the file lives in the job's folder or below
+    it, in a folder that already exists."""
+    if name is None:
+        return None
+    wanted = (target.parent / name).resolve()
+    if not wanted.is_relative_to(target.parent.resolve()):
+        raise Refused(400, f"{key}_outside_job_folder")
+    if not wanted.parent.is_dir():
+        raise Refused(400, f"{key}_folder_missing")
+    return name

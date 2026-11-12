@@ -97,9 +97,9 @@ extraction pipeline. `rastro new` writes a complete job file. See
 A job file (`job.toml`, `format_version = 1`) declares fields, sources and a SQLite dataset as
 data, with no Python. Rastro loads records with stable identity, keeps the last valid rows when
 a source fails, and marks stale origins. `job load`, `recipe repair` and `recipe apply` need a
-`[dataset]` block and `recipe_memory` in the job; `rastro new` writes the `[dataset]` block only
-when you pass `--dataset` and `--identity`, and never adds `recipe_memory`, so add
-`recipe_memory = "recipes.sqlite3"` yourself:
+`[dataset]` block and `recipe_memory` in the job; `rastro new` writes the `[dataset]` block when
+you pass `--dataset` and `--identity`, and `recipe_memory` when you pass
+`--recipe-memory recipes.sqlite3`:
 
 ```sh
 rastro job validate job.toml

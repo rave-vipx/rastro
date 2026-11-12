@@ -28,14 +28,17 @@ First public release of `rastro-engine` on PyPI: one-call typed scraping with `r
 - `SQLiteRecipeRepository(path, read_only=True)` reads an existing store without creating, migrating or writing it (DATA-002).
 - `rastro recipe promote` adopts an imported candidate on a store with nothing serving, so export, import, promote and `job load` work on a fresh store; the candidate gate still runs on the job's own page (HUB-001, REC-006).
 - The MCP server covers the whole job lifecycle: `job_extract` (like `rastro job run`, no dataset write), `job_load` (with `drift`), `drift_status`, `recipe_history`, `recipe_repair` (proposes; promotes only when the job sets `[repair] auto_promote = true`), `recipe_promote` (requires a reason), `recipe_apply`, `suggest_recipe`, `job_new` (never overwrites) and `scrape_file` (one-off extraction from a workspace file, no network). Tools declare bounded JSON Schema inputs and read-only/destructive/idempotent hints, outputs are bounded with `truncated`, and the server sends workflow `instructions` (AGENT-002, AGENT-003, REPAIR-002-005, REC-006, INT-002, JOB-001).
+- `rastro new --recipe-memory FILE`, MCP `job_new(recipe_memory=...)` and the Studio wizard's "Recipe memory file" add `recipe_memory` to the new job, so a job created without the command line can be repaired; MCP `job_new` accepts `identity` as a field name or a list (JOB-001, REC-006, AGENT-003, P-008).
 - `rastro new --allow-partial` writes a job even when the recipe preview is only a partial success; `Suggestion.status` reports the preview outcome (JOB-001, INT-002).
 
 ### Security
 
+- Studio refuses a `POST` without an `Origin` header even with a valid token; GET requests are unchanged (P-008, SEC-008).
 - Studio requires the session token on every `/api` request, reads included (job and page lists, connect commands); the page and its static files stay public. Saving a selector and writing a serving recipe compare the expected digest with the bytes being replaced inside the write step, so a file changed after the check fails with `file_changed` instead of being overwritten. Dataset pages and downloads cut field and identity values longer than 2,000 characters and mark the record `truncated` (P-008, SEC-008, DATA-004, REC-006).
 
 ### Changed
 
+- The MCP server reports Rastro's package version as its `serverInfo.version` instead of the MCP library's (AGENT-002).
 - Package classifier is `Development Status :: 4 - Beta`; README rewritten for external users.
 - MCP `recipe_repair` declares `destructiveHint: true`, because a job with `[repair] auto_promote = true` lets it change the serving recipe; `dataset_records` output is bounded like the other tools, and every MCP output also caps objects at 100 keys with `truncated` (AGENT-002).
 - With `recipe_memory`, `job run`, `job load`, `run_job` and `run_job_file` use the serving recipe in memory when its version is higher than the job file's recipe version, so a promoted repair applies to the next run. Previously `job run` kept the stale file recipe and `job load` used memory whenever it had a serving recipe; see ADR 0021 (REC-006).

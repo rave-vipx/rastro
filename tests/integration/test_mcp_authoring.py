@@ -129,3 +129,37 @@ async def test_page_symlink_is_refused(workspace: Path, tmp_path_factory: Any) -
         workspace, "suggest_recipe", page_path="work/link.html", examples=EXAMPLES
     )
     assert failed
+
+
+@pytest.mark.asyncio
+async def test_job_new_with_recipe_memory_enables_repair(workspace: Path) -> None:
+    """REC-006, AGENT-003: an MCP-only agent can create a job that recipe_repair accepts."""
+    failed, _ = await call(
+        workspace,
+        "job_new",
+        path="work/shop.toml",
+        page_path="work/page.html",
+        examples=EXAMPLES,
+        dataset="shop.sqlite",
+        identity="name",
+        recipe_memory="recipes.sqlite",
+    )
+    assert not failed
+    assert not (await call(workspace, "job_load", path="work/shop.toml"))[0]
+    broken = PAGE.replace('class="name"', 'class="title"').replace("<ul>", "<ol><ul>")
+    (workspace / "work" / "page.html").write_text(broken, encoding="utf-8")
+    failed, report = await call(workspace, "recipe_repair", path="work/shop.toml", source=1)
+    assert not failed, report
+    assert report["sources"][0]["source_index"] == 1
+
+
+@pytest.mark.asyncio
+async def test_server_reports_the_rastro_version(workspace: Path) -> None:
+    """AGENT-002: serverInfo.version is Rastro's package version, not the MCP library's."""
+    import rastro
+
+    async with create_connected_server_and_client_session(
+        build_server(workspace)._mcp_server
+    ) as client:
+        info = (await client.initialize()).serverInfo
+    assert (info.name, info.version) == ("rastro", rastro.__version__)

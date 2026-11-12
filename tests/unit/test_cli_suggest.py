@@ -100,6 +100,25 @@ def test_new_keeps_string_when_page_values_do_not_fit_the_inferred_type(tmp_path
     assert types["n"] == "string"
 
 
+def test_new_can_enable_recipe_memory(page, tmp_path, capsys):
+    """REC-006, JOB-001: --recipe-memory writes a top-level recipe_memory the job can repair."""
+    job = tmp_path / "job.toml"
+    args = ["new", str(job), "--from", str(page), "--url", URL, *EXAMPLES]
+    args += ["--recipe-memory", "recipes.sqlite"]
+    assert main(args) == 0
+    assert tomllib.loads(job.read_text(encoding="utf-8"))["recipe_memory"] == "recipes.sqlite"
+
+
+@pytest.mark.parametrize("memory", ["missing/recipes.sqlite", "../recipes.sqlite", "/tmp/r.db"])
+def test_new_refuses_a_bad_recipe_memory_path(page, tmp_path, capsys, memory):
+    job = tmp_path / "job.toml"
+    args = ["new", str(job), "--from", str(page), "--url", URL, *EXAMPLES]
+    args += ["--recipe-memory", memory]
+    assert main(args) == 2
+    assert "recipe_memory" in json.loads(capsys.readouterr().err)["message"]
+    assert not job.exists()
+
+
 def test_new_refuses_to_overwrite(page, tmp_path, capsys):
     job = tmp_path / "job.toml"
     job.write_text("keep", encoding="utf-8")

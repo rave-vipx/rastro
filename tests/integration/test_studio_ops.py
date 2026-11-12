@@ -104,6 +104,16 @@ def test_create_validates_the_name(client: TestClient, root: Path, name: str) ->
     assert not list((root / "pages").glob("*.toml"))
 
 
+def test_create_can_add_recipe_memory(client: TestClient, root: Path) -> None:
+    """REC-006, JOB-001: the wizard can enable recipe memory, so repair works later."""
+    create(client, dataset="agenda.sqlite", identity=["title"], recipe_memory="recipes.sqlite")
+    assert load_job(root / "pages/agenda.toml").recipe_memory == "recipes.sqlite"
+    body = {"file": "pages/b.toml", "page": "pages/agenda.html", "examples": EXAMPLES}
+    for bad in ("missing/r.sqlite", "../r.sqlite", "/tmp/r.sqlite"):
+        assert post(client, "/api/create", {**body, "recipe_memory": bad}).status_code == 400
+    assert not (root / "pages/b.toml").exists()
+
+
 def test_create_requires_identity_with_a_dataset(client: TestClient, root: Path) -> None:
     body = {"file": "pages/a.toml", "page": "pages/agenda.html", "examples": EXAMPLES}
     assert post(client, "/api/create", {**body, "dataset": "a.sqlite"}).status_code == 400

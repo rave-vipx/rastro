@@ -106,9 +106,12 @@ def flag(data: dict[str, Any], key: str) -> bool:
 
 
 def _origin_ok(request: Request) -> bool:
-    """No Origin (same-origin GET, CLI clients) or exactly this Studio's own origin."""
+    """Exactly this Studio's own origin. A GET may omit Origin (same-origin navigation);
+    a mutating request must send it, as every browser does for POST."""
     origin = request.headers.get("origin")
-    return origin is None or origin == f"http://{request.headers.get('host', '')}"
+    if origin is None:
+        return request.method in {"GET", "HEAD"}
+    return origin == f"http://{request.headers.get('host', '')}"
 
 
 class Studio:
