@@ -1,6 +1,6 @@
 """Shared HTTP plumbing for Studio routers: guard, bodies, typed inputs, JSON replies (P-008).
 
-Security posture: loopback only, Host and Origin checks, a per-run token on every POST,
+Security posture: loopback only, Host and Origin checks, a per-run token on every API call,
 paths confined to one root, bounded bodies, a strict Content-Security-Policy.
 """
 
@@ -19,6 +19,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 from starlette.routing import Route
 
+from rastro.application.atomic_files import FileChangedError
 from rastro.application.job_loader import load_job
 from rastro.cli_errors import classify
 from rastro.domain.jobs import Job
@@ -131,10 +132,11 @@ class Studio:
         if files.digest(files.read_job_bytes(path)) != text(data, "sha256"):
             raise Refused(409, "file_changed")
 
-    def guard(self, request: Request) -> None:
+    def guard(self, request: Request, *, api: bool) -> None:
+        """Exact origin everywhere; the token on every ``/api`` call, GETs included."""
         if not _origin_ok(request):
             raise Refused(403, "origin_refused")
-        if request.method == "POST":
+        if api or request.method != "GET":
             sent = request.headers.get("x-studio-token", "")
             if not hmac.compare_digest(sent.encode(), self.token.encode()):
                 raise Refused(403, "token_required")
@@ -144,8 +146,10 @@ class Studio:
 
         async def endpoint(request: Request) -> Response:
             try:
-                self.guard(request)
+                self.guard(request, api=path.startswith("/api/"))
                 return await handler(request)
+            except FileChangedError:
+                return reply({"ok": False, "error": "file_changed"}, 409)
             except Refused as refused:
                 return reply({"ok": False, "error": refused.code}, refused.status)
             except HANDLED as error:

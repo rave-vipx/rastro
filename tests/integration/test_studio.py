@@ -171,11 +171,14 @@ def test_host_origin_and_token_are_enforced(root: Path) -> None:
 
 
 def _check_local(local: TestClient, token: str) -> None:
+    assert local.get("/api/jobs").status_code == 403  # reads need the token too
+    local.headers["X-Studio-Token"] = token
     assert local.get("/api/jobs").status_code == 200
     assert local.get("/api/jobs", headers={"Origin": "https://evil.example"}).status_code == 403
     # Another local app (other port) is not this Studio's origin.
     assert local.get("/api/jobs", headers={"Origin": "http://localhost:3000"}).status_code == 403
     assert local.get("/api/jobs", headers={"Origin": "http://localhost:8765"}).status_code == 200
+    del local.headers["X-Studio-Token"]
     body = {"file": "job.toml"}
     assert local.post("/api/validate", json=body).status_code == 403
     assert (

@@ -92,7 +92,7 @@ def routes(studio: Studio) -> list[Route]:
         path, original, _, raw = _edited(studio, data)
         if files.digest(original) != text(data, "sha256"):
             raise Refused(409, "file_changed")
-        files.write_atomic(path, raw)
+        files.write_atomic(path, raw, expected_digest=files.digest(original))
         reloaded = load_job(path)
         return reply(
             {"ok": True, "sha256": files.digest(raw), "selectors": editing.list_selectors(reloaded)}

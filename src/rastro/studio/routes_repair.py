@@ -157,7 +157,10 @@ def routes(studio: Studio) -> list[Route]:
         path = studio.job_path(text(data, "file"))
         index = integer(data, "source", 1, MAX_SOURCES)
         studio.check_digest(path, data)
-        applied = await run_in_threadpool(write_serving_recipe, path, index)
+        expected = text(data, "sha256")
+        applied = await run_in_threadpool(
+            lambda: write_serving_recipe(path, index, expected_digest=expected)
+        )
         sha = files.digest(files.read_job_bytes(path))
         return reply(
             {

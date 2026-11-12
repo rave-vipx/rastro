@@ -1,7 +1,9 @@
 """Dataset browser: paginated records with stale markers, and JSON or HTML export.
 
 Reads the job's ``[dataset]`` file without creating it; values stay labelled untrusted
-(DATA-004, P-008).
+and every field value is capped at ``MAX_CHARS`` with a ``truncated`` flag (DATA-004, P-008).
+The store has no paged read, so a page reads the whole dataset; that read is bounded by the
+job's ``Limits`` (``max_records``, ``max_json_bytes``).
 """
 
 from __future__ import annotations
@@ -27,7 +29,7 @@ from rastro.studio.web import Refused, Studio, body, integer, reply, text
 MAX_PAGE = 100
 MAX_OFFSET = 1_000_000
 MAX_EXPORT = 5_000
-MAX_CHARS = 500
+MAX_CHARS = 2_000
 
 
 def _store(studio: Studio, path: Path, job: Job) -> tuple[SQLiteDatasetStore, str]:
@@ -46,16 +48,53 @@ def _stale_keys(store: SQLiteDatasetStore, name: str) -> set[str]:
     return {k.model_dump_json() for s in stale_sources(store, name) for k in s.affected_keys}
 
 
-def _cut(value: Any) -> Any:
-    if isinstance(value, str) and len(value) > MAX_CHARS:
-        return value[:MAX_CHARS] + "…"
-    return value
+def _cap(value: Any) -> tuple[Any, bool]:
+    text = value if isinstance(value, str) else None
+    if text is None and isinstance(value, (list, dict)):
+        text = json.dumps(value, ensure_ascii=False)
+    if text is None or len(text) <= MAX_CHARS:
+        return value, False
+    return text[:MAX_CHARS] + "…", True
+
+
+def _capped_fields(fields: dict[str, Any]) -> tuple[dict[str, Any], bool]:
+    capped = {name: _cap(value) for name, value in fields.items()}
+    return {k: v for k, (v, _) in capped.items()}, any(cut for _, cut in capped.values())
+
+
+def _capped(record: StoredRecord) -> tuple[StoredRecord, bool]:
+    """The record with long values cut in its fields and in every origin's fields."""
+    fields, cut = _capped_fields(record.fields)
+    origins = {}
+    for url, origin in record.origins.items():
+        origin_fields, origin_cut = _capped_fields(origin.fields)
+        origins[url] = origin.model_copy(update={"fields": origin_fields})
+        cut = cut or origin_cut
+    return record.model_copy(update={"fields": fields, "origins": origins}), cut
+
+
+def _capped_identity(key: dict[str, Any]) -> bool:
+    """Cut long identity values of a dumped record key in place; True when any was cut."""
+    capped = [_cap(value) for value in key["identity"]]
+    key["identity"] = [value for value, _ in capped]
+    return any(cut for _, cut in capped)
+
+
+def _dumped(record: StoredRecord) -> tuple[dict[str, Any], bool]:
+    """JSON form of a record with every field and identity value capped."""
+    capped, cut = _capped(record)
+    data: dict[str, Any] = capped.model_dump(mode="json")
+    keys = [data["key"], *(origin["key"] for origin in data["origins"].values())]
+    cut = any([_capped_identity(key) for key in keys]) or cut
+    return data, cut
 
 
 def _row(record: StoredRecord, stale: set[str]) -> dict[str, Any]:
+    data, cut = _dumped(record)
     return {
-        "identity": list(record.key.identity),
-        "fields": {k: _cut(v) for k, v in record.model_dump(mode="json")["fields"].items()},
+        "identity": data["key"]["identity"],
+        "fields": data["fields"],
+        "truncated": cut,
         "last_observed_at": record.last_observed_at.isoformat(),
         "stale": record.key.model_dump_json() in stale,
     }
@@ -78,11 +117,13 @@ def _page(store: SQLiteDatasetStore, name: str, offset: int, limit: int) -> dict
 
 
 def _export(store: SQLiteDatasetStore, name: str, kind: str) -> dict[str, Any]:
-    records = store.records(name)
-    if len(records) > MAX_EXPORT:
+    stored = store.records(name)
+    if len(stored) > MAX_EXPORT:
         raise ConfigurationError(
             f"More than {MAX_EXPORT} records; use `rastro dataset export` instead"
         )
+    capped = [_capped(record) for record in stored]
+    records = tuple(record for record, _ in capped)
     if kind == "html":
         stale = {k for s in stale_sources(store, name) for k in s.affected_keys}
         fields = list(dict.fromkeys(field for record in records for field in record.fields))
@@ -92,7 +133,9 @@ def _export(store: SQLiteDatasetStore, name: str, kind: str) -> dict[str, Any]:
         "schema_version": 1,
         "data_trust": "untrusted_source_data",
         "dataset": name,
-        "records": [r.model_dump(mode="json") for r in records],
+        "records": [
+            {**data, **({"truncated": True} if cut else {})} for data, cut in map(_dumped, stored)
+        ],
     }
     content = json.dumps(payload, indent=2, ensure_ascii=True)
     return {

@@ -40,9 +40,17 @@ def apply_job_recipe(path: str | Path, source: int, *, allow_absolute_paths: boo
 
 
 def write_serving_recipe(
-    path: str | Path, source: int, *, allow_absolute_paths: bool = False
+    path: str | Path,
+    source: int,
+    *,
+    allow_absolute_paths: bool = False,
+    expected_digest: str | None = None,
 ) -> AppliedRecipe:
-    """``apply_job_recipe`` with the applied version and whether the file changed."""
+    """``apply_job_recipe`` with the applied version and whether the file changed.
+
+    With ``expected_digest`` (sha256 of the file the caller saw), a file changed in the
+    meantime raises ``FileChangedError`` at write time and is left as it is.
+    """
     file = Path(path)
     if file.is_symlink():
         raise ConfigurationError("Recipe command paths must not contain symlinks")
@@ -65,7 +73,7 @@ def write_serving_recipe(
     raw = _read(file)
     text = _rewrite(raw, file.suffix.lower(), recipe, location)
     _verify(job, text, file.suffix.lower(), recipe, location)
-    write_atomic(file, text.encode("utf-8"))
+    write_atomic(file, text.encode("utf-8"), expected_digest=expected_digest)
     return AppliedRecipe(file, source, recipe.version, changed=True)
 
 
