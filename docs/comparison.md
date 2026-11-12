@@ -20,6 +20,80 @@ mutations. Rastro was slower on every page. The
 [first regression result](#first-recorded-result) shows no advantage either. DIFF-001
 remains open for accuracy, silent error detection, maintenance and recovery.
 
+## Same task, side by side
+
+The task: read job offers (title and link) from a careers page into typed records. Both
+versions below use Scrapling for parsing and Pydantic for validation; the difference is how
+much you write and what happens when the page changes.
+
+**Scrapling + Pydantic by hand:**
+
+```python
+from pydantic import BaseModel, HttpUrl, ValidationError
+from scrapling.parser import Selector
+
+
+class Offer(BaseModel):
+    title: str
+    url: HttpUrl
+
+
+page = Selector(html)
+offers, errors = [], []
+for card in page.css("li.job"):
+    raw = {"title": card.css("h3::text").get(), "url": card.css("a::attr(href)").get()}
+    try:
+        offers.append(Offer.model_validate(raw))
+    except ValidationError as error:
+        errors.append(error)
+```
+
+**Rastro:**
+
+```python
+from typing import Annotated
+from pydantic import BaseModel, HttpUrl
+import rastro
+
+
+class Offer(BaseModel):
+    __records__ = "li.job"
+    title: Annotated[str, rastro.css("h3::text")]
+    url: Annotated[HttpUrl, rastro.css("a::attr(href)")]
+
+
+result = rastro.scrape(
+    html, Offer, url="https://acme.example/careers", memory="recipes.db", repair="auto"
+)
+offers = result.items
+```
+
+Both produce the same `Offer` objects on an unchanged page. Rastro additionally returns an
+explicit `result.status`, per-record issues and, for every field, the source URL, observation
+time, selector and recipe version.
+
+**When the site renames `li.job` to `li.position`:**
+
+- *By hand:* `page.css("li.job")` matches nothing, the loop never runs and `offers` is an empty
+  list with no error. Your code has to notice that zero offers is suspicious. (Scrapling's
+  adaptive element relocation can find moved elements, but it does not check the result against
+  your schema or a known-good sample.)
+- *Rastro:* the remembered recipe finds no records, so the result is a failure outcome, not an
+  empty success. With `repair="propose"` (the default) Rastro searches offline for a
+  replacement record container, verifies it against the saved success sample and the schema,
+  and stores it as a candidate in `result.repair`. With `repair="auto"` it promotes the candidate
+  only if every gate passes, re-extracts, and returns the repaired offers with
+  `result.repair.promoted` set. A candidate that fails a gate is never promoted.
+
+This is the scenario Rastro is built for. It does not make extraction more accurate on an
+unchanged page: the measured results below show equal accuracy and higher latency than a
+competent hand-written baseline. The automatic repair rate on synthetic breakages is measured
+separately in the
+[repair suite](https://github.com/rave-vipx/rastro/tree/main/benchmarks/repair_suite): on
+synthetic pages modeled on real ones, 10 of 11 structural breakages were repaired automatically
+and no wrong recipe was promoted. Self-repair has not yet been proven on a real live site
+change. See also [recipe CI and repair](repair.md).
+
 ## Reproduce
 
 From a checkout or unpacked source distribution, using Python 3.12+:

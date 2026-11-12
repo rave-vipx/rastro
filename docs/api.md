@@ -186,6 +186,22 @@ lists one `RecipeSelection` (`source_index`, `recipe_origin`, `recipe_version`) 
 `JobLoadResult` sources carry the same `recipe_origin` and `recipe_version`. See
 [recipe repair](repair.md) for the gates and the rule that picks the recipe.
 
+## Recipes from examples
+
+```python
+from rastro import FieldConfidence, Suggestion, SuggestionError, suggest
+```
+
+`suggest(html, schema, *, examples, url=None, records_min=2, limits=None)` builds a
+`CssRecipe` from a saved page and example values, runs it through the normal extraction
+pipeline and returns a `Suggestion` with `recipe`, `preview` (an `ExtractionResult`) and
+`confidence` (one `FieldConfidence` per schema field: `method` is `example`, `microdata` or
+`unmapped`, plus `selector`, `examples_matched`, `examples_total`, `records_with_value`,
+`ambiguous` and `note`). `schema` is a Pydantic model or a list of job field definitions.
+It is deterministic and offline. `SuggestionError` (a `ConfigurationError`) lists the
+examples that were not found or not reproduced. The CLI equivalents are `rastro suggest`
+and `rastro new`; see [recipes from examples](suggest.md).
+
 ## Results
 
 `ExtractionResult` contains:

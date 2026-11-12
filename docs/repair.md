@@ -15,7 +15,10 @@ The next successful load captures the container without a migration or backfill.
 If the document exceeds relocation's structural budget
 or uses unsupported selectors, the historical fixture is still retained. The successful
 load keeps its exit code and reports `relocation_retention_skipped` in that source's
-`issues` array (DATA-001, SCR-002). No issue array is emitted when retention succeeds.
+`issues` array (DATA-001, SCR-002). If the sample cannot be retained at all (for example,
+the sanitizer refuses it or the evidence write fails), the rows are already committed: the
+load keeps its exit code, reports `evidence_retention_failed` for that source and keeps the
+previous evidence. No issue array is emitted when retention succeeds.
 
 ```toml
 [repair]

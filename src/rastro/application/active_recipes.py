@@ -25,6 +25,15 @@ def source_key(job: Job, item: JobSource) -> RecipeKey:
     )
 
 
+def memory_wins(declared: int | None, stored: int | None) -> bool:
+    """The one selection rule: memory wins without a job recipe, or with a higher version.
+
+    ``stored`` is the serving version in memory (``None`` when nothing is stored yet, in
+    which case memory still wins without a job recipe because the engine learns into it).
+    """
+    return declared is None or (stored is not None and stored > declared)
+
+
 def select_recipes(
     job: Job, repository: RecipeRepository | None
 ) -> tuple[Job, tuple[RecipeSelection, ...]]:
@@ -42,8 +51,8 @@ def select_recipes(
         declared = item.recipe or job.recipe
         serving = repository.get(source_key(job, item)) if repository is not None else None
         stored = serving.recipe.version if serving is not None else None
-        if (declared is None and job.recipe_memory is not None) or (
-            declared is not None and stored is not None and stored > declared.version
+        if job.recipe_memory is not None and memory_wins(
+            declared.version if declared else None, stored
         ):
             sources.append(item.model_copy(update={"recipe": None}))
             selections.append(

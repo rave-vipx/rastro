@@ -10,6 +10,7 @@ from rastro.application.job_dataset import load_job_file
 from rastro.application.job_repair import promote_job_recipe, repair_job_source
 from rastro.application.jobs import load_job, run_job, run_job_async, run_job_file
 from rastro.application.recipe_apply import apply_job_recipe
+from rastro.application.suggest import suggest
 from rastro.domain.acquisition import AcquisitionPolicy, EgressProfile
 from rastro.domain.intelligence import InferencePolicy, ModelError, ModelRequest, RecipeProposal
 from rastro.domain.job_fields import (
@@ -92,6 +93,7 @@ from rastro.domain.recipe_compare import (
     RepairReport,
     SourceRepair,
 )
+from rastro.domain.suggest import FieldConfidence, Suggestion, SuggestionError
 from rastro.mocklab import (
     FixtureBundle,
     MockLabError,
@@ -143,6 +145,7 @@ __all__ = [
     "Evidence",
     "ExtractionRecord",
     "ExtractionResult",
+    "FieldConfidence",
     "FileJobSource",
     "FixtureBundle",
     "InferencePolicy",
@@ -203,6 +206,8 @@ __all__ = [
     "SourceRepair",
     "StoredRecipe",
     "StringField",
+    "Suggestion",
+    "SuggestionError",
     "SyntheticLabel",
     "UrlField",
     "UrlJobSource",
@@ -223,5 +228,6 @@ __all__ = [
     "run_job_async",
     "run_job_file",
     "schema_fingerprint",
+    "suggest",
     "verify_fixture",
 ]

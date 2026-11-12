@@ -2,13 +2,15 @@
 
 import json
 import os
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 
-from rastro import JobExitCode, load_job, run_job_file
+from rastro import JobExitCode, SQLiteRecipeRepository, load_job, run_job_file
 from rastro.cli import main
-from rastro.domain.models import ConfigurationError
+from rastro.domain.memory import RecipeKey, RecipeStorageError
+from rastro.domain.models import ConfigurationError, CssRecipe
 
 HEAD = "format_version = 1\n"
 BODY = """
@@ -25,6 +27,12 @@ url = "https://agenda.example.com/events"
 name = "title"
 type = "string"
 """
+_KEY = {
+    "source_fingerprint": "a" * 64,
+    "schema_fingerprint": "b" * 64,
+    "locale": "en-US",
+    "timezone": "UTC",
+}
 
 
 def _job(tmp: Path, *, dataset: str = 'path = "agenda.sqlite"', extra: str = "", body: str = BODY):
@@ -41,16 +49,70 @@ def _code(argv: list[str], capsys: pytest.CaptureFixture[str]) -> tuple[int, str
     return code, capsys.readouterr().err
 
 
-def test_preview_refuses_memory_enabled_jobs_and_writes_nothing(tmp_path, capsys):
+def test_preview_with_missing_recipe_memory_uses_the_job_recipe_and_creates_nothing(
+    tmp_path, capsys
+):
+    """DATA-002: preview of a memory-enabled job never creates the recipe store."""
     job = _job(tmp_path, extra='recipe_memory = "memory.sqlite"')
-    code, err = _code(["job", "preview", str(job), "--output", "json"], capsys)
-    assert code == JobExitCode.CONFIG_ERROR
-    assert "recipe_memory" in json.loads(err)["message"]
+    assert main(["job", "preview", str(job), "--output", "json"]) == JobExitCode.SUCCESS
+    record = json.loads(capsys.readouterr().out)["sources"][0]["records"][0]
+    assert record["status"] == "accepted"
     assert not (tmp_path / "memory.sqlite").exists()
+
+
+def test_preview_with_existing_recipe_memory_leaves_the_file_untouched(tmp_path, capsys):
+    """DATA-002: the store is read with mode=ro; bytes and mtime stay identical."""
+    job = _job(tmp_path, extra='recipe_memory = "memory.sqlite"')
+    assert main(["job", "load", str(job)]) == JobExitCode.SUCCESS
+    store = tmp_path / "memory.sqlite"
+    os.utime(store, ns=(1_000_000_000_000_000_000, 1_000_000_000_000_000_000))
+    before = (store.read_bytes(), store.stat().st_mtime_ns)
+    capsys.readouterr()
+    assert main(["job", "preview", str(job), "--output", "json"]) == JobExitCode.SUCCESS
+    assert json.loads(capsys.readouterr().out)["sources"][0]["records"][0]["status"] == "accepted"
+    assert (store.read_bytes(), store.stat().st_mtime_ns) == before
+    assert sorted(p.name for p in tmp_path.iterdir()) == [
+        "agenda.sqlite",
+        "job.toml",
+        "memory.sqlite",
+        "page.html",
+    ]
+
+
+def test_preview_uses_a_newer_stored_serving_recipe(tmp_path, capsys):
+    """DATA-002, REC-001: a stored serving version above the job recipe's version wins."""
+    body = BODY.replace('fields = { title = "b::text" }', 'fields = { title = "i::text" }')
+    job = _job(tmp_path, extra='recipe_memory = "memory.sqlite"', body=body)
+    (tmp_path / "page.html").write_text("<ul><li><b>Tango</b><i>Milonga</i></li></ul>")
+    loaded = load_job(job)
+    schema = loaded.build_schema()
+    source = loaded.region.to_source(loaded.sources[0].resolved_source_url())
+    key = RecipeKey.for_source(source, schema, None, representation="html")
+    stored = CssRecipe(version=2, record_selector="li", fields={"title": "b::text"})
+    SQLiteRecipeRepository(tmp_path / "memory.sqlite").save_success(
+        key, stored, selected_index=0, at=datetime.now(UTC)
+    )
+    assert main(["job", "preview", str(job), "--output", "json"]) == JobExitCode.SUCCESS
+    field = json.loads(capsys.readouterr().out)["sources"][0]["records"][0]["fields"][0]
+    assert (field["value"], field["recipe_version"]) == ("Tango", 2)
+
+
+def test_preview_refuses_an_old_schema_store_without_migrating_it(tmp_path, capsys):
+    """DATA-002: read-only access never migrates; an unknown file fails and stays as is."""
+    job = _job(tmp_path, extra='recipe_memory = "memory.sqlite"')
     existing = tmp_path / "memory.sqlite"
     existing.write_bytes(b"not touched")
-    assert main(["job", "preview", str(job)]) == JobExitCode.CONFIG_ERROR
+    code, err = _code(["job", "preview", str(job)], capsys)
+    assert code != JobExitCode.SUCCESS and json.loads(err)["error"]
     assert existing.read_bytes() == b"not touched"
+
+
+def test_read_only_repository_refuses_writes(tmp_path):
+    """DATA-002: a read-only repository fails every write before touching the file."""
+    repository = SQLiteRecipeRepository(tmp_path / "missing.sqlite", read_only=True)
+    with pytest.raises(RecipeStorageError, match="read-only"):
+        repository.delete(RecipeKey.model_validate(_KEY))
+    assert not (tmp_path / "missing.sqlite").exists()
 
 
 def test_dataset_path_cannot_be_the_recipe_memory_file(tmp_path, capsys):

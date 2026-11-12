@@ -11,6 +11,21 @@ from pydantic import ValidationInfo
 from rastro.domain.localized_dates import parse_localized
 
 
+def strip_text(value: Any, *, required: bool) -> Any:
+    """Strip surrounding whitespace (NBSP included) so constraints see the real value.
+
+    A blank required value is a validation error. A blank optional value stays ``""`` so a
+    present-but-blank element still fails ``min_length`` or type parsing instead of
+    silently becoming absent.
+    """
+    if not isinstance(value, str):
+        return value
+    stripped = value.strip()
+    if required and not stripped:
+        raise ValueError("value is blank")
+    return stripped
+
+
 def localized_date(value: Any, info: ValidationInfo, *, want_time: bool) -> Any:
     if not isinstance(value, str):
         return value

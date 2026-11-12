@@ -129,11 +129,26 @@ class _Evidence:
     evaluate: Evaluate
 
 
-async def _evidence(context: RepairContext, index: int, policy: RepairPolicy) -> _Evidence:
+async def _evidence(
+    context: RepairContext,
+    index: int,
+    policy: RepairPolicy,
+    previous: Recipe | None = None,
+    *,
+    allow_fallbacks: bool = False,
+) -> _Evidence:
+    """Current document, retained evidence and a CI evaluator for one source.
+
+    ``previous`` defaults to the serving recipe; promotion passes it explicitly so a store
+    with nothing serving yet (an imported bundle) can adopt its candidate.
+    """
     from rastro.adapters.scrapling import ScraplingParser
     from rastro.adapters.structured import JsonParser
 
-    source, key, previous = context.source(index)
+    if previous is None:
+        source, key, previous = context.source(index)
+    else:
+        source, key = context.locate(index)
     document = await context.document(index, source)
     snapshot, fixtures = context.fixtures(source, previous)
     parser = JsonParser() if previous.representation == "json" else ScraplingParser()
@@ -153,6 +168,7 @@ async def _evidence(context: RepairContext, index: int, policy: RepairPolicy) ->
             rules=context.job.consistency,
             history=history,
             policy=policy,
+            allow_fallbacks=allow_fallbacks,
         )
 
     return _Evidence(source, key, previous, document, snapshot, evaluate)
@@ -166,10 +182,17 @@ async def _promote(
     reason: str,
     override_gates: bool,
 ) -> SourceRepair:
-    evidence = await _evidence(context, index, policy)
-    stored = context.repository.get(evidence.key, version=version)
+    _, key = context.locate(index)
+    stored = context.repository.get(key, version=version)
     if stored is None or stored.metadata.state != RecipeState.CANDIDATE:
         raise ConfigurationError("Only a stored candidate may be promoted")
+    serving = context.repository.get(key)
+    # A fresh store (an imported bundle) has nothing serving: compare with itself.
+    previous = serving.validated_recipe if serving else stored.validated_recipe
+    adopting = serving is None
+    if adopting:  # No history yet; the import already replayed the bundle's records.
+        policy = policy.model_copy(update={"min_historical_fixtures": 0})
+    evidence = await _evidence(context, index, policy, previous, allow_fallbacks=adopting)
     evaluation = evidence.evaluate(
         RepairCandidate(recipe=stored.recipe, origin="discovery", rationale="Operator review")
     )

@@ -25,7 +25,10 @@ theme:
 nav:
   - Overview: index.md
   - Getting started: getting-started.md
+  - For AI agents: ai-agents.md
+  - Stability policy: stability.md
   - Declarative jobs: jobs.md
+  - Recipes from examples: suggest.md
   - MCP server: mcp.md
   - Dataset load and export: dataset.md
   - Local Studio: studio.md

@@ -169,6 +169,12 @@ All field types accept `required = true` (default) or `required = false` (nullab
 to `None` when omitted by a recipe). Constraints from another type (such as `ge` on `string`)
 are rejected during validation.
 
+Extracted text values of every type have surrounding whitespace, including non-breaking
+spaces, removed before validation, so `min_length`, `pattern` and number or date parsing see
+the real value. A required field whose value is blank is a validation error, never an empty
+success. A blank value for an optional field stays an empty string, so `min_length = 1` still
+rejects it.
+
 ### Strict job definitions, lax extracted values
 
 The job file itself is parsed strictly. Booleans must be TOML/JSON booleans, integers must be
@@ -293,8 +299,11 @@ value, method and locator provenance, validation outcome and `loaded` flag (`tru
 record was accepted, the field is in `approve` and the source actually supplied it; an optional
 field the recipe did not observe shows `validation = "not_observed"` and is never loaded). Rejected records appear with their reason
 codes; the pipeline never keeps rejected values, so none are shown. It writes nothing: no dataset
-file and no recipe memory, so a job that sets `recipe_memory` is refused (exit code `2`) until a
-read-only recipe lookup exists. It requires a `[dataset]` block (exit code `2` otherwise) and shares the exit codes below.
+file and no recipe memory. For a job that sets `recipe_memory`, the store is opened read-only
+and never created or upgraded: each source uses the stored serving recipe when its version is
+higher than the job file's recipe, otherwise the job file's recipe. If the store file does not
+exist yet, the job file's recipe is used. A store written by an older release must be upgraded
+first by any writing command, such as `rastro job load`. It requires a `[dataset]` block (exit code `2` otherwise) and shares the exit codes below.
 Table cells escape control characters. JSON output carries `data_trust = "untrusted_source_data"`
 and follows [`docs/schemas/job-preview.schema.json`](schemas/job-preview.schema.json)
 (`rastro job schema --target preview`).
@@ -334,6 +343,7 @@ option) use the same format:
   the rest.
 - `location`: dotted path of the first invalid field, for example
   `fields.0.string.pattern` (union members appear by tag), or `null` when no field applies.
+- `hint` (optional): a suggested next step, such as the command to run.
 
 | `error` | Meaning |
 | --- | --- |
@@ -347,7 +357,13 @@ option) use the same format:
 | `file_error` | The operating system refused to read a file. |
 | `internal_error` | Unexpected failure. Run with `--verbose` for a traceback on `stderr`. |
 
-Commands other than `rastro job` keep their existing output.
+Other commands use the same envelope. Their input errors use the code `invalid_input`
+with a specific `message` (for example `Dataset file not found: agenda.sqlite` from
+`rastro dataset export`), and a missing optional dependency uses `missing_extra`:
+
+```json
+{"error": "missing_extra", "message": "This command needs the optional 'studio' extra", "location": null, "hint": "pip install 'rastro-engine[studio]'"}
+```
 
 ## Machine-readable output and JSON Schemas
 
@@ -394,5 +410,7 @@ Use `rastro job load job.toml` to write approved observed fields, then
 `rastro dataset export agenda.sqlite --format jsonl` to consume them.
 The load report schema is available with `rastro job schema --target load`.
 `[dataset].match_fields` optionally names the two labels and aware timestamp used
-for uncertain cross-source comparisons; it defaults to `title`, `venue`, `start_time`.
+for uncertain cross-source comparisons. Without it, records are matched on `identity`
+only and no uncertain match is flagged. A misspelled name is reported with
+`"location": "dataset.match_fields"`.
 See [dataset usage and the executed offline sequence](dataset.md#load-inspect-and-export-a-job).

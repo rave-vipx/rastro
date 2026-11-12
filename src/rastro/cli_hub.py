@@ -81,7 +81,7 @@ def _import(args: argparse.Namespace) -> int:
 
     if args.store.is_symlink():
         raise ConfigurationError("Recipe command paths must not contain symlinks")
-    stored = import_bundle(
+    imported = import_bundle(
         args.directory,
         SQLiteRecipeRepository(args.store),
         _parser_for,
@@ -91,8 +91,9 @@ def _import(args: argparse.Namespace) -> int:
         json.dumps(
             {
                 "schema_version": 1,
-                "state": stored.metadata.state,
-                "version": stored.recipe.version,
+                "state": imported.stored.metadata.state,
+                "version": imported.stored.recipe.version,
+                "reused": imported.reused,
             }
         )
     )

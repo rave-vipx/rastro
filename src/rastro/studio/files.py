@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import tomllib
 from pathlib import Path
 
 from rastro.application.atomic_files import write_atomic as write_atomic
@@ -42,8 +43,21 @@ def _visible(name: str) -> bool:
     return not name.startswith(".") and name not in SKIPPED_DIRS
 
 
+def _looks_like_job(path: Path) -> bool:
+    """A bounded TOML file with a top-level ``format_version``: a job, valid or not.
+
+    Invalid jobs stay listed so Studio can show their errors; reports, ``pyproject.toml``
+    and other TOML or JSON files do not.
+    """
+    try:
+        data = tomllib.loads(read_job_bytes(path).decode("utf-8"))
+    except (ConfigurationError, OSError, UnicodeDecodeError, tomllib.TOMLDecodeError):
+        return False
+    return "format_version" in data
+
+
 def list_job_files(root: Path) -> tuple[list[str], bool]:
-    """Relative .toml/.json files below ``root`` and whether the list was cut at the cap.
+    """Relative ``.toml`` job files below ``root`` and whether the list was cut at the cap.
 
     Hidden and vendor directories and symlinks are skipped; the walk is bounded.
     """
@@ -57,7 +71,9 @@ def list_job_files(root: Path) -> tuple[list[str], bool]:
         )
         for name in sorted(names):
             path = Path(directory) / name
-            if path.suffix.lower() in SUFFIXES and not path.is_symlink():
+            if len(found) > MAX_FILES:
+                break
+            if path.suffix.lower() == ".toml" and not path.is_symlink() and _looks_like_job(path):
                 found.append(path.relative_to(root).as_posix())
     found.sort()
     return found[:MAX_FILES], len(found) > MAX_FILES
