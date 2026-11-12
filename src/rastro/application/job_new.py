@@ -137,7 +137,9 @@ def render_job(
 ) -> str:
     """TOML text for a one-source job; field names are validated identifiers."""
     lines = [
-        "# Created by `rastro new`. Review the recipe, then run: rastro job run <this file>",
+        "# Created by `rastro new`. Review the recipe, then preview it with",
+        "# `rastro job run <this file>` (prints records, no writes)."
+        + (" Store approved records with `rastro job load <this file>`." if dataset else ""),
         "format_version = 1",
         "",
         "[recipe]",
