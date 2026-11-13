@@ -236,6 +236,8 @@ def test_repair_and_promote_agree_and_repeated_repairs_reuse_the_version(job, ca
     assert repository.get(key, version=version).metadata.state == "retired"
     second = rastro.repair_job_source(job, 1, auto_promote=True)
     assert [c.candidate_version for c in second.sources[0].comparisons] == [version]
+    assert [c.reused for c in second.sources[0].comparisons] == [True]
+    assert first.sources[0].comparisons[0].reused is False
     assert repository.next_version(key) == version + 1
     assert main(["recipe", "promote", str(job), "--version", str(version), "--reason", "x"]) == 2
     assert "Only a stored candidate" in capsys.readouterr().err
@@ -414,3 +416,60 @@ def test_container_rename_relocates_with_a_card_missing_its_optional_field(job):
     report = rastro.repair_job_source(job, 1, auto_promote=True)
     (source,) = report.sources
     assert source.promoted_version == 2, source.model_dump_json(indent=2)
+
+
+def stage_candidate(job, selector="h2.new-title::text"):
+    repository, key = history(job)
+    recipe = rastro.load_job(job).sources[0].recipe
+    candidate = recipe.model_copy(
+        update={"version": 2, "fields": {**recipe.fields, "title": selector}}
+    )
+    repository.save_candidate(key, candidate, selected_index=0, at=datetime.now(UTC))
+    return repository, key
+
+
+def test_promote_on_an_unusable_page_keeps_the_candidate(job):
+    """REPAIR-005: a consent wall or empty shell never retires a candidate."""
+    assert rastro.load_job_file(job).job.status == "success"
+    repository, key = stage_candidate(job)
+    (job.parent / "board.html").write_text(
+        "<html><body><p>Accept cookies to continue</p></body></html>", encoding="utf-8"
+    )
+    report = rastro.promote_job_recipe(job, 1, 2, reason="x")
+    assert report.sources[0].comparisons[0].evaluation.decision == "reject"
+    assert report.sources[0].notes == ("page_not_usable",)
+    assert report.sources[0].promoted_version is None
+    assert repository.get(key, version=2).metadata.state == "candidate"
+    with pytest.raises(rastro.ConfigurationError, match="candidate was kept"):
+        rastro.promote_job_recipe(job, 1, 2, reason="x", override_gates=True)
+    assert repository.get(key, version=2).metadata.state == "candidate"
+
+
+def test_promote_reject_on_a_usable_page_reports_retirement(job):
+    """REPAIR-005: the not-promoted report says the candidate was retired."""
+    assert rastro.load_job_file(job).job.status == "success"
+    repository, key = stage_candidate(job, selector="p.none::text")
+    report = rastro.promote_job_recipe(job, 1, 2, reason="x")
+    assert report.sources[0].notes == ("candidate_retired",)
+    assert json.loads(report.model_dump_json())["sources"][0]["notes"] == ["candidate_retired"]
+    assert repository.get(key, version=2).metadata.state == "retired"
+
+
+def test_equal_reuse_prefers_the_newest_candidate(job):
+    """REC-006: reuse picks the newest equal candidate, else the newest retired twin."""
+    from rastro.application.recipe_repair import _equal_stored
+
+    assert rastro.load_job_file(job).job.status == "success"
+    repository, key = history(job)
+    recipe = rastro.load_job(job).sources[0].recipe
+    proposal = recipe.model_copy(update={"fields": {**recipe.fields, "title": "h3::text"}})
+    now = datetime.now(UTC)
+    for version in (2, 3, 4):
+        repository.save_candidate(
+            key, proposal.model_copy(update={"version": version}), selected_index=0, at=now
+        )
+    repository.transition(key, 4, rastro.RecipeState.RETIRED, reason="Rejected", at=now)
+    assert _equal_stored(repository, key, proposal) == (3, "candidate")
+    repository.transition(key, 3, rastro.RecipeState.RETIRED, reason="Rejected", at=now)
+    repository.transition(key, 2, rastro.RecipeState.RETIRED, reason="Rejected", at=now)
+    assert _equal_stored(repository, key, proposal) == (4, "retired")

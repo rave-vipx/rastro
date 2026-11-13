@@ -10,12 +10,13 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from rastro.application.extraction import extract_document
 from rastro.application.recipe_ci import evaluate_candidate
 from rastro.application.recipe_repair import repair_candidates
 from rastro.application.repair_context import RepairContext
 from rastro.domain.lifecycle import RecipeState
 from rastro.domain.memory import RecipeKey
-from rastro.domain.models import ConfigurationError, Limits, Recipe, Source
+from rastro.domain.models import ConfigurationError, Limits, RastroError, Recipe, Source
 from rastro.domain.recipe_compare import (
     CandidateEvaluation,
     RecipeComparison,
@@ -127,6 +128,7 @@ class _Evidence:
     document: str
     snapshot: RelocationSnapshot | None
     evaluate: Evaluate
+    records: Callable[[Recipe], int]
 
 
 async def _evidence(
@@ -171,7 +173,22 @@ async def _evidence(
             allow_fallbacks=allow_fallbacks,
         )
 
-    return _Evidence(source, key, previous, document, snapshot, evaluate)
+    def records(recipe: Recipe) -> int:
+        """Validated records ``recipe`` extracts from the current page (0 on any error)."""
+        try:
+            result = extract_document(
+                document,
+                source=source,
+                schema=context.schema,
+                recipe=recipe,
+                parser=parser,
+                limits=context.job.limits or Limits(),
+            )
+        except RastroError:
+            return 0
+        return len(result.records)
+
+    return _Evidence(source, key, previous, document, snapshot, evaluate, records)
 
 
 async def _promote(
@@ -196,19 +213,29 @@ async def _promote(
     evaluation = evidence.evaluate(
         RepairCandidate(recipe=stored.recipe, origin="discovery", rationale="Operator review")
     )
+    notes: tuple[str, ...] = ()
     if evaluation.decision == "reject":
-        # Same rule as repair: a rejected candidate is retired with a lifecycle event.
-        context.repository.transition(
-            evidence.key,
-            version,
-            RecipeState.RETIRED,
-            reason="Recipe CI: reject",
-            at=datetime.now(UTC),
-        )
+        # Retire only when the page itself is usable: a consent wall, maintenance page or
+        # empty shell says nothing about the candidate, which then stays a candidate.
+        usable = evaluation.current_records > 0 or evidence.records(evidence.previous) > 0
+        if usable:
+            context.repository.transition(
+                evidence.key,
+                version,
+                RecipeState.RETIRED,
+                reason="Recipe CI: reject",
+                at=datetime.now(UTC),
+            )
+        notes = ("candidate_retired",) if usable else ("page_not_usable",)
         if override_gates:
+            outcome = (
+                "the candidate was rejected and retired"
+                if usable
+                else "the page has no usable records, so the candidate was kept"
+            )
             raise ConfigurationError(
                 "--override-gates bypasses quarantine thresholds, never a validation or "
-                "regression failure; the candidate was rejected and retired" + _describe(evaluation)
+                f"regression failure; {outcome}" + _describe(evaluation)
             )
     promoted = evaluation.decision == "promote" or (
         override_gates and evaluation.decision == "quarantine"
@@ -222,6 +249,7 @@ async def _promote(
         source_index=index,
         comparisons=(RecipeComparison.between(evidence.previous, stored.recipe, evaluation),),
         promoted_version=version if promoted else None,
+        notes=notes,
     )
 
 

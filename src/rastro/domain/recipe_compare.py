@@ -57,6 +57,8 @@ class RecipeComparison(Contract):
     changed_settings: tuple[str, ...] = ()
     strategy_changed: bool
     evaluation: CandidateEvaluation | None = None
+    # True when repair reused an equal stored version instead of allocating a new one.
+    reused: bool = Field(default=False, exclude_if=lambda v: not v)
 
     @classmethod
     def between(
@@ -100,6 +102,8 @@ class SourceRepair(Contract):
     issues: tuple[Issue, ...] | None = Field(default=None, exclude_if=lambda v: v is None)
     comparisons: tuple[RecipeComparison, ...]
     promoted_version: int | None = None
+    # Audit notes, e.g. ``candidate_retired`` or ``page_not_usable`` (candidate kept).
+    notes: tuple[str, ...] = Field(default=(), exclude_if=lambda v: not v)
 
 
 class RepairReport(Contract):

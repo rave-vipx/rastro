@@ -135,10 +135,15 @@ Every candidate is evaluated, by the same evaluator for `recipe repair` and
 come first: a candidate whose current records fail validation, a historical replay or a
 declared consistency rule is **rejected**, and the report's `blocking` list names each
 failing record (`record_index`, `field`, issue `code`, never values). Rejection retires the
-version with a lifecycle event (`Recipe CI: reject`), from either command. Ambiguous
+version with a lifecycle event (`Recipe CI: reject`), from either command, but only when
+the page is usable: if neither the candidate nor the serving recipe finds any record on it
+(a consent wall, maintenance page or empty shell), `recipe promote` keeps the candidate and
+reports `notes: ["page_not_usable"]`; otherwise it reports `notes: ["candidate_retired"]`. Ambiguous
 candidates that otherwise validate remain quarantined (`ambiguous_evidence`). A proposal equal
 to a stored candidate reuses that version, and one equal to a retired version that is rejected
-again reuses it too, so repeated repair runs do not allocate new versions. If multiple
+again reuses it too, so repeated repair runs do not allocate new versions. Reuse picks the newest equal
+candidate, then the newest equal retired version, and the comparison is marked
+`"reused": true` so every run stays auditable. If multiple
 candidates pass, all are quarantined as competing proposals. A unique passing candidate
 may promote only with `auto_promote = true`. Rejected versions become retired; quarantined
 versions stay in lifecycle state `candidate`. Neither state serves unpinned extraction.

@@ -37,8 +37,9 @@ def repair_candidates(
             evaluation = evaluation.model_copy(
                 update={"decision": "quarantine", "reasons": ("competing_candidates",)}
             )
-        recipe = _store(lifecycle, key, candidate.recipe, evaluation, at)
-        comparisons.append(RecipeComparison.between(previous, recipe, evaluation))
+        recipe, reused = _store(lifecycle, key, candidate.recipe, evaluation, at)
+        comparison = RecipeComparison.between(previous, recipe, evaluation)
+        comparisons.append(comparison.model_copy(update={"reused": reused}))
     return tuple(comparisons)
 
 
@@ -48,21 +49,20 @@ def _store(
     proposal: Recipe,
     evaluation: CandidateEvaluation,
     at: datetime,
-) -> Recipe:
+) -> tuple[Recipe, bool]:
+    """Store or reuse a version; return it and whether an equal stored version was reused."""
     existing = _equal_stored(lifecycle, key, proposal)
     if existing is not None:
         version, state = existing
-        if state == RecipeState.RETIRED and evaluation.decision != "reject":
-            existing = None  # a retired row cannot be promoted again; store a fresh one
-        else:
-            recipe = with_version(proposal, version)
+        if state == RecipeState.CANDIDATE or evaluation.decision == "reject":
             if state == RecipeState.CANDIDATE:
                 _decide(lifecycle, key, version, evaluation, at)
-            return recipe
+            return with_version(proposal, version), True
+        # A retired row cannot be promoted again; a passing proposal gets a fresh version.
     recipe = with_version(proposal, lifecycle.next_version(key))
     lifecycle.save_candidate(key, recipe, selected_index=0, at=at)
     _decide(lifecycle, key, recipe.version, evaluation, at)
-    return recipe
+    return recipe, False
 
 
 def _decide(
@@ -82,13 +82,17 @@ def _decide(
 def _equal_stored(
     lifecycle: RecipeLifecycle, key: RecipeKey, proposal: Recipe
 ) -> tuple[int, RecipeState] | None:
+    """The newest equal version, preferring a candidate over a retired twin."""
     get = getattr(lifecycle, "get", None)  # RecipeRepository.get; absent on bare lifecycles
     if not callable(get):
         return None
-    for status in lifecycle.history(key).versions:
+    matches = []
+    for status in sorted(lifecycle.history(key).versions, key=lambda v: -v.version):
         if status.state not in _REUSABLE:
             continue
         stored = get(key, version=status.version)
         if stored is not None and stored.recipe == with_version(proposal, status.version):
-            return status.version, status.state
-    return None
+            matches.append((status.version, status.state))
+    candidates = [m for m in matches if m[1] == RecipeState.CANDIDATE]
+    preferred = candidates or matches
+    return preferred[0] if preferred else None
