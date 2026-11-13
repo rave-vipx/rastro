@@ -68,9 +68,12 @@ class OllamaProvider(RedactedContract):
 
 
 class OpenAICompatibleProvider(RedactedContract):
-    """Chat Completions model configuration; credentials are env variable names only."""
+    """Chat Completions model configuration; credentials are env variable names only.
 
-    provider: Literal["openai_compatible"] = "openai_compatible"
+    ``provider = "http"`` is the documented name; ``"openai_compatible"`` stays accepted.
+    """
+
+    provider: Literal["http", "openai_compatible"] = "http"
     model: str = Field(pattern=_OPENAI_MODEL)
     base_url: str = Field(default="http://127.0.0.1:11434/v1", min_length=1, max_length=2048)
     base_url_env: str | None = Field(default=None, pattern=ENV_REFERENCE)
@@ -104,6 +107,39 @@ class OpenAICompatibleProvider(RedactedContract):
         return self
 
 
+class CommandProvider(RedactedContract):
+    """A local model command run without a shell; the prompt goes to stdin.
+
+    The command may forward page content to a hosted service, so it needs either
+    ``allow_remote = true`` or ``local = true``. ``env`` lists extra variable names
+    passed through besides ``PATH`` and ``HOME``.
+    """
+
+    provider: Literal["command"] = "command"
+    argv: tuple[Annotated[str, Field(min_length=1, max_length=4096)], ...] = Field(
+        min_length=1, max_length=64
+    )
+    allow_remote: StrictBool = False
+    local: StrictBool = False
+    timeout: float | None = Field(default=None, gt=0, le=3600, allow_inf_nan=False)
+    output: Literal["json", "text"] = "json"
+    json_path: str | None = Field(
+        default=None, pattern=r"^[A-Za-z0-9_-]{1,64}(\.[A-Za-z0-9_-]{1,64}){0,7}$"
+    )
+    env: tuple[Annotated[str, Field(pattern=ENV_REFERENCE)], ...] = Field(default=(), max_length=32)
+
+    @model_validator(mode="after")
+    def check_command(self) -> Self:
+        if any("\0" in arg for arg in self.argv) or not self.argv[0].strip():
+            raise ValueError("argv must start with a program name and contain no NUL")
+        if not (self.allow_remote or self.local):
+            raise ValueError(
+                "A model command may send page content off this machine; "
+                "set allow_remote = true, or local = true for a local model"
+            )
+        return self
+
+
 type JobModelProvider = Annotated[
-    OllamaProvider | OpenAICompatibleProvider, Field(discriminator="provider")
+    OllamaProvider | OpenAICompatibleProvider | CommandProvider, Field(discriminator="provider")
 ]

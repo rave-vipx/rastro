@@ -17,7 +17,7 @@ from urllib.parse import urlsplit
 
 import httpx
 
-from rastro.domain.intelligence import InferencePolicy, ModelError, ModelRequest, proposal_schema
+from rastro.domain.intelligence import InferencePolicy, ModelError, ModelRequest
 from rastro.domain.json import strict_json
 from rastro.domain.models import ConfigurationError
 
@@ -128,12 +128,14 @@ class OpenAICompatibleModel:
                 "json_schema": {
                     "name": "rastro_recipe_proposal",
                     "strict": False,
-                    "schema": proposal_schema(),
+                    "schema": request.output_schema,
                 },
             }
         else:
             # JSON mode constrains syntax only, so the trusted prompt carries the schema.
-            system += "\nRespond with JSON matching this schema: " + json.dumps(proposal_schema())
+            system += "\nRespond with JSON matching this schema: " + json.dumps(
+                request.output_schema
+            )
             response_format = {"type": "json_object"}
         payload: dict[str, Any] = {
             "model": self._model,

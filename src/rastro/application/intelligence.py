@@ -126,7 +126,7 @@ class RecipeLearner:
         representation: Representation = "html",
     ) -> ExtractionResult[T]:
         """Discover before inference. JSON uses structured discovery only; models propose HTML."""
-        candidates, field_names, required = await self._discover(
+        candidates, _, required = await self._discover(
             html, schema=schema, limits=limits, representation=representation
         )
         session = _LearningSession(
@@ -151,11 +151,11 @@ class RecipeLearner:
                 policy=self._policy,
                 slots=self._slots,
                 html=html,
-                fields=field_names,
-                required=required,
+                schema=schema,
                 failure=failure,
                 attempts=session.attempts,
                 evaluate=session.evaluate,
+                limits=limits,
             )
         storage_seconds = await self._persist_learned(prepared, session.selected)
         result = stamp_learning(

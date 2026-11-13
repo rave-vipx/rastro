@@ -9,7 +9,7 @@ from urllib.parse import urlsplit
 
 import httpx
 
-from rastro.domain.intelligence import InferencePolicy, ModelError, ModelRequest, proposal_schema
+from rastro.domain.intelligence import InferencePolicy, ModelError, ModelRequest
 from rastro.domain.json import strict_json
 from rastro.domain.models import ConfigurationError
 
@@ -54,7 +54,7 @@ class OllamaModel:
                 {"role": "system", "content": request.system},
                 {"role": "user", "content": request.content},
             ],
-            "format": proposal_schema(),
+            "format": request.output_schema,
             # Capable models otherwise spend the output budget on hidden reasoning.
             "think": False,
             "options": {

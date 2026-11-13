@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath, PureWindowsPath
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import rastro
-from rastro.domain.job_providers import JobModelProvider, OllamaProvider, OpenAICompatibleProvider
+from rastro.domain.job_providers import JobModelProvider
 from rastro.domain.jobs import (
     MAX_JOB_BYTES,
     FileJobSource,
@@ -17,6 +16,7 @@ from rastro.domain.jobs import (
     parse_job,
     validate_job_path_syntax,
 )
+from rastro.domain.model_trust import check_job_model
 from rastro.domain.models import (
     ConfigurationError,
     Limits,
@@ -148,29 +148,12 @@ def _read_local_source(path: Path, max_bytes: int, representation: Representatio
 
 
 def _build_model_provider(spec: JobModelProvider) -> ModelPort:
-    if spec.base_url_env is not None:
-        base_url = os.environ.get(spec.base_url_env, "").strip()
-        if not base_url:
-            raise ConfigurationError(f"Set {spec.base_url_env} to a valid model endpoint URL")
-    else:
-        base_url = spec.base_url
-    try:
-        if isinstance(spec, OllamaProvider):
-            ollama_cls: Any = rastro.OllamaModel
-            return ollama_cls(spec.model, base_url=base_url)  # type: ignore[no-any-return]
-        assert isinstance(spec, OpenAICompatibleProvider)
-        openai_cls: Any = rastro.OpenAICompatibleModel
-        return openai_cls(  # type: ignore[no-any-return]
-            spec.model,
-            base_url=base_url,
-            api_key_env=spec.api_key_env,
-            allow_remote=spec.allow_remote,
-            response_format=spec.response_format,
-            token_limit=spec.token_limit,
-            temperature=spec.temperature,
-        )
-    except ImportError as error:
-        raise ConfigurationError(str(error)) from None
+    """A job file's model, only as far as the operator allows (never the job alone)."""
+    from rastro.application.operator_trust import current_trust
+    from rastro.model_factory import build_model
+
+    check_job_model(spec, current_trust())
+    return build_model(spec)
 
 
 def prepare_job(

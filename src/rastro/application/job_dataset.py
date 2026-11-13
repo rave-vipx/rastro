@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from contextlib import AbstractContextManager, nullcontext
 from datetime import timedelta
 from pathlib import Path
@@ -22,13 +23,20 @@ if TYPE_CHECKING:
 
 
 def load_job_file(
-    path: str | Path, *, drift: bool = False, allow_absolute_paths: bool = False
+    path: str | Path,
+    *,
+    drift: bool = False,
+    allow_absolute_paths: bool = False,
+    allow_remote: bool = False,
+    allow_command: bool = False,
+    allow_env: Sequence[str] = (),
 ) -> JobLoadResult:
     """Run a job file and load its approved fields into the job's ``[dataset]``.
 
     Raises ``ConfigurationError`` for invalid jobs or paths. With ``drift=True`` the
     structural drift of each source is measured and reported. Each loaded source
     reports whether its recipe came from the job file or from ``recipe_memory``.
+    ``allow_*`` are the operator's model opt-ins, as for ``run_job``.
     """
     file = Path(path)
     job = load_job(file, allow_absolute_paths=allow_absolute_paths)
@@ -64,7 +72,14 @@ def load_job_file(
     else:
         capture = nullcontext({})
     with capture as snapshots, collect_successes() as successes:
-        report = run_job(job, base_dir=file.parent, allow_absolute_paths=allow_absolute_paths)
+        report = run_job(
+            job,
+            base_dir=file.parent,
+            allow_absolute_paths=allow_absolute_paths,
+            allow_remote=allow_remote,
+            allow_command=allow_command,
+            allow_env=allow_env,
+        )
     loaded = load_results(
         spec,
         [f.name for f in job.fields],

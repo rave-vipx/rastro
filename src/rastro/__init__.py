@@ -28,6 +28,7 @@ from rastro.domain.job_fields import (
 )
 from rastro.domain.job_load import JobLoadResult, LoadedSource
 from rastro.domain.job_providers import (
+    CommandProvider,
     JobModelProvider,
     OllamaProvider,
     OpenAICompatibleProvider,
@@ -104,6 +105,7 @@ from rastro.mocklab import (
     load_fixture,
     verify_fixture,
 )
+from rastro.model_factory import model
 from rastro.ports.model import ModelPort
 from rastro.ports.recipes import RecipeLifecycle, RecipeRepository
 from rastro.scrape import scrape, scrape_async
@@ -138,6 +140,7 @@ __all__ = [
     "AcquisitionPolicy",
     "BooleanField",
     "CandidateEvaluation",
+    "CommandProvider",
     "ConfigurationError",
     "CssRecipe",
     "DateField",
@@ -225,6 +228,7 @@ __all__ = [
     "load_fixture",
     "load_job",
     "load_job_file",
+    "model",
     "parse_job",
     "promote_job_recipe",
     "repair_job_source",

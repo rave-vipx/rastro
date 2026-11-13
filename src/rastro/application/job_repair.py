@@ -11,6 +11,7 @@ from typing import Any
 from uuid import uuid4
 
 from rastro.application.extraction import extract_document
+from rastro.application.operator_trust import operator_trust
 from rastro.application.recipe_ci import evaluate_candidate
 from rastro.application.recipe_repair import repair_candidates
 from rastro.application.repair_context import RepairContext
@@ -38,11 +39,15 @@ def repair_job_source(
     min_completeness: float | None = None,
     auto_promote: bool | None = None,
     allow_absolute_paths: bool = False,
+    allow_remote: bool = False,
+    allow_command: bool = False,
+    allow_env: Sequence[str] = (),
 ) -> RepairReport:
     """Propose, evaluate and store repair candidates for one source (1-based index).
 
     Candidates are saved as versions; one that passes every gate becomes active when
     automatic promotion is enabled. Keyword thresholds override the job's ``[repair]``.
+    ``allow_*`` are the operator's model opt-ins, as for ``run_job``.
     """
     overrides = {
         name: value
@@ -54,7 +59,13 @@ def repair_job_source(
         if value is not None
     }
     return repair_job_sources(
-        path, (source,), allow_absolute_paths=allow_absolute_paths, **overrides
+        path,
+        (source,),
+        allow_absolute_paths=allow_absolute_paths,
+        allow_remote=allow_remote,
+        allow_command=allow_command,
+        allow_env=allow_env,
+        **overrides,
     )
 
 
@@ -63,6 +74,9 @@ def repair_job_sources(
     sources: Sequence[int] | None,
     *,
     allow_absolute_paths: bool = False,
+    allow_remote: bool = False,
+    allow_command: bool = False,
+    allow_env: Sequence[str] = (),
     **overrides: Any,
 ) -> RepairReport:
     """Repair several sources, or all of them when ``sources`` is ``None``."""
@@ -74,7 +88,10 @@ def repair_job_sources(
         items = [await _repair_source(context, index, policy) for index in indexes]
         return RepairReport(run_id=str(uuid4()), sources=tuple(items))
 
-    return _run(run())
+    with operator_trust(
+        allow_remote=allow_remote, allow_command=allow_command, allow_env=allow_env
+    ):
+        return _run(run())
 
 
 def promote_job_recipe(
@@ -129,6 +146,7 @@ class _Evidence:
     snapshot: RelocationSnapshot | None
     evaluate: Evaluate
     records: Callable[[Recipe], int]
+    samples: tuple[dict[str, Any], ...] = ()
 
 
 async def _evidence(
@@ -188,7 +206,8 @@ async def _evidence(
             return 0
         return len(result.records)
 
-    return _Evidence(source, key, previous, document, snapshot, evaluate, records)
+    samples = tuple(record.data for bundle in fixtures for record in bundle.expected.records)
+    return _Evidence(source, key, previous, document, snapshot, evaluate, records, samples[:2])
 
 
 async def _promote(
@@ -300,6 +319,12 @@ async def _repair_source(context: RepairContext, index: int, policy: RepairPolic
         limits=context.job.limits or Limits(),
         snapshot=evidence.snapshot,
         model_enabled=context.job.model is not None,
+        samples=evidence.samples,
+        failure=(
+            "serving_recipe_extracts_no_records"
+            if model is not None and evidence.records(previous) == 0
+            else "serving_recipe_fails_gates"
+        ),
     )
     comparisons = repair_candidates(
         candidates.candidates,

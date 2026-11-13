@@ -7,6 +7,7 @@ then explicitly enables it for this call. All proposals still require recipe CI.
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Mapping, Sequence
 from typing import Literal, Protocol
 
 from pydantic import BaseModel, ValidationError
@@ -71,12 +72,16 @@ class RepairCandidateGenerator:
         limits: Limits,
         snapshot: RelocationSnapshot | None = None,
         model_enabled: bool = False,
+        samples: Sequence[Mapping[str, object]] = (),
+        failure: str = "recipe_repair",
     ) -> RepairCandidates:
         """Collect relocation, fallbacks, discovery, then optional model proposals.
 
         Supply representation-appropriate discovery. Snapshot reuse is bound to
         source, schema and recipe; the adapter checks the recipe identity.
         Versions are unchanged: the lifecycle caller assigns fresh versions.
+        ``samples`` are records from the last success, shown to the model clipped and
+        labelled untrusted; ``failure`` is a safe category for why the recipe fails.
         """
         recipe = _check_input(html, recipe, schema, limits)
         candidates: list[RepairCandidate] = []
@@ -119,7 +124,16 @@ class RepairCandidateGenerator:
             schema,
             recipe,
         )
-        return await self._with_model(html, schema, recipe, candidates, model_enabled)
+        return await self._with_model(
+            html,
+            schema,
+            recipe,
+            candidates,
+            model_enabled,
+            samples=samples,
+            limits=limits,
+            failure=failure,
+        )
 
     def _extend(
         self,
@@ -154,6 +168,10 @@ class RepairCandidateGenerator:
         recipe: Recipe,
         candidates: list[RepairCandidate],
         enabled: bool,
+        *,
+        samples: Sequence[Mapping[str, object]],
+        limits: Limits,
+        failure: str,
     ) -> RepairCandidates:
         if not enabled or recipe.representation != "html":
             return RepairCandidates(candidates=tuple(candidates))
@@ -185,11 +203,13 @@ class RepairCandidateGenerator:
             policy=self._policy,
             slots=self._slots,
             html=html,
-            fields=tuple(schema.model_fields),
-            required={name for name, field in schema.model_fields.items() if field.is_required()},
-            failure="recipe_repair",
+            schema=schema,
+            failure=failure,
             attempts=attempts,
             evaluate=collect,
+            recipe=recipe,
+            samples=samples,
+            limits=limits,
         )
         return RepairCandidates(
             candidates=tuple(candidates),

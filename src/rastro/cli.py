@@ -25,6 +25,7 @@ from rastro import (
 )
 from rastro.application.job_preview import preview_job_file, render_preview_table
 from rastro.application.job_summary import job_validation_summary
+from rastro.application.operator_trust import set_process_trust
 from rastro.cli_dataset import add_commands, dataset_command, load_job_command
 from rastro.cli_errors import UsageError, classify, missing_extra_error
 from rastro.cli_recipe import add_commands as add_recipe_commands
@@ -33,6 +34,7 @@ from rastro.cli_studio import add_command as add_studio_command
 from rastro.cli_studio import studio_command
 from rastro.cli_suggest import add_commands as add_suggest_commands
 from rastro.cli_suggest import new_command, suggest_command
+from rastro.cli_trust import add_trust_arguments, apply_trust, hoist_trust_flags
 from rastro.domain.job_dataset import job_preview_json_schema
 from rastro.domain.job_load import job_load_json_schema
 
@@ -53,6 +55,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--version", action="version", version=f"rastro {__version__}")
     parser.add_argument("--verbose", action="store_true", help="Write structured logs to stderr")
+    add_trust_arguments(parser)
     subcommands = parser.add_subparsers(dest="command", required=True)
     subcommands.add_parser("demo", help="Run a synthetic JSON-LD extraction without network access")
     subcommands.add_parser("doctor", help="Report installed core versions and capabilities as JSON")
@@ -216,7 +219,7 @@ def _is_job_command(argv: list[str]) -> bool:
 
 
 def main(argv: list[str] | None = None) -> int:
-    arguments = sys.argv[1:] if argv is None else argv
+    arguments = hoist_trust_flags(sys.argv[1:] if argv is None else argv)
     parser = _build_parser()
     try:
         args = parser.parse_args(arguments)
@@ -232,7 +235,9 @@ def main(argv: list[str] | None = None) -> int:
         handler = logging.StreamHandler(sys.stderr)
         logger.addHandler(handler)
         logger.setLevel(logging.INFO)
+    previous_trust = None
     try:
+        previous_trust = apply_trust(args)
         return _dispatch(args)
     except (OSError, ValueError, ValidationError, SchemaError, RastroError) as error:
         if args.command in _JSON_ERRORS:
@@ -251,6 +256,8 @@ def main(argv: list[str] | None = None) -> int:
             logger.exception("Unexpected error while handling a job command")
         return _report_job_error(error)
     finally:
+        if previous_trust is not None:
+            set_process_trust(previous_trust)
         if handler is not None:
             logger.removeHandler(handler)
             handler.close()

@@ -90,6 +90,7 @@ type = "string"
     secret = "sk-ENV-SECRET-NEVER-PRINT-0001"
     monkeypatch.setenv("RASTRO_SECRET_KEY", secret)
     monkeypatch.setenv("RASTRO_MODEL_URL", "http://127.0.0.1:11434/v1")
+    monkeypatch.setenv("RASTRO_ALLOW_REMOTE", "1")  # the operator's opt-in, not the job's
     provider = _build_model_provider(
         OpenAICompatibleProvider(
             model="local-m",

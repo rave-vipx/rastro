@@ -175,6 +175,90 @@
       "title": "BooleanField",
       "type": "object"
     },
+    "CommandProvider": {
+      "additionalProperties": false,
+      "description": "A local model command run without a shell; the prompt goes to stdin.\n\nThe command may forward page content to a hosted service, so it needs either\n``allow_remote = true`` or ``local = true``. ``env`` lists extra variable names\npassed through besides ``PATH`` and ``HOME``.",
+      "properties": {
+        "allow_remote": {
+          "default": false,
+          "title": "Allow Remote",
+          "type": "boolean"
+        },
+        "argv": {
+          "items": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 64,
+          "minItems": 1,
+          "title": "Argv",
+          "type": "array"
+        },
+        "env": {
+          "default": [],
+          "items": {
+            "pattern": "^[A-Z_][A-Z0-9_]{0,127}$",
+            "type": "string"
+          },
+          "maxItems": 32,
+          "title": "Env",
+          "type": "array"
+        },
+        "json_path": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9_-]{1,64}(\\.[A-Za-z0-9_-]{1,64}){0,7}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Json Path"
+        },
+        "local": {
+          "default": false,
+          "title": "Local",
+          "type": "boolean"
+        },
+        "output": {
+          "default": "json",
+          "enum": [
+            "json",
+            "text"
+          ],
+          "title": "Output",
+          "type": "string"
+        },
+        "provider": {
+          "const": "command",
+          "default": "command",
+          "title": "Provider",
+          "type": "string"
+        },
+        "timeout": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 3600,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Timeout"
+        }
+      },
+      "required": [
+        "argv"
+      ],
+      "title": "CommandProvider",
+      "type": "object"
+    },
     "ConsistencyRule": {
       "discriminator": {
         "mapping": {
@@ -869,6 +953,8 @@
     "JobModelProvider": {
       "discriminator": {
         "mapping": {
+          "command": "#/$defs/CommandProvider",
+          "http": "#/$defs/OpenAICompatibleProvider",
           "ollama": "#/$defs/OllamaProvider",
           "openai_compatible": "#/$defs/OpenAICompatibleProvider"
         },
@@ -880,6 +966,9 @@
         },
         {
           "$ref": "#/$defs/OpenAICompatibleProvider"
+        },
+        {
+          "$ref": "#/$defs/CommandProvider"
         }
       ]
     },
@@ -1167,7 +1256,7 @@
     },
     "OpenAICompatibleProvider": {
       "additionalProperties": false,
-      "description": "Chat Completions model configuration; credentials are env variable names only.",
+      "description": "Chat Completions model configuration; credentials are env variable names only.\n\n``provider = \"http\"`` is the documented name; ``\"openai_compatible\"`` stays accepted.",
       "properties": {
         "allow_remote": {
           "default": false,
@@ -1213,8 +1302,11 @@
           "type": "string"
         },
         "provider": {
-          "const": "openai_compatible",
-          "default": "openai_compatible",
+          "default": "http",
+          "enum": [
+            "http",
+            "openai_compatible"
+          ],
           "title": "Provider",
           "type": "string"
         },

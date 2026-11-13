@@ -81,6 +81,12 @@ class ModelRequest(Contract):
 
     system: str
     content: str
+    response_schema: dict[str, Any] | None = None
+
+    @property
+    def output_schema(self) -> dict[str, Any]:
+        """The JSON Schema the answer must match; recipe proposals unless overridden."""
+        return self.response_schema or proposal_schema()
 
     @property
     def context_bytes(self) -> int:
@@ -89,7 +95,7 @@ class ModelRequest(Contract):
                 {"role": "system", "content": self.system},
                 {"role": "user", "content": self.content},
             ],
-            "format": proposal_schema(),
+            "format": self.output_schema,
         }
         return len(json.dumps(envelope).encode("utf-8"))
 
