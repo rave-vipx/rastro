@@ -9,6 +9,7 @@ from typing import Any
 
 from rastro.domain.jobs import Job, parse_job
 from rastro.domain.models import ConfigurationError
+from rastro.domain.selector_policy import check_untrusted_field
 
 MAX_SELECTOR = 1024
 
@@ -69,6 +70,7 @@ def apply_edit(text: str, suffix: str, edit: SelectorEdit) -> str:
     """Return ``text`` with one selector replaced; TOML comments and layout are kept."""
     if not edit.selector or len(edit.selector) > MAX_SELECTOR or "\x00" in edit.selector:
         raise ConfigurationError("Selector must be non-empty text of at most 1024 characters")
+    check_untrusted_field(edit.selector)
     json_file = suffix.lower() == ".json"
     raw = json.loads(text) if json_file else tomllib.loads(text)
     fields = _fields_of(raw, edit.source)

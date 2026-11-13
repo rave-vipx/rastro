@@ -170,6 +170,47 @@ def test_replay_mismatch_fails_even_with_valid_hashes(exported, tmp_path, capsys
     assert not store.exists()
 
 
+def _costly_bundle(folder: Path, siblings: int) -> Path:
+    """The audit H3 PoC: valid hashes, a replay that matches, a quadratic selector."""
+    from rastro.domain.models import Recipe
+
+    folder.mkdir()
+    recipe = Recipe.model_validate(
+        {"strategy": "css", "record_selector": "p ~ p ~ p ~ b", "fields": {"t": "::text"}}
+    ).model_dump(mode="json")
+    sample = ("<html><body>" + "<p>a</p>" * siblings + "<b>z</b></body></html>").encode()
+    files = {
+        "recipe.json": canonical_json(recipe),
+        "schema.json": canonical_json({"fields": [{"name": "t", "type": "string"}]}),
+        "expected.json": canonical_json([{"t": "z"}]),
+        "sample.html": sample,
+    }
+    manifest = {
+        "format_version": 1,
+        "source": {"url": "https://shop.example.com/p"},
+        "context": {},
+        "representation": "html",
+        "last_verified": "2026-01-01",
+        "files": {name: sha256_hex(data) for name, data in files.items()},
+    }
+    files[MANIFEST_FILE] = canonical_json(manifest)
+    for name, data in files.items():
+        (folder / name).write_bytes(data)
+    return folder
+
+
+def test_costly_selector_is_refused_before_replay(tmp_path, capsys):
+    """Audit H3: a 48 KB bundle with p ~ p ~ p ~ b took 105 s of CPU to replay."""
+    import time
+
+    bundle = _costly_bundle(tmp_path / "evil", 6_000)
+    started = time.perf_counter()
+    err, store = import_error(bundle, tmp_path, capsys)
+    assert time.perf_counter() - started < 5
+    assert "sibling combinators" in err
+    assert not store.exists()
+
+
 def test_unknown_version_and_foreign_names_are_rejected(exported, tmp_path, capsys):
     _, _, bundle = exported
     rewrite_manifest(bundle, format_version=2)

@@ -121,6 +121,24 @@ async def test_scrape_file_rejects_ambiguous_or_invalid_input(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        {"fields": {"a": "li ~ li .a::text"}},
+        {"fields": {"a": ".a::text"}, "records": "p ~ p ~ p ~ li"},
+        {"recipe": {"strategy": "css", "record_selector": "li:has(a)", "fields": {"a": "::text"}}},
+    ],
+)
+async def test_scrape_file_refuses_costly_selectors(
+    workspace: Path, arguments: dict[str, Any]
+) -> None:
+    """Audit H3: agent-supplied selectors follow the untrusted-recipe policy."""
+    failed, error = await call(workspace, "scrape_file", page_path="work/page.html", **arguments)
+    assert failed and error["error"] == "configuration_error"
+    assert "untrusted-recipe policy" in error["message"]
+
+
+@pytest.mark.asyncio
 async def test_page_symlink_is_refused(workspace: Path, tmp_path_factory: Any) -> None:
     outside = tmp_path_factory.mktemp("outside") / "page.html"
     outside.write_text(PAGE, encoding="utf-8")
