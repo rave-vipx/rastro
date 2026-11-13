@@ -1,9 +1,15 @@
-# Optional recipe learning
+# Bring your own AI
 
-M4 adds opt-in discovery and local Ollama assistance for contexts without a stored
-recipe. A model proposes a **recipe**, never the extracted records. Rastro executes
-that recipe against the original document and validates the observations itself.
-Requirements: **INT-002, AI-001–004, REC-004**.
+Rastro works without any AI. When you want one, it uses **whatever AI you already have**:
+a local model, any OpenAI-compatible API, a subscription CLI such as Claude Code or Codex,
+or a plain Python function. No provider is special-cased in code; the products below are
+documented presets of three generic transports.
+
+A model proposes a **recipe** (selectors and field mappings), never the extracted records.
+Rastro executes the recipe on the original document and validates every observation with
+the same deterministic gates as a hand-written recipe. Model output is untrusted: it can only
+help Rastro find more correct recipes and reject more wrong ones.
+Requirements: **INT-002, AI-001–005, REC-004, REPAIR-001, SEC-004/005/011, P-001**.
 
 ## Start without a model
 
@@ -13,7 +19,7 @@ uv run python examples/intelligence.py --database rastro-discovery.db
 ```
 
 The first run discovers synthetic JSON-LD with zero inference calls. The second
-reuses its validated recipe. No Ollama installation, browser, or network is needed.
+reuses its validated recipe. No model, browser, or network is needed.
 
 ```python
 from pydantic import BaseModel
@@ -36,8 +42,174 @@ async def extract_product():
 
 `discover_recipes=True` enables automatic recipes on asynchronous methods. Supplying
 `model=` also enables this mode. Without either option, omitting a recipe retains
-M3's exact-context lookup behavior. Synchronous `extract_html` continues to use
+exact-context lookup behavior. Synchronous `extract_html` continues to use
 explicit or stored recipes, even on a client configured with a model.
+
+## `rastro.model()`: one entry point, three transports
+
+```python
+import rastro
+
+local = rastro.model("ollama:qwen3:4b")  # loopback HTTP, no opt-in
+api = rastro.model(
+    "http:gpt-4.1-mini@https://api.openai.com/v1", api_key_env="OPENAI_API_KEY", allow_remote=True
+)
+cli = rastro.model(
+    'command:claude -p --output-format json --tools ""',
+    json_path="result",
+    allow_remote=True,
+    timeout=120,
+)
+fn = rastro.model(my_function)  # async or sync callable
+env = rastro.model()  # reads RASTRO_MODEL
+
+engine = rastro.Rastro(model=cli, inference_policy=rastro.InferencePolicy(timeout_seconds=120))
+```
+
+`rastro.model(spec=None, **options)` returns a `ModelPort`. It accepts:
+
+| Spec | Transport | Notes |
+| --- | --- | --- |
+| `"http:<model>@<base_url>"`, or `"http"` with `model=`, `base_url=` | OpenAI-compatible Chat Completions | Needs `rastro-engine[openai]` (HTTPX). Without `@<base_url>` the endpoint is `http://127.0.0.1:11434/v1` |
+| `"ollama:<model>"` | Same, on loopback Ollama `/v1` | Shorthand; `"ollama"` with `model=` keeps the native `/api/chat` adapter |
+| `"command:<program and arguments>"`, or `"command"` with `argv=[...]` | Any local CLI, prompt on stdin | Core install; no extra |
+| a function | In-process Python | `async def f(request) -> str` or a blocking `def` |
+| a `ModelPort` object | Passed through unchanged | Options are refused |
+
+Anything else raises `ConfigurationError` listing the valid forms. Options given as
+keywords override what the spec string says (`allow_remote`, `local`, `timeout`,
+`output`, `json_path`, `env`, `api_key_env`, `response_format`, `token_limit`,
+`temperature`); unknown options are refused, never ignored.
+
+**Environment.** With no spec, `RASTRO_MODEL` holds a spec string. Because a string cannot
+carry consent, set `RASTRO_MODEL_ALLOW_REMOTE=1` to allow a remote endpoint or a command
+that may send data off the machine, or `RASTRO_MODEL_LOCAL=1` to declare a command local.
+
+**Command strings are never run by a shell.** `command:` text is split with `shlex` into an
+argument list for `exec`; `|`, `;`, `$(...)` and redirections are passed as literal
+arguments. Pass `argv=[...]` to avoid quoting questions entirely.
+
+### OpenAI-compatible HTTP
+
+One strategy covers OpenAI, Ollama's `/v1`, LM Studio, vLLM, llama.cpp server, OpenRouter,
+Groq, Gemini's OpenAI-compatible endpoint and any gateway such as LiteLLM. Literal loopback
+addresses need no opt-in; every other host, including `localhost` and LAN addresses,
+requires `allow_remote=True` **and** HTTPS. `api_key_env` names the environment variable
+holding the key; the key is read per request, sent only as `Authorization: Bearer …`, and
+never stored, logged or shown by `repr`. Details of the request, endpoint rules and failure
+mapping are in [OpenAI-compatible endpoints](#openai-compatible-endpoints).
+
+### Command (any local CLI)
+
+```python
+rastro.model(
+    "command",
+    argv=["llm", "-m", "mistral"],
+    local=True,  # or allow_remote=True if the CLI calls a hosted service
+    timeout=120,  # capped by InferencePolicy.timeout_seconds
+    output="text",  # "json": stdout is one JSON document; "text": free text
+    json_path=None,  # e.g. "result" to dig into {"result": "..."} wrappers
+    env=["LLM_USER_PATH"],  # extra variable names passed through
+)
+```
+
+Rastro writes one prompt to stdin: the fixed trusted instructions, the answer's JSON Schema
+(`request.output_schema`), then the JSON data envelope. It reads stdout within
+`max_response_bytes` and the deadline, then extracts the answer: with `output="json"` the
+stdout must be one JSON document, `json_path` (dot-separated keys) selects a field, and a
+string value is searched for its first JSON object (so Markdown fences are fine); with
+`output="text"` the first top-level JSON object in stdout is used.
+
+- **Consent.** A CLI may forward page content to a hosted service, so `allow_remote=True`
+  is required unless you declare `local=True`.
+- **Environment.** The child sees only `PATH`, `HOME` and the names listed in `env=`.
+  Values are read per call and never stored.
+- **Failures.** A missing program or non-zero exit is `model_unavailable`, the deadline is
+  `model_timeout` (the process is killed), oversized stdout is `model_response_limit`, and
+  output without a JSON object is `invalid_model_response`. Stderr is discarded and never
+  surfaces in errors or logs.
+
+### Python function
+
+```python
+async def my_function(request: rastro.ModelRequest) -> str:
+    # request.system: trusted instructions; request.content: untrusted JSON envelope;
+    # request.output_schema: the JSON Schema the answer must match.
+    return await my_sdk_call(request.system, request.content, request.output_schema)
+```
+
+A blocking function runs in a worker thread. Rastro applies the context, deadline and
+response-size budgets; raise `ModelError` with a fixed category for provider failures.
+Other exceptions propagate as programmer errors.
+
+## Presets
+
+These are documentation, not code paths. Flags were checked against the installed
+`--help` output where the tool was available (Claude Code, Codex CLI, Ollama); check your
+version's help before relying on them.
+
+| You have | Spec | Privacy |
+| --- | --- | --- |
+| Claude Code subscription | `rastro.model("command", argv=["claude", "-p", "--output-format", "json", "--tools", "", "--no-session-persistence"], json_path="result", allow_remote=True, timeout=120)` | Page content goes to Anthropic under your plan's terms. `--tools ""` disables all tools |
+| Codex CLI subscription | `rastro.model("command", argv=["codex", "exec", "--sandbox", "read-only", "--skip-git-repo-check", "--ephemeral", "-"], output="text", allow_remote=True, timeout=180)` | Page content goes to OpenAI. `-` reads the prompt from stdin; the read-only sandbox stops it writing files |
+| Gemini CLI | `rastro.model("command", argv=["gemini", "-p", ""], output="text", allow_remote=True)` (not installed here; check `gemini --help` for how it reads stdin) | Page content goes to Google |
+| `llm` (Simon Willison) | `rastro.model("command", argv=["llm", "-m", "<model>"], output="text", local=True)` for a local plugin model, `allow_remote=True` for hosted ones | Depends on the selected model |
+| Ollama | `rastro.model("ollama:<model>")`, or `rastro.model("command", argv=["ollama", "run", "<model>", "--format", "json", "--think=false"], local=True)` | Stays on the machine unless the model is a `*cloud*` model |
+| LM Studio | `rastro.model("http:<model>@http://127.0.0.1:1234/v1")` | Local |
+| OpenRouter | `rastro.model("http:<vendor/model>@https://openrouter.ai/api/v1", api_key_env="OPENROUTER_API_KEY", allow_remote=True)` | Third-party gateway and the upstream vendor |
+| Any OpenAI-compatible gateway | `rastro.model("http:<model>@https://gateway.example/v1", api_key_env="...", allow_remote=True)` | The gateway's terms |
+| The MCP agent itself | No model needed: the agent calls `suggest_recipe`, `recipe_repair` and validates with Rastro's tools | Whatever the agent already sees |
+
+Subscription CLIs are agents: keep their tools disabled or sandboxed as above, give them
+a generous `timeout`, and raise `InferencePolicy.timeout_seconds` (the effective deadline is
+the smaller of the two).
+
+## Prompts small models can follow
+
+The trusted system message gives numbered rules and a one-line example of the JSON shape.
+The data envelope carries:
+
+- `fields`: name, type, whether it is required, and the `Field(description=...)` you wrote;
+- `untrusted_html`, or for a page too large for `max_context_bytes`, `untrusted_page_digest`;
+- for repair, `current_recipe` (the serving recipe, without version or fallbacks), a safe
+  `last_failure` category such as `serving_recipe_extracts_no_records`, and
+  `untrusted_last_success_samples` (up to two records from the last retained success,
+  each value clipped to 120 characters). The rules ask the model to keep selectors that
+  still match and to keep working on the previous structure (CSS unions such as
+  `h3.old, h2.new` are allowed), because candidates must pass historical replay;
+- on a retry, `last_failure` names why the previous candidate was rejected. The previous
+  model output is never echoed back.
+
+The **page digest** (`rastro.application.page_digest.digest_page(html, *, limits)`) is a
+deterministic, bounded (12,000 characters by default) description of the page: repeated
+container candidates (`parent > child` selectors with counts and one or two sample records
+as indented `tag.class` trees with clipped text and `href`/`src`/`datetime`/`content`
+values), the title, headings, JSON-LD types and URL- or date-like attributes. Selectors
+use only safe tag names and stable class tokens; every page string is clipped, stripped of
+control, bidi and zero-width characters, quoted, and the digest opens with a label saying
+quoted text is untrusted data. Parsing lives behind the `PageOutliner` port. A recipe
+proposed from a digest is still executed against the full original page.
+
+## Operator trust for models in job files
+
+A job file is data that anyone (including an agent through MCP or Studio) may write. It may
+**declare** a `[model]`, but only the operator decides what that model may do:
+
+| A job-declared model that... | Needs from the operator |
+| --- | --- |
+| uses a loopback endpoint on 11434, 1234, 8000 or 8080 | nothing |
+| uses any other endpoint, `base_url_env`, or sets `allow_remote = true` | `--allow-remote`, `allow_remote=True` or `RASTRO_ALLOW_REMOTE=1` |
+| uses `provider = "command"` | `--allow-command`, `allow_command=True` or `RASTRO_ALLOW_COMMAND=1` (plus remote consent if the job sets `allow_remote = true`) |
+| reads `api_key_env`, `base_url_env` or command `env` names outside `RASTRO_*` | `--allow-env NAME`, `allow_env=["NAME"]` or `RASTRO_ALLOWED_ENV="NAME,..."` |
+
+`allow_remote = true` inside a job means "this job needs a remote model"; it is not consent.
+Without the operator's opt-in the run fails closed with a `ConfigurationError` naming the
+flag, before any request is made or any secret is read. The CLI flags work with every
+command and may follow the subcommand (`rastro job run job.toml --allow-remote`,
+`rastro mcp --allow-remote`, `rastro studio --allow-command`). The SDK keywords exist on
+`run_job`, `run_job_async`, `run_job_file`, `load_job_file`, `repair_job_source` and
+`repair_job_sources`. A model passed in code (`model=` or `rastro.model(...)`) is trusted
+and not restricted.
 
 ## Add a local Ollama model
 
@@ -62,12 +234,12 @@ For a runnable synthetic DOM example:
 uv run --extra ollama python examples/intelligence.py --model YOUR_INSTALLED_MODEL
 ```
 
-Rastro never starts Ollama, downloads models, or registers tools. The adapter uses
-`POST /api/chat`, a per-strategy JSON Schema response format, non-streaming generation,
-temperature zero, disabled thinking (`think: false`), and explicit context/output token
-options. Transport reads are streamed to
-enforce the response-byte budget. Model quality and schema-format support vary;
-validation remains mandatory regardless of model choice.
+Rastro never starts Ollama, downloads models, or registers tools. The native adapter uses
+`POST /api/chat`, the request's JSON Schema as the response format, non-streaming
+generation, temperature zero, disabled thinking (`think: false`), and explicit
+context/output token options. Transport reads are streamed to enforce the response-byte
+budget. Model quality and schema-format support vary; validation remains mandatory
+regardless of model choice.
 
 The default origin is `http://127.0.0.1:11434`. `base_url=` permits only literal
 IPv4 loopback addresses or `::1`, with HTTP(S) and a valid port. Hostnames, credentials,
@@ -85,17 +257,20 @@ limits across its bounded workers.
 ## Choosing or writing a model provider
 
 `model=` accepts any object implementing `ModelPort`, the provider strategy
-interface. Rastro ships two optional strategies; both need HTTPX, so the core
-install never does (P-002). Requirements: **AI-001–005, SEC-004/005/011, P-001, P-007**.
+interface; `rastro.model()` builds one for you. The HTTP strategies need HTTPX, so the
+core install never does (P-002). Requirements: **AI-001–005, SEC-004/005/011, P-001, P-007**.
 
 | Provider | Install | Endpoint | Use when |
 | --- | --- | --- | --- |
 | `OllamaModel` | `rastro-engine[ollama]` | native `/api/chat`, loopback only | A local Ollama service; strictest local-only checks |
 | `OpenAICompatibleModel` | `rastro-engine[openai]` | `POST {base_url}/chat/completions` | Any Chat Completions server, local or (opt-in) remote |
+| `CommandModel` | core | a local program, prompt on stdin | Any CLI, including subscription agents |
+| `CallableModel` | core | an in-process function | SDKs and local runtimes you call from Python |
 
-Both are importable from `rastro` lazily (`from rastro import OpenAICompatibleModel`);
-without the extra, the attribute access raises an `ImportError` naming it. They are
-intentionally absent from `rastro.__all__`, so `from rastro import *` stays core-only.
+The two HTTP classes are importable from `rastro` lazily (`from rastro import
+OpenAICompatibleModel`); without the extra, the attribute access raises an `ImportError`
+naming it. They are intentionally absent from `rastro.__all__`, so `from rastro import *`
+stays core-only. `CommandModel` and `CallableModel` live in `rastro.adapters`.
 
 ### OpenAI-compatible endpoints
 
@@ -243,7 +418,8 @@ The contract:
    manager at call time; never accept them as constructor strings, log them or put
    them in `repr`.
 
-An Anthropic Messages API provider, for example, sends `request.system` as the
+Most users do not need a custom class: `rastro.model(function)` wraps a function, and
+`rastro.model("command", ...)` runs a CLI. An Anthropic Messages API provider, for example, sends `request.system` as the
 top-level system prompt and `request.content` as the user turn, sets `max_tokens`
 from the policy, asks for JSON matching `proposal_schema()`, rejects any non-text or
 tool-use content and any truncated stop reason, reads its key from an environment
@@ -322,8 +498,9 @@ these limits are not an OS sandbox or a guarantee of server compute termination.
 
 Context accounting includes both message envelopes and the recipe output schema,
 using conservative escaped JSON byte sizing. It is separate from Ollama's token
-window; model tokenization can still truncate its internal context. Oversized input
-is rejected, never silently sliced by Rastro. Responses with a reported output-token
+window; model tokenization can still truncate its internal context. A page whose
+envelope exceeds `max_context_bytes` is replaced by its bounded digest; if even that
+does not fit, the outcome is `model_context_limit`. Rastro never slices the page itself. Responses with a reported output-token
 limit are rejected. Compressed responses are rejected before decompression.
 Existing HTML, record and JSON-LD block limits apply. Nested discovery is bounded
 to depth 8 and 4,096 keys per JSON-LD object; no candidate combinations are generated.
@@ -340,10 +517,13 @@ and validation time. Candidate counts/parsing times sum actual parsing attempts.
 ## Trust and verification
 
 System instructions are fixed; page text lives in a separate JSON data envelope.
-Only field names and required-field names accompany the HTML. Source URLs and full
-Pydantic schemas, descriptions, defaults and examples are not sent as prompt metadata.
-The HTML itself may contain sensitive content: opting into a model authorizes sending
-that document to the configured service (remote only with `allow_remote=True`).
+Field names, simple type names, required flags and your `Field(description=...)` text
+accompany the page; source URLs, defaults, examples and validators are not sent. For
+repair, the serving recipe and up to two clipped values per field from the last
+retained success are added and labelled untrusted. The page may contain sensitive
+content: opting into a model authorizes sending it (or its digest) and those samples
+to the configured service (remote only with `allow_remote=True`). Rastro never logs
+prompts, page content, keys or tokens.
 Prompt separation does not guarantee semantic correctness. A malicious page or model can still suggest the wrong existing
 node; use meaningful schema validators and review samples.
 

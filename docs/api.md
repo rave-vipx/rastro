@@ -150,6 +150,20 @@ convert values. Validator transformations do not create source evidence.
 ## Model providers
 
 ```python
+import rastro
+
+rastro.model("ollama:qwen3:4b")  # loopback HTTP
+rastro.model("http:m@https://api.example/v1", api_key_env="KEY", allow_remote=True)
+rastro.model("command", argv=["llm", "-m", "m"], local=True)  # any CLI, no shell
+rastro.model(my_function)  # async or sync callable
+rastro.model()  # RASTRO_MODEL
+```
+
+`rastro.model(spec=None, **options) -> ModelPort` is the provider-agnostic entry point;
+see [bring your own AI](intelligence.md#rastromodel-one-entry-point-three-transports).
+Unknown specs or options raise `ConfigurationError` listing the valid forms.
+
+```python
 from rastro import OllamaModel, OpenAICompatibleModel  # lazy; need an optional extra
 
 OllamaModel(model, *, base_url="http://127.0.0.1:11434")                  # [ollama]

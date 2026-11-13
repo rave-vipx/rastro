@@ -91,11 +91,11 @@ proxy_url = "https://proxy.example.com:8443"
 username_env = "RASTRO_PROXY_USER"
 password_env = "RASTRO_PROXY_PASS"
 
-[model]
-provider = "openai_compatible"
+[model]  # runs only with the operator's --allow-remote (see Security boundaries)
+provider = "http"
 model = "gpt-4.1-mini"
 base_url = "https://api.example.com/v1"
-api_key_env = "OPENAI_API_KEY"
+api_key_env = "RASTRO_OPENAI_API_KEY"
 allow_remote = true
 response_format = "json_schema"
 token_limit = "max_completion_tokens"
@@ -223,7 +223,7 @@ Without that context, relative URLs fail validation. Resolution does not fetch t
 - **Regional context (`region`).** Optional `locale`, `languages`, `timezone`, `currency` and `egress` applied to every source. Browser `geolocation` is rejected. Named `egress` values must exist in `acquisition.egress_profiles`.
 - **Recipes and discovery.** Job-level `recipe` and per-source `sources[].recipe` use the declarative [`Recipe`](api.md#recipe-variants) contract (`css`, `jsonld`, `json`) matching the source's `representation`, and may only map declared `fields`. Optional `discover_recipes = true` and `discovery_aliases` enable deterministic discovery.
 - **Recipe memory (`recipe_memory`, `context`, `recipe_version`).** `recipe_memory` points to a SQLite database file (`:memory:` is rejected). `context` (`RecipeContext`) and `recipe_version` require `recipe_memory`, and `recipe_version` cannot be combined with an explicit `recipe`. If you edit a job recipe without raising its `version`, a higher version stored in `recipe_memory` (for example a promoted repair) is used instead; each run reports which one was used in `recipe_origin`. Raise `version` to the number named in the error, or above the stored versions, so your edit is used.
-- **Model providers (`model`, `inference_policy`).** Optional `provider = "ollama"` (`model`, `base_url` or `base_url_env`) or `provider = "openai_compatible"` (`model`, `base_url` or `base_url_env`, `api_key_env`, `allow_remote`, `response_format`, `token_limit`, `temperature`). Non-loopback endpoints and `*cloud*` model names require `allow_remote = true` and HTTPS (on `openai_compatible`). Because an endpoint read from `base_url_env` is only known at run time, `openai_compatible` with `base_url_env` also requires `allow_remote = true`. Ollama endpoints, including `base_url_env` values, must be loopback, which the adapter checks at run time.
+- **Model providers (`model`, `inference_policy`).** Optional `provider = "ollama"` (`model`, `base_url` or `base_url_env`), `provider = "command"` (`argv` list, `allow_remote` or `local`, `timeout`, `output`, `json_path`, `env`; never run by a shell) or `provider = "http"` (alias `"openai_compatible"`; `model`, `base_url` or `base_url_env`, `api_key_env`, `allow_remote`, `response_format`, `token_limit`, `temperature`). Non-loopback endpoints and `*cloud*` model names require `allow_remote = true` and HTTPS (on `openai_compatible`). Because an endpoint read from `base_url_env` is only known at run time, `openai_compatible` with `base_url_env` also requires `allow_remote = true`. Ollama endpoints, including `base_url_env` values, must be loopback, which the adapter checks at run time. These keys declare what the job needs; the operator still has to consent at run time, as described under [Security boundaries](#security-boundaries) and in [operator trust](intelligence.md#operator-trust-for-models-in-job-files).
 
 ### CSS field scope: `document:` and blank text
 
@@ -381,7 +381,8 @@ Committed JSON Schemas live at [`docs/schemas/job.schema.json`](schemas/job.sche
 
 ## Security boundaries
 
-- Job files are data only (256 KiB cap, UTF-8 without BOM, `extra="forbid"`, no imports or code evaluation).
+- Job files are data (256 KiB cap, UTF-8 without BOM, `extra="forbid"`, no imports or code evaluation), and data cannot grant trust. A `[model]` may be declared, but Rastro uses a non-loopback endpoint, an endpoint outside the local model ports 11434, 1234, 8000 and 8080, `base_url_env` or `allow_remote = true` only with the operator's `--allow-remote` (SDK `allow_remote=True`, env `RASTRO_ALLOW_REMOTE=1`), and a `provider = "command"` only with `--allow-command` (`allow_command=True`, `RASTRO_ALLOW_COMMAND=1`). Otherwise the run fails closed before any request, naming the flag.
+- `api_key_env`, `base_url_env` and command `env` names must start with `RASTRO_` unless the operator allows them (`--allow-env NAME`, SDK `allow_env=[...]`, or `RASTRO_ALLOWED_ENV="A,B"`), so a job cannot pick an arbitrary process secret and send it to an endpoint.
 - Relative `sources[].path` and `recipe_memory` paths cannot contain `..` and must resolve inside the job file's directory after symlink resolution; absolute paths are rejected unless `--allow-absolute-paths` is passed explicitly.
 - API keys, model endpoints and proxy credentials are referenced only by uppercase environment-variable names (`[A-Z_][A-Z0-9_]{0,127}`) in every `*_env` field. Lowercase, token-shaped values are rejected, and validation errors never echo offending inputs.
 - `rastro job validate` prints the normalized job with every `*_env` value replaced by `"<redacted>"`.
