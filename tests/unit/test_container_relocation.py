@@ -365,3 +365,17 @@ def test_omissions_must_match_tag_and_class_and_empty_rows_are_heterogeneous():
     for other, expected in cases.items():
         page, found = rows(f"<main>{full}{full}{other}</main>")
         assert homogeneous(page, found, found) is expected, other
+
+
+def test_text_only_records_with_identical_shapes_stay_homogeneous():
+    """REPAIR-002: records without element children (table cells) can still relocate."""
+    from scrapling.parser import Selector
+
+    from rastro.adapters.scrapling_container import homogeneous
+
+    page = Selector(
+        '<table><tr><td class="cell">1</td></tr><tr><td class="cell">2</td></tr></table>',
+        adaptive=False,
+    )
+    found = list(page.css("td.cell"))
+    assert homogeneous(page, found, found) is True

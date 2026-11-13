@@ -127,7 +127,12 @@ def _children(node: Any) -> tuple[Child, ...]:
 
 
 def _omits_only(shape: tuple[Child, ...], template: tuple[Child, ...]) -> bool:
-    """``shape`` keeps at least half of ``template``'s children, in order, by tag and class."""
+    """``shape`` keeps at least half of ``template``'s children, in order, by tag and class.
+
+    Identical shapes always match, including text-only records with no element children.
+    """
+    if shape == template:
+        return True
     if not shape or 2 * len(shape) < len(template):
         return False
     remaining = iter(template)

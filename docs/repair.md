@@ -223,3 +223,7 @@ transactions. A storage failure can occur after validated data or a promotion ha
 inspect lifecycle history before retrying after such an error. Trusted private directories
 are required; path checks are not a sandbox against concurrent directory replacement.
 Retained samples contain approved extracted values and need the dataset's privacy controls.
+
+## Known limits
+
+- Container relocation compares child classes exactly. When a record holds two siblings that share a class and one adds another (`span.price` and `span.price.sale`), the relocated selector is ambiguous and the candidate is rejected instead of promoted. Repair the recipe by hand in that case; no wrong value is stored.
