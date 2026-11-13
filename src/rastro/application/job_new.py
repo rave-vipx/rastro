@@ -59,8 +59,9 @@ def new_job(
     if dataset is not None and not identity:
         raise ConfigurationError("--dataset requires --identity naming the record key fields")
     if recipe_memory is not None:
-        _check_memory(recipe_memory, path.parent, dataset)
+        _check_memory(recipe_memory, path.parent)
     page_path = _relative(page, path.parent)
+    _check_distinct(path, page, dataset, recipe_memory)
     html = _read_local_source(page, Limits().max_html_bytes, "html")
     checked = check_examples(examples)
     try:
@@ -97,17 +98,36 @@ def new_job(
     return path
 
 
-def _check_memory(memory: str, base: Path, dataset: str | None) -> None:
+def _check_memory(memory: str, base: Path) -> None:
     try:
         validate_job_path_syntax(memory)
     except ValueError:
         raise ConfigurationError("recipe_memory must be a file name relative to the job") from None
     if PurePosixPath(memory).is_absolute() or PureWindowsPath(memory).anchor:
         raise ConfigurationError("recipe_memory must be a file name relative to the job")
-    if memory == dataset:
-        raise ConfigurationError("recipe_memory must be a different file from the dataset")
     if not (base / memory).parent.is_dir():
         raise ConfigurationError("The recipe_memory folder must already exist")
+
+
+def _check_distinct(job: Path, page: Path, dataset: str | None, memory: str | None) -> None:
+    """Refuse a dataset or recipe store that is the job file, the page or each other.
+
+    Paths are resolved against the job folder and compared case-insensitively, so
+    ``./data.sqlite`` and ``data.sqlite`` (or ``Job.toml`` on macOS) count as one file.
+    """
+    base = job.parent.resolve()
+
+    def key(target: Path) -> str:
+        return str(target.resolve()).casefold()
+
+    taken = {key(base / job.name): "the job file", key(page): "the page"}
+    for label, name in (("dataset", dataset), ("recipe_memory", memory)):
+        if name is None:
+            continue
+        resolved = key(base / name)
+        if resolved in taken:
+            raise ConfigurationError(f"{label} is the same file as {taken[resolved]}")
+        taken[resolved] = f"the {label}"
 
 
 def _relative(page: Path, base: Path) -> str:
