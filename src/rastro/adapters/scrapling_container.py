@@ -52,7 +52,7 @@ def container_selector(
     selector = " > ".join(
         [
             *_path(nodes[0]),
-            _identifier(nodes[0].tag) + "".join("." + _identifier(c) for c in sorted(classes)),
+            identifier(nodes[0].tag) + "".join("." + identifier(c) for c in sorted(classes)),
         ]
     )
     return selector, [Selector(root=node, adaptive=False) for node in nodes]
@@ -87,7 +87,8 @@ def homogeneous(page: Selector, relocated: list[Selector], selected: list[Select
 
     Every container needs the same ancestor path and classes. Its children must be
     the rows' most common child sequence, or that sequence with some children left
-    out (an absent optional field). Extra or reordered children stay heterogeneous.
+    out (an absent optional field), matching tag and class. Extra, reordered or
+    reclassed children, or a row keeping under half the children, stay heterogeneous.
     """
     first = relocated[0]._root
     classes = set(first.get("class", "").split())
@@ -113,13 +114,24 @@ def template_record(records: list[Selector]) -> Selector:
     return records[shapes.index(best)]
 
 
-def _children(node: Any) -> tuple[str, ...]:
-    return tuple(child.tag for child in node if isinstance(child.tag, str))
+type Child = tuple[str, tuple[str, ...]]
 
 
-def _omits_only(shape: tuple[str, ...], template: tuple[str, ...]) -> bool:
+def _children(node: Any) -> tuple[Child, ...]:
+    """Each element child as (tag, sorted classes)."""
+    return tuple(
+        (child.tag, tuple(sorted(set(child.get("class", "").split()))))
+        for child in node
+        if isinstance(child.tag, str)
+    )
+
+
+def _omits_only(shape: tuple[Child, ...], template: tuple[Child, ...]) -> bool:
+    """``shape`` keeps at least half of ``template``'s children, in order, by tag and class."""
+    if not shape or 2 * len(shape) < len(template):
+        return False
     remaining = iter(template)
-    return all(tag in remaining for tag in shape)
+    return all(child in remaining for child in shape)
 
 
 def field_supported(matches: list[Selector], fingerprint: ElementFingerprint) -> bool:
@@ -140,15 +152,16 @@ def field_supported(matches: list[Selector], fingerprint: ElementFingerprint) ->
 
 def _path(node: Any) -> tuple[str, ...]:
     parts = tuple(
-        _identifier(parent.tag)
-        + "".join("." + _identifier(c) for c in sorted(set(parent.get("class", "").split())))
+        identifier(parent.tag)
+        + "".join("." + identifier(c) for c in sorted(set(parent.get("class", "").split())))
         for parent in reversed(list(node.iterancestors()))
         if parent.tag not in _ROOTS
     )
     return parts or ("body",)
 
 
-def _identifier(value: str) -> str:
+def identifier(value: str) -> str:
+    """Escape a tag or class name for a CSS selector."""
     escaped = re.sub(r"[^a-zA-Z0-9_-]", lambda match: f"\\{ord(match[0]):x} ", value)
     if escaped[0].isdigit() or escaped.startswith("-"):
         escaped = f"\\{ord(escaped[0]):x} " + escaped[1:]
