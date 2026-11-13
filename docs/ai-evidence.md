@@ -23,106 +23,106 @@ recipe for it (`benchmarks/ai_repair/cases/<case>/`; `schema.json` describes the
 | Record class renamed and a complete-looking promo block added outside the listing | trap | all |
 | Title and performer given the same tag and class, performer first | trap | all |
 
-**Flow.** Each Rastro executor works in a temporary folder through the public API:
-`load_job_file` on the before page (it must succeed and retain the success sample),
+**Flow.** Each Rastro executor works in a temporary folder through the public API.
+`load_job_file` runs on the before page (it must succeed and retain the success sample),
 then the after page is swapped in and loaded again. If that load succeeds, its records
 are judged. Otherwise `repair_job_source` runs with `[repair] auto_promote = true` and
 `min_records = 5`. If it promotes, the serving recipe's records (`run_job_file`) are
-judged. The job declares no `[[consistency]]` rules.
+judged. The job declares no `[[consistency]]` rules. Job `[[fields]]` carry no
+descriptions, so prompts get field names and types only.
 
-**Verdicts.** **correct**: exactly the expected records, compared as text, order-insensitive,
-absent optional values ignored. **wrong**: anything else served without refusal (a silent
-error). **refused**: nothing new served; the detail says quarantined, rejected,
-no_candidates or repair_error. Intervals are 95% Wilson score intervals over 28 cases.
+With a model configured, Rastro itself decides when to call it (since the AI wave):
+proposals only when no deterministic candidate would pass, joined with the serving
+selectors (`old, new`), and the semantic judge before every automatic promotion,
+deterministic ones included.
+
+**Verdicts.** **correct**: exactly the expected records, compared as text,
+order-insensitive, absent optional values ignored. **wrong**: anything else served
+without refusal (a silent error). **refused**: nothing new served; the detail says
+judge_blocked, quarantined, rejected, no_candidates or repair_error. Intervals are 95%
+Wilson score intervals over 28 cases.
 
 **Executors.**
 
-- `deterministic`: Rastro 0.6.0 with no model.
+- `deterministic`: Rastro with no model.
 - `baseline`: a careful hand-written Scrapling + Pydantic scraper. It knows the base
   selectors, falls back to `[data-id]` records and generic per-field selectors (headings,
   `[class*=title]`, `time::attr(datetime)`, `a::attr(href)`, ...) and refuses when a record
   fails validation.
-- `oracle_*`: a fake `ModelPort` that sees only Rastro's prompt. It finds the page by
-  digest and answers with a scripted recipe. `correct` gives the right recipe for the new
-  page. `compatible` joins the old and new selectors (`old, new`), which needs the serving
-  recipe that this release's prompt does not send. `adversarial` gives the compatible
-  recipe with the title and performer selectors swapped. **This measures Rastro's gates,
-  not any model.**
-- `escalate+<model>`: repair without a model first, then add `[model]` to the job and
-  repair again only when nothing was promoted.
-- `ollama:<name>`: the job's real `[model] provider = "ollama"` path at temperature 0,
-  `think: false`, default `InferencePolicy` (2 calls, 1 retry after invalid output) with
+- `oracle_*`: a fake `ModelPort` that sees only Rastro's requests. **It measures Rastro's
+  gates, not any model.** For a recipe request it finds the page by digest and answers
+  with a scripted recipe. For a judge request it answers per field.
+  - `correct`: the right recipe for the new page, and a truthful judge (`match` only when
+    every candidate value is a true value of that field).
+  - `wrong_recipe`: title and performer swapped, with the truthful judge.
+  - `adversarial`: the swapped recipe, and a judge that always says `match`.
+- `ollama:<name>`: the job's real `[model] provider = "ollama"` path (native `/api/chat`,
+  temperature 0, `think: false`, schema-constrained output), default call budget,
   `timeout_seconds = 180`.
 
 ## Results
 
-Offline executors: commit `121e9be` (harness), Rastro 0.6.0, Python 3.12.16. Every run is
-deterministic and reproducible with `python -m benchmarks.ai_repair.run`.
+Recorded on 2026-11-13 from `cut/ai-wave`. The offline rows are reproducible with
+`python -m benchmarks.ai_repair.run`. Python 3.12.16.
 
 | Executor | Correct | Wrong (silent) | Refused | Model calls |
 | --- | ---: | ---: | ---: | ---: |
-| deterministic | 12/28 (0.27–0.61) | 0/28 (0.00–0.12) | 16/28 | 0 |
-| baseline | 14/28 (0.33–0.67) | **4/28 (0.06–0.32)** | 10/28 | 0 |
-| oracle_correct | 11/28 (0.24–0.58) | 0/28 (0.00–0.12) | 17/28 | 28 |
-| oracle_compatible | 9/28 (0.18–0.51) | 0/28 (0.00–0.12) | 19/28 | 28 |
-| oracle_adversarial | 12/28 (0.27–0.61) | 0/28 (0.00–0.12) | 16/28 | 28 |
-| escalate+oracle_compatible | **21/28 (0.57–0.87)** | 0/28 (0.00–0.12) | 7/28 | 16 |
-| escalate+oracle_adversarial | 12/28 (0.27–0.61) | 0/28 (0.00–0.12) | 16/28 | 16 |
+| Deterministic Rastro, no model | 12/28 (0.27–0.61) | 0/28 (0.00–0.12) | 16/28 | 0 |
+| Hand-written Scrapling + Pydantic baseline | 14/28 (0.33–0.67) | **4/28 (0.06–0.32)** | 10/28 | 0 |
+| Scripted oracle: correct recipe, honest judge | **23/28 (0.64–0.92)** | 0/28 (0.00–0.12) | 5/28 | 44 |
+| Scripted oracle: swapped recipe, honest judge | 12/28 (0.27–0.61) | 0/28 (0.00–0.12) | 16/28 | 44 |
+| Scripted oracle: swapped recipe, judge approves all | 12/28 (0.27–0.61) | **6/28 (0.10–0.40)** | 10/28 | 44 |
+| `qwen3:4b` (local) | 5/28 (0.08–0.36) | 0/28 (0.00–0.12) | 23/28 | 44 |
+| `llama3.2:3b` (local) | 11/28 (0.24–0.58) | 0/28 (0.00–0.12) | 17/28 | 44 |
 
-Live local models, recorded on one Apple Silicon Mac with Ollama 0.40.13, one run per case:
+The live rows are on commit `a3ba147`, which fixes the judge schema. On `7d4a84f`, before
+that fix, both local models scored 0/28 correct, 0 wrong and 28 refused: every judge call
+was rejected by Ollama, and every promotion was quarantined
+(`results-live-*-7d4a84f.json`).
 
-| Executor | Correct | Wrong (silent) | Refused | Model calls | Wall time |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| ollama:qwen3:4b (commit `c2e604b`) | 11/28 (0.24–0.58) | 0/28 (0.00–0.12) | 17/28 | 36 | 181 s |
-| escalate+ollama:qwen3:4b | 12/28 (0.27–0.61) | 0/28 (0.00–0.12) | 16/28 | 22 | 88 s |
-| ollama:llama3.2:3b (commit `121e9be`) | 10/28 (0.21–0.54) | 0/28 (0.00–0.12) | 18/28 (4 repair errors) | 39 | 135 s |
-| escalate+ollama:llama3.2:3b | 12/28 (0.27–0.61) | 0/28 (0.00–0.12) | 16/28 (2 repair errors) | 23 | 68 s |
+Live runs: one Apple M1 Pro, Ollama 0.40.13, one run per case. Models: `qwen3:4b`
+digest `359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7` (4.0B,
+Q4_K_M); `llama3.2:3b` digest
+`a80c4f17acd55265feec403c7aef86be0c25983ab279d83f3bcd3abbcb5b8b72` (3.2B, Q4_K_M).
+Raw results are in `benchmarks/ai_repair/results*.json`: verdict, detail, model calls
+and seconds per case. Prompts and model output are not stored.
 
-Commits `c2e604b` and `121e9be` differ only in how the harness counts an aborted repair.
-The first `llama3.2:3b` attempt on `c2e604b` crashed the harness on that defect.
-
-Models: `qwen3:4b` digest `359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7`
-(4.0B, Q4_K_M); `llama3.2:3b` digest
-`a80c4f17acd55265feec403c7aef86be0c25983ab279d83f3bcd3abbcb5b8b72` (3.2B, Q4_K_M). Raw
-results: `benchmarks/ai_repair/results.json`, `results-live-qwen3-4b.json`,
-`results-live-llama3.2-3b.json` (per case: verdict, detail, model calls, seconds; no
-prompts or model output are stored).
+The previous measurement on 0.6.0 before the AI wave (model consulted on every repair,
+no serving recipe in the prompt, no judge) was: deterministic 12, scripted correct oracle
+11, `qwen3:4b` 11, `llama3.2:3b` 10, all with 0 wrong.
 
 ## What it shows
 
-1. **No silent errors from Rastro.** No Rastro executor served wrong data, including the
-   adversarial oracle and the live models. The hand-written baseline recovered two more
-   pages, but it served the promo blocks as events in four of the trap cases.
-2. **Consulting a model on every repair does not help in 0.6.0.** When deterministic
-   repair already has a passing candidate, a second passing candidate from the model makes
-   recipe CI quarantine both (competing proposals). `oracle_compatible` loses 12
-   deterministic wins this way.
-3. **Proposals for the new page alone fail the history gate.** Recipe CI replays the last
-   good sample, and a selector for the new structure finds nothing there. The repair
-   prompt sends field names and the page, not the serving recipe, so even a perfect reader
-   of the page (`oracle_correct`) recovers nothing new.
-4. **With escalation and old+new selectors, a perfect proposer recovers 9 more pages**:
-   three restructured containers, all four semantic swaps and two decoy cases. It loses
-   none, for 21/28 correct with 16 calls. This is the ceiling for a model in this design,
-   not a result of any real model.
-5. **Small local models add nothing on these pages.** `qwen3:4b` recovered no page that
-   deterministic repair could not. Consulted every time, it cost one correct repair (the
-   grid restructure, through a competing candidate). `llama3.2:3b` also recovered nothing
-new. Four of its proposals contained invalid CSS, which aborted the repair (see below).
-Two of those aborts erased correct deterministic repairs (cards class rename and tag
-change). Escalation kept both models at the deterministic 12/28 with about 40% fewer
-calls.
-6. **Still out of reach for everyone:** a date moved into an attribute of the record
-   itself. Rastro reports the grouped `time::attr(datetime), ::attr(data-starts-at)`
-   selector as ambiguous on the old page. A table that lost an optional field in 2 of 5
-   rows is quarantined by the documented 75% completeness rule.
+1. **Escalation plus the `old, new` union makes a good proposer useful.** With correct
+   answers, Rastro recovers 23/28, up from 12/28. That adds three restructured
+   containers, all four semantic swaps and all four decoy cases, loses no deterministic
+   win and serves 0 wrong records. Before the AI wave, the same oracle reached 11/28.
+2. **The judge is now the only defence against a meaning swap.** Because the union keeps
+   the old selector first, the last good sample replays through it and passes, so a
+   swapped new alternative is not caught by history. An honest judge blocked all six such
+   proposals (0 wrong). A judge that approves everything let all six through: the
+   **6/28 wrong** row. The same model writes the recipe and judges it, so one bad model
+   defeats both checks.
+3. **Small local models make repair worse here.** Their judge compares values instead of
+   meanings. A correct title from a different event is called `mismatch` (seen on both
+   models with a hand-made pair). So the judge blocks correct deterministic repairs:
+   `qwen3:4b` 10 times (5/28 correct), `llama3.2:3b` once (11/28). Neither recovered any
+   page that deterministic repair could not. Neither served wrong data.
+4. **The hand-written baseline** recovers two more pages than deterministic Rastro, but
+   it silently served promo blocks as events four times.
+5. **Still out of reach for every executor:** a date moved into an attribute of the record
+   itself (the grouped selector is ambiguous on the old page), and a table that lost an
+   optional field in 2 of 5 rows (the documented 75% completeness rule).
 
-## Defects found
+## Defects found by this benchmark
 
-- An invalid CSS selector in a model proposal makes `recipe repair` raise
-  `ConfigurationError` and exit 2, instead of rejecting that one candidate. No data is
-  written, but the deterministic candidates of the same run are lost. The benchmark counts
-  this as `refused/repair_error`.
+| Defect | Status |
+| --- | --- |
+| 0.6.0: a model candidate competing with a passing relocation quarantined both | Fixed in the AI wave (escalation) |
+| 0.6.0: the repair prompt lacked the serving recipe, so history replay rejected every model proposal | Fixed (serving recipe in the prompt, `old, new` union) |
+| 0.6.0: an invalid model CSS selector aborted `recipe repair` with exit 2 | Fixed (`invalid_model_candidate`) |
+| AI wave: the judge's response schema nested `$defs`, so Ollama rejected every judge call (HTTP 400) and every promotion was quarantined (`semantic_judge_failed`); live runs scored 0/28 | Fixed in `a3ba147`, with a regression test |
+| AI wave: with the `old, new` union, history replay passes through the old alternative, so a meaning swap in the new one is caught only by the judge (6/28 wrong with a lying judge) | Open. Suggested fix: run the relocation value checks (`value_matches_other_field`) on model candidates |
 
 ## Run it yourself
 
@@ -132,24 +132,42 @@ Offline (CI-safe, no network, no model):
 UV_PYTHON=/opt/homebrew/bin/python3.12 uv run python -m benchmarks.ai_repair.run
 ```
 
-Local models (never in CI):
+Local Ollama models (never in CI):
 
 ```sh
 uv run --extra ollama python -m benchmarks.ai_repair.run \
-  --executor ollama:YOUR_MODEL --executor escalate+ollama:YOUR_MODEL \
-  --output benchmarks/ai_repair/results-live-YOUR_MODEL.json
+  --executor ollama:YOUR_MODEL --output benchmarks/ai_repair/results-live-YOUR_MODEL.json
 ```
 
-Any other provider, including the CLI of a subscription, goes through the generic model
-factory `rastro.model(spec)` with the same spec you would put in `RASTRO_MODEL`. These
-runs send every benchmark page (synthetic, no private content) to that provider, so the
-spec must opt into remote use:
+### Strong-model run (owner-run, not recorded here)
+
+Any provider goes through the generic factory with `--executor "spec:<spec>"` and
+`--model-options '<JSON of rastro.model keywords>'`. These runs send all 28 synthetic
+benchmark pages (no private content) to the provider under your plan's terms, so they
+need `allow_remote`. Examples using the generic `command` transport, with presets from
+[optional intelligence](intelligence.md):
 
 ```sh
+# Claude Code subscription
 uv run python -m benchmarks.ai_repair.run \
-  --executor "spec:$RASTRO_MODEL" --executor "escalate+spec:$RASTRO_MODEL" \
-  --output benchmarks/ai_repair/results-live-mine.json
+  --executor 'spec:command:claude -p --output-format json --tools= --no-session-persistence' \
+  --model-options '{"json_path": "result", "allow_remote": true, "timeout": 120}' \
+  --output benchmarks/ai_repair/results-live-claude-code.json
+
+# Codex CLI subscription
+uv run python -m benchmarks.ai_repair.run \
+  --executor 'spec:command:codex exec --sandbox read-only --skip-git-repo-check --ephemeral -' \
+  --model-options '{"output": "text", "allow_remote": true, "timeout": 180}' \
+  --output benchmarks/ai_repair/results-live-codex.json
 ```
 
-The subscription CLIs were not run for this page. Commands for them are left for the owner,
-using the generic `command` transport of `rastro.model`.
+| Executor | Correct | Wrong (silent) | Refused | Model calls |
+| --- | ---: | ---: | ---: | ---: |
+| Claude Code (owner run) | _pending_ | _pending_ | _pending_ | _pending_ |
+| Codex CLI (owner run) | _pending_ | _pending_ | _pending_ | _pending_ |
+
+`--tools=` (one argument) disables Claude Code's tools. An empty separate argument
+(`--tools ""`) is refused by the command transport. Check `claude --help` and
+`codex exec --help` for your installed versions before running. Record the CLI version,
+model and date with the result file. No subscription or hosted
+model was run for this page.

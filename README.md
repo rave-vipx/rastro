@@ -81,14 +81,16 @@ See [self-repair](https://rave-vipx.github.io/rastro/repair/).
 Rastro works fully offline and deterministically. You can also connect a model: a local one,
 any API you have a key for, the command-line tool of a subscription you already have, or the
 agent that drives Rastro over MCP. No provider is preferred. Rastro uses the model to propose
-recipes when it has no examples and to propose repairs for pages whose structure changed.
+recipes when it has no examples, to propose repairs for pages whose structure changed, and to
+check that a repair's values still mean the same thing.
 **A model never writes your data. It proposes, and Rastro verifies:** every proposal goes
 through the same validation and repair gates as a deterministic one, and sending page content
 off the machine requires an explicit `allow_remote`.
 
-On our 28-case synthetic benchmark, no executor made Rastro serve wrong data. A model raised
-correct repairs from 12 to 21 only when consulted after deterministic repair failed, and only
-with a perfect scripted proposer. The small local models we tried added nothing. See
+On our 28-case synthetic benchmark, Rastro repaired 12 broken pages without a model, and 23
+with a scripted model that answered correctly, with no wrong data in either case. The small
+local models we tried recovered nothing new, and as judges they blocked correct repairs. A model
+that is wrong both when it proposes and when it judges got 6 wrong repairs through. See
 [bring your own AI](https://rave-vipx.github.io/rastro/ai/) for the numbers.
 
 ## Suggest selectors from examples

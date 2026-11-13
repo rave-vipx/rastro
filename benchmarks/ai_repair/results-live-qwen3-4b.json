@@ -1,0 +1,279 @@
+{
+ "environment": {
+  "recorded_at": "2026-11-13T12:52Z",
+  "git_head": "a3ba147",
+  "rastro": "0.6.0",
+  "python": "3.12.16",
+  "cases": 28
+ },
+ "results": {
+  "ollama:qwen3:4b": {
+   "summary": {
+    "cases": 28,
+    "model_calls": 44,
+    "correct": {
+     "count": 5,
+     "rate": 0.179,
+     "wilson95": [
+      0.079,
+      0.356
+     ]
+    },
+    "wrong": {
+     "count": 0,
+     "rate": 0.0,
+     "wilson95": [
+      0.0,
+      0.121
+     ]
+    },
+    "refused": {
+     "count": 23,
+     "rate": 0.821,
+     "wilson95": [
+      0.644,
+      0.921
+     ]
+    },
+    "by_kind": {
+     "structural": {
+      "correct": 5,
+      "wrong": 0,
+      "refused": 15
+     },
+     "trap": {
+      "correct": 0,
+      "wrong": 0,
+      "refused": 8
+     }
+    }
+   },
+   "cases": [
+    {
+     "case": "cards-class_rename",
+     "kind": "structural",
+     "verdict": "refused",
+     "detail": "judge_blocked",
+     "model_calls": 1,
+     "seconds": 7.84
+    },
+    {
+     "case": "cards-container_restructured",
+     "kind": "structural",
+     "verdict": "refused",
+     "detail": "rejected",
+     "model_calls": 2,
+     "seconds": 10.17
+    },
+    {
+     "case": "cards-decoy_blocks",
+     "kind": "trap",
+     "verdict": "refused",
+     "detail": "quarantined",
+     "model_calls": 2,
+     "seconds": 9.63
+    },
+    {
+     "case": "cards-field_rename",
+     "kind": "structural",
+     "verdict": "correct",
+     "detail": "promoted",
+     "model_calls": 1,
+     "seconds": 1.49
+    },
+    {
+     "case": "cards-field_to_attribute",
+     "kind": "structural",
+     "verdict": "refused",
+     "detail": "rejected",
+     "model_calls": 2,
+     "seconds": 8.95
+    },
+    {
+     "case": "cards-semantic_swap",
+     "kind": "trap",
+     "verdict": "refused",
+     "detail": "judge_blocked",
+     "model_calls": 2,
+     "seconds": 7.67
+    },
+    {
+     "case": "cards-tag_change",
+     "kind": "structural",
+     "verdict": "correct",
+     "detail": "promoted",
+     "model_calls": 1,
+     "seconds": 1.2
+    },
+    {
+     "case": "cards-wrapper_added",
+     "kind": "structural",
+     "verdict": "refused",
+     "detail": "judge_blocked",
+     "model_calls": 1,
+     "seconds": 4.27
+    },
+    {
+     "case": "dlist-class_rename",
+     "kind": "structural",
+     "verdict": "refused",
+     "detail": "judge_blocked",
+     "model_calls": 1,
+     "seconds": 4.2
+    },
+    {
+     "case": "dlist-container_restructured",
+     "kind": "structural",
+     "verdict": "refused",
+     "detail": "rejected",
+     "model_calls": 2,
+     "seconds": 7.85
+    },
+    {
+     "case": "dlist-decoy_blocks",
+     "kind": "trap",
+     "verdict": "refused",
+     "detail": "quarantined",
+     "model_calls": 2,
+     "seconds": 9.49
+    },
+    {
+     "case": "dlist-field_rename",
+     "kind": "structural",
+     "verdict": "correct",
+     "detail": "promoted",
+     "model_calls": 1,
+     "seconds": 0.97
+    },
+    {
+     "case": "dlist-field_to_attribute",
+     "kind": "structural",
+     "verdict": "refused",
+     "detail": "rejected",
+     "model_calls": 2,
+     "seconds": 8.72
+    },
+    {
+     "case": "dlist-semantic_swap",
+     "kind": "trap",
+     "verdict": "refused",
+     "detail": "rejected",
+     "model_calls": 2,
+     "seconds": 8.53
+    },
+    {
+     "case": "grid-class_rename",
+     "kind": "structural",
+     "verdict": "refused",
+     "detail": "judge_blocked",
+     "model_calls": 1,
+     "seconds": 4.37
+    },
+    {
+     "case": "grid-container_restructured",
+     "kind": "structural",
+     "verdict": "refused",
+     "detail": "judge_blocked",
+     "model_calls": 1,
+     "seconds": 4.27
+    },
+    {
+     "case": "grid-decoy_blocks",
+     "kind": "trap",
+     "verdict": "refused",
+     "detail": "quarantined",
+     "model_calls": 2,
+     "seconds": 10.41
+    },
+    {
+     "case": "grid-field_rename",
+     "kind": "structural",
+     "verdict": "correct",
+     "detail": "promoted",
+     "model_calls": 1,
+     "seconds": 0.95
+    },
+    {
+     "case": "grid-field_to_attribute",
+     "kind": "structural",
+     "verdict": "refused",
+     "detail": "rejected",
+     "model_calls": 2,
+     "seconds": 8.95
+    },
+    {
+     "case": "grid-optional_thinned",
+     "kind": "structural",
+     "verdict": "refused",
+     "detail": "judge_blocked",
+     "model_calls": 1,
+     "seconds": 5.79
+    },
+    {
+     "case": "grid-semantic_swap",
+     "kind": "trap",
+     "verdict": "refused",
+     "detail": "judge_blocked",
+     "model_calls": 2,
+     "seconds": 7.29
+    },
+    {
+     "case": "table-class_rename",
+     "kind": "structural",
+     "verdict": "refused",
+     "detail": "judge_blocked",
+     "model_calls": 1,
+     "seconds": 5.65
+    },
+    {
+     "case": "table-container_restructured",
+     "kind": "structural",
+     "verdict": "refused",
+     "detail": "rejected",
+     "model_calls": 2,
+     "seconds": 8.42
+    },
+    {
+     "case": "table-decoy_blocks",
+     "kind": "trap",
+     "verdict": "refused",
+     "detail": "quarantined",
+     "model_calls": 2,
+     "seconds": 9.47
+    },
+    {
+     "case": "table-field_rename",
+     "kind": "structural",
+     "verdict": "correct",
+     "detail": "promoted",
+     "model_calls": 1,
+     "seconds": 0.95
+    },
+    {
+     "case": "table-field_to_attribute",
+     "kind": "structural",
+     "verdict": "refused",
+     "detail": "rejected",
+     "model_calls": 2,
+     "seconds": 8.28
+    },
+    {
+     "case": "table-optional_thinned",
+     "kind": "structural",
+     "verdict": "refused",
+     "detail": "quarantined",
+     "model_calls": 2,
+     "seconds": 8.0
+    },
+    {
+     "case": "table-semantic_swap",
+     "kind": "trap",
+     "verdict": "refused",
+     "detail": "judge_blocked",
+     "model_calls": 2,
+     "seconds": 7.14
+    }
+   ]
+  }
+ }
+}
