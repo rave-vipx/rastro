@@ -14,6 +14,7 @@ Key facts for agents:
 
 - [README](https://github.com/rave-vipx/rastro/blob/main/README.md): what Rastro is, install, quickstart, comparison
 - [Rastro for AI agents](https://rave-vipx.github.io/rastro/ai-agents/): MCP setup, tools, JSON CLI contract, exit codes, safe use
+- [Bring your own AI](https://rave-vipx.github.io/rastro/ai/): optional model of any provider; proposes recipes, Rastro verifies; measured results
 - [Quickstart](https://rave-vipx.github.io/rastro/quickstart/): `rastro.scrape`, model selectors, memory and self-repair
 - [API and outcomes](https://rave-vipx.github.io/rastro/api/): results, evidence, outcomes, public functions
 - [Declarative jobs](https://rave-vipx.github.io/rastro/jobs/): job file format, CLI commands, error objects

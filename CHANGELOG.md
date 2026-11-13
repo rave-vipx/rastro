@@ -33,6 +33,8 @@ First public release of `rastro-engine` on PyPI: one-call typed scraping with `r
 - `rastro new --allow-partial` writes a job even when the recipe preview is only a partial success; `Suggestion.status` reports the preview outcome (JOB-001, INT-002).
 - `rastro recipe show job.toml --source N [--version V]` prints a stored recipe version as JSON, read-only; `recipe compare` reports `changed_settings` (such as `record_selector`); `rastro recipe --help` describes every subcommand (REC-006).
 - Rejected repair candidates report `blocking` issues: record index, field and issue code, never values (REPAIR-002).
+- `benchmarks/ai_repair/`: an offline benchmark of 28 synthetic before/after pages, run with deterministic Rastro, Rastro plus a fake `ModelPort` (scripted oracle: correct, backward-compatible, adversarial, and escalation only after deterministic failure), and a hand-written Scrapling + Pydantic baseline. It reports correct, wrong (silent) and refused outcomes, model calls and Wilson 95% intervals; the oracle is not a quality claim. Recorded local runs: `qwen3:4b` and `llama3.2:3b` (QUAL-001, REPAIR-001-005, AI-001).
+- `docs/ai.md` ("Bring your own AI") explains how to connect any provider (local, API, subscription CLI, MCP agent), what a model does in each flow, privacy, call budgets and the measured results; `docs/ai-evidence.md` records the benchmark runs. README and overview pages now say Rastro works offline and deterministically and that a connected model proposes while Rastro verifies (AI-001-005, AGENT-002, P-001).
 
 ### Security
 
