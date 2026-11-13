@@ -1,0 +1,27 @@
+{
+ "kind": "trap",
+ "layout": "grid",
+ "mutation": "semantic_swap",
+ "recipe": {
+  "record_selector": "div.grid div.col > div.tile",
+  "fields": {
+   "id": "::attr(data-id)",
+   "title": "h3.tile-title::text",
+   "performer": "p.tile-artist::text",
+   "starts_at": "time.tile-date::attr(datetime)",
+   "price": "span.tile-price::text",
+   "url": "a.tile-link::attr(href)"
+  }
+ },
+ "correct_recipe": {
+  "record_selector": "div.grid div.col > div.tile",
+  "fields": {
+   "id": "::attr(data-id)",
+   "title": "span.meta:nth-of-type(2)::text",
+   "performer": "span.meta:nth-of-type(1)::text",
+   "starts_at": "time.tile-date::attr(datetime)",
+   "price": "span.tile-price::text",
+   "url": "a.tile-link::attr(href)"
+  }
+ }
+}
