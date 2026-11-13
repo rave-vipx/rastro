@@ -91,19 +91,39 @@ def test_deterministic_repair_runs_offline_and_promotes_a_class_rename() -> None
     assert (verdict.verdict, verdict.detail, verdict.model_calls) == ("correct", "promoted", 0)
 
 
-def test_a_wrong_meaning_proposal_is_refused_not_served() -> None:
-    oracle = ScriptedOracle(CASES, "adversarial")
+def test_oracle_judges_candidate_values_truthfully_or_adversarially() -> None:
+    from pydantic import create_model
+
+    from rastro.application.semantic_judge import judge_request
+
+    schema = create_model("E", title=(str, ...), performer=(str, ...))
+    titles = [{"title": r["title"]} for r in RECORDS]
+    swapped = [{"title": r["performer"]} for r in RECORDS]
+    policy = InferencePolicy()
+
+    def verdict(mode: str, rows: list[dict[str, object]]) -> str:
+        request = judge_request(schema, ("title",), rows, titles)  # type: ignore[arg-type]
+        oracle = ScriptedOracle(CASES, mode)  # type: ignore[arg-type]
+        run = asyncio.run(oracle.generate(request, policy), loop_factory=asyncio.SelectorEventLoop)
+        return str(json.loads(run)["title"]["verdict"])
+
+    assert verdict("correct", titles) == "match"
+    assert verdict("correct", swapped) == "mismatch"
+    assert verdict("adversarial", swapped) == "match"
+
+
+def test_an_honest_judge_blocks_a_wrong_meaning_proposal() -> None:
+    oracle = ScriptedOracle(CASES, "wrong_recipe")
     verdict = run_rastro(CASE["cards-semantic_swap"], provider=PLACEHOLDER, fake=oracle)
-    assert verdict.verdict == "refused"
-    assert oracle.calls == 1
+    assert (verdict.verdict, verdict.detail) == ("refused", "judge_blocked")
 
 
-def test_escalation_consults_the_model_only_after_deterministic_repair_fails() -> None:
-    run = executor("escalate+oracle_compatible")
-    assert run(CASE["cards-class_rename"]).model_calls == 0
-    restructured = run(CASE["cards-container_restructured"])
-    assert (restructured.verdict, restructured.detail) == ("correct", "escalated_promoted")
-    assert restructured.model_calls == 1
+def test_rastro_proposes_with_the_model_only_after_deterministic_repair_fails() -> None:
+    run = executor("oracle_correct")
+    renamed = run(CASE["cards-class_rename"])  # deterministic candidate, judged once
+    assert (renamed.verdict, renamed.model_calls) == ("correct", 1)
+    restructured = run(CASE["cards-container_restructured"])  # proposal, then judge
+    assert (restructured.verdict, restructured.model_calls) == ("correct", 2)
 
 
 def test_hand_written_baseline_serves_decoys_silently() -> None:
