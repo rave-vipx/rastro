@@ -73,8 +73,23 @@ When the site renames a class or moves a block, the remembered recipe fails and 
 searches offline for a replacement, then checks it against the saved sample and your schema.
 With `repair="propose"` (the default) it stores the candidate for review; with `repair="auto"`
 it promotes the candidate only if every gate passes and returns the repaired result.
-`repair="off"` reports the failure as is. No AI and no extra network requests are involved.
+`repair="off"` reports the failure as is. Repair needs no AI and makes no extra network requests.
 See [self-repair](https://rave-vipx.github.io/rastro/repair/).
+
+## Bring your own AI
+
+Rastro works fully offline and deterministically. You can also connect a model: a local one,
+any API you have a key for, the command-line tool of a subscription you already have, or the
+agent that drives Rastro over MCP. No provider is preferred. Rastro uses the model to propose
+recipes when it has no examples and to propose repairs for pages whose structure changed.
+**A model never writes your data. It proposes, and Rastro verifies:** every proposal goes
+through the same validation and repair gates as a deterministic one, and sending page content
+off the machine requires an explicit `allow_remote`.
+
+On our 28-case synthetic benchmark, no executor made Rastro serve wrong data. A model raised
+correct repairs from 12 to 21 only when consulted after deterministic repair failed, and only
+with a perfect scripted proposer. The small local models we tried added nothing. See
+[bring your own AI](https://rave-vipx.github.io/rastro/ai/) for the numbers.
 
 ## Suggest selectors from examples
 

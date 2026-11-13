@@ -1,0 +1,27 @@
+{
+ "kind": "trap",
+ "layout": "cards",
+ "mutation": "decoy_blocks",
+ "recipe": {
+  "record_selector": "section.events > article.card",
+  "fields": {
+   "id": "::attr(data-id)",
+   "title": "h3.card-title::text",
+   "performer": "p.card-artist::text",
+   "starts_at": "time.card-date::attr(datetime)",
+   "price": "span.card-price::text",
+   "url": "a.card-link::attr(href)"
+  }
+ },
+ "correct_recipe": {
+  "record_selector": "main > section.events > article.event-card",
+  "fields": {
+   "id": "::attr(data-id)",
+   "title": "h3.card-title::text",
+   "performer": "p.card-artist::text",
+   "starts_at": "time.card-date::attr(datetime)",
+   "price": "span.card-price::text",
+   "url": "a.card-link::attr(href)"
+  }
+ }
+}

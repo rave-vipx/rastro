@@ -42,7 +42,9 @@ nav:
   - Recipe CI and repair: repair.md
   - Instant Mock Lab: mock-lab.md
   - Mock Lab mutations: mock-lab-mutations.md
+  - Bring your own AI: ai.md
   - Optional intelligence: intelligence.md
+  - AI repair evidence: ai-evidence.md
   - Extraction comparison: comparison.md
   - Product-task comparison (v0.2): comparison-v02.md
   - Recovery benchmark protocol: recovery-benchmark.md

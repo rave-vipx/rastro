@@ -79,7 +79,9 @@ Use the optional HTTP extra and asynchronous SDK described in the [acquisition g
 
 To reuse successful recipes across process restarts, follow the [memory guide](memory.md)
 or run `uv run python examples/memory.py` twice. Memory is opt-in through the SDK;
-it does not require the HTTP extra or an AI model.
+it does not require the HTTP extra or an AI model. Everything works offline and
+deterministically. To connect a model of your choice (local, API, subscription CLI or MCP
+agent), see [bring your own AI](ai.md).
 
 ```bash
 uv run rastro --version

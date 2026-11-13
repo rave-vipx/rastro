@@ -1,0 +1,27 @@
+{
+ "kind": "structural",
+ "layout": "dlist",
+ "mutation": "field_rename",
+ "recipe": {
+  "record_selector": "div.agenda > dl.event",
+  "fields": {
+   "id": "::attr(data-id)",
+   "title": "dd.name::text",
+   "performer": "dd.cast::text",
+   "starts_at": "dd.when::text",
+   "price": "dd.cost::text",
+   "url": "a.buy::attr(href)"
+  }
+ },
+ "correct_recipe": {
+  "record_selector": "div.agenda > dl.event",
+  "fields": {
+   "id": "::attr(data-id)",
+   "title": "dd.headline::text",
+   "performer": "dd.cast::text",
+   "starts_at": "dd.when::text",
+   "price": "dd.cost::text",
+   "url": "a.buy::attr(href)"
+  }
+ }
+}

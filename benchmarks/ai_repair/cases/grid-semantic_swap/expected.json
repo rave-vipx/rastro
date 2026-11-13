@@ -1,0 +1,42 @@
+[
+ {
+  "id": "ev-1",
+  "title": "Noche de Tango",
+  "performer": "Orquesta Sintética",
+  "starts_at": "2099-04-03T21:00:00-03:00",
+  "url": "https://agenda.example/ev-1",
+  "price": "1200"
+ },
+ {
+  "id": "ev-2",
+  "title": "Candombe en el Parque",
+  "performer": "Comparsa Prueba",
+  "starts_at": "2099-04-05T19:30:00-03:00",
+  "url": "https://agenda.example/ev-2",
+  "price": "800"
+ },
+ {
+  "id": "ev-3",
+  "title": "Jazz de Medianoche",
+  "performer": "Trío Ficticio",
+  "starts_at": "2099-04-08T23:00:00-03:00",
+  "url": "https://agenda.example/ev-3",
+  "price": "950"
+ },
+ {
+  "id": "ev-4",
+  "title": "Cuarteto de Cuerdas",
+  "performer": "Ensamble Modelo",
+  "starts_at": "2099-04-12T20:00:00-03:00",
+  "url": "https://agenda.example/ev-4",
+  "price": "1500"
+ },
+ {
+  "id": "ev-5",
+  "title": "Murga Joven",
+  "performer": "Murga Ejemplo",
+  "starts_at": "2099-04-15T21:30:00-03:00",
+  "url": "https://agenda.example/ev-5",
+  "price": "600"
+ }
+]
