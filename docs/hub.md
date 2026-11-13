@@ -72,8 +72,17 @@ fallbacks is accepted. A candidate that fails the gate stays a candidate.
 
 Every failure exits with code 2 and a typed error (`BundleIntegrityError`,
 `BundleVersionError`, `BundleVerificationError`, all `ConfigurationError`) and leaves
-the store unchanged. Hashes detect corruption, not a malicious author: review a
-candidate before you promote it.
+the store unchanged. Hashes detect corruption, not a malicious author: a bundle gives
+integrity, not authenticity. Review a candidate before you promote it.
+
+Because anyone can build a bundle whose hashes and replay check out, import applies the
+untrusted-recipe selector policy before the replay runs. CSS selectors may not use
+`:has()` or sibling combinators (`~`, `+`), chain more than 8 compound selectors, list
+more than 8 alternatives or nest pseudo-classes more than 2 deep. These shapes are
+quadratic or worse in lxml: a 48 KB bundle using `p ~ p ~ p ~ b` took 105 s of CPU to
+replay. A refused selector fails with a `ConfigurationError` that names the rule. The same
+policy applies to recipes from MCP `scrape_file`, Studio selector edits and model
+proposals. Recipes you write in your own job file are not checked.
 
 ## Limits
 

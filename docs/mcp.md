@@ -15,6 +15,10 @@ claude mcp add rastro -- rastro mcp --root .
 Without the extra, `rastro mcp` exits non-zero and prints a JSON error on stderr with
 `"error": "missing_extra"`, a `message` and `"hint": "pip install 'rastro-engine[mcp]'"`.
 `--root` is the workspace root (default: the current directory) and must exist.
+An agent can write job files, so the server applies the [operator opt-in](jobs.md#operator-opt-in):
+jobs that declare egress proxies run only when you start it with `--allow-egress`, and
+`--allow-env NAME` adds names to the secret allow-list. Recipes and selectors passed to
+`scrape_file` follow the [untrusted-recipe selector policy](hub.md#import).
 
 ## Workflow
 
@@ -40,7 +44,7 @@ The server sends this order to the client as its `instructions`:
 | `suggest_recipe(page_path, examples, url?)` | `rastro suggest` | Verified CSS recipe, per-field confidence and preview rows | read-only |
 | `job_new(path, page_path, examples, url?, dataset?, identity?, recipe_memory?)` | `rastro new` | Writes a new `.toml` job; refuses to overwrite | writes |
 | `job_validate(path)` | `rastro job validate` | Validates the job; reads no sources | read-only |
-| `job_preview(path)` | `rastro job preview --output json` | Runs the job, writes nothing (recipe memory is read-only) | read-only |
+| `job_preview(path)` | `rastro job preview --output json` | Runs the job, writes nothing (recipe memory is read-only) | writes nothing; not `readOnlyHint`, because the job may fetch URLs or call a model |
 | `job_extract(path)` | `rastro job run` | Runs the job and returns its records; writes no dataset | writes recipe memory only |
 | `job_load(path, drift?)` | `rastro job load [--drift]` | Runs the job and loads approved fields into its dataset | destructive |
 | `job_run(path)` | `rastro job load` | Deprecated alias of `job_load`, removed in 0.7.0 | destructive |

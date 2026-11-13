@@ -386,6 +386,27 @@ Committed JSON Schemas live at [`docs/schemas/job.schema.json`](schemas/job.sche
 - API keys, model endpoints and proxy credentials are referenced only by uppercase environment-variable names (`[A-Z_][A-Z0-9_]{0,127}`) in every `*_env` field. Lowercase, token-shaped values are rejected, and validation errors never echo offending inputs.
 - `rastro job validate` prints the normalized job with every `*_env` value replaced by `"<redacted>"`.
 
+### Operator opt-in
+
+A job file is configuration: remote models, egress proxies and secret environment names
+need operator opt-in. The job file cannot grant it to itself.
+
+- A job that declares `[acquisition.egress_profiles]` runs only with `--allow-egress`
+  (`rastro job run|preview|load`, `rastro recipe repair|promote`, `rastro mcp`,
+  `rastro studio`), `allow_egress=True` on `run_job`, `run_job_async`, `run_job_file`,
+  `load_job_file`, `preview_job`, `repair_job_source` and `promote_job_recipe`, or
+  `RASTRO_ALLOW_EGRESS=1`. Without it the run fails with a `ConfigurationError` at
+  `acquisition.egress_profiles` before any request. Jobs without egress profiles need no
+  opt-in.
+- Proxy credential references (`username_env`, `password_env`) must be named `RASTRO_*`
+  (`RASTRO_[A-Z0-9_]{1,64}`) or appear in the operator allow-list: `RASTRO_ALLOWED_ENV`
+  (comma-separated) or `--allow-env NAME` (repeatable; `allow_env=` in Python). The error
+  names the job key, never the variable.
+
+```console
+$ RASTRO_PROXY_USER=me RASTRO_PROXY_PASS=secret rastro job run job.toml --allow-egress
+```
+
 ## Python API
 
 ```python
