@@ -24,6 +24,7 @@ from rastro.application.job_loader import load_job
 from rastro.cli_errors import classify
 from rastro.domain.jobs import Job
 from rastro.domain.models import RastroError
+from rastro.ports.model import ModelPort
 from rastro.studio import files
 
 MAX_BODY = 16 * 1024
@@ -115,11 +116,17 @@ def _origin_ok(request: Request) -> bool:
 
 
 class Studio:
-    """The served root and this run's token; routers resolve every path through it."""
+    """The served root, this run's token and the optional model for "Ask AI"; routers
+    resolve every path through it."""
 
-    def __init__(self, root: Path) -> None:
+    def __init__(
+        self, root: Path, *, model: ModelPort | None = None, model_remote: bool = False
+    ) -> None:
         self.root = root.resolve()
         self.token = secrets.token_urlsafe(32)
+        self.model = model
+        # Set by --allow-remote: Studio then says page content may leave this machine.
+        self.model_remote = model_remote
 
     def job_path(self, name: str) -> Path:
         return files.resolve_in_root(self.root, name)
