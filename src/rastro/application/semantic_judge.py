@@ -46,11 +46,13 @@ class FieldVerdict(Contract):
 
 def _response_schema(fields: Sequence[str]) -> dict[str, object]:
     verdict = FieldVerdict.model_json_schema()
+    defs = verdict.pop("$defs", {})  # "$ref"s resolve from the root, so hoist them there
     return {
         "type": "object",
         "properties": dict.fromkeys(fields, verdict),
         "required": list(fields),
         "additionalProperties": False,
+        **({"$defs": defs} if defs else {}),
     }
 
 

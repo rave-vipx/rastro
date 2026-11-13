@@ -69,7 +69,10 @@ def _injected(model: ModelPort | None) -> Iterator[None]:
 
 
 def _refusal(source: SourceRepair) -> str:
-    decisions = [c.evaluation.decision for c in source.comparisons if c.evaluation]
+    evaluations = [c.evaluation for c in source.comparisons if c.evaluation]
+    decisions = [e.decision for e in evaluations]
+    if any(r.startswith("semantic_") for e in evaluations for r in e.reasons):
+        return "judge_blocked"
     if "quarantine" in decisions:
         return "quarantined"
     return "rejected" if decisions else "no_candidates"
@@ -94,18 +97,17 @@ def run_rastro(
     *,
     provider: dict[str, Any] | None = None,
     fake: ModelPort | None = None,
-    escalate: bool = False,
 ) -> Verdict:
     """Load the base page, break it, then load, repair and reload through the public API.
 
     ``provider`` is the job's ``[model]`` table; ``fake`` replaces the provider it names.
-    With ``escalate`` the first repair runs without a model and, only when it promotes
-    nothing, the operator adds ``[model]`` to the job and repairs again.
+    Rastro itself decides when to consult it: proposals only when no deterministic
+    candidate passes, and the semantic judge before every automatic promotion.
     """
     started = time.perf_counter()
     with tempfile.TemporaryDirectory(prefix="ai-repair-") as raw, _injected(fake):
         job = Path(raw) / "job.toml"
-        job.write_text(job_toml(case.recipe(), None if escalate else provider), "utf-8")
+        job.write_text(job_toml(case.recipe(), provider), "utf-8")
         page = job.with_name("page.html")
         page.write_text(render(case.before), encoding="utf-8")
         if rastro.load_job_file(job, drift=True).exit_code != 0:
@@ -115,8 +117,4 @@ def run_rastro(
             verdict, detail, calls = judge(_served(job), case), "load_succeeded", 0
         else:
             verdict, detail, calls = _repair(job, case)
-            if escalate and detail != "promoted":
-                job.write_text(job_toml(case.recipe(), provider), encoding="utf-8")
-                verdict, detail, calls = _repair(job, case)
-                detail = f"escalated_{detail}"
     return Verdict(case.name, case.kind, verdict, detail, calls, time.perf_counter() - started)

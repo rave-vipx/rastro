@@ -134,3 +134,16 @@ def test_resolve_model_accepts_any_port_and_rejects_other_objects(monkeypatch):
     )
     assert resolve_model("env") is port and resolve_model("x", allow_remote=True) is port
     assert seen == [(None, {}), ("x", {"allow_remote": True})]
+
+
+def test_response_schema_refs_resolve_from_its_root():
+    """QUAL-005, AI-005: schema-enforcing providers (Ollama, strict APIs) resolve every
+    ``$ref`` from the root; a nested ``$defs`` made them reject each judge call."""
+    schema = judge_request(Offer, ("title", "city"), [], []).output_schema
+    refs = [prop["properties"]["verdict"]["$ref"] for prop in schema["properties"].values()]
+    for ref in refs:
+        node = schema
+        for key in ref.removeprefix("#/").split("/"):
+            node = node[key]
+        assert node["enum"] == ["match", "mismatch", "unsure"]
+    assert all("$defs" not in prop for prop in schema["properties"].values())

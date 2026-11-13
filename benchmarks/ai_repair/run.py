@@ -31,16 +31,16 @@ OFFLINE = (
     "deterministic",
     "baseline",
     "oracle_correct",
-    "oracle_compatible",
+    "oracle_wrong_recipe",
     "oracle_adversarial",
-    "escalate+oracle_compatible",
-    "escalate+oracle_adversarial",
 )
 PLACEHOLDER = {"provider": "ollama", "model": "injected"}  # replaced by the injected ModelPort
 Executor = Callable[[Case], Verdict]
 
 
-def _model(name: str) -> tuple[dict[str, Any], Callable[[], ModelPort | None]]:
+def _model(
+    name: str, options: dict[str, Any]
+) -> tuple[dict[str, Any], Callable[[], ModelPort | None]]:
     """The job's ``[model]`` table and a factory for the ModelPort injected behind it."""
     if name.startswith("oracle_"):
         mode: Any = name.removeprefix("oracle_")
@@ -48,29 +48,30 @@ def _model(name: str) -> tuple[dict[str, Any], Callable[[], ModelPort | None]]:
     if name.startswith("ollama:"):
         return {"provider": "ollama", "model": name.removeprefix("ollama:")}, lambda: None
     if name.startswith("spec:"):
-        build = getattr(rastro, "model", None)  # the generic factory from slice AI1
-        if build is None:
-            raise SystemExit("spec: executors need rastro.model(spec) (slice AI1)")
-        port: ModelPort = build(name.removeprefix("spec:"))
+        port = rastro.model(name.removeprefix("spec:"), **options)
         return PLACEHOLDER, lambda: port
     raise SystemExit(f"unknown executor {name!r}")
 
 
-def executor(name: str) -> Executor:
-    """``deterministic``, ``baseline``, a model executor, or ``escalate+<model executor>``."""
+def executor(name: str, options: dict[str, Any] | None = None) -> Executor:
+    """``deterministic``, ``baseline``, ``oracle_<mode>``, ``ollama:<model>`` or ``spec:<spec>``.
+
+    ``options`` are ``rastro.model`` keywords for ``spec:`` executors (``json_path``, ...).
+    """
     if name == "deterministic":
         return run_rastro
     if name == "baseline":
         return run_baseline
-    escalate = name.startswith("escalate+")
-    provider, fake = _model(name.removeprefix("escalate+"))
-    return lambda case: run_rastro(case, provider=provider, fake=fake(), escalate=escalate)
+    provider, fake = _model(name, options or {})
+    return lambda case: run_rastro(case, provider=provider, fake=fake())
 
 
-def run(names: list[str], cases: tuple[Case, ...] = CASES) -> dict[str, Any]:
+def run(
+    names: list[str], cases: tuple[Case, ...] = CASES, options: dict[str, Any] | None = None
+) -> dict[str, Any]:
     results: dict[str, Any] = {}
     for name in names:
-        verdicts = [executor(name)(case) for case in cases]
+        verdicts = [executor(name, options)(case) for case in cases]
         results[name] = {
             "summary": summarize(verdicts),
             "cases": [v.as_dict() for v in verdicts],
@@ -110,8 +111,11 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--executor", action="append", help="default: every offline executor")
     parser.add_argument("--output", type=Path, default=HERE / "results.json")
+    parser.add_argument(
+        "--model-options", type=json.loads, default={}, help="JSON rastro.model keywords"
+    )
     args = parser.parse_args(argv)
-    results = run(args.executor or list(OFFLINE))
+    results = run(args.executor or list(OFFLINE), options=args.model_options)
     report = {"environment": environment(), "results": results}
     args.output.write_text(json.dumps(report, indent=1, ensure_ascii=False) + "\n", "utf-8")
     print(table(results))
