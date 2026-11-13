@@ -16,7 +16,7 @@ from rastro.application.extraction import extract_document, validate_recipe
 from rastro.application.field_aliases import discovery_aliases as resolve_discovery_aliases
 from rastro.application.memory import PreparedRecipe
 from rastro.application.outcomes import stamp_learning
-from rastro.application.proposals import propose_with_model
+from rastro.application.proposals import propose_with_model, schema_hints
 from rastro.domain.intelligence import InferencePolicy
 from rastro.domain.models import (
     ConfigurationError,
@@ -156,6 +156,7 @@ class RecipeLearner:
                 failure=failure,
                 attempts=session.attempts,
                 evaluate=session.evaluate,
+                hints=schema_hints(schema),
             )
         storage_seconds = await self._persist_learned(prepared, session.selected)
         result = stamp_learning(

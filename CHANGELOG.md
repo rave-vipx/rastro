@@ -33,6 +33,12 @@ First public release of `rastro-engine` on PyPI: one-call typed scraping with `r
 - `rastro new --allow-partial` writes a job even when the recipe preview is only a partial success; `Suggestion.status` reports the preview outcome (JOB-001, INT-002).
 - `rastro recipe show job.toml --source N [--version V]` prints a stored recipe version as JSON, read-only; `recipe compare` reports `changed_settings` (such as `record_selector`); `rastro recipe --help` describes every subcommand (REC-006).
 - Rejected repair candidates report `blocking` issues: record index, field and issue code, never values (REPAIR-002).
+- `rastro.scrape(..., model=...)` accepts any `ModelPort`, a `rastro.model` spec or `"env"` (`RASTRO_MODEL`): with no selectors and no structured data the model proposes a recipe from the field names, types and descriptions, verified by extraction and the schema and remembered with `memory=`; when relocation finds no candidate that passes, the model proposes repairs (at most two calls by default) gated exactly like relocated ones. `SelfRepair.origin` (`relocation` or `model`) and `model_calls` report it; both are omitted without a model (INT-002, REPAIR-001, AI-001).
+- Semantic gate: with a model, every would-be automatic promotion (scrape and job repair) is judged per changed field from its name, type, description and earlier values, with candidate values clipped and labelled untrusted. Verdicts appear in `indicators.results` (`kind = "model_judge"`) and `semantic_confidence`; `mismatch` quarantines (`semantic_mismatch`), `unsure` promotes only when every deterministic gate is at its strictest, and a failed answer quarantines (`semantic_judge_failed`). Without a model the indicator stays unassessed (QUAL-005, QUAL-006).
+- Model repair composes each changed selector as `"<serving>, <proposed>"` so historical samples keep parsing, and sends the serving recipe in the prompt; the plain proposal is gated only if the union fails (REPAIR-002, REPAIR-004).
+- `repair_job_source(..., model=, allow_remote=)`, `rastro recipe repair --model SPEC [--allow-remote]` and `[repair] model = true` (use `RASTRO_MODEL` when the job has no `[model]` table); `SourceRepair.origin` reports where candidates came from; `job.schema.json` gains the optional `repair.model` (REPAIR-001, REPAIR-005, AI-001).
+- `rastro.suggest(..., model=...)` makes `examples` optional; `rastro suggest` and `rastro new` take `--model SPEC`, `--allow-remote` and `--field NAME`, with `--example` optional when `--model` is set. Model recipes must still reproduce every given example and extract `records_min` records; `FieldConfidence.method` gains `model` (INT-002, JOB-001, AI-001).
+- `ModelRequest.response_schema` (optional) and `ModelRequest.output_schema` let a request ask for a JSON shape other than a recipe proposal; the Ollama and OpenAI-compatible providers constrain decoding with `output_schema` (AI-001, AI-005).
 
 ### Security
 
@@ -42,6 +48,8 @@ First public release of `rastro-engine` on PyPI: one-call typed scraping with `r
 
 ### Changed
 
+- Recipe proposal prompts include `field_hints` (each field's type and description, clipped) so models map fields by meaning; docs/intelligence.md lists what is sent (AI-002, P-001).
+- With a configured model, job repair asks it only when no deterministic candidate would pass (escalation, not competition), so a model candidate can no longer quarantine a passing relocation as `competing_candidates`; an invalid model selector rejects that proposal (`invalid_model_candidate`) instead of aborting the repair (REPAIR-001, REPAIR-002).
 - The MCP server reports Rastro's package version as its `serverInfo.version` instead of the MCP library's (AGENT-002).
 - Package classifier is `Development Status :: 4 - Beta`; README rewritten for external users.
 - MCP `recipe_repair` declares `destructiveHint: true`, because a job with `[repair] auto_promote = true` lets it change the serving recipe; `dataset_records` output is bounded like the other tools, and every MCP output also caps objects at 100 keys with `truncated` (AGENT-002).

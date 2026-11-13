@@ -165,6 +165,37 @@ Editing a field's selector in your model starts a fresh recipe history, so your
 own changes always win over a remembered repair. To start over, delete
 `recipes.db` and `recipes.samples.db`.
 
+## With a model
+
+Everything above works without AI. A model makes the difference where rules give up,
+and it never supplies the data: it proposes **recipes** and **judgements**, and every
+proposal passes the same deterministic checks as a relocated one.
+
+```python
+port = rastro.model()  # reads RASTRO_MODEL; any ModelPort object works too
+result = rastro.scrape(page, Offer, memory="recipes.db", repair="auto", model=port)
+result.repair.origin  # "relocation" or "model": where the candidates came from
+result.repair.model_calls  # proposal and judge calls this repair made
+```
+
+- **No selectors.** A model without `rastro.css` markers, on a page without matching
+  structured data, gets a recipe proposed from the field names, types and descriptions;
+  it is kept only if extraction and the schema validate, and `memory=` remembers it.
+- **Repair.** Relocation runs first. Only when none of its candidates would pass does
+  the model propose (at most two calls by default). Rastro prefixes each changed
+  selector with the remembered one (`"old, new"`), so the retained sample still parses,
+  and gates the result like any candidate.
+- **Meaning.** Before `"auto"` promotes, the model judges whether each changed field's
+  new values match the field (name, type, description, earlier values). A `mismatch`
+  quarantines the candidate (`semantic_mismatch`); `unsure` promotes only when every
+  deterministic gate is at its strictest; a failed or malformed answer quarantines
+  (`semantic_judge_failed`). Without a model nothing changes.
+
+`model` also accepts a spec string for `rastro.model` or `"env"` (the `RASTRO_MODEL`
+variable). Sending a page to a model that is not on this machine requires opting in
+with `allow_remote=True` when you build the port. Values sent to the judge are clipped
+and labelled as untrusted page data.
+
 ## Async code
 
 `rastro.scrape` runs its own event loop. Inside async code (including Jupyter),

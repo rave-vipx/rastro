@@ -97,6 +97,8 @@ class SelfRepair(Contract):
 
     ``promoted`` is true only when a candidate passed every gate, became the serving
     recipe and produced this result. ``candidates`` lists every stored proposal.
+    With a model, ``origin`` says whether candidates came from relocation or the model
+    and ``model_calls`` counts its proposal and judge calls.
     """
 
     mode: Literal["propose", "auto"]
@@ -104,6 +106,9 @@ class SelfRepair(Contract):
     promoted: bool = False
     promoted_version: int | None = None
     candidates: tuple[RepairProposal, ...] = ()
+    # With a model: where the candidates came from, and the model calls repair made.
+    origin: Literal["relocation", "model"] | None = Field(default=None, exclude_if=_absent)
+    model_calls: int = Field(default=0, ge=0, exclude_if=lambda v: not v)
 
 
 class ExtractionResult[T: BaseModel](Contract):

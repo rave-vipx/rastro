@@ -340,8 +340,12 @@ and validation time. Candidate counts/parsing times sum actual parsing attempts.
 ## Trust and verification
 
 System instructions are fixed; page text lives in a separate JSON data envelope.
-Only field names and required-field names accompany the HTML. Source URLs and full
-Pydantic schemas, descriptions, defaults and examples are not sent as prompt metadata.
+Field names, required-field names and `field_hints` (each field's type name and
+description, clipped to 200 characters) accompany the HTML; repair adds the serving
+recipe as `previous_recipe`. Source URLs, defaults and examples are not sent.
+`ModelRequest.response_schema` lets a request ask for another JSON shape (the semantic
+judge does); `output_schema` is that schema or `proposal_schema()`, and providers
+should constrain decoding with it.
 The HTML itself may contain sensitive content: opting into a model authorizes sending
 that document to the configured service (remote only with `allow_remote=True`).
 Prompt separation does not guarantee semantic correctness. A malicious page or model can still suggest the wrong existing

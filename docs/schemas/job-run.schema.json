@@ -811,6 +811,28 @@
           "title": "Mode",
           "type": "string"
         },
+        "model_calls": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Model Calls",
+          "type": "integer"
+        },
+        "origin": {
+          "anyOf": [
+            {
+              "enum": [
+                "relocation",
+                "model"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Origin"
+        },
         "previous_version": {
           "title": "Previous Version",
           "type": "integer"

@@ -21,6 +21,8 @@ class RepairPolicy(RedactedContract):
     min_completeness: Rate = 1.0
     min_structural_validity: Rate = 1.0
     min_semantic_confidence: Rate = 1.0
+    # Use RASTRO_MODEL for repair when the job has no [model] table.
+    model: StrictBool = Field(default=False, exclude_if=lambda v: not v)
     fixtures: tuple[str, ...] = Field(default=(), max_length=31)
 
 
@@ -104,6 +106,10 @@ class SourceRepair(Contract):
     promoted_version: int | None = None
     # Audit notes, e.g. ``candidate_retired`` or ``page_not_usable`` (candidate kept).
     notes: tuple[str, ...] = Field(default=(), exclude_if=lambda v: not v)
+    # With a model: whether candidates came from relocation or the model fallback.
+    origin: Literal["relocation", "model"] | None = Field(
+        default=None, exclude_if=lambda v: v is None
+    )
 
 
 class RepairReport(Contract):

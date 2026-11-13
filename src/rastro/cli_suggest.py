@@ -10,10 +10,13 @@ from typing import Any
 from rastro.application.job_loader import _read_local_source
 from rastro.application.job_new import new_job
 from rastro.application.job_preview import _cell
+from rastro.application.model_choice import resolve_model
 from rastro.application.suggest import suggest
+from rastro.cli_model import add_model_options
 from rastro.domain.job_fields import StringField
 from rastro.domain.models import ConfigurationError, Limits
 from rastro.domain.suggest import Suggestion
+from rastro.ports.model import ModelPort
 
 MAX_PREVIEW_ROWS = 50
 
@@ -48,15 +51,25 @@ def _add_example_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--example",
         action="append",
-        required=True,
+        default=[],
         metavar="FIELD=VALUE",
         help="Example value; repeating a field starts the next example record",
     )
+    parser.add_argument(
+        "--field",
+        action="append",
+        default=[],
+        metavar="NAME",
+        help="Field to extract without an example (requires --model)",
+    )
+    add_model_options(parser, "propose the recipe; examples become optional")
     parser.add_argument("--records-min", type=int, default=2, help="Minimum records (default 2)")
 
 
 def parse_examples(items: list[str]) -> list[dict[str, str]]:
     """``FIELD=VALUE`` items as example records; a repeated field starts a new record."""
+    if not items:
+        return []
     records: list[dict[str, str]] = [{}]
     for item in items:
         name, separator, value = item.partition("=")
@@ -69,17 +82,33 @@ def parse_examples(items: list[str]) -> list[dict[str, str]]:
     return records
 
 
+def _model(args: argparse.Namespace) -> ModelPort | None:
+    if not args.example and args.model is None:
+        raise ConfigurationError("Give --example values, or --model with --field names")
+    if args.field and args.model is None:
+        raise ConfigurationError("--field without an example requires --model")
+    return resolve_model(args.model, allow_remote=args.allow_remote)
+
+
 def suggest_command(args: argparse.Namespace) -> int:
+    model = _model(args)
     examples = parse_examples(args.example)
     html = _read_local_source(args.page, Limits().max_html_bytes, "html")
-    names = dict.fromkeys(name for example in examples for name in example)
+    names = dict.fromkeys([*(name for example in examples for name in example), *args.field])
     try:
         fields = [StringField(name=name) for name in names]
     except ValueError:
         raise ConfigurationError(
             "Example field names must start with a letter and use letters, digits or _"
         ) from None
-    found = suggest(html, fields, examples=examples, url=args.url, records_min=args.records_min)
+    found = suggest(
+        html,
+        fields,
+        examples=examples,
+        url=args.url,
+        records_min=args.records_min,
+        model=model,
+    )
     payload = suggestion_payload(found)
     if args.output == "json":
         print(json.dumps(payload, indent=2))
@@ -100,6 +129,8 @@ def new_command(args: argparse.Namespace) -> int:
         identity=tuple(args.identity),
         recipe_memory=args.recipe_memory,
         allow_partial=args.allow_partial,
+        fields=tuple(args.field),
+        model=_model(args),
     )
     print(json.dumps({"schema_version": 1, "created": str(path)}))
     return 0

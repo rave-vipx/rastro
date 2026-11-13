@@ -12,6 +12,7 @@ from rastro.application.recipe_apply import write_serving_recipe
 from rastro.application.repair_context import RepairContext, safe_path
 from rastro.cli_hub import add_commands as add_hub_commands
 from rastro.cli_hub import hub_command
+from rastro.cli_model import add_model_options
 from rastro.cli_prune import add_commands as add_prune_commands
 from rastro.cli_prune import prune_command
 from rastro.domain.models import ConfigurationError
@@ -62,6 +63,7 @@ def add_commands(subcommands: argparse._SubParsersAction) -> None:  # type: igno
             command.add_argument("--to-version", type=int, required=True)
         if name == "repair":
             command.add_argument("--report", help="New report path inside the job directory")
+            add_model_options(command, "propose repairs relocation cannot find and judge them")
 
 
 def recipe_command(args: argparse.Namespace) -> int:
@@ -168,6 +170,8 @@ def _repair_command(context: RepairContext, args: argparse.Namespace) -> int:
             args.file,
             None if args.source is None else (args.source,),
             allow_absolute_paths=args.allow_absolute_paths,
+            model=args.model,
+            allow_remote=args.allow_remote,
         )
         assert descriptor is not None
         with os.fdopen(descriptor, "w", encoding="utf-8") as output:
