@@ -85,7 +85,7 @@ class ModelRequest(Contract):
 
     @property
     def output_schema(self) -> dict[str, Any]:
-        """The JSON Schema the answer must match; recipe proposals unless overridden."""
+        """The JSON Schema the answer must match; recipe proposals by default."""
         return self.response_schema or proposal_schema()
 
     @property

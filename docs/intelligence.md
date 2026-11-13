@@ -169,9 +169,10 @@ the smaller of the two).
 The trusted system message gives numbered rules and a one-line example of the JSON shape.
 The data envelope carries:
 
-- `fields`: name, type, whether it is required, and the `Field(description=...)` you wrote;
+- `fields` and `required_fields`, plus `field_hints`: each field's type and the
+  `Field(description=...)` you wrote;
 - `untrusted_html`, or for a page too large for `max_context_bytes`, `untrusted_page_digest`;
-- for repair, `current_recipe` (the serving recipe, without version or fallbacks), a safe
+- for repair, `previous_recipe` (the serving recipe, without version or fallbacks), a safe
   `last_failure` category such as `serving_recipe_extracts_no_records`, and
   `untrusted_last_success_samples` (up to two records from the last retained success,
   each value clipped to 120 characters). The rules ask the model to keep selectors that
@@ -206,9 +207,10 @@ A job file is data that anyone (including an agent through MCP or Studio) may wr
 Without the operator's opt-in the run fails closed with a `ConfigurationError` naming the
 flag, before any request is made or any secret is read. The CLI flags work with every
 command and may follow the subcommand (`rastro job run job.toml --allow-remote`,
-`rastro mcp --allow-remote`, `rastro studio --allow-command`). The SDK keywords exist on
-`run_job`, `run_job_async`, `run_job_file`, `load_job_file`, `repair_job_source` and
-`repair_job_sources`. A model passed in code (`model=` or `rastro.model(...)`) is trusted
+`rastro mcp --allow-remote`, `rastro studio --allow-command`). The SDK keywords
+`allow_remote`, `allow_command` and `allow_env` exist on `run_job`, `run_job_async`,
+`run_job_file` and `load_job_file`; `repair_job_source(s)` take `allow_remote` (use the
+environment variables for the others). A model passed in code (`model=` or `rastro.model(...)`) is trusted
 and not restricted.
 
 ## Add a local Ollama model
@@ -517,13 +519,16 @@ and validation time. Candidate counts/parsing times sum actual parsing attempts.
 ## Trust and verification
 
 System instructions are fixed; page text lives in a separate JSON data envelope.
-Field names, simple type names, required flags and your `Field(description=...)` text
-accompany the page; source URLs, defaults, examples and validators are not sent. For
-repair, the serving recipe and up to two clipped values per field from the last
-retained success are added and labelled untrusted. The page may contain sensitive
-content: opting into a model authorizes sending it (or its digest) and those samples
-to the configured service (remote only with `allow_remote=True`). Rastro never logs
-prompts, page content, keys or tokens.
+Field names, required-field names and `field_hints` (each field's type name and your
+`Field(description=...)`, clipped to 200 characters) accompany the page; repair adds the
+serving recipe as `previous_recipe` and up to two clipped values per field from the last
+retained success, labelled untrusted. Source URLs, defaults, examples and validators are
+not sent. `ModelRequest.response_schema` lets a request ask for another JSON shape (the
+semantic judge does); `output_schema` is that schema or `proposal_schema()`, and providers
+should constrain decoding with it. The page may contain sensitive content: opting into a
+model authorizes sending it (or its digest) and those samples to the configured service
+(remote only with `allow_remote=True`). Rastro never logs prompts, page content, keys or
+tokens.
 Prompt separation does not guarantee semantic correctness. A malicious page or model can still suggest the wrong existing
 node; use meaningful schema validators and review samples.
 

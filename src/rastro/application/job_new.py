@@ -16,6 +16,7 @@ from pydantic import ValidationError
 
 from rastro.application.engine import Rastro
 from rastro.application.job_loader import _read_local_source
+from rastro.application.model_choice import ModelChoice
 from rastro.application.suggest import suggest
 from rastro.domain.job_fields import (
     DateField,
@@ -38,19 +39,23 @@ def new_job(
     path: Path,
     *,
     page: Path,
-    examples: Sequence[Example],
+    examples: Sequence[Example] = (),
     url: str | None = None,
     records_min: int = 2,
     dataset: str | None = None,
     identity: Sequence[str] = (),
     allow_partial: bool = False,
     recipe_memory: str | None = None,
+    fields: Sequence[str] = (),
+    model: ModelChoice = None,
 ) -> Path:
     """Write a new TOML job at ``path``; never overwrite an existing file.
 
     The suggested recipe's preview must succeed; ``allow_partial=True`` writes a job whose
     preview is only a partial success. ``recipe_memory`` names a recipe store relative to
     the job file, in a folder that already exists; it enables repair and promotion.
+    With ``model``, examples are optional: ``fields`` names the fields to extract and
+    the model proposes the recipe, verified like an example-built one.
     """
     if path.suffix != ".toml":
         raise ConfigurationError("The new job file must end in .toml")
@@ -63,17 +68,20 @@ def new_job(
     page_path = _relative(page, path.parent)
     _check_distinct(path, page, dataset, recipe_memory)
     html = _read_local_source(page, Limits().max_html_bytes, "html")
-    checked = check_examples(examples)
+    checked = check_examples(examples) if examples or model is None else ()
+    names = dict.fromkeys([*(k for e in checked for k in e), *fields])
+    if not names:
+        raise ConfigurationError("Name the fields with examples or --field")
     try:
-        fields: list[JobField] = [
-            StringField(name=name) for name in dict.fromkeys(k for e in checked for k in e)
-        ]
+        job_fields: list[JobField] = [StringField(name=name) for name in names]
     except ValidationError:
         raise ConfigurationError(
             "Example field names must start with a letter and use letters, digits or _"
         ) from None
     source = FileJobSource(path=page_path, url=url)
-    found = suggest(html, fields, examples=checked, url=url, records_min=records_min)
+    found = suggest(
+        html, job_fields, examples=checked, url=url, records_min=records_min, model=model
+    )
     if found.status != Outcome.SUCCESS and not allow_partial:
         issues = ", ".join(
             sorted({f"{i.code}:{i.field}" if i.field else i.code for i in found.preview.issues})
@@ -83,7 +91,9 @@ def new_job(
             + (f" ({issues})" if issues else "")
             + "; add examples, or pass --allow-partial to write the job anyway"
         )
-    typed = _typed_fields(html, fields, checked, found, Source(url=source.resolved_source_url()))
+    typed = _typed_fields(
+        html, job_fields, checked, found, Source(url=source.resolved_source_url())
+    )
     text = render_job(
         typed,
         found.recipe,

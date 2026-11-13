@@ -50,6 +50,8 @@ def model(spec: object = None, **options: Any) -> ModelPort:
         data.update(_env_opt_in(data))
     else:
         data = parse_model_spec(spec)
+    if options.get("allow_remote") is False:
+        del options["allow_remote"]  # adds nothing; keeps an environment opt-in and Ollama
     data.update(options)
     return build_model(provider_from(data))
 

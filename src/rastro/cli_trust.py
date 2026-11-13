@@ -56,12 +56,19 @@ def hoist_trust_flags(argv: list[str]) -> list[str]:
     return hoisted + rest
 
 
-def apply_trust(args: argparse.Namespace) -> OperatorTrust:
-    """Install the parsed opt-ins process-wide; returns the previous value."""
+def apply_trust(args: argparse.Namespace, argv: list[str]) -> OperatorTrust:
+    """Install the parsed opt-ins process-wide; returns the previous value.
+
+    Subcommands with their own ``--allow-remote`` (``studio``, ``suggest``, ``recipe
+    repair``) see the hoisted flag too, so it means the same thing everywhere.
+    """
+    head = argv[: argv.index("--")] if "--" in argv else argv
+    if "--allow-remote" in head:
+        args.allow_remote = True
     return set_process_trust(
         OperatorTrust(
-            allow_remote=bool(args.allow_remote),
-            allow_command=bool(args.allow_command),
-            allowed_env=env_names(args.allow_env),
+            allow_remote=bool(getattr(args, "allow_remote", False)),
+            allow_command=bool(getattr(args, "allow_command", False)),
+            allowed_env=env_names(getattr(args, "allow_env", None) or ()),
         )
     )

@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 
 from rastro import ConfigurationError, CssRecipe, Limits, ResourceLimitError
 from rastro.application.page_digest import HEADER, digest_page
-from rastro.application.proposal_prompt import build_proposal_request
+from rastro.application.proposal_prompt import build_proposal_request, schema_hints
 
 BIDI, LSEP = chr(0x202E), chr(0x2028)
 
@@ -61,33 +61,32 @@ class Event(BaseModel):
     when: str | None = None
 
 
-def test_repair_prompt_carries_types_descriptions_recipe_and_clipped_samples():
+def test_repair_prompt_carries_hints_recipe_and_clipped_samples():
     recipe = CssRecipe(record_selector="li.event", fields={"title": "h3::text"})
     request = build_proposal_request(
-        schema=Event,
+        fields=("title", "when"),
+        required={"title"},
         failure="serving_recipe_extracts_no_records",
         digest="DIGEST",
-        recipe=recipe,
+        hints=schema_hints(Event),
+        previous=recipe,
         samples=[{"title": "x" * 500 + BIDI, "when": None, "secret_extra": "drop"}],
     )
     envelope = json.loads(request.content)
-    assert envelope["fields"] == [
-        {
-            "name": "title",
-            "type": "str",
-            "required": True,
-            "description": "Name of the event as printed",
-        },
-        {"name": "when", "type": "str | null", "required": False},
-    ]
+    assert envelope["fields"] == ["title", "when"]
+    assert envelope["required_fields"] == ["title"]
+    assert envelope["field_hints"] == {
+        "title": {"type": "str", "description": "Name of the event as printed"},
+        "when": {"type": "str | null"},
+    }
     assert envelope["untrusted_page_digest"] == "DIGEST"
     assert "untrusted_html" not in envelope
-    assert envelope["current_recipe"]["record_selector"] == "li.event"
-    assert "version" not in envelope["current_recipe"]
+    assert envelope["previous_recipe"]["record_selector"] == "li.event"
+    assert "version" not in envelope["previous_recipe"]
     (sample,) = envelope["untrusted_last_success_samples"]
     assert set(sample) == {"title"} and len(sample["title"]) == 120
     assert envelope["last_failure"] == "serving_recipe_extracts_no_records"
-    assert "previous page structure" in request.system
+    assert "first comma-separated alternative" in request.system
 
 
 @pytest.mark.asyncio
@@ -114,7 +113,8 @@ async def test_large_pages_reach_the_model_as_a_digest():
         policy=InferencePolicy(max_context_bytes=20_000),
         slots=asyncio.Semaphore(1),
         html=noisy_page(),
-        schema=Event,
+        fields=("title", "when"),
+        required={"title"},
         failure="no_valid_recipe",
         attempts=[],
         evaluate=accept,

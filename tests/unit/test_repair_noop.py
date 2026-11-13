@@ -27,17 +27,13 @@ async def test_json_discovery_skips_unchanged_active_recipe():
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("origin", ["fallback", "discovery", "model"])
+@pytest.mark.parametrize("origin", ["fallback", "discovery"])
 async def test_unchanged_proposals_compare_normalized_baseline(origin):
     proposal = CssRecipe(record_selector="article", fields={"title": "h2::text"})
 
     class Discovery:
         def discover(self, *args, **kwargs):
             return (proposal,) if origin == "discovery" else ()
-
-    class Model:
-        async def generate(self, request, policy):
-            return proposal.model_dump_json(include={"strategy", "record_selector", "fields"})
 
     recipe = proposal.model_copy(
         update={
@@ -48,13 +44,12 @@ async def test_unchanged_proposals_compare_normalized_baseline(origin):
             else (),
         }
     )
-    report = await RepairCandidateGenerator(discovery=Discovery(), model=Model()).generate(
+    report = await RepairCandidateGenerator(discovery=Discovery()).generate(
         "<article><h2>Dance</h2></article>",
         source=Source(url="https://example.com"),
         schema=Event,
         recipe=recipe,
         limits=Limits(),
-        model_enabled=origin == "model",
     )
     assert report.candidates == ()
     assert report.outcome == "no_candidates"

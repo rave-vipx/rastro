@@ -7,6 +7,7 @@ Proof-of-concept shaped: a hostile job points a model at a loopback sink with
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 import httpx
 import pytest
@@ -183,3 +184,39 @@ def test_cli_flags_are_hoisted_and_scoped(tmp_path, sink, capsys):
     sink.clear()
     assert main(["job", "run", str(job)]) != 0  # the opt-in did not outlive the command
     assert not sink
+
+
+def test_repair_applies_operator_trust_to_job_models_only(monkeypatch):
+    from types import SimpleNamespace
+
+    from rastro.application.job_repair import _assist
+
+    spec = OpenAICompatibleProvider(
+        model="m", base_url="https://api.example.com/v1", allow_remote=True
+    )
+    context: Any = SimpleNamespace(
+        job=SimpleNamespace(model=spec, repair=None, inference_policy=None)
+    )
+    with pytest.raises(ConfigurationError, match="--allow-remote"):
+        _assist(context, None, False)
+    assert _assist(context, None, True) is not None
+    # [repair] model = true reads RASTRO_MODEL, which the operator set: trusted.
+    monkeypatch.setenv("RASTRO_MODEL", "ollama:qwen3:4b")
+    context.job = SimpleNamespace(
+        model=None, repair=SimpleNamespace(model=True), inference_policy=None
+    )
+    assert _assist(context, None, False) is not None
+
+
+def test_hoisted_allow_remote_reaches_subcommands_with_their_own_flag():
+    from rastro.application.operator_trust import set_process_trust
+    from rastro.cli import _build_parser
+    from rastro.cli_trust import apply_trust
+
+    argv = hoist_trust_flags(["studio", "--allow-remote"])
+    args = _build_parser().parse_args(argv)
+    previous = apply_trust(args, argv)
+    try:
+        assert args.allow_remote is True
+    finally:
+        set_process_trust(previous)

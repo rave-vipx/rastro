@@ -31,7 +31,7 @@ class FieldConfidence(Contract):
     """How one field was mapped. Notes are Rastro's own text, never page content."""
 
     field: str
-    method: Literal["example", "microdata", "unmapped"]
+    method: Literal["example", "microdata", "model", "unmapped"]
     selector: str | None = None
     examples_matched: int = Field(default=0, ge=0)
     examples_total: int = Field(default=0, ge=0)

@@ -16,7 +16,7 @@ from rastro.application.extraction import extract_document, validate_recipe
 from rastro.application.field_aliases import discovery_aliases as resolve_discovery_aliases
 from rastro.application.memory import PreparedRecipe
 from rastro.application.outcomes import stamp_learning
-from rastro.application.proposals import propose_with_model
+from rastro.application.proposals import propose_with_model, schema_hints
 from rastro.domain.intelligence import InferencePolicy
 from rastro.domain.models import (
     ConfigurationError,
@@ -126,7 +126,7 @@ class RecipeLearner:
         representation: Representation = "html",
     ) -> ExtractionResult[T]:
         """Discover before inference. JSON uses structured discovery only; models propose HTML."""
-        candidates, _, required = await self._discover(
+        candidates, field_names, required = await self._discover(
             html, schema=schema, limits=limits, representation=representation
         )
         session = _LearningSession(
@@ -151,11 +151,12 @@ class RecipeLearner:
                 policy=self._policy,
                 slots=self._slots,
                 html=html,
-                schema=schema,
+                fields=field_names,
+                required=required,
                 failure=failure,
                 attempts=session.attempts,
                 evaluate=session.evaluate,
-                limits=limits,
+                hints=schema_hints(schema),
             )
         storage_seconds = await self._persist_learned(prepared, session.selected)
         result = stamp_learning(

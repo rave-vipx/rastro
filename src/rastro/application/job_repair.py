@@ -3,21 +3,21 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable, Coroutine, Sequence
-from dataclasses import dataclass
+from collections.abc import Coroutine, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-from rastro.application.extraction import extract_document
+from rastro.application.model_choice import ModelChoice, resolve_model
+from rastro.application.model_repair import ModelAssist, assist_repair
 from rastro.application.operator_trust import operator_trust
-from rastro.application.recipe_ci import evaluate_candidate
 from rastro.application.recipe_repair import repair_candidates
 from rastro.application.repair_context import RepairContext
+from rastro.application.repair_evidence import gather_evidence
+from rastro.domain.intelligence import InferencePolicy
 from rastro.domain.lifecycle import RecipeState
-from rastro.domain.memory import RecipeKey
-from rastro.domain.models import ConfigurationError, Limits, RastroError, Recipe, Source
+from rastro.domain.models import ConfigurationError, Limits
 from rastro.domain.recipe_compare import (
     CandidateEvaluation,
     RecipeComparison,
@@ -25,10 +25,9 @@ from rastro.domain.recipe_compare import (
     RepairReport,
     SourceRepair,
 )
-from rastro.domain.repair import RelocationSnapshot, RepairCandidate
+from rastro.domain.repair import RepairCandidate
 
 OVERRIDE_PREFIX = "gates overridden: "
-type Evaluate = Callable[[RepairCandidate], CandidateEvaluation]
 
 
 def repair_job_source(
@@ -39,15 +38,16 @@ def repair_job_source(
     min_completeness: float | None = None,
     auto_promote: bool | None = None,
     allow_absolute_paths: bool = False,
+    model: ModelChoice = None,
     allow_remote: bool = False,
-    allow_command: bool = False,
-    allow_env: Sequence[str] = (),
 ) -> RepairReport:
     """Propose, evaluate and store repair candidates for one source (1-based index).
 
     Candidates are saved as versions; one that passes every gate becomes active when
     automatic promotion is enabled. Keyword thresholds override the job's ``[repair]``.
-    ``allow_*`` are the operator's model opt-ins, as for ``run_job``.
+    ``model`` (a ``ModelPort`` or a spec for ``rastro.model``) overrides the job's model:
+    it proposes candidates when relocation finds none that passes and judges every
+    would-be promotion. Remote specs need ``allow_remote=True``.
     """
     overrides = {
         name: value
@@ -62,9 +62,8 @@ def repair_job_source(
         path,
         (source,),
         allow_absolute_paths=allow_absolute_paths,
+        model=model,
         allow_remote=allow_remote,
-        allow_command=allow_command,
-        allow_env=allow_env,
         **overrides,
     )
 
@@ -74,24 +73,21 @@ def repair_job_sources(
     sources: Sequence[int] | None,
     *,
     allow_absolute_paths: bool = False,
+    model: ModelChoice = None,
     allow_remote: bool = False,
-    allow_command: bool = False,
-    allow_env: Sequence[str] = (),
     **overrides: Any,
 ) -> RepairReport:
     """Repair several sources, or all of them when ``sources`` is ``None``."""
     context = RepairContext.load(Path(path), allow_absolute_paths)
-    policy = _policy(context, overrides)
+    policy = job_policy(context, overrides)
     indexes = sources if sources is not None else range(1, len(context.job.sources) + 1)
+    assist = _assist(context, model, allow_remote)
 
     async def run() -> RepairReport:
-        items = [await _repair_source(context, index, policy) for index in indexes]
+        items = [await _repair_source(context, index, policy, assist) for index in indexes]
         return RepairReport(run_id=str(uuid4()), sources=tuple(items))
 
-    with operator_trust(
-        allow_remote=allow_remote, allow_command=allow_command, allow_env=allow_env
-    ):
-        return _run(run())
+    return run_sync(run())
 
 
 def promote_job_recipe(
@@ -113,16 +109,16 @@ def promote_job_recipe(
         raise ConfigurationError("Promotion requires a non-empty reason")
     context = RepairContext.load(Path(path), allow_absolute_paths)
     # Explicit approval enables promotion, but cannot bypass the CI gates on its own.
-    policy = _policy(context, {"auto_promote": True})
+    policy = job_policy(context, {"auto_promote": True})
 
     async def run() -> RepairReport:
         item = await _promote(context, source, version, policy, reason, override_gates)
         return RepairReport(run_id=str(uuid4()), sources=(item,))
 
-    return _run(run())
+    return run_sync(run())
 
 
-def _policy(context: RepairContext, overrides: dict[str, Any]) -> RepairPolicy:
+def job_policy(context: RepairContext, overrides: dict[str, Any]) -> RepairPolicy:
     base = context.job.repair or RepairPolicy()
     if not overrides:
         return base
@@ -132,82 +128,9 @@ def _policy(context: RepairContext, overrides: dict[str, Any]) -> RepairPolicy:
         raise ConfigurationError("Invalid repair threshold override") from None
 
 
-def _run(coroutine: Coroutine[Any, Any, RepairReport]) -> RepairReport:
+def run_sync[T](coroutine: Coroutine[Any, Any, T]) -> T:
     with asyncio.Runner(loop_factory=asyncio.SelectorEventLoop) as runner:
         return runner.run(coroutine)
-
-
-@dataclass(frozen=True)
-class _Evidence:
-    source: Source
-    key: RecipeKey
-    previous: Recipe
-    document: str
-    snapshot: RelocationSnapshot | None
-    evaluate: Evaluate
-    records: Callable[[Recipe], int]
-    samples: tuple[dict[str, Any], ...] = ()
-
-
-async def _evidence(
-    context: RepairContext,
-    index: int,
-    policy: RepairPolicy,
-    previous: Recipe | None = None,
-    *,
-    allow_fallbacks: bool = False,
-) -> _Evidence:
-    """Current document, retained evidence and a CI evaluator for one source.
-
-    ``previous`` defaults to the serving recipe; promotion passes it explicitly so a store
-    with nothing serving yet (an imported bundle) can adopt its candidate.
-    """
-    from rastro.adapters.scrapling import ScraplingParser
-    from rastro.adapters.structured import JsonParser
-
-    if previous is None:
-        source, key, previous = context.source(index)
-    else:
-        source, key = context.locate(index)
-    document = await context.document(index, source)
-    snapshot, fixtures = context.fixtures(source, previous)
-    parser = JsonParser() if previous.representation == "json" else ScraplingParser()
-    history = context.history()  # before any dataset write; repair never applies snapshots
-    now = datetime.now(UTC)
-
-    def evaluate(candidate: RepairCandidate) -> CandidateEvaluation:
-        return evaluate_candidate(
-            candidate,
-            document,
-            source=source,
-            schema=context.schema,
-            parser=parser,
-            limits=context.job.limits or Limits(),
-            observed_at=now,
-            fixtures=fixtures,
-            rules=context.job.consistency,
-            history=history,
-            policy=policy,
-            allow_fallbacks=allow_fallbacks,
-        )
-
-    def records(recipe: Recipe) -> int:
-        """Validated records ``recipe`` extracts from the current page (0 on any error)."""
-        try:
-            result = extract_document(
-                document,
-                source=source,
-                schema=context.schema,
-                recipe=recipe,
-                parser=parser,
-                limits=context.job.limits or Limits(),
-            )
-        except RastroError:
-            return 0
-        return len(result.records)
-
-    samples = tuple(record.data for bundle in fixtures for record in bundle.expected.records)
-    return _Evidence(source, key, previous, document, snapshot, evaluate, records, samples[:2])
 
 
 async def _promote(
@@ -228,7 +151,7 @@ async def _promote(
     adopting = serving is None
     if adopting:  # No history yet; the import already replayed the bundle's records.
         policy = policy.model_copy(update={"min_historical_fixtures": 0})
-    evidence = await _evidence(context, index, policy, previous, allow_fallbacks=adopting)
+    evidence = await gather_evidence(context, index, policy, previous, allow_fallbacks=adopting)
     evaluation = evidence.evaluate(
         RepairCandidate(recipe=stored.recipe, origin="discovery", rationale="Operator review")
     )
@@ -291,23 +214,41 @@ def _describe(evaluation: CandidateEvaluation) -> str:
     return f" ({detail})" if detail else ""
 
 
-async def _repair_source(context: RepairContext, index: int, policy: RepairPolicy) -> SourceRepair:
+def _assist(context: RepairContext, model: ModelChoice, allow_remote: bool) -> ModelAssist | None:
+    """The override, else the job's ``[model]``, else ``RASTRO_MODEL`` with ``[repair] model``.
+
+    The override and ``RASTRO_MODEL`` come from the operator and are trusted; a model
+    declared in the job file passes the operator-trust checks.
+    """
+    port = resolve_model(model, allow_remote=allow_remote)
+    if port is None and context.job.model is not None:
+        from rastro.application.job_loader import _build_model_provider
+
+        # Declared by the job file: only the operator's opt-ins apply (H1).
+        with operator_trust(allow_remote=allow_remote):
+            port = _build_model_provider(context.job.model)
+    if port is None and context.job.repair is not None and context.job.repair.model:
+        port = resolve_model("env", allow_remote=allow_remote)
+    return (
+        None
+        if port is None
+        else ModelAssist(port, context.job.inference_policy or InferencePolicy())
+    )
+
+
+async def _repair_source(
+    context: RepairContext, index: int, policy: RepairPolicy, assist: ModelAssist | None
+) -> SourceRepair:
     from rastro.adapters.discovery import ScraplingDiscovery
     from rastro.adapters.scrapling_relocation import ScraplingRelocation
     from rastro.adapters.structured import JsonDiscovery
     from rastro.application.repair_candidates import RepairCandidateGenerator
 
-    evidence = await _evidence(context, index, policy)
+    evidence = await gather_evidence(context, index, policy)
     previous = evidence.previous
-    model = None
-    if context.job.model is not None:
-        from rastro.application.job_loader import _build_model_provider
-
-        model = _build_model_provider(context.job.model)
     generator = RepairCandidateGenerator(
         discovery=JsonDiscovery() if previous.representation == "json" else ScraplingDiscovery(),
         relocation=ScraplingRelocation(),
-        model=model,
         policy=context.job.inference_policy,
         aliases=context.job.discovery_aliases or None,
     )
@@ -318,20 +259,24 @@ async def _repair_source(context: RepairContext, index: int, policy: RepairPolic
         recipe=previous,
         limits=context.job.limits or Limits(),
         snapshot=evidence.snapshot,
-        model_enabled=context.job.model is not None,
-        samples=evidence.samples,
-        failure=(
-            "serving_recipe_extracts_no_records"
-            if model is not None and evidence.records(previous) == 0
-            else "serving_recipe_fails_gates"
-        ),
     )
+    assisted = await assist_repair(
+        assist,
+        [(c, evidence.evaluate(c)) for c in candidates.candidates],
+        html=evidence.document,
+        schema=context.schema,
+        previous=previous,
+        gate=evidence.evaluate,
+        rows=evidence.rows,
+        history=evidence.history,
+    )
+    decided = {id(c): e for c, e in assisted.evaluated}
     comparisons = repair_candidates(
-        candidates.candidates,
+        [c for c, _ in assisted.evaluated],
         previous=previous,
         key=evidence.key,
         lifecycle=context.repository,
-        evaluate=evidence.evaluate,
+        evaluate=lambda c: decided[id(c)],
         at=datetime.now(UTC),
     )
     promoted = [
@@ -341,9 +286,10 @@ async def _repair_source(context: RepairContext, index: int, policy: RepairPolic
     ]
     return SourceRepair(
         source_index=index,
-        outcome=candidates.outcome,
-        inference_calls=candidates.inference_calls,
-        issues=candidates.issues,
+        outcome="candidates" if comparisons else "no_candidates",
+        inference_calls=candidates.inference_calls + assisted.model_calls,
+        issues=(*candidates.issues, *assisted.issues),
         comparisons=comparisons,
         promoted_version=promoted[0] if promoted else None,
+        origin=assisted.origin if assist is not None else None,
     )

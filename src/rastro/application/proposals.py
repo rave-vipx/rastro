@@ -9,12 +9,12 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from time import perf_counter
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel, ValidationError
+from pydantic import ValidationError
 
 from rastro.application.page_digest import digest_page
-from rastro.application.proposal_prompt import build_proposal_request
+from rastro.application.proposal_prompt import build_proposal_request, schema_hints
 from rastro.domain.intelligence import InferencePolicy, ModelError, ModelRequest, RecipeProposal
 from rastro.domain.json import strict_json
 from rastro.domain.models import (
@@ -26,6 +26,8 @@ from rastro.domain.models import (
     RecipeAttempt,
 )
 from rastro.ports.model import ModelPort
+
+__all__ = ["CandidateEvaluator", "parse_proposal", "propose_with_model", "schema_hints"]
 
 type CandidateEvaluator = Callable[
     [Recipe, Literal["discovery", "model"]], Awaitable[tuple[bool, str]]
@@ -44,11 +46,13 @@ async def propose_with_model(
     policy: InferencePolicy,
     slots: asyncio.Semaphore,
     html: str,
-    schema: type[BaseModel],
+    fields: Sequence[str],
+    required: set[str],
     failure: str,
     attempts: list[RecipeAttempt],
     evaluate: CandidateEvaluator,
-    recipe: Recipe | None = None,
+    hints: Mapping[str, Mapping[str, str]] | None = None,
+    previous: Recipe | None = None,
     samples: Sequence[Mapping[str, object]] = (),
     limits: Limits | None = None,
 ) -> tuple[bool, str, int, float]:
@@ -56,18 +60,17 @@ async def propose_with_model(
     complete = False
     inference_start = perf_counter()
     page: dict[str, str | None] = {"html": html, "digest": None}
+    parts: dict[str, Any] = {
+        "fields": fields,
+        "required": required,
+        "hints": hints,
+        "previous": previous,
+        "samples": samples,
+    }
     try:
         async with asyncio.timeout(policy.timeout_seconds):
             for _ in range(min(policy.max_calls, 1 + policy.max_repair_attempts)):
-                request = await _fitting_request(
-                    page,
-                    policy,
-                    limits,
-                    schema=schema,
-                    failure=failure,
-                    recipe=recipe,
-                    samples=samples,
-                )
+                request = await _fitting_request(page, policy, limits, failure=failure, **parts)
                 if request is None:
                     failure = "model_context_limit"
                     break
@@ -99,17 +102,18 @@ async def _fitting_request(
     page: dict[str, str | None],
     policy: InferencePolicy,
     limits: Limits | None,
-    **parts: object,
+    **parts: Any,
 ) -> ModelRequest | None:
     """The raw page if it fits the context budget, else its digest; None if neither fits."""
-    request = build_proposal_request(html=page["html"], digest=page["digest"], **parts)  # type: ignore[arg-type]
-    if request.context_bytes <= policy.max_context_bytes or page["digest"] is not None:
-        return request if request.context_bytes <= policy.max_context_bytes else None
-    try:
-        page["digest"] = await asyncio.to_thread(
-            digest_page, page["html"] or "", limits=limits or Limits()
-        )
-    except RastroError:
-        return None
-    request = build_proposal_request(digest=page["digest"], **parts)  # type: ignore[arg-type]
+    if page["digest"] is None:
+        request = build_proposal_request(html=page["html"], **parts)
+        if request.context_bytes <= policy.max_context_bytes:
+            return request
+        try:
+            page["digest"] = await asyncio.to_thread(
+                digest_page, page["html"] or "", limits=limits or Limits()
+            )
+        except RastroError:
+            return None
+    request = build_proposal_request(digest=page["digest"], **parts)
     return request if request.context_bytes <= policy.max_context_bytes else None

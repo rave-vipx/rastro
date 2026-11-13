@@ -1477,6 +1477,11 @@
           "minimum": 0,
           "title": "Min Structural Validity",
           "type": "number"
+        },
+        "model": {
+          "default": false,
+          "title": "Model",
+          "type": "boolean"
         }
       },
       "title": "RepairPolicy",

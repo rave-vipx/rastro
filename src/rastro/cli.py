@@ -237,7 +237,7 @@ def main(argv: list[str] | None = None) -> int:
         logger.setLevel(logging.INFO)
     previous_trust = None
     try:
-        previous_trust = apply_trust(args)
+        previous_trust = apply_trust(args, arguments)
         return _dispatch(args)
     except (OSError, ValueError, ValidationError, SchemaError, RastroError) as error:
         if args.command in _JSON_ERRORS:

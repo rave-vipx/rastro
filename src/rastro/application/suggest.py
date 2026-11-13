@@ -2,23 +2,25 @@
 
 Candidates come from a ``RecipeSuggester`` port; each is run through the normal extraction
 pipeline with the caller's schema, and only a recipe that reproduces every example is
-returned. Deterministic and offline: no model, no network.
+returned. Deterministic and offline unless a model is given (``application/suggest_model``).
 """
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from typing import Any, overload
 
 from pydantic import BaseModel, TypeAdapter, ValidationError
 
 from rastro.application.engine import Rastro
+from rastro.application.model_choice import ModelChoice, resolve_model
 from rastro.application.suggest_diagnosis import (
     HINT,
     example_type_failures,
     raw_rows,
     record_type_failures,
 )
+from rastro.application.suggest_model import suggest_with_model
 from rastro.domain.job_fields import JobField, build_job_schema
 from rastro.domain.models import (
     ConfigurationError,
@@ -62,10 +64,11 @@ def suggest[T: BaseModel](
     html: str,
     schema: type[T],
     *,
-    examples: Sequence[Example],
+    examples: Sequence[Example] | None = None,
     url: str | None = None,
     records_min: int = 2,
     limits: Limits | None = None,
+    model: ModelChoice = None,
     _suggester: RecipeSuggester | None = None,
 ) -> Suggestion[T]: ...
 @overload
@@ -73,35 +76,71 @@ def suggest(
     html: str,
     schema: Sequence[JobField | Mapping[str, Any]],
     *,
-    examples: Sequence[Example],
+    examples: Sequence[Example] | None = None,
     url: str | None = None,
     records_min: int = 2,
     limits: Limits | None = None,
+    model: ModelChoice = None,
     _suggester: RecipeSuggester | None = None,
 ) -> Suggestion[BaseModel]: ...
 def suggest(
     html: str,
     schema: SchemaInput,
     *,
-    examples: Sequence[Example],
+    examples: Sequence[Example] | None = None,
     url: str | None = None,
     records_min: int = 2,
     limits: Limits | None = None,
+    model: ModelChoice = None,
     _suggester: RecipeSuggester | None = None,
 ) -> Suggestion[Any]:
-    """Build, verify and return a CSS recipe that reproduces every example on ``html``."""
-    model = schema_model(schema)
+    """Build, verify and return a CSS recipe that reproduces every example on ``html``.
+
+    With ``model`` (a ``ModelPort``, a spec for ``rastro.model`` or ``"env"``), examples
+    are optional: the model proposes recipes when there are no examples or when the
+    examples alone do not yield one. Every proposal is verified the same way.
+    """
+    port = resolve_model(model)
+    if not examples and port is None:
+        raise ConfigurationError("Give example records, or a model to propose without them")
+    target = schema_model(schema)
     limits = limits or Limits()
     if not 1 <= records_min <= limits.max_records:
         raise ConfigurationError("records_min must be between 1 and limits.max_records")
     if len(html.encode()) > limits.max_html_bytes:
         raise ResourceLimitError("HTML input exceeds max_html_bytes")
-    checked = check_examples(examples)
-    names = tuple(model.model_fields)
+    checked = check_examples(examples) if examples else ()
+    names = tuple(target.model_fields)
     unknown = sorted({key for example in checked for key in example} - set(names))
     if unknown:
         raise ConfigurationError(f"Example fields are not in the schema: {', '.join(unknown)}")
     source = Source(url=url or LOCAL_URL)
+
+    def verify(candidates: Sequence[RecipeCandidate]) -> Suggestion[Any]:
+        return _verify(html, target, source, checked, candidates, limits)
+
+    if not checked:
+        assert port is not None
+        return suggest_with_model(port, html, target, verify=verify, records_min=records_min)
+    try:
+        return _from_examples(html, target, checked, url, records_min, limits, _suggester, verify)
+    except SuggestionError:
+        if port is None:
+            raise
+        return suggest_with_model(port, html, target, verify=verify, records_min=records_min)
+
+
+def _from_examples(
+    html: str,
+    model: type[BaseModel],
+    checked: tuple[dict[str, str], ...],
+    url: str | None,
+    records_min: int,
+    limits: Limits,
+    _suggester: RecipeSuggester | None,
+    verify: Callable[[Sequence[RecipeCandidate]], Suggestion[Any]],
+) -> Suggestion[Any]:
+    names = tuple(model.model_fields)
     # ``_suggester`` is a private test seam, not part of the public signature.
     suggester = _suggester
     if suggester is None:
@@ -117,7 +156,7 @@ def suggest(
         max_candidates=MAX_CANDIDATES,
         base_url=url,
     )
-    return _verify(html, model, source, checked, candidates, limits)
+    return verify(candidates)
 
 
 def _verify[T: BaseModel](

@@ -4,7 +4,7 @@
 
 ```python
 rastro.scrape(target, schema, *, records=None, fields=None, recipe=None, url=None,
-              memory=None, repair="propose", locale="en-US", limits=None)
+              memory=None, repair="propose", locale="en-US", limits=None, model=None)
 await rastro.scrape_async(...)  # same arguments
 rastro.css(selector)            # Annotated[...] marker for model fields
 ```
@@ -24,6 +24,7 @@ It returns the same `ExtractionResult[YourModel]` as `Rastro`, and
 | `memory` | Path to a recipe database. A successful recipe is remembered; a sanitized success sample goes to `<name>.samples<suffix>` next to it. |
 | `repair` | `"off"`, `"propose"` or `"auto"`; applies only with `memory` when a remembered recipe fails structurally (no records with `missing_data`, `invalid_data` or `insufficient_evidence`). |
 | `locale`, `limits` | `Source.locale` and `Limits` for this call. |
+| `model` | Optional: any `ModelPort` object, a spec string for `rastro.model`, or `"env"` (`RASTRO_MODEL`). It proposes a recipe when there are no selectors and discovery finds nothing, proposes repairs when relocation finds none that passes, and judges changed fields before `"auto"` promotes. A string spec stays local-only; build a remote port with `rastro.model(..., allow_remote=True)` and pass it. See [quickstart](quickstart.md#with-a-model). |
 
 With no selectors and no `recipe`, exact-name JSON-LD and microdata discovery is
 tried; if it finds nothing, `ConfigurationError` asks for `rastro.css(...)`,
@@ -240,14 +241,17 @@ lists one `RecipeSelection` (`source_index`, `recipe_origin`, `recipe_version`) 
 from rastro import FieldConfidence, Suggestion, SuggestionError, suggest
 ```
 
-`suggest(html, schema, *, examples, url=None, records_min=2, limits=None)` builds a
+`suggest(html, schema, *, examples=None, url=None, records_min=2, limits=None, model=None)` builds a
 `CssRecipe` from a saved page and example values, runs it through the normal extraction
 pipeline and returns a `Suggestion` with `recipe`, `preview` (an `ExtractionResult`), `status` (the
 preview outcome; check it is `success` before trusting the recipe) and
 `confidence` (one `FieldConfidence` per schema field: `method` is `example`, `microdata` or
 `unmapped`, plus `selector`, `examples_matched`, `examples_total`, `records_with_value`,
 `ambiguous` and `note`). `schema` is a Pydantic model or a list of job field definitions.
-It is deterministic and offline. `SuggestionError` (a `ConfigurationError`) lists the
+Without `model` it is deterministic and offline and `examples` are required. With
+`model`, examples are optional: the model proposes a recipe (method `model`) when there
+are no examples or the examples alone yield none, and the recipe must still reproduce
+every given example and extract at least `records_min` records. `SuggestionError` (a `ConfigurationError`) lists the
 examples that were not found or not reproduced. The CLI equivalents are `rastro suggest`
 and `rastro new`; see [recipes from examples](suggest.md).
 

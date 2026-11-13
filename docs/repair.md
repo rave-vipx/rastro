@@ -105,6 +105,32 @@ rastro.apply_job_recipe("job.toml", 1)  # writes the serving recipe back
 override the job's `[repair]` values for one call. `RepairReport.exit_code` follows the
 command's exit codes.
 
+## With a model
+
+A model helps repair in two places and never supplies values. It is used when the job
+has a `[model]` table, when `[repair] model = true` (the `RASTRO_MODEL` spec, through
+`rastro.model`), or when `rastro recipe repair --model SPEC [--allow-remote]` or
+`repair_job_source(..., model=...)` overrides both.
+
+1. **Escalation.** Relocation, declared fallbacks and discovery run first. The model
+   proposes only when none of their candidates would pass every gate, so it cannot
+   compete with a passing deterministic candidate. The prompt carries the serving
+   recipe and the field types and descriptions. Each changed selector is composed as
+   `"<serving>, <proposed>"`, as relocation does, so historical pages keep matching; the
+   plain proposal is gated only if the union does not pass. A rejected proposal is
+   retried once (by default) with only a failure category. A proposal whose selector
+   is invalid counts as `invalid_model_candidate`; it never aborts the run.
+2. **Semantic gate.** Before a candidate is promoted, the model judges whether the
+   changed fields' current values (clipped, labelled untrusted, with earlier sample
+   values as reference) match each field's meaning. Verdicts appear in
+   `indicators.results` with `kind = "model_judge"` and lower
+   `indicators.semantic_confidence`. `mismatch` quarantines (`semantic_mismatch`);
+   `unsure` promotes only with complete history, completeness and validity;
+   a failed answer quarantines (`semantic_judge_failed`).
+
+`SourceRepair.origin` says whether candidates came from `relocation` or the `model`;
+`inference_calls` counts proposal and judge calls. Without a model, repair is unchanged.
+
 ## What CI measures
 
 `evaluate_candidate` in `application/recipe_ci.py` evaluates each proposal without
@@ -212,8 +238,9 @@ recipe CI; any heterogeneous, extra or unverified single-container match is mark
 ambiguous and quarantined when its fields validate, and rejected when they do not. Promotion still requires the
 ordinary history, evidence and configured CI gates.
 
-If no container candidate is available, repair tries declared fallbacks, discovery and
-optionally the job's configured model. Models are never enabled implicitly. Last-success replay conservatively
+If no container candidate is available, repair tries declared fallbacks and discovery,
+then the configured model (see [With a model](#with-a-model)). Models are never enabled
+implicitly. Last-success replay conservatively
 rejects a candidate that changes historical field values, even when that change might be
 intentional. Automatic semantic monitoring of ordinary loads, score calibration,
 retention pruning and heterogeneous-template relocation remain open work.

@@ -31,7 +31,9 @@ The server sends this order to the client as its `instructions`:
 7. `recipe_history`, then `recipe_promote`: activate a reviewed candidate, with a reason.
 8. `recipe_apply`: write the serving recipe back into the job file.
 
-`scrape_file` extracts once from a saved page without a job.
+`scrape_file` extracts once from a saved page without a job. When deterministic repair finds
+no passing candidate, or a page has no example values yet, the agent itself proposes the
+recipe: see [Agent in the loop](#agent-in-the-loop).
 
 ## Tools
 
@@ -52,6 +54,11 @@ The server sends this order to the client as its `instructions`:
 | `recipe_promote(path, source, version, reason, override_gates?)` | `rastro recipe promote` | Re-checks a candidate and makes it the serving recipe if it passes | destructive |
 | `recipe_apply(path, source)` | `rastro recipe apply` | Writes the serving recipe into the job file; the rest of the file is kept | destructive, idempotent |
 | `scrape_file(page_path, fields? + records?, recipe?, url?)` | none (`rastro.scrape` in Python) | One-off extraction from a workspace file | read-only |
+| `repair_context(path, source)` | none | Failing recipe, field definitions, last success values, current issues and a page outline | read-only |
+| `recipe_propose(path, source, recipe, reason)` | none | Gates the agent's recipe like a repair candidate and stores it | destructive (may promote when the job opts in) |
+| `semantic_review(path, source, version)` | none | Old and new values side by side for each changed field | read-only |
+| `suggest_context(page_path, fields)` | none | Page outline and recipe format for a new page | read-only |
+| `recipe_try(page_path, recipe, fields?, url?)` | none | Runs a recipe once: fill counts, preview rows, issues | read-only |
 
 `source` is the one-based index of a source in the job. Each tool declares its MCP
 annotations (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`) so a client
@@ -82,6 +89,78 @@ checks were overridden. Rollback is not exposed; use `rastro recipe rollback`.
 - `url` is only the address the page came from, used for relative links. These tools never
   fetch it.
 
+## Agent in the loop
+
+The agent connected over MCP already runs a strong model. Rastro lets that model do the
+intelligent part, proposing recipes and judging meaning, while Rastro verifies and stores.
+No API key and no second model are needed, and it works the same with any MCP client and any
+model: no provider is special-cased.
+
+The agent proposes recipe definitions, never records. Every proposal passes the same strict
+recipe validation and the same recipe CI as deterministic repair: it must replay the retained
+success samples with identical values, extract complete, valid records from the current page
+and pass the value checks. A wrong proposal cannot reach the dataset; at worst it is stored and
+retired.
+
+The server instructions give this order:
+
+1. `drift_status`, then `recipe_repair` (deterministic, no model).
+2. If no candidate passes: `repair_context` returns the failing recipe, the job's field
+   definitions, up to 10 values from the last successful run, the current status and issues,
+   and a page digest (repeated containers as `parent > child` selectors with counts and
+   sample records as `tag.class` trees, headings, JSON-LD types and URL- or date-like
+   attributes; at most 12,000 characters, labelled untrusted; see
+   [prompts small models can follow](intelligence.md#prompts-small-models-can-follow)).
+3. `recipe_propose(recipe, reason)`: Rastro validates the recipe against the job's fields and
+   representation, runs the gates, stores it as a candidate (an equal stored candidate is
+   reused) and returns `decision`, the reasons, blocking record issues, a selector `diff` and
+   `next`. On `reject`, read the reasons and propose again, at most three times.
+4. `semantic_review(version)`: old values (last successful run) and new values (the candidate
+   on the current page) per changed field. Check meaning: a title must still be a title, not
+   a city or an identifier. Gates check structure and history; the agent checks meaning.
+5. `recipe_promote(version, reason)`, then `recipe_apply`.
+
+`recipe_propose` promotes on its own only when the job sets `[repair] auto_promote = true` and
+every gate passes, exactly like `recipe_repair`. Its `reason` is checked like a promotion
+reason and returned as `agent_reason`; the lifecycle event records the recipe CI decision.
+
+For a new page without example values, `suggest_context(page_path, fields)` returns the page
+outline and the recipe format, and `recipe_try(page_path, recipe)` runs a recipe once and
+reports per-field fill counts, up to 20 preview rows and issues. Iterate until every row is
+right, then write the job with `job_new` using values from the preview as examples.
+
+### Example transcript
+
+A job board renamed its title class. The agent works through the tools:
+
+```text
+agent  -> recipe_repair(path="jobs/job.toml", source=1)
+rastro <- comparisons: [], outcome: "no_candidates"
+agent  -> repair_context(path="jobs/job.toml", source=1)
+rastro <- recipe.fields.title: "h2.title::text"; current.status: "failed";
+          last_success_sample: [{"job_id": "job-1", "title": "Synthetic role 1"}, ...];
+          page_outline: "PAGE DIGEST ...\n  - selector: section > article.card  (count 5)\n
+          ...\n        h2.new-title \"Synthetic role 1\"\n        span.city \"Synthetic city 1\""
+agent  -> recipe_propose(..., recipe={"strategy": "css", "record_selector": "article.card",
+          "fields": {"job_id": "::attr(data-id)", "title": "span.city::text"}},
+          reason="title moved")
+rastro <- decision: "reject", reasons: ["validation_or_regression_failed"],
+          next: "Rejected: read the reasons and blocking issues, then propose a corrected recipe"
+agent  -> recipe_propose(..., fields: {"job_id": "::attr(data-id)", "title": "h2::text"},
+          reason="h2 holds the title on old and new pages")
+rastro <- decision: "quarantine", reasons: ["automatic_promotion_disabled"],
+          candidate_version: 3
+agent  -> semantic_review(path="jobs/job.toml", source=1, version=3)
+rastro <- fields: [{"field": "title", "old": ["Synthetic role 1", ...],
+                    "new": ["Synthetic role 1", ...]}]
+agent  -> recipe_promote(..., version=3, reason="Semantic review: same titles")
+agent  -> recipe_apply(path="jobs/job.toml", source=1)
+```
+
+The first proposal mapped the title to the city: the historical replay caught it and the
+version was retired. The serving recipe never changed until the agent promoted a candidate
+whose values it had checked.
+
 ## Limits and safety
 
 - Paths are workspace-relative, at most 1024 characters. Absolute paths (rejected as "Absolute
@@ -95,4 +174,10 @@ checks were overridden. Rollback is not exposed; use `rastro recipe rollback`.
   object: `{"error", "message", "location", "hint"}` (`hint` may be `null`). They never contain
   stack traces, argument values, job values or page text.
 - A job with URL sources fetches only its `allowed_hosts` under the job's robots and
-  rate-limit policy. `suggest_recipe`, `job_new` and `scrape_file` read workspace files only.
+  rate-limit policy. `suggest_recipe`, `job_new`, `scrape_file`, `suggest_context` and
+  `recipe_try` read workspace files only; `repair_context` and `semantic_review` read the job's
+  current page like `recipe_repair` does and never create or write a store.
+- `recipe_propose` and `recipe_try` accept a recipe object of at most 64 KiB, validated with
+  the strict recipe model; unknown keys and undeclared fields are refused. The page outline has
+  its own 6,000-character limit; other outputs follow the limits above, with text cut at 300
+  characters for the agent tools.

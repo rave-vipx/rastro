@@ -1,6 +1,7 @@
 // Studio entry: session token, views, job list, preview and selector correction.
 // All source-derived text is set as plain text content; markup is never parsed.
 import { $, api, bind, el, requireFile, show, state, table } from "./dom.js";
+import { initAI } from "./ai.js";
 import { initOperate, resetOperate } from "./operate.js";
 import { initWizard } from "./wizard.js";
 
@@ -126,6 +127,7 @@ async function start() {
   $("selector-pick").addEventListener("change", showSelector);
   initOperate();
   initWizard({ openJob, refreshJobs, switchView });
+  await initAI();
 }
 
 start().catch((error) => show("listing", `Error: ${error.message}`, "bad"));
