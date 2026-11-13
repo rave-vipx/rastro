@@ -27,6 +27,7 @@ from rastro.domain.models import (
     Source,
     schema_fingerprint,
 )
+from rastro.domain.safe_messages import safe_message
 from rastro.ports.parser import DocumentParser
 
 _INVALID = {
@@ -114,7 +115,14 @@ def extract_document[T: BaseModel](
             ):
                 # Validator messages can contain secrets; only expose a stable category.
                 field = str(detail["loc"][0]) if detail["loc"] else None
-                issues.append(Issue(code="validation_error", record_index=index, field=field))
+                issues.append(
+                    Issue(
+                        code="validation_error",
+                        record_index=index,
+                        field=field,
+                        message=safe_message(detail["type"], detail["msg"]),
+                    )
+                )
             rejected += 1
             continue
         evidence = {

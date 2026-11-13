@@ -54,6 +54,7 @@ type Indicator = Literal[
     "subtree_fingerprint",
     "field_coverage",
     "validation_failure_rate",
+    "extraction_failed",
 ]
 
 
@@ -84,6 +85,26 @@ _WEIGHTS: dict[Indicator, float] = {
 }
 _STRUCTURAL = {"selector_match_count", "fallback_used", "subtree_fingerprint"}
 _UNAVAILABLE = {Outcome.ACCESS_RESTRICTION, Outcome.TRANSIENT_FAILURE, Outcome.PERMANENT_FAILURE}
+_EXTRACTED = {Outcome.SUCCESS, Outcome.PARTIAL_SUCCESS}
+
+
+def _total_failure(current: StructuralSnapshot) -> DriftSignal | None:
+    """An available source that yielded no field evidence at all: the recipe stopped working."""
+    if current.status in _EXTRACTED | _UNAVAILABLE:
+        return None
+    if any(item.field_coverage for item in current.fields.values()):
+        return None
+    return DriftSignal(
+        field="*",
+        indicator="extraction_failed",
+        baseline=Outcome.SUCCESS.value,
+        current=current.status.value,
+        explanation="No field was extracted from a source that previously succeeded.",
+        dataset_effect=(
+            "Rejected records not updated; earlier values and times kept; source flagged stale."
+        ),
+        contribution=1.0,
+    )
 
 
 def _signals(old: StructuralSnapshot, new: StructuralSnapshot) -> tuple[DriftSignal, ...]:
@@ -129,17 +150,28 @@ def assess_drift(
     current: StructuralSnapshot,
     *,
     thresholds: DriftThresholds | None = None,
+    previously_succeeded: bool = False,
 ) -> DriftAssessment:
-    """Score the worst affected field against the last successful comparable run."""
+    """Score the worst affected field against the last successful comparable run.
+
+    A total extraction failure after any earlier success (a comparable drift baseline, or
+    ``previously_succeeded`` from the dataset history) adds an ``extraction_failed`` signal
+    with contribution 1.0, so it is always high risk.
+    """
     policy = thresholds or DriftThresholds()
-    signals = (
-        _signals(baseline, current)
-        if baseline is not None
+    comparable = (
+        baseline is not None
         and baseline.context == current.context
         and baseline.status == Outcome.SUCCESS
-        and current.status not in _UNAVAILABLE
+    )
+    signals = (
+        _signals(baseline, current)
+        if baseline is not None and comparable and current.status not in _UNAVAILABLE
         else ()
     )
+    failure = _total_failure(current) if comparable or previously_succeeded else None
+    if failure is not None:
+        signals = (*signals, failure)
     scores: dict[str, float] = {}
     for signal in signals:
         scores[signal.field] = scores.get(signal.field, 0) + signal.contribution

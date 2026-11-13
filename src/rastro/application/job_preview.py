@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any
 
 from rastro.application.job_loader import load_job
 from rastro.application.jobs import run_job
+from rastro.application.preview_recipes import read_only_job
 from rastro.domain.job_dataset import (
     DatasetSpec,
     JobPreview,
@@ -101,15 +102,12 @@ def preview_job(
     acquisition: AcquisitionPort | None = None,
     model: ModelPort | None = None,
 ) -> JobPreview:
-    """Preview an already loaded job with a ``[dataset]`` block. Writes no dataset file."""
+    """Preview an already loaded job with a ``[dataset]`` block. Writes no file: recipe
+    memory, when declared, is read through a read-only connection and never created."""
     if job.dataset is None:
         raise ConfigurationError("job preview requires a [dataset] block in the job file")
-    if job.recipe_memory is not None:
-        raise ConfigurationError(
-            "job preview cannot run jobs with recipe_memory: recipe storage would be written"
-        )
     report = run_job(
-        job,
+        read_only_job(job, base_dir=base_dir, allow_absolute_paths=allow_absolute_paths),
         base_dir=base_dir,
         allow_absolute_paths=allow_absolute_paths,
         acquisition=acquisition,

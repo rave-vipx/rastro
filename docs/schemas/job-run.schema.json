@@ -215,6 +215,17 @@
           "title": "Records",
           "type": "array"
         },
+        "repair": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SelfRepair"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "requested_url": {
           "anyOf": [
             {
@@ -295,7 +306,7 @@
     },
     "Issue": {
       "additionalProperties": false,
-      "description": "Safe diagnostics: no input values or user-supplied validation messages.",
+      "description": "Safe diagnostics: no input values or user-supplied validation messages.\n\n``message`` names Pydantic's error type and message (for example\n``int_parsing: Input should be a valid integer``) only for built-in types whose\nmessage cannot contain input (see ``domain.safe_messages``); custom validator\ntext is never included. It is omitted from serialized output when absent.",
       "properties": {
         "code": {
           "title": "Code",
@@ -312,6 +323,19 @@
           ],
           "default": null,
           "title": "Field"
+        },
+        "message": {
+          "anyOf": [
+            {
+              "maxLength": 512,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message"
         },
         "record_index": {
           "anyOf": [
@@ -687,6 +711,134 @@
       ],
       "title": "RecipeAttempt",
       "type": "object"
+    },
+    "RecipeSelection": {
+      "additionalProperties": false,
+      "description": "Which recipe one job source used: the job file's, or the serving one in recipe memory.\n\n``memory`` covers a stored serving recipe newer than the job file's, a pinned\n``recipe_version``, and sources without a recipe in the job file (memory lookup or\nlearning). ``recipe_version`` is ``None`` only when no recipe existed before the run.",
+      "properties": {
+        "recipe_origin": {
+          "enum": [
+            "job",
+            "memory"
+          ],
+          "title": "Recipe Origin",
+          "type": "string"
+        },
+        "recipe_version": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Recipe Version"
+        },
+        "source_index": {
+          "minimum": 1,
+          "title": "Source Index",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "source_index",
+        "recipe_origin"
+      ],
+      "title": "RecipeSelection",
+      "type": "object"
+    },
+    "RepairProposal": {
+      "additionalProperties": false,
+      "description": "One stored repair candidate and the gate decision recipe CI gave it.",
+      "properties": {
+        "changed_fields": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Changed Fields",
+          "type": "array"
+        },
+        "decision": {
+          "enum": [
+            "promote",
+            "quarantine",
+            "reject"
+          ],
+          "title": "Decision",
+          "type": "string"
+        },
+        "reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Reasons",
+          "type": "array"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "version",
+        "decision",
+        "reasons",
+        "changed_fields"
+      ],
+      "title": "RepairProposal",
+      "type": "object"
+    },
+    "SelfRepair": {
+      "additionalProperties": false,
+      "description": "What offline self-repair did after a remembered recipe stopped matching.\n\n``promoted`` is true only when a candidate passed every gate, became the serving\nrecipe and produced this result. ``candidates`` lists every stored proposal.",
+      "properties": {
+        "candidates": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/RepairProposal"
+          },
+          "title": "Candidates",
+          "type": "array"
+        },
+        "mode": {
+          "enum": [
+            "propose",
+            "auto"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "previous_version": {
+          "title": "Previous Version",
+          "type": "integer"
+        },
+        "promoted": {
+          "default": false,
+          "title": "Promoted",
+          "type": "boolean"
+        },
+        "promoted_version": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Promoted Version"
+        }
+      },
+      "required": [
+        "mode",
+        "previous_version"
+      ],
+      "title": "SelfRepair",
+      "type": "object"
     }
   },
   "$id": "https://rave-vipx.github.io/rastro/schemas/job-run.schema.json",
@@ -701,6 +853,14 @@
     },
     "job": {
       "$ref": "#/$defs/JobSummary"
+    },
+    "recipes": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/RecipeSelection"
+      },
+      "title": "Recipes",
+      "type": "array"
     },
     "results": {
       "items": {

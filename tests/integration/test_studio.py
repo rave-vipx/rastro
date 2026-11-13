@@ -36,6 +36,7 @@ def root(tmp_path: Path) -> Path:
 def serving(app: Starlette, base_url: str) -> Iterator[TestClient]:
     """In-process client; only the event loop's private wake-up socket is allowed to open."""
     client = TestClient(app, base_url=base_url)
+    client.headers["Origin"] = base_url  # browsers send Origin on every POST
     with pytest.MonkeyPatch.context() as patch:
         patch.setattr(socket, "socket", _ORIGINAL_SOCKET)
         client.__enter__()
@@ -171,11 +172,14 @@ def test_host_origin_and_token_are_enforced(root: Path) -> None:
 
 
 def _check_local(local: TestClient, token: str) -> None:
+    assert local.get("/api/jobs").status_code == 403  # reads need the token too
+    local.headers["X-Studio-Token"] = token
     assert local.get("/api/jobs").status_code == 200
     assert local.get("/api/jobs", headers={"Origin": "https://evil.example"}).status_code == 403
     # Another local app (other port) is not this Studio's origin.
     assert local.get("/api/jobs", headers={"Origin": "http://localhost:3000"}).status_code == 403
     assert local.get("/api/jobs", headers={"Origin": "http://localhost:8765"}).status_code == 200
+    del local.headers["X-Studio-Token"]
     body = {"file": "job.toml"}
     assert local.post("/api/validate", json=body).status_code == 403
     assert (
@@ -187,6 +191,12 @@ def _check_local(local: TestClient, token: str) -> None:
     assert (
         local.post("/api/validate", json=body, headers={"X-Studio-Token": token}).status_code == 200
     )
+    # A mutating request without Origin is refused even with the token; GETs stay allowed.
+    del local.headers["Origin"]
+    assert (
+        local.post("/api/validate", json=body, headers={"X-Studio-Token": token}).status_code == 403
+    )
+    assert local.get("/api/jobs", headers={"X-Studio-Token": token}).status_code == 200
 
 
 def test_request_bodies_are_bounded_and_must_be_objects(client: TestClient) -> None:
@@ -198,9 +208,13 @@ def test_request_bodies_are_bounded_and_must_be_objects(client: TestClient) -> N
 
 
 def test_source_content_is_rendered_as_text_only() -> None:
-    script = (Path(__file__).parents[2] / "src/rastro/studio/static/studio.js").read_text()
-    assert "innerHTML" not in script and "insertAdjacentHTML" not in script
-    assert "document.write" not in script and "eval(" not in script
+    scripts = sorted((Path(__file__).parents[2] / "src/rastro/studio/static").glob("*.js"))
+    assert len(scripts) >= 4
+    for path in scripts:
+        script = path.read_text()
+        assert "innerHTML" not in script and "insertAdjacentHTML" not in script, path
+        assert "document.write" not in script and "eval(" not in script, path
+        assert "outerHTML" not in script and "://" not in script, path  # no external code
 
 
 def test_json_job_is_edited_and_roundtrips(root: Path) -> None:
@@ -242,7 +256,9 @@ def test_cli_without_extra_fails_clearly(
 ) -> None:
     monkeypatch.setitem(sys.modules, "uvicorn", None)
     assert main(["studio"]) == 2
-    assert "missing_extra" in capsys.readouterr().err
+    error = json.loads(capsys.readouterr().err)
+    assert error["error"] == "missing_extra" and error["message"]
+    assert error["hint"] == "pip install 'rastro-engine[studio]'"
 
 
 def test_cli_serves_loopback_only(
@@ -261,13 +277,17 @@ def test_cli_serves_loopback_only(
 def test_listing_skips_hidden_and_vendor_dirs_and_reports_truncation(
     client: TestClient, root: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """P-008: only TOML job files are listed; reports and other TOML files are not."""
     for name in (".git", "node_modules", "__pycache__", ".venv", "venv", "dist", "build", "site"):
         (root / name).mkdir()
         (root / name / "x.json").write_text("{}")
     (root / "ok").mkdir()
-    (root / "ok" / "y.json").write_text("{}")
+    (root / "ok" / "y.toml").write_text("format_version = 2\n")  # invalid jobs stay listed
+    (root / "repair-report-1.json").write_text('{"schema_version": 1}')
+    (root / "pyproject.toml").write_text('[project]\nname = "x"\n')
+    (root / "broken.toml").write_text("format_version = [\n")
     listing = client.get("/api/jobs").json()
-    assert listing["files"] == ["job.toml", "ok/y.json"] and listing["truncated"] is False
+    assert listing["files"] == ["job.toml", "ok/y.toml"] and listing["truncated"] is False
     monkeypatch.setattr("rastro.studio.files.MAX_FILES", 1)
     cut = client.get("/api/jobs").json()
     assert cut["files"] == ["job.toml"] and cut["truncated"] is True
@@ -278,3 +298,25 @@ def test_script_reads_token_from_fragment_only() -> None:
     script = (base / "studio.js").read_text()
     assert "location.hash" in script and "replaceState" in script
     assert "studio-token" not in (base / "index.html").read_text()
+
+
+def test_preview_of_a_memory_job_writes_nothing(client: TestClient, root: Path) -> None:
+    """DATA-002, P-008: Studio previews recipe_memory jobs without creating the store."""
+    job = root / "job.toml"
+    memory = 'format_version = 1\nrecipe_memory = "r.sqlite"'
+    job.write_text(job.read_text().replace("format_version = 1", memory))
+    shown = post(client, "/api/preview", {"file": "job.toml"}).json()
+    assert shown["ok"] and shown["preview"]["sources"][0]["records"][0]["status"] == "accepted"
+    assert not (root / "r.sqlite").exists() and not (root / "agenda.sqlite").exists()
+
+
+def test_listing_includes_json_jobs_only_with_format_version(
+    client: TestClient, root: Path
+) -> None:
+    """P-008: JSON job files are listed like TOML ones; other JSON files are not."""
+    (root / "job2.json").write_text('{"format_version": 1, "sources": []}')
+    (root / "data.json").write_text('{"records": []}')
+    (root / "list.json").write_text("[1, 2]")
+    (root / "deep.json").write_text("[" * 100_000 + "]" * 100_000)
+    (root / "broken.json").write_text("{")
+    assert client.get("/api/jobs").json()["files"] == ["job.toml", "job2.json"]

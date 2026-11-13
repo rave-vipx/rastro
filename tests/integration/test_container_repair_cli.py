@@ -9,8 +9,8 @@ import pytest
 
 from rastro.adapters.scrapling_relocation import ScraplingRelocation
 from rastro.adapters.sqlite_dataset import SQLiteDatasetStore
+from rastro.application.repair_context import RepairContext
 from rastro.cli import main
-from rastro.cli_repair_context import RepairContext
 from rastro.domain.models import Limits
 
 pytestmark = pytest.mark.usefixtures("offline_cli_loop")

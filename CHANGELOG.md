@@ -1,18 +1,87 @@
 # Changelog
 
-All notable user-facing changes will be recorded here. No public release has been published.
+All notable user-facing changes are recorded here. The project follows [Semantic Versioning](docs/stability.md) from 0.6.0. Versions before 0.6.0 were never published to a package registry.
 
-## Unreleased
+## 0.6.0 — 2026-11-12
+
+First public release of `rastro-engine` on PyPI: one-call typed scraping with `rastro.scrape`, selectors suggested from example values, verified self-repair, a complete MCP server for AI agents and a local Studio GUI.
 
 ### Added
 
+- `Issue.message` (optional) gives Pydantic's built-in error type and message for `validation_error` issues, never the input value or custom validator text; it is omitted from serialized output when absent, and the job-run and job-load JSON Schemas gain the field (P-005).
+- Tag-triggered release workflow: builds the sdist and wheel, checks them with `twine check --strict`, verifies the tag matches the package version, smoke-tests the installed wheel, publishes to PyPI through Trusted Publishing with attestations and creates the GitHub release from this changelog (P-009, Release Evidence).
+- CI `package` job installs the built wheel with and without the `http`, `mcp` and `studio` extras and runs the CLI smoke checks (P-006, Release Evidence).
+- `docs/stability.md` defines the public surface and the deprecation policy; `docs/ai-agents.md` and a root `llms.txt` describe how AI agents use Rastro (AGENT-001, AGENT-002, AGENT-003).
+- Studio is a complete local GUI: a new-scraper wizard (pick a saved page, give example values, review the suggested recipe with per-field confidence, create the job file), Extract (writes nothing) and Load into dataset with recipe origin and version per source, health with stale status and optional drift, repair proposals with an old-versus-new selector diff and gate results, promotion with a recorded reason (overriding failed gates warns and records it), writing the serving recipe back to the job file, and a paginated dataset browser with stale markers and JSON or HTML download. JSON job files are listed next to TOML ones. Every new action is a token-protected, exact-origin POST confined to the Studio folder; file edits carry the file digest. The app is split into per-area routers and the page into dependency-free ES modules, with light and dark themes (P-008, INT-002, JOB-001, DATA-001, DATA-004, REPAIR-002-005, REC-006).
+- `rastro.scrape(target, schema, ...)` and `rastro.scrape_async` extract HTML text, a file or a URL into validated Pydantic models in one call; `rastro.css("...")` declares a field's selector on the model, `__records__` or `records=` selects records, and `ExtractionResult.items` lists the validated instances (INT-001, INT-002, REC-003).
+- `scrape(..., memory="recipes.db")` remembers the working recipe and a sanitized success sample; when the remembered recipe stops matching, `repair="propose"` (default) stores gated offline repair candidates and `repair="auto"` promotes one that passes every gate and returns its result. `ExtractionResult.repair` describes what happened; it is omitted from serialized output when no repair ran, and `job-run.schema.json` gains the optional field. Before promotion, relocated fields must keep their retained values' type and shape and must not take another field's values (`value_shape_changed`, `value_type_changed`, `value_matches_other_field`); an identical stored candidate is reused instead of adding a version (REC-001, REC-006, REPAIR-001-005, SCR-002).
+- `docs/quickstart.md`, `examples/scrape.py` and `examples/self_repair.py` (INT-001).
+- `rastro.suggest(html, schema, *, examples, url=None)` builds a verified CSS recipe from a saved page and one or two example values per field, deterministically and without AI; it returns `Suggestion` (`recipe`, `preview`, per-field `confidence`) or raises `SuggestionError` naming the examples it could not reproduce (INT-002, DISC-003, P-003).
+- `rastro suggest page.html --example FIELD=VALUE ...` prints the suggested recipe as JSON or a preview table; `rastro new job.toml --from page.html --example ...` writes a complete job file with conservatively typed fields, never overwriting an existing file (JOB-001, DISC-003).
 - A `css` recipe field prefixed `expand:` turns a card with several values into one record per value, with per-value provenance and `max_records` enforced; relocation repair refuses it (DATA-004, DATA-005, JOB-002).
 - `rastro recipe prune --store FILE --older-than DAYS [--dry-run]` deletes old recipe versions but never a serving one; `prune` always keeps the newest version of each key so version numbers are never reused (REC-005).
 - A JSON-LD recipe field may list 1 to 4 JSON pointers; the first that resolves wins and the locator records it; a JSON null falls through to the next pointer (INT-002, DATA-005).
+- Public Python API for datasets and repair: `rastro.load_job_file`, `rastro.repair_job_source`, `rastro.promote_job_recipe` and `rastro.apply_job_recipe`, with the `RepairReport`, `SourceRepair` and `RecipeSelection` result types (DATA-001, REPAIR-002–006, REC-006).
+- `rastro recipe apply job.toml --source N` writes the serving recipe from `recipe_memory` back into the job file; TOML text outside that recipe's tables is kept, the write is atomic and refuses symlinks (REC-006).
+- `rastro recipe promote --override-gates --reason "..."` activates a quarantined candidate; the lifecycle history records `gates overridden: <reason>`. Rejected candidates are never activated (REPAIR-005).
+- Job run and load reports state per source whether the job file's recipe or the serving recipe in memory was used (`recipes` / `recipe_origin`, `recipe_version`); the published job-run and job-load JSON Schemas are updated (REC-006).
+- `rastro job preview`, Studio preview and the MCP `job_preview` tool work for jobs with `recipe_memory`: the store is opened read-only (never created or upgraded) and a stored serving recipe newer than the job file's recipe is used (DATA-002, REC-001, P-008, AGENT-002).
+- `SQLiteRecipeRepository(path, read_only=True)` reads an existing store without creating, migrating or writing it (DATA-002).
+- `rastro recipe promote` adopts an imported candidate on a store with nothing serving, so export, import, promote and `job load` work on a fresh store; the candidate gate still runs on the job's own page (HUB-001, REC-006).
+- The MCP server covers the whole job lifecycle: `job_extract` (like `rastro job run`, no dataset write), `job_load` (with `drift`), `drift_status`, `recipe_history`, `recipe_repair` (proposes; promotes only when the job sets `[repair] auto_promote = true`), `recipe_promote` (requires a reason), `recipe_apply`, `suggest_recipe`, `job_new` (never overwrites) and `scrape_file` (one-off extraction from a workspace file, no network). Tools declare bounded JSON Schema inputs and read-only/destructive/idempotent hints, outputs are bounded with `truncated`, and the server sends workflow `instructions` (AGENT-002, AGENT-003, REPAIR-002-005, REC-006, INT-002, JOB-001).
+- `rastro new --recipe-memory FILE`, MCP `job_new(recipe_memory=...)` and the Studio wizard's "Recipe memory file" add `recipe_memory` to the new job, so a job created without the command line can be repaired; MCP `job_new` accepts `identity` as a field name or a list (JOB-001, REC-006, AGENT-003, P-008).
+- `rastro new --allow-partial` writes a job even when the recipe preview is only a partial success; `Suggestion.status` reports the preview outcome (JOB-001, INT-002).
+- `rastro recipe show job.toml --source N [--version V]` prints a stored recipe version as JSON, read-only; `recipe compare` reports `changed_settings` (such as `record_selector`); `rastro recipe --help` describes every subcommand (REC-006).
+- Rejected repair candidates report `blocking` issues: record index, field and issue code, never values (REPAIR-002).
+
+### Security
+
+- `rastro new`, MCP `job_new` and Studio create resolve the dataset and `recipe_memory` paths against the job folder and refuse either one when it is the job file, the page or the other (`./data.sqlite` and `data.sqlite` count as one file) (JOB-001, REC-006, SEC-008).
+- Studio refuses a `POST` without an `Origin` header even with a valid token; GET requests are unchanged (P-008, SEC-008).
+- Studio requires the session token on every `/api` request, reads included (job and page lists, connect commands); the page and its static files stay public. Saving a selector and writing a serving recipe compare the expected digest with the bytes being replaced inside the write step, so a file changed after the check fails with `file_changed` instead of being overwritten. Dataset pages and downloads cut field and identity values longer than 2,000 characters and mark the record `truncated` (P-008, SEC-008, DATA-004, REC-006).
+
+### Changed
+
+- The MCP server reports Rastro's package version as its `serverInfo.version` instead of the MCP library's (AGENT-002).
+- Package classifier is `Development Status :: 4 - Beta`; README rewritten for external users.
+- MCP `recipe_repair` declares `destructiveHint: true`, because a job with `[repair] auto_promote = true` lets it change the serving recipe; `dataset_records` output is bounded like the other tools, and every MCP output also caps objects at 100 keys with `truncated` (AGENT-002).
+- With `recipe_memory`, `job run`, `job load`, `run_job` and `run_job_file` use the serving recipe in memory when its version is higher than the job file's recipe version, so a promoted repair applies to the next run. Previously `job run` kept the stale file recipe and `job load` used memory whenever it had a serving recipe; see ADR 0021 (REC-006).
+- Repair completeness counts optional fields only as often as the stored success samples filled them, so an optional field that is legitimately empty in some records no longer quarantines a correct repair (QUAL-006).
+- Code that imported `rastro.cli_dataset.load_job_file`, `rastro.cli_repair_context` or `rastro.cli_repair_storage` should use `rastro.load_job_file` and the other public functions; those internal modules moved under `rastro.application`.
+- `rastro recipe import` reuses a stored version whose recipe equals the bundle's, and its JSON output gains `"reused": true|false` (HUB-001).
+- Studio lists only job files (`.toml` or `.json` with a top-level `format_version`); repair reports and other files are no longer shown (P-008).
+- MCP `job_run` is renamed `job_load`, matching `rastro job load` (it writes the dataset); `job_run` stays as a deprecated alias until 0.7.0. Use `job_extract` for the `rastro job run` behaviour. MCP tool errors, including argument validation errors, are always `{"error", "message", "location", "hint"}`; the `mcp` extra now requires `mcp>=1.10` (AGENT-002, AGENT-003).
+- `rastro studio` and `rastro mcp` report a missing optional extra as `{"error": "missing_extra", "message", "location": null, "hint": "pip install 'rastro-engine[<extra>]'"}` (P-008, AGENT-002).
+- A job `[dataset]` without `match_fields` now matches records on its `identity` fields only and flags no uncertain matches; previously it assumed event fields named `title`, `venue` and `start_time`. To keep near matching, declare `match_fields` explicitly. Errors in `match_fields`, `identity` and `approve` now report their TOML key as `location` (DATA-004, AGENT-001).
+- `rastro new` refuses (exit 2, listing the preview issues) when the suggested recipe's preview is not a full success; pass `--allow-partial` to write it anyway (JOB-001).
+- `rastro.scrape("page.html", ...)` raises `ConfigurationError` asking for `pathlib.Path(...)` instead of parsing the filename as HTML (INT-001).
+- `rastro recipe import` reuses only an equal candidate or serving version; an equal retired version gets a new candidate version (HUB-001, REC-005).
+- The recipe-version conflict error names the next free version to set in the job file (REC-006, ADR 0021).
+- `RepairPolicy` is no longer exported from `rastro`; repair thresholds stay in the job's `[repair]` table. The `suggest` test seam is now the private `_suggester` keyword.
+- `recipe repair` and `recipe promote` share one evaluator: hard validation, replay or consistency failures reject before ambiguity is considered, and a rejection from either command retires the version with a `Recipe CI: reject` lifecycle event. `--override-gates` bypasses quarantine thresholds only; on a rejected candidate it exits 2 with an error that says so (REPAIR-002, REPAIR-005).
+- `recipe repair` reuses a stored candidate (or a still-rejected retired version) with the same definition instead of allocating a new version each run (REC-006).
+- `recipe apply` on a job whose sources share the job-level recipe adds a `[sources.recipe]` table for the repaired source only, instead of refusing (REC-006).
+- `recipe promote` retires a rejected candidate only when the current page is usable; on a page where neither the candidate nor the serving recipe finds records (consent wall, maintenance page) the candidate stays a candidate and the report notes `page_not_usable`. Promotion reports note `candidate_retired` when a version was retired (REPAIR-005).
+- Repair reuse prefers the newest equal candidate over a retired twin and marks reused comparisons with `"reused": true` (REC-006).
 
 ### Fixed
 
+- `Issue.message` is limited to Pydantic error types whose message is fixed or quotes schema constraints; types that can echo input, such as `union_tag_invalid` (the discriminator value), `timezone_offset` and parser `error` details, carry no message (P-005, SEC-005).
+- `rastro.suggest` tells a value the selector found but the schema type rejects (for example "59.90 EUR" for a `Decimal` field) apart from a value that was not reproduced: `SuggestionError` names only the failing field, its type and the page text's length and shape, and suggests a string field or a `BeforeValidator`; partial results note such fields in `confidence`. The comment written by `rastro new` says `rastro job run` previews without writing and, with a dataset, points to `rastro job load` (INT-002, INT-003, DISC-003).
+- `rastro job load --drift` reports a total extraction failure (for example a record selector that no longer matches) on a source that succeeded before as `risk: high`, `score: 1.0` with an `extraction_failed` signal on field `*`, instead of `low`/`0.0` when the earlier success was loaded without `--drift`; `job-load.schema.json` gains the indicator (DRIFT-002, DRIFT-004).
+- Self-repair (`rastro.scrape` and `rastro recipe repair`) relocates a renamed record container when some records lack an optional child, such as one card without a stock label: rows may omit children of the most common row shape (matched by tag and class, keeping at least half), while extra children, other classes or other paths still count as different containers. Relocated field selectors use tag+class steps instead of positions and never target an element another field reads, so a thinned card cannot hand a field its neighbour's value. Optional fields now need three quarters of the fill rate the success sample showed instead of the same rate (REPAIR-001, REPAIR-002, SCR-002, QUAL-006).
+- `rastro.scrape` strips text in `rastro.css` fields like jobs do (NBSP included); a whitespace-only value in a required field is a validation issue instead of an empty string (QUAL-004).
+- `rastro.scrape` raises `ConfigurationError` when `schema` is not a Pydantic model class (INT-001).
+- `rastro job load` names a dataset folder that does not exist (`location: "dataset.path"`) instead of `Dataset operation failed`; the Studio wizard stores the dataset path relative to the job file and refuses a missing folder or a path outside the job's folder (DATA-001, P-008).
+- The MCP tools reject an absolute path such as `/etc/passwd` as an absolute path instead of reporting a symlink (AGENT-002).
+- Job field values are stripped of surrounding whitespace (NBSP included) before validation; a blank required value is a validation error instead of a successful `""` (QUAL-002, QUAL-004, JOB-001).
+- `rastro job load` no longer exits 2 after writing rows when a field holds a relative URL: the retained repair fixture now replays exactly. A repair-evidence retention failure after the rows are committed is reported as `evidence_retention_failed` on that source, with the load's exit code unchanged (DATA-001, REPAIR-002, SCR-002).
+- Every CLI error on `stderr` now has `error`, `message` and `location`, plus an optional `hint`. Commands other than `rastro job` used to print only `{"error": "invalid_input", "hint": ...}`. `rastro dataset export` and `status` on a missing file name the missing path. `rastro studio` and `rastro mcp` without their extra print `missing_extra` with the `pip install` command in `hint` (it used to be in `message` for `mcp`) (AGENT-001, DATA-003).
+- `rastro demo` prints its price as an exact decimal string (`"12.5"`), like every other JSON output (AGENT-001).
 - The HTTP `User-Agent` reports the installed package version instead of a fixed `0.1` (transparent contact metadata, ADR 0002).
+- File targets of `rastro.scrape` are opened non-blocking, so a FIFO is refused instead of hanging (SEC-005).
+- Job runs, loads and previews refuse a symlinked `recipe_memory` path; run and load open a current-schema store read-only while choosing recipes, and a pinned `recipe_version` is reported only when the store holds it (SEC-008, REC-006).
+- `rastro recipe apply` refuses a symlink in any directory between the working directory (or, for a job outside it, the job's own directory) and the job file, and atomic writes sync the parent directory on POSIX (SEC-008).
 
 ## 0.5.0 — not published (2026-11-11)
 
@@ -109,9 +178,10 @@ Release candidate tagged on `main`; not published to any package registry. Final
 - `OpenAICompatibleModel(token_limit="max_completion_tokens", temperature=None)` for OpenAI reasoning models that reject `max_tokens` and sampling parameters (AI-005, AI-007).
 - "Choosing or writing a model provider" documentation with provider examples and the custom `ModelPort` contract.
 
-## 0.1.0 — release candidate (not yet tagged or published)
+## Before 0.1.0rc1 — prepared as 0.1.0 (2026-10-30), never tagged
 
-First Rastro Engine release candidate: schema-first, verifiable extraction with
+These entries were drafted as `0.1.0` and shipped in the `0.1.0rc1` tag above; `0.1.0` itself
+was never tagged. First Rastro Engine release candidate: schema-first, verifiable extraction with
 optional policy-aware HTTP acquisition, structured JSON responses, explicit egress
 profiles, SQLite recipe memory and optional bounded Ollama assistance. A release
 date, tag and registry publication await maintainer approval.

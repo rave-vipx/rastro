@@ -60,6 +60,15 @@ to `elevated = 0.2` and `high = 0.5`, inclusive; lower scores are `low`.
 `DriftThresholds` can configure these in Python and the assessment includes them.
 These weights are an explainable heuristic, not a calibrated probability.
 
+A total extraction failure is never low risk. When an available source yields no
+field evidence at all (every `field_coverage` is zero and the outcome is neither
+success nor an acquisition failure) and the source succeeded before, the assessment
+adds one signal with field `*`, indicator `extraction_failed`, baseline `success`,
+the current outcome and contribution 1, so the score is 1 and the risk `high`.
+"Succeeded before" means a comparable successful drift run or a successful dataset
+load of that source, even one run without `--drift`. A source that has never
+succeeded has nothing to drift from and gets no such signal.
+
 Any observed count change, new fallback use or changed fingerprint gives verdict
 `structural_drift`, independently of whether extraction still succeeds. When
 those structural indicators are unchanged or unknown, a non-successful extraction

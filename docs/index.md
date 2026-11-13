@@ -4,7 +4,7 @@
 
 Rastro converts supplied HTML or permitted web sources into validated Python records and explains where each observed field came from. Its long-term goal is reliable, continuously updated web datasets.
 
-**Status: v0.5.0, not published.** Describe the data, name the sources, and get a database that keeps itself updated when the pages change, with a local Studio, an MCP server and shareable recipe bundles; see the [README](https://github.com/rave-vipx/rastro#readme) for results and limits.
+**Status: Beta — 0.6.0.** Typed, self-healing web scraping: declare a Pydantic model, get validated records with provenance; when the site changes Rastro detects it and proposes or applies a verified repair. A local Studio, an MCP server and shareable recipe bundles are included; see the [README](https://github.com/rave-vipx/rastro#readme) for results and limits.
 
 ## Start here
 
@@ -14,6 +14,8 @@ Rastro converts supplied HTML or permitted web sources into validated Python rec
 - [Discover recipes with optional local assistance](intelligence.md).
 - [Understand results, evidence, and limits](api.md).
 - [See the architecture and tradeoffs](architecture.md).
+- [Use Rastro from an AI agent](ai-agents.md).
+- [Know what is stable across releases](stability.md).
 - [Follow the milestone plan](roadmap.md).
 
 ## What makes the foundation useful?

@@ -25,7 +25,7 @@ from pydantic import (
 from pydantic_core import SchemaError
 
 from rastro.domain.job_contract import RedactedContract
-from rastro.domain.job_field_values import localized_date, relative_url
+from rastro.domain.job_field_values import localized_date, relative_url, strip_text
 from rastro.domain.models import ConfigurationError
 
 type JobFieldType = Literal[
@@ -61,7 +61,12 @@ class _FieldBase(RedactedContract):
         return value
 
     def _wrap_required(self, annotation: Any) -> tuple[Any, Any]:
-        return (annotation, ...) if self.required else (annotation | None, None)
+        # Blank text is stripped before validation, so constraints see the real value and
+        # a blank required value is a validation issue (QUAL-004).
+        blank = BeforeValidator(partial(strip_text, required=self.required))
+        if self.required:
+            return (Annotated[annotation, blank], ...)
+        return (Annotated[annotation | None, blank], None)
 
 
 class StringField(_FieldBase):

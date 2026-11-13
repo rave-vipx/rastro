@@ -162,3 +162,22 @@ def test_missing_store_has_no_history_and_does_not_create_database(tmp_path) -> 
     link.symlink_to(path)
     with pytest.raises(DatasetStorageError, match="symlink"):
         history_from_store(SQLiteDatasetStore(link), "d", ["value"])
+
+
+def test_nearly_empty_optional_field_still_lowers_completeness():
+    """QUAL-006: an optional field the samples filled 80% of the time but the candidate fills
+    in 1 of 20 records scores 1/16, so completeness stays below the default threshold."""
+    from datetime import UTC, datetime
+
+    from rastro.application.consistency import evaluate_consistency
+
+    rows = [{"title": "t", "salary": "1" if i == 0 else None} for i in range(20)]
+    report = evaluate_consistency(
+        (),
+        rows,
+        datetime(2026, 11, 7, tzinfo=UTC),
+        declared_fields=("title", "salary"),
+        expected_rates={"salary": 0.8},
+    )
+    assert report.completeness == pytest.approx((1 + 0.05 / 0.8) / 2, abs=1e-4)
+    assert report.completeness < 1.0

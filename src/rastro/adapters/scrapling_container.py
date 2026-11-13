@@ -52,7 +52,7 @@ def container_selector(
     selector = " > ".join(
         [
             *_path(nodes[0]),
-            _identifier(nodes[0].tag) + "".join("." + _identifier(c) for c in sorted(classes)),
+            identifier(nodes[0].tag) + "".join("." + identifier(c) for c in sorted(classes)),
         ]
     )
     return selector, [Selector(root=node, adaptive=False) for node in nodes]
@@ -83,7 +83,13 @@ def container_evidence(
 
 
 def homogeneous(page: Selector, relocated: list[Selector], selected: list[Selector]) -> bool:
-    """Check selected rows and competing same-class containers elsewhere on the page."""
+    """Check selected rows and competing same-class containers elsewhere on the page.
+
+    Every container needs the same ancestor path and classes. Its children must be
+    the rows' most common child sequence, or that sequence with some children left
+    out (an absent optional field), matching tag and class. Extra, reordered or
+    reclassed children, or a row keeping under half the children, stay heterogeneous.
+    """
     first = relocated[0]._root
     classes = set(first.get("class", "").split())
     competitors = [
@@ -91,12 +97,46 @@ def homogeneous(page: Selector, relocated: list[Selector], selected: list[Select
         for node in page._root.iter(first.tag)
         if not classes or classes.intersection(node.get("class", "").split())
     ]
-    shape = (_path(first), tuple(child.tag for child in first), classes)
+    rows = [*(n._root for n in relocated), *(n._root for n in selected)]
+    template = _children(template_record([*relocated, *selected])._root)
     return all(
-        (_path(node), tuple(child.tag for child in node), set(node.get("class", "").split()))
-        == shape
-        for node in [*(n._root for n in relocated), *(n._root for n in selected), *competitors]
+        _path(node) == _path(first)
+        and set(node.get("class", "").split()) == classes
+        and _omits_only(_children(node), template)
+        for node in [*rows, *competitors]
     )
+
+
+def template_record(records: list[Selector]) -> Selector:
+    """The first record with the most common child sequence; ties prefer more children."""
+    shapes = [_children(record._root) for record in records]
+    best = max(shapes, key=lambda shape: (shapes.count(shape), len(shape)))
+    return records[shapes.index(best)]
+
+
+type Child = tuple[str, tuple[str, ...]]
+
+
+def _children(node: Any) -> tuple[Child, ...]:
+    """Each element child as (tag, sorted classes)."""
+    return tuple(
+        (child.tag, tuple(sorted(set(child.get("class", "").split()))))
+        for child in node
+        if isinstance(child.tag, str)
+    )
+
+
+def _omits_only(shape: tuple[Child, ...], template: tuple[Child, ...]) -> bool:
+    """``shape`` keeps at least half of ``template``'s children, in order, by tag and class.
+
+    Identical shapes always match, including text-only records with no element children.
+    """
+    if shape == template:
+        return True
+    if not shape or 2 * len(shape) < len(template):
+        return False
+    remaining = iter(template)
+    return all(child in remaining for child in shape)
 
 
 def field_supported(matches: list[Selector], fingerprint: ElementFingerprint) -> bool:
@@ -117,15 +157,16 @@ def field_supported(matches: list[Selector], fingerprint: ElementFingerprint) ->
 
 def _path(node: Any) -> tuple[str, ...]:
     parts = tuple(
-        _identifier(parent.tag)
-        + "".join("." + _identifier(c) for c in sorted(set(parent.get("class", "").split())))
+        identifier(parent.tag)
+        + "".join("." + identifier(c) for c in sorted(set(parent.get("class", "").split())))
         for parent in reversed(list(node.iterancestors()))
         if parent.tag not in _ROOTS
     )
     return parts or ("body",)
 
 
-def _identifier(value: str) -> str:
+def identifier(value: str) -> str:
+    """Escape a tag or class name for a CSS selector."""
     escaped = re.sub(r"[^a-zA-Z0-9_-]", lambda match: f"\\{ord(match[0]):x} ", value)
     if escaped[0].isdigit() or escaped.startswith("-"):
         escaped = f"\\{ord(escaped[0]):x} " + escaped[1:]

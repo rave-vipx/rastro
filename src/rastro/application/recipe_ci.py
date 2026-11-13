@@ -9,7 +9,14 @@ from pydantic import BaseModel
 from rastro.application.consistency import History, evaluate_consistency
 from rastro.application.extraction import extract_document, validate_recipe
 from rastro.domain.consistency import ConsistencyReport, ConsistencyRule
-from rastro.domain.models import ConfigurationError, Limits, Outcome, Source, schema_fingerprint
+from rastro.domain.models import (
+    ConfigurationError,
+    Issue,
+    Limits,
+    Outcome,
+    Source,
+    schema_fingerprint,
+)
 from rastro.domain.recipe_compare import CandidateEvaluation, RegressionCheck, RepairPolicy
 from rastro.domain.repair import RepairCandidate
 from rastro.mocklab.bundle import FixtureBundle
@@ -29,16 +36,21 @@ def evaluate_candidate(
     rules: Sequence[ConsistencyRule] = (),
     history: History | None = None,
     policy: RepairPolicy | None = None,
+    allow_fallbacks: bool = False,
 ) -> CandidateEvaluation:
     """Replay historical fixtures and generated invariants; never save candidate data.
 
     Historical comparisons require identical validated values and proven fields,
     allowing changed locators/version numbers. Current semantics use pre-write history.
+    Completeness counts required fields, plus optional fields as often as the stored
+    success samples had a value for them.
     No declared consistency rules means the semantic gate is inapplicable, not passed.
+    ``allow_fallbacks`` admits a recipe with fallbacks: only for adopting a verified
+    shared recipe on a store with nothing serving, where every gate still applies.
     """
     policy = policy or RepairPolicy()
     recipe = validate_recipe(schema, candidate.recipe, candidate.recipe.representation)
-    if not recipe.require_evidence or recipe.fallbacks:
+    if not recipe.require_evidence or (recipe.fallbacks and not allow_fallbacks):
         raise ConfigurationError("Recipe CI requires evidence and a single candidate")
     if len(fixtures) > 32:
         raise ConfigurationError("Recipe CI accepts at most 32 historical fixtures")
@@ -53,6 +65,7 @@ def evaluate_candidate(
         declared_fields=tuple(schema.model_fields),
         history=history,
         rejected=current.metrics.rejected,
+        expected_rates=_sample_rates(schema, fixtures),
     )
     historical = tuple(
         _replay(candidate, fixture, schema, parser, limits, i) for i, fixture in enumerate(fixtures)
@@ -85,7 +98,36 @@ def evaluate_candidate(
         historical_passed=sum(check.passed for check in historical),
         indicators=indicators,
         regressions=(*historical, *generated),
+        blocking=() if decision != "reject" else _blocking(current.issues),
     )
+
+
+def _blocking(issues: Sequence[Issue]) -> tuple[Issue, ...]:
+    """Record-level issues (index, field, code) that block the candidate; at most 20."""
+    return tuple(issues[:20])
+
+
+_OPTIONAL_SHARE = 0.75
+
+
+def _sample_rates(schema: type[BaseModel], fixtures: Sequence[FixtureBundle]) -> dict[str, float]:
+    """Optional fields need three quarters of the fill rate the success samples showed.
+
+    An optional value may thin out (one card in five without a stock label scores 0.8)
+    but losing it in half the records stays below the completeness threshold.
+    Required fields keep the strict default rate of 1.0. Without samples, optional fields
+    are not counted (QUAL-006).
+    """
+    rows = [r.data for fixture in fixtures for r in fixture.expected.records]
+    return {
+        name: (
+            _OPTIONAL_SHARE * sum(row.get(name) not in (None, "") for row in rows) / len(rows)
+            if rows
+            else 0.0
+        )
+        for name, field in schema.model_fields.items()
+        if not field.is_required()
+    }
 
 
 def _replay(
@@ -132,15 +174,15 @@ def _decide(
     has_rules: bool,
     policy: RepairPolicy,
 ) -> tuple[Literal["promote", "quarantine", "reject"], tuple[str, ...]]:
-    if candidate.ambiguous:
-        return "quarantine", ("ambiguous_evidence",)
+    # Hard failures come first, so repair and promote reach the same verdict whether or
+    # not ambiguity evidence is available; ambiguity is a quarantine reason only.
     if (
         status != Outcome.SUCCESS
         or not all(c.passed for c in (*historical, *generated))
         or (has_rules and indicators.verdict == "inconsistent")
     ):
         return "reject", ("validation_or_regression_failed",)
-    reasons = []
+    reasons = ["ambiguous_evidence"] if candidate.ambiguous else []
     if len(historical) < policy.min_historical_fixtures:
         reasons.append("insufficient_history")
     if count < policy.min_records:

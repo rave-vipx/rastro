@@ -8,6 +8,7 @@ import json
 import os
 import stat
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any
@@ -16,6 +17,7 @@ from pydantic import BaseModel, TypeAdapter, ValidationError
 
 from rastro.application.extraction import extract_document, validate_recipe
 from rastro.domain.job_fields import JobField, build_job_schema
+from rastro.domain.lifecycle import RecipeState
 from rastro.domain.memory import RecipeContext, RecipeKey, StoredRecipe
 from rastro.domain.models import ConfigurationError, Limits, Outcome, Recipe, Representation, Source
 from rastro.domain.recipe_bundle import (
@@ -95,6 +97,14 @@ def export_bundle(
     return manifest
 
 
+@dataclass(frozen=True)
+class ImportedRecipe:
+    """The stored version an import produced, and whether it already existed."""
+
+    stored: StoredRecipe
+    reused: bool
+
+
 def import_bundle(
     directory: Path,
     repository: RecipeRepository,
@@ -102,8 +112,13 @@ def import_bundle(
     *,
     at: datetime,
     limits: Limits | None = None,
-) -> StoredRecipe:
-    """Verify a bundle offline, then store it as a candidate."""
+) -> ImportedRecipe:
+    """Verify a bundle offline, then store it as a candidate.
+
+    A definition equal to a stored candidate or serving version of the same key is
+    reused, not duplicated. An equal retired version is not reused: the import stores
+    a new candidate version so it can be reviewed and promoted again.
+    """
     if not isinstance(repository, RecipeLifecycle):
         raise ConfigurationError("Importing recipes requires a lifecycle-aware repository")
     limits = limits or Limits()
@@ -119,8 +134,18 @@ def import_bundle(
     key = RecipeKey.for_source(
         manifest.source, schema, manifest.context, representation=manifest.representation
     )
+    for status in repository.history(key).versions:
+        if status.state not in _REUSABLE:
+            continue  # a retired equal definition must not block a fresh candidate
+        existing = repository.get(key, version=status.version)
+        if existing is not None and existing.recipe == _with_version(recipe, status.version):
+            return ImportedRecipe(existing, reused=True)
     version = repository.next_version(key)
-    return repository.save_candidate(key, _with_version(recipe, version), selected_index=0, at=at)
+    stored = repository.save_candidate(key, _with_version(recipe, version), selected_index=0, at=at)
+    return ImportedRecipe(stored, reused=False)
+
+
+_REUSABLE = frozenset({RecipeState.CANDIDATE, RecipeState.ACTIVE, RecipeState.DEGRADED})
 
 
 def _verify_replay(

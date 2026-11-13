@@ -6,7 +6,11 @@ from typing import TYPE_CHECKING
 
 from rastro.adapters.sqlite import SQLiteRecipeRepository
 from rastro.application.engine import Rastro
+from rastro.application.job_dataset import load_job_file
+from rastro.application.job_repair import promote_job_recipe, repair_job_source
 from rastro.application.jobs import load_job, run_job, run_job_async, run_job_file
+from rastro.application.recipe_apply import apply_job_recipe
+from rastro.application.suggest import suggest
 from rastro.domain.acquisition import AcquisitionPolicy, EgressProfile
 from rastro.domain.intelligence import InferencePolicy, ModelError, ModelRequest, RecipeProposal
 from rastro.domain.job_fields import (
@@ -22,6 +26,7 @@ from rastro.domain.job_fields import (
     UrlField,
     build_job_schema,
 )
+from rastro.domain.job_load import JobLoadResult, LoadedSource
 from rastro.domain.job_providers import (
     JobModelProvider,
     OllamaProvider,
@@ -33,6 +38,7 @@ from rastro.domain.job_results import (
     JobRunResult,
     JobRunStatus,
     JobSummary,
+    RecipeSelection,
     job_run_json_schema,
 )
 from rastro.domain.jobs import (
@@ -60,6 +66,7 @@ from rastro.domain.memory import (
     RecipeStorageError,
     StoredRecipe,
 )
+from rastro.domain.model_selectors import css
 from rastro.domain.models import (
     ConfigurationError,
     CssRecipe,
@@ -80,6 +87,14 @@ from rastro.domain.models import (
     Source,
     schema_fingerprint,
 )
+from rastro.domain.recipe_compare import (
+    CandidateEvaluation,
+    RecipeComparison,
+    RepairReport,
+    SourceRepair,
+)
+from rastro.domain.results import RepairProposal, SelfRepair
+from rastro.domain.suggest import FieldConfidence, Suggestion, SuggestionError
 from rastro.mocklab import (
     FixtureBundle,
     MockLabError,
@@ -91,6 +106,7 @@ from rastro.mocklab import (
 )
 from rastro.ports.model import ModelPort
 from rastro.ports.recipes import RecipeLifecycle, RecipeRepository
+from rastro.scrape import scrape, scrape_async
 
 if TYPE_CHECKING:
     from rastro.adapters.ollama import OllamaModel as OllamaModel
@@ -121,6 +137,7 @@ def __getattr__(name: str) -> object:
 __all__ = [
     "AcquisitionPolicy",
     "BooleanField",
+    "CandidateEvaluation",
     "ConfigurationError",
     "CssRecipe",
     "DateField",
@@ -130,6 +147,7 @@ __all__ = [
     "Evidence",
     "ExtractionRecord",
     "ExtractionResult",
+    "FieldConfidence",
     "FileJobSource",
     "FixtureBundle",
     "InferencePolicy",
@@ -139,6 +157,7 @@ __all__ = [
     "JobExitCode",
     "JobField",
     "JobFieldType",
+    "JobLoadResult",
     "JobModelProvider",
     "JobRecordData",
     "JobRunResult",
@@ -152,6 +171,7 @@ __all__ = [
     "LifecycleHistory",
     "LifecycleTransitionError",
     "Limits",
+    "LoadedSource",
     "Metrics",
     "MockLabError",
     "ModelError",
@@ -165,6 +185,7 @@ __all__ = [
     "RastroError",
     "Recipe",
     "RecipeAttempt",
+    "RecipeComparison",
     "RecipeConflictError",
     "RecipeContext",
     "RecipeKey",
@@ -173,31 +194,46 @@ __all__ = [
     "RecipeNotFoundError",
     "RecipeProposal",
     "RecipeRepository",
+    "RecipeSelection",
     "RecipeState",
     "RecipeStorageError",
     "RegionalContext",
+    "RepairProposal",
+    "RepairReport",
     "Representation",
     "ResourceLimitError",
     "SQLiteRecipeRepository",
     "SanitizationError",
+    "SelfRepair",
     "Source",
+    "SourceRepair",
     "StoredRecipe",
     "StringField",
+    "Suggestion",
+    "SuggestionError",
     "SyntheticLabel",
     "UrlField",
     "UrlJobSource",
     "VersionStatus",
     "__version__",
+    "apply_job_recipe",
     "build_fixture",
     "build_job_schema",
+    "css",
     "job_json_schema",
     "job_run_json_schema",
     "load_fixture",
     "load_job",
+    "load_job_file",
     "parse_job",
+    "promote_job_recipe",
+    "repair_job_source",
     "run_job",
     "run_job_async",
     "run_job_file",
     "schema_fingerprint",
+    "scrape",
+    "scrape_async",
+    "suggest",
     "verify_fixture",
 ]

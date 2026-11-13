@@ -1,6 +1,6 @@
 # Roadmap and requirement coverage
 
-**v0.5 delivered (2026-11-11): version 0.5.0, not published.** v0.4 (Studio, MCP) and v0.5 (Hub step 1) closed in one cut on top of v0.3. This roadmap is the planning source; the master spec is reference only. The engine is domain-neutral; the events example runs offline.
+**0.6.0 (2026-11-12): first public release of `rastro-engine`.** On top of v0.5 it adds one-call typed scraping (`rastro.scrape` with selectors declared on the Pydantic model and verified self-repair), selectors suggested from example values (`rastro.suggest`, `rastro new`), a public Python API for loading, repairing, promoting and applying recipes, a complete MCP server and a full Studio GUI, plus the fixes from an independent adoption evaluation. This roadmap is the planning source; the master spec is reference only. The engine is domain-neutral; the events example runs offline.
 
 v0.1 remains the reference release. It is complete: `0.1.0rc1` is its release candidate, with M1–M4 implemented, the M5 technical evidence recorded, every section 18 acceptance criterion evidenced, and DIFF-001 partially demonstrated. Publication (namespace ownership, legal/trademark review, tag and Trusted Publishing) awaits maintainer approval through the release gates in issue #5; nothing has been published.
 

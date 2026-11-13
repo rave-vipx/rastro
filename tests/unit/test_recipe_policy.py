@@ -49,14 +49,41 @@ def evaluate(recipe=RECIPE, **kwargs):
     )
 
 
-def test_measured_completeness_threshold_and_opt_in():
-    assert evaluate(policy=RepairPolicy(auto_promote=True)).reasons == (
-        "completeness_below_threshold",
+def test_optional_field_absent_in_success_sample_does_not_lower_completeness():
+    """QUAL-006: an optional field the success sample never filled is not counted."""
+    result = evaluate(policy=RepairPolicy(auto_promote=True))
+    assert result.indicators.completeness == 1.0
+    assert result.decision == "promote"
+    assert evaluate(policy=RepairPolicy()).reasons == ("automatic_promotion_disabled",)
+
+
+def test_optional_field_filled_in_success_sample_still_gates_completeness():
+    """QUAL-006: losing an optional value the success sample had stays below threshold."""
+    body = "<article><h2>Hello</h2><p>More</p></article>"
+    sampled = CssRecipe(
+        record_selector="article",
+        fields={"title": "h2::text", "extra": "p::text"},
+        require_evidence=True,
     )
-    assert (
-        evaluate(policy=RepairPolicy(auto_promote=True, min_completeness=0.5)).decision == "promote"
+    result = extract_document(
+        body, source=SOURCE, schema=Item, recipe=sampled, parser=ScraplingParser(), limits=Limits()
     )
-    assert evaluate(policy=RepairPolicy(min_completeness=0.5)).decision == "quarantine"
+    sample = build_fixture(
+        body, source=SOURCE, schema=Item, recipe=sampled, result=result, synthetic_count=0
+    )
+    evaluation = evaluate_candidate(
+        RepairCandidate(recipe=sampled, origin="discovery", rationale="Current page lost extra"),
+        BODY,
+        source=SOURCE,
+        schema=Item,
+        parser=ScraplingParser(),
+        limits=Limits(),
+        observed_at=NOW,
+        fixtures=(sample,),
+        policy=RepairPolicy(auto_promote=True),
+    )
+    assert evaluation.indicators.completeness == 0.5
+    assert "completeness_below_threshold" in evaluation.reasons
 
 
 def test_unassessable_consistency_does_not_pass():
@@ -128,3 +155,46 @@ def test_ci_refuses_weak_evidence_and_wrong_fixture_context():
             observed_at=NOW,
             fixtures=(wrong,),
         )
+
+
+@pytest.mark.parametrize(("filled", "complete"), [(2, False), (3, True), (4, True)])
+def test_optional_field_may_thin_to_three_quarters_of_the_sample(filled, complete):
+    """QUAL-006: losing an optional value in half the records quarantines; one in four does not."""
+    recipe = CssRecipe(
+        record_selector="article",
+        fields={"title": "h2::text", "extra": "p::text"},
+        require_evidence=True,
+    )
+
+    def page(count):
+        return "".join(
+            f"<article><h2>T{i}</h2>{'<p>More</p>' if i < count else ''}</article>"
+            for i in range(4)
+        )
+
+    sampled = page(4)
+    result = extract_document(
+        sampled,
+        source=SOURCE,
+        schema=Item,
+        recipe=recipe,
+        parser=ScraplingParser(),
+        limits=Limits(),
+    )
+    sample = build_fixture(
+        sampled, source=SOURCE, schema=Item, recipe=recipe, result=result, synthetic_count=0
+    )
+    evaluation = evaluate_candidate(
+        RepairCandidate(recipe=recipe, origin="discovery", rationale="Thinned optional field"),
+        page(filled),
+        source=SOURCE,
+        schema=Item,
+        parser=ScraplingParser(),
+        limits=Limits(),
+        observed_at=NOW,
+        fixtures=(sample,),
+        policy=RepairPolicy(auto_promote=True),
+    )
+    assert ("completeness_below_threshold" not in evaluation.reasons) is complete
+    if not complete:
+        assert evaluation.decision == "quarantine"

@@ -3,6 +3,14 @@
     "CandidateEvaluation": {
       "additionalProperties": false,
       "properties": {
+        "blocking": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Issue"
+          },
+          "title": "Blocking",
+          "type": "array"
+        },
         "current_records": {
           "minimum": 0,
           "title": "Current Records",
@@ -149,6 +157,58 @@
       "title": "ConsistencyReport",
       "type": "object"
     },
+    "Issue": {
+      "additionalProperties": false,
+      "description": "Safe diagnostics: no input values or user-supplied validation messages.\n\n``message`` names Pydantic's built-in error type and message (for example\n``int_parsing: Input should be a valid integer``); custom validator text is\nnever included. It is omitted from serialized output when absent.",
+      "properties": {
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "field": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Field"
+        },
+        "message": {
+          "anyOf": [
+            {
+              "maxLength": 512,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message"
+        },
+        "record_index": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Record Index"
+        }
+      },
+      "required": [
+        "code"
+      ],
+      "title": "Issue",
+      "type": "object"
+    },
     "Outcome": {
       "enum": [
         "success",
@@ -284,6 +344,14 @@
       "title": "Changed Fields",
       "type": "array"
     },
+    "changed_settings": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Changed Settings",
+      "type": "array"
+    },
     "evaluation": {
       "anyOf": [
         {
@@ -302,6 +370,11 @@
     "previous_version": {
       "title": "Previous Version",
       "type": "integer"
+    },
+    "reused": {
+      "default": false,
+      "title": "Reused",
+      "type": "boolean"
     },
     "schema_version": {
       "const": 1,

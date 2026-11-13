@@ -23,12 +23,23 @@ class Outcome(StrEnum):
     INSUFFICIENT_EVIDENCE = "insufficient_evidence"
 
 
+def _absent(value: object) -> bool:
+    return value is None
+
+
 class Issue(Contract):
-    """Safe diagnostics: no input values or user-supplied validation messages."""
+    """Safe diagnostics: no input values or user-supplied validation messages.
+
+    ``message`` names Pydantic's error type and message (for example
+    ``int_parsing: Input should be a valid integer``) only for built-in types whose
+    message cannot contain input (see ``domain.safe_messages``); custom validator
+    text is never included. It is omitted from serialized output when absent.
+    """
 
     code: str
     record_index: int | None = None
     field: str | None = None
+    message: str | None = Field(default=None, max_length=512, exclude_if=_absent)
 
 
 class Evidence(Contract):
@@ -72,6 +83,29 @@ class RecipeAttempt(Contract):
     status: Outcome
 
 
+class RepairProposal(Contract):
+    """One stored repair candidate and the gate decision recipe CI gave it."""
+
+    version: int
+    decision: Literal["promote", "quarantine", "reject"]
+    reasons: tuple[str, ...]
+    changed_fields: tuple[str, ...]
+
+
+class SelfRepair(Contract):
+    """What offline self-repair did after a remembered recipe stopped matching.
+
+    ``promoted`` is true only when a candidate passed every gate, became the serving
+    recipe and produced this result. ``candidates`` lists every stored proposal.
+    """
+
+    mode: Literal["propose", "auto"]
+    previous_version: int
+    promoted: bool = False
+    promoted_version: int | None = None
+    candidates: tuple[RepairProposal, ...] = ()
+
+
 class ExtractionResult[T: BaseModel](Contract):
     learned_recipe: Recipe | None = None
     recipe_version: int | None = None
@@ -91,3 +125,10 @@ class ExtractionResult[T: BaseModel](Contract):
     records: tuple[ExtractionRecord[T], ...]
     issues: tuple[Issue, ...]
     metrics: Metrics
+    # Results without a repair serialize byte-for-byte as they did before the field.
+    repair: SelfRepair | None = Field(default=None, exclude_if=_absent)
+
+    @property
+    def items(self) -> list[T]:
+        """The validated model instances, in record order; empty when nothing validated."""
+        return [record.data for record in self.records]

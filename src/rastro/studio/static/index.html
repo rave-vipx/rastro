@@ -3,40 +3,130 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
 <title>Rastro Studio</title>
 <link rel="stylesheet" href="/static/studio.css">
 </head>
 <body>
-<header><h1>Rastro Studio</h1><p id="root"></p><p id="listing" role="status"></p></header>
-<main>
-  <section>
-    <h2>1. Job file</h2>
-    <select id="files" aria-label="Job file"></select>
-    <button id="validate">2. Validate</button>
-    <p id="validation" role="status"></p>
-  </section>
-  <section>
-    <h2>3. Preview</h2>
-    <button id="preview">Preview sample records</button>
-    <div id="records"></div>
-  </section>
-  <section>
-    <h2>4. Correct a match</h2>
-    <select id="selector-pick" aria-label="Field selector"></select>
-    <input id="selector-text" type="text" maxlength="1024" aria-label="New selector" size="50">
-    <button id="repreview">Re-preview with this selector</button>
-  </section>
-  <section>
-    <h2>5. Accept</h2>
-    <button id="accept">Write the corrected job to its file</button>
-    <p id="accepted" role="status"></p>
-  </section>
-  <section>
-    <h2>6. Connect your app</h2>
-    <button id="connect">Show commands</button>
-    <pre id="commands"></pre>
-  </section>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <h1>Rastro Studio</h1>
+  <p id="root" class="muted"></p>
+  <nav aria-label="Views">
+    <button type="button" class="tab" data-view="jobs" aria-pressed="true">Jobs</button>
+    <button type="button" class="tab" data-view="wizard" aria-pressed="false">New scraper</button>
+  </nav>
+</header>
+<p id="listing" class="banner" role="status" aria-live="polite"></p>
+<main id="main">
+  <div id="view-jobs">
+    <section class="card">
+      <h2>Job file</h2>
+      <div class="row">
+        <label for="files">Job</label>
+        <select id="files"></select>
+        <button type="button" id="validate">Open</button>
+      </div>
+      <p id="validation" role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="card">
+      <h2>Preview and correct</h2>
+      <p class="muted">Sample records with how each field was found. Nothing is written.</p>
+      <button type="button" id="preview">Preview sample records</button>
+      <div class="row">
+        <label for="selector-pick">Field</label>
+        <select id="selector-pick"></select>
+        <label for="selector-text">New selector</label>
+        <input id="selector-text" type="text" maxlength="1024" size="40" spellcheck="false">
+        <button type="button" id="repreview">Preview with this selector</button>
+        <button type="button" id="accept">Save to job file</button>
+      </div>
+      <p id="accepted" role="status" aria-live="polite"></p>
+      <div id="records"></div>
+    </section>
+
+    <section class="card">
+      <h2>Run</h2>
+      <div class="row">
+        <button type="button" id="extract">Extract (writes nothing)</button>
+        <button type="button" id="load">Load into dataset</button>
+        <label class="check"><input type="checkbox" id="drift"> Measure drift</label>
+      </div>
+      <p id="run-status" role="status" aria-live="polite"></p>
+      <div id="run-result"></div>
+    </section>
+
+    <section class="card">
+      <h2>Health and repair</h2>
+      <button type="button" id="health">Check health</button>
+      <p id="health-status" role="status" aria-live="polite"></p>
+      <div id="health-result"></div>
+      <div id="repair-result"></div>
+    </section>
+
+    <section class="card">
+      <h2>Dataset</h2>
+      <div class="row">
+        <button type="button" id="dataset">Show records</button>
+        <button type="button" id="prev-page">Previous page</button>
+        <button type="button" id="next-page">Next page</button>
+        <button type="button" id="export-json">Download JSON</button>
+        <button type="button" id="export-html">Download HTML</button>
+      </div>
+      <p id="dataset-status" role="status" aria-live="polite"></p>
+      <div id="dataset-result"></div>
+    </section>
+
+    <section class="card">
+      <h2>Connect your app</h2>
+      <button type="button" id="connect">Show commands</button>
+      <pre id="commands"></pre>
+    </section>
+  </div>
+
+  <div id="view-wizard" hidden>
+    <section class="card">
+      <h2>1. Saved page</h2>
+      <p class="muted">Save the web page as HTML inside the Studio folder, then pick it here.</p>
+      <div class="row">
+        <label for="page">Page</label>
+        <select id="page"></select>
+        <label for="page-url">Address it came from</label>
+        <input id="page-url" type="url" size="40" placeholder="https://example.com/list">
+      </div>
+    </section>
+    <section class="card">
+      <h2>2. Fields and one example each</h2>
+      <p class="muted">Name each field and copy one value exactly as the page shows it.</p>
+      <table class="fields">
+        <thead><tr><th scope="col">Field name</th><th scope="col">Example value</th>
+          <th scope="col">Record key</th><th scope="col"><span class="sr">Remove</span></th></tr></thead>
+        <tbody id="field-rows"></tbody>
+      </table>
+      <div class="row">
+        <button type="button" id="add-field">Add field</button>
+        <button type="button" id="suggest" class="primary">Suggest</button>
+      </div>
+      <p id="suggest-status" role="status" aria-live="polite"></p>
+      <div id="suggest-result"></div>
+    </section>
+    <section class="card">
+      <h2>3. Create the job</h2>
+      <div class="row">
+        <label for="new-file">Job file</label>
+        <input id="new-file" type="text" size="30" spellcheck="false" placeholder="pages/events.toml">
+        <label for="new-dataset">Dataset file, next to the job file (optional)</label>
+        <input id="new-dataset" type="text" size="24" spellcheck="false" placeholder="events.sqlite">
+        <label for="new-memory">Recipe memory file, enables repair (optional)</label>
+        <input id="new-memory" type="text" size="24" spellcheck="false" placeholder="recipes.sqlite">
+        <button type="button" id="create" class="primary">Create job</button>
+      </div>
+      <p class="muted">The job file goes next to the page. A dataset needs at least one record key.</p>
+      <p id="create-status" role="status" aria-live="polite"></p>
+    </section>
+  </div>
 </main>
-<script src="/static/studio.js"></script>
+<script type="module" src="/static/studio.js"></script>
 </body>
 </html>

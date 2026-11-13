@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 from copy import deepcopy
+from typing import Any
 
 from cssselect import SelectorError
 from lxml.etree import LxmlError  # type: ignore[import-untyped]
@@ -19,7 +20,9 @@ from rastro.adapters.scrapling_container import (
     container_evidence,
     container_selector,
     field_supported,
+    identifier,
     relocate_matches,
+    template_record,
 )
 from rastro.domain.models import (
     ConfigurationError,
@@ -115,10 +118,14 @@ class ScraplingRelocation:
                 record_selector = f"{record_selector}, {new}"
         if not records:
             return ()
-        # shortcut: one template record, expand when heterogeneous-template fixtures require it.
-        record = records[0]
+        # One template record: the most common shape, so a row missing an optional child
+        record = template_record(records)  # does not become the template.
         selected = {
             field: _css(record, _expression(expr)[0]) for field, expr in recipe.fields.items()
+        }
+        names = {
+            node: (node.tag, tuple(sorted(set(node.get("class", "").split()))))
+            for node in page._root.iter()
         }
         _mask(page)
         evidence = container_evidence(page, relocated, records, snapshot.fields, selected)
@@ -127,16 +134,19 @@ class ScraplingRelocation:
             if _expression(recipe.fields[field])[0] == ":scope":
                 evidence.append(RepairEvidence(field=field, match_count=1))
                 continue
-            matches = relocate_matches(record, fingerprint)
+            # An element another field already reads is never a relocation target.
+            taken = {n._root for name, nodes in selected.items() if name != field for n in nodes}
+            matches = [n for n in relocate_matches(record, fingerprint) if n._root not in taken]
             if relocated and not selected[field] and not field_supported(matches, fingerprint):
                 return ()
             evidence.append(RepairEvidence(field=field, match_count=len(matches)))
+            paths = [_relative(record, node, names) for node in matches]
             if matches and [node._root for node in matches] != [
                 node._root for node in selected[field]
             ]:
                 _, suffix = _expression(fields[field])
                 fields[field] = ", ".join(
-                    [fields[field], *(_relative(record, node) + suffix for node in matches)]
+                    [fields[field], *(path + suffix for path in paths if path is not None)]
                 )
         if fields == recipe.fields and record_selector == recipe.record_selector:
             return ()
@@ -239,7 +249,13 @@ def _fingerprint(node: Selector) -> ElementFingerprint:
     )
 
 
-def _relative(record: Selector, node: Selector) -> str:
+def _relative(
+    record: Selector, node: Selector, names: dict[Any, tuple[str, tuple[str, ...]]]
+) -> str | None:
+    """A tag+class child path from the record; None when a step is not unique.
+
+    Positional steps would read a sibling in a record that omits an optional child.
+    """
     parts: list[str] = []
     current = node._root
     while current is not record._root:
@@ -247,6 +263,9 @@ def _relative(record: Selector, node: Selector) -> str:
         if parent is None:
             raise ConfigurationError("Relocation escaped the record")
         siblings = [child for child in parent if isinstance(child.tag, str)]
-        parts.append(f"*:nth-child({siblings.index(current) + 1})")
+        if sum(names[child] == names[current] for child in siblings) != 1:
+            return None
+        tag, classes = names[current]
+        parts.append(identifier(tag) + "".join("." + identifier(c) for c in classes))
         current = parent
     return " > ".join([":scope", *reversed(parts)])

@@ -4,7 +4,7 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
-from rastro.cli_repair_context import RepairContext
+from rastro.application.repair_context import RepairContext
 
 
 def stage_candidate(job: Path, edit: Path) -> tuple[int, int]:

@@ -87,7 +87,7 @@ def test_failed_candidate_never_replaces_active_and_deletes_no_records(tmp_path,
     # Schema-valid sale dates must fail the semantic CI gate.
     from rastro.adapters.sqlite import SQLiteRecipeRepository
     from rastro.application.intelligence import with_version
-    from rastro.cli_repair_context import RepairContext
+    from rastro.application.repair_context import RepairContext
 
     context = RepairContext.load(job, False)
     _source, key, recipe = context.source(2)
@@ -154,7 +154,7 @@ def test_ambiguous_candidate_is_quarantined_not_active(tmp_path, capsys):
     from rastro.adapters.scrapling import ScraplingParser
     from rastro.application.recipe_ci import evaluate_candidate
     from rastro.application.recipe_repair import repair_candidates
-    from rastro.cli_repair_context import RepairContext
+    from rastro.application.repair_context import RepairContext
     from rastro.domain.models import Limits
     from rastro.domain.repair import RepairCandidate, RepairEvidence
 

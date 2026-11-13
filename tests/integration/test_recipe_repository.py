@@ -29,7 +29,8 @@ def test_restart_immutable_versions_success_metadata_and_cleanup(tmp_path, sourc
     assert old.metadata.successful_runs == 2
     assert old.metadata.created_at == NOW - timedelta(days=1)
     assert old.metadata.last_success_at == NOW
-    with pytest.raises(RecipeConflictError):
+    # ADR 0021: the conflict names the next free version so a job edit can bump to it.
+    with pytest.raises(RecipeConflictError, match=r"version 1 is already stored.* 3 or higher"):
         repo.save_success(
             key, Recipe(strategy="jsonld", fields={"name": "/different"}), selected_index=0, at=NOW
         )

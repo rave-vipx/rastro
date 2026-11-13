@@ -63,6 +63,71 @@ def test_renamed_class_yields_structural_drift_naming_field_and_table_effect(tmp
     assert len(store.records(first.dataset)) == len(before)
 
 
+def test_total_extraction_failure_after_success_is_high_risk(tmp_path):
+    """DRIFT-002/004: a record selector that stops matching is never low risk or 0.0."""
+    sample = tmp_path / "sample"
+    shutil.copytree(Path("examples/uy-dance-agenda/sample"), sample)
+    load(sample)
+    path = sample / "sodre-cartelera.html"
+    html = path.read_text(encoding="utf-8")
+    assert "espectaculo" in html
+    path.write_text(html.replace("espectaculo", "show-renamed"), encoding="utf-8")
+    second, _ = load(sample)
+    drift = second.drift[0]
+    assert second.sources[0].status != "success"
+    assert drift.risk == "high"
+    assert drift.score >= drift.thresholds.high
+    assert drift.verdict in {"extraction_failure", "structural_drift"}
+    assert any(s.indicator == "extraction_failed" for s in drift.signals)
+
+
+def test_total_failure_without_drift_baseline_uses_dataset_success_history(tmp_path, capsys):
+    """DRIFT-002/004: the earlier success came from a load without --drift; still high risk."""
+    import json
+
+    from rastro.cli import main
+
+    sample = tmp_path / "sample"
+    shutil.copytree(Path("examples/uy-dance-agenda/sample"), sample)
+    command = ["job", "load", str(sample / "job.toml")]
+    assert main(command) == 0
+    path = sample / "sodre-cartelera.html"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace("espectaculo", "show-renamed"), encoding="utf-8"
+    )
+    capsys.readouterr()
+    main([*command, "--drift"])
+    report = json.loads(capsys.readouterr().out)
+    failed, healthy = report["drift"]
+    assert (failed["risk"], failed["score"], failed["verdict"]) == (
+        "high",
+        1.0,
+        "extraction_failure",
+    )
+    assert [s["indicator"] for s in failed["signals"]] == ["extraction_failed"]
+    assert failed["signals"][0]["baseline"] == "success"
+    assert (healthy["risk"], healthy["score"]) == ("low", 0.0)
+
+
+def test_first_ever_failure_is_not_called_drift():
+    """No earlier success anywhere: nothing to drift from, so no extraction_failed signal."""
+    from datetime import UTC, datetime
+
+    from rastro.domain.drift import FieldStructure, StructuralSnapshot, assess_drift
+
+    snapshot = StructuralSnapshot(
+        source_url="https://example.org",
+        run_id="r1",
+        observed_at=datetime(2026, 11, 12, tzinfo=UTC),
+        schema_fingerprint="a" * 64,
+        status="missing_data",
+        fields={"t": FieldStructure(field_coverage=0, validation_failure_rate=0)},
+    )
+    assert assess_drift(None, snapshot).risk == "low"
+    escalated = assess_drift(None, snapshot, previously_succeeded=True)
+    assert (escalated.risk, escalated.score) == ("high", 1.0)
+
+
 def test_cli_drift_is_opt_in_and_persists_without_changing_default_report(tmp_path, capsys):
     import json
     import sqlite3

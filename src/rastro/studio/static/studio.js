@@ -1,36 +1,13 @@
-"use strict";
+// Studio entry: session token, views, job list, preview and selector correction.
 // All source-derived text is set as plain text content; markup is never parsed.
-const $ = (id) => document.getElementById(id);
+import { $, api, bind, el, requireFile, show, state, table } from "./dom.js";
+import { initOperate, resetOperate } from "./operate.js";
+import { initWizard } from "./wizard.js";
+
 // The token arrives in the URL fragment (never sent to the server); keep it in memory only.
-const token = new URLSearchParams(location.hash.slice(1)).get("token") || "";
+state.token = new URLSearchParams(location.hash.slice(1)).get("token") || "";
 history.replaceState(null, "", location.pathname + location.search);
-let sha = null;
 let selectors = [];
-
-async function api(path, body) {
-  const options = body === undefined
-    ? {}
-    : {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Studio-Token": token },
-        body: JSON.stringify(body),
-      };
-  const response = await fetch(path, options);
-  const data = await response.json();
-  if (!response.ok || data.ok === false) {
-    throw new Error(`${data.error || "error"}${data.message ? ": " + data.message : ""}`);
-  }
-  return data;
-}
-
-function el(tag, text, className) {
-  const node = document.createElement(tag);
-  if (text !== undefined) node.textContent = text;
-  if (className) node.className = className;
-  return node;
-}
-
-function show(id, text) { $(id).textContent = text; }
 
 function currentEdit() {
   const picked = selectors[Number($("selector-pick").value)];
@@ -47,20 +24,11 @@ function renderRecord(record) {
     return box;
   }
   box.append(el("p", `Record ${record.index} accepted`));
-  const table = el("table");
-  const head = el("tr");
-  for (const name of ["field", "value", "method", "locator", "validation", "loaded"]) {
-    head.append(el("th", name));
-  }
-  table.append(head);
-  for (const f of record.fields) {
-    const row = el("tr");
-    const cells = [f.name + (f.identity ? "*" : ""), f.value === null ? "" : String(f.value),
-      f.method || "-", f.locator || "-", f.validation, f.loaded ? "yes" : "no"];
-    for (const text of cells) row.append(el("td", text));
-    table.append(row);
-  }
-  box.append(table);
+  const rows = record.fields.map((f) => [
+    f.name + (f.identity ? " (key)" : ""), f.value === null ? "" : String(f.value),
+    f.method || "-", f.locator || "-", f.validation, f.loaded ? "yes" : "no",
+  ]);
+  box.append(table(["field", "value", "method", "locator", "validation", "loaded"], rows));
   return box;
 }
 
@@ -72,6 +40,7 @@ function renderPreview(preview) {
     for (const issue of source.issues) out.append(el("p", `issue: ${issue.code}`, "rejected"));
     for (const record of source.records) out.append(renderRecord(record));
   }
+  if (preview.truncated) out.append(el("p", "Long values and lists were shortened.", "muted"));
 }
 
 function fillSelectors(rows) {
@@ -79,7 +48,7 @@ function fillSelectors(rows) {
   const pick = $("selector-pick");
   pick.replaceChildren();
   rows.forEach((row, i) => {
-    const label = `${row.source === null ? "recipe" : "source " + row.source} / ${row.field}`;
+    const label = `${row.source === null ? "recipe" : "source " + (row.source + 1)} / ${row.field}`;
     pick.append(new Option(label, String(i)));
   });
   showSelector();
@@ -90,52 +59,73 @@ function showSelector() {
   $("selector-text").value = row ? row.selector : "";
 }
 
-async function guarded(target, action) {
-  try { await action(); } catch (error) { show(target, `Error: ${error.message}`); }
-}
-
-async function validate() {
-  const data = await api("/api/validate", { file: $("files").value });
-  sha = data.sha256;
+export async function openJob(name) {
+  const data = await api("/api/validate", { file: name });
+  state.file = name;
+  state.sha = data.sha256;
   fillSelectors(data.selectors);
-  show("validation", data.has_dataset ? "Valid job." : "Valid job, but it has no [dataset] block: preview needs one.");
+  resetOperate();
+  const notes = [`${data.sources} source(s)`];
+  if (!data.has_dataset) notes.push("no [dataset] block: preview and load need one");
+  if (data.has_memory) notes.push("recipe memory on: repairs are available");
+  show("validation", `Valid job. ${notes.join("; ")}.`, "good");
 }
 
 async function preview() {
-  const data = await api("/api/preview", { file: $("files").value, edit: currentEdit() });
-  sha = data.sha256;
+  const data = await api("/api/preview", { file: requireFile(), edit: currentEdit() });
+  state.sha = data.sha256;
   renderPreview(data.preview);
+  show("accepted", "");
 }
 
 async function accept() {
   const edit = currentEdit();
   if (!edit) throw new Error("change a selector first");
-  const data = await api("/api/accept", { file: $("files").value, edit, sha256: sha });
-  sha = data.sha256;
+  const data = await api("/api/accept", { file: requireFile(), edit, sha256: state.sha });
+  state.sha = data.sha256;
   fillSelectors(data.selectors);
-  show("accepted", "Written. The corrected job validated and replaced the file.");
+  show("accepted", "Saved. The corrected job validated and replaced the file.", "good");
 }
 
 async function connect() {
-  const data = await api(`/api/connect?file=${encodeURIComponent($("files").value)}`);
+  const data = await api(`/api/connect?file=${encodeURIComponent(requireFile())}`);
   show("commands", `${data.cli.join("\n")}\n\n${data.sdk}\n\n# ${data.note}`);
 }
 
-async function start() {
-  if (!token) {
-    show("listing", "Open the URL printed in the terminal (it carries the session token).");
-    return;
-  }
+export async function refreshJobs(select) {
   const data = await api("/api/jobs");
   if (data.truncated) show("listing", "Only the first 500 job files are listed.");
-  show("root", `Root: ${data.root}`);
-  for (const name of data.files) $("files").append(new Option(name, name));
+  show("root", `Folder: ${data.root}`, "muted");
+  const list = $("files");
+  list.replaceChildren(...data.files.map((name) => new Option(name, name)));
+  if (select) list.value = select;
 }
 
-$("validate").onclick = () => guarded("validation", validate);
-$("preview").onclick = () => guarded("validation", preview);
-$("repreview").onclick = () => guarded("validation", preview);
-$("accept").onclick = () => guarded("accepted", accept);
-$("connect").onclick = () => guarded("commands", connect);
-$("selector-pick").onchange = showSelector;
-guarded("validation", start);
+export function switchView(name) {
+  for (const tab of document.querySelectorAll(".tab")) {
+    const active = tab.dataset.view === name;
+    tab.setAttribute("aria-pressed", String(active));
+    $(`view-${tab.dataset.view}`).hidden = !active;
+  }
+}
+
+async function start() {
+  if (!state.token) {
+    show("listing", "Open the address printed in the terminal (it carries the session token).", "bad");
+    return;
+  }
+  await refreshJobs();
+  for (const tab of document.querySelectorAll(".tab")) {
+    tab.addEventListener("click", () => switchView(tab.dataset.view));
+  }
+  bind("validate", "validation", () => openJob($("files").value));
+  bind("preview", "accepted", preview);
+  bind("repreview", "accepted", preview);
+  bind("accept", "accepted", accept);
+  bind("connect", "commands", connect);
+  $("selector-pick").addEventListener("change", showSelector);
+  initOperate();
+  initWizard({ openJob, refreshJobs, switchView });
+}
+
+start().catch((error) => show("listing", `Error: ${error.message}`, "bad"));

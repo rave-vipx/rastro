@@ -1,5 +1,7 @@
 """Synthetic CLI smoke demo, kept separate from command dispatch."""
 
+from decimal import Decimal
+
 from pydantic import BaseModel, Field
 
 from rastro import JobExitCode, JsonLdRecipe, Outcome, Rastro, Source
@@ -7,7 +9,7 @@ from rastro import JobExitCode, JsonLdRecipe, Outcome, Rastro, Source
 
 class _DemoProduct(BaseModel):
     name: str = Field(min_length=1)
-    price: float = Field(ge=0, allow_inf_nan=False)
+    price: Decimal = Field(ge=0, allow_inf_nan=False)
 
 
 def demo_command() -> int:
