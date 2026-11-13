@@ -57,10 +57,12 @@ job_load.
 Agent in the loop (you are the model; Rastro verifies and stores):
 drift_status -> recipe_repair -> if it finds no passing candidate: repair_context ->
 recipe_propose (a recipe, never records; on reject read the reasons and propose again,
-at most 3 times) -> semantic_review -> recipe_promote -> recipe_apply.
-Before recipe_promote, check meaning with semantic_review: each new value must be the same
-kind of data as the old value of that field (a title, not a city). Gates check structure
-and history; you check meaning. Never promote with override_gates unless the user asks."""
+at most 3 times) -> judge meaning -> recipe_promote -> recipe_apply.
+recipe_propose never promotes, even when the job sets auto_promote: you are the semantic
+judge. Its reply includes review (old and new values per changed field; semantic_review
+gives the same). Promote only if each new value is the same kind of data as the old value
+of that field (a title, not a city). Gates check structure and history; you check meaning.
+Never promote with override_gates unless the user asks."""
 
 
 def build_server(root: Path) -> FastMCP:

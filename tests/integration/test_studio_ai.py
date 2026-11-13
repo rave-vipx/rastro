@@ -26,7 +26,6 @@ BASE = "http://127.0.0.1:8765"
 FIELDS = {"job_id": "::attr(data-id)", "title": "h2::text", "salary": "span.salary::text"}
 RIGHT = {"strategy": "css", "record_selector": "article.card", "fields": FIELDS}
 MISSING = {**RIGHT, "record_selector": "li.nothing"}
-WRONG = {**RIGHT, "fields": {**FIELDS, "title": "::attr(data-id)"}}  # title -> job id
 PAGE = {**RIGHT, "fields": {"job_id": "::attr(data-id)", "title": "h2::text"}}
 
 
@@ -111,19 +110,61 @@ def test_suggest_refuses_bad_fields_and_pages(root: Path) -> None:
     assert model.requests == []
 
 
-def test_repair_gates_model_proposals_and_never_promotes(root: Path) -> None:
-    """REPAIR-003/005: a wrong mapping is rejected, a right one waits for promotion."""
-    model = FakeModel(WRONG, RIGHT)
+REWRITTEN = (
+    '<div class="row" data-id="job-{n}"><p class="role">Synthetic role {n}</p>{salary}</div>'
+)
+REPAIR = {
+    "strategy": "css",
+    "record_selector": "div.row",
+    "fields": {"job_id": "::attr(data-id)", "title": "p.role::text", "salary": "b::text"},
+}
+
+
+class JudgingModel:
+    """Proposes ``REPAIR`` and answers the semantic judge with ``verdict``."""
+
+    def __init__(self, verdict: str) -> None:
+        self.verdict = verdict
+        self.requests: list[ModelRequest] = []
+
+    async def generate(self, request: ModelRequest, policy: InferencePolicy) -> str:
+        self.requests.append(request)
+        if request.response_schema is None or "untrusted_html" in request.content:
+            return json.dumps(REPAIR)
+        names = [item["name"] for item in json.loads(request.content)["fields"]]
+        return json.dumps({n: {"verdict": self.verdict, "confidence": 1.0} for n in names})
+
+
+def rewritten() -> str:
+    cards = "".join(
+        REWRITTEN.format(n=n, salary="" if n == 3 else f"<b>{n}000</b>") for n in range(1, 6)
+    )
+    return f"<!doctype html><html><body><main>{cards}</main></body></html>"
+
+
+@pytest.mark.parametrize(
+    ("repair", "verdict", "promoted"),
+    [
+        ("", "match", False),
+        ("auto_promote = true", "mismatch", False),
+        ("auto_promote = true", "match", True),
+    ],
+)
+def test_ai_repair_uses_repair_with_model_and_the_judge(
+    root: Path, repair: str, verdict: str, promoted: bool
+) -> None:
+    """REPAIR-001/005, QUAL-006: relocation finds nothing on rewritten markup, so the model
+    proposes; Studio promotes only when the job opts in and the judge agrees."""
+    (root / "job.toml").write_text(JOB + f"\n[repair]\n{repair}\n", encoding="utf-8")
+    model = JudgingModel(verdict)
     for http in client_for(root, model, remote=True):
         assert post(http, "/api/load", {"file": "job.toml"}).status_code == 200
-        (root / "board.html").write_text(board("new-title", wrap=True), encoding="utf-8")
+        (root / "board.html").write_text(rewritten(), encoding="utf-8")
         data = post(http, "/api/ai/repair", {"file": "job.toml", "source": 1}).json()
         assert http.get("/api/ai").json() == {"enabled": True, "remote": True}
-    assert data["ok"] is True and data["calls"] == 2 and data["remote"] is True
-    comparisons = [r["sources"][0]["comparisons"][0] for r in data["reports"]]
-    decisions = [c["evaluation"]["decision"] for c in comparisons]
-    assert decisions == ["reject", "quarantine"]
-    last = data["reports"][1]["sources"][0]
-    assert last["promoted_version"] is None
-    diff = {f["field"]: f for f in last["comparisons"][0]["diff"]["fields"]}
-    assert diff["title"]["new"] == "h2::text" and diff["title"]["changed"] is True
+    assert data["ok"] is True and data["remote"] is True, data
+    (source,) = data["report"]["sources"]
+    assert source["inference_calls"] >= 1
+    assert (source["promoted_version"] is not None) is promoted
+    diff = {f["field"]: f for f in source["comparisons"][-1]["diff"]["fields"]}
+    assert diff["title"]["new"].endswith("p.role::text") and diff["title"]["changed"] is True

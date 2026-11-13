@@ -2,8 +2,8 @@
 (AGENT-002, AGENT-003, REPAIR-001-005, INT-001).
 
 Read-only tools that may read a job's URL sources declare ``openWorldHint``. recipe_propose
-stores a candidate and, only when the job sets ``[repair] auto_promote = true``, can change
-the serving recipe, so it is declared destructive like recipe_repair.
+stores a candidate and never promotes (the calling agent is the semantic judge), but it can
+retire an equal stored candidate that fails again, so it keeps recipe_repair's hints.
 """
 
 from __future__ import annotations
@@ -38,11 +38,12 @@ def register(server: FastMCP, workspace: Path) -> None:
     async def recipe_propose(
         path: Path_, source: SourceIndex, recipe: RecipeJson, reason: Reason
     ) -> dict[str, Any]:
-        """Submit your recipe for a failing source. Rastro validates it, runs the repair
-        gates (historical fixtures, completeness, value checks), stores it as a candidate and
-        returns the decision, reasons, blocking issues and selector diff. Promotes only if
-        the job sets [repair] auto_promote = true; otherwise call semantic_review and
-        recipe_promote."""
+        """Submit your recipe for a failing source. Each changed selector is composed with the
+        serving one ("<serving>, <yours>") so past pages still match; Rastro validates it,
+        runs the repair gates (historical fixtures, completeness, value checks), stores it as
+        a candidate and returns the decision, reasons, blocking issues, selector diff and
+        review (old and new values per changed field). Never promotes: judge the meaning,
+        then call recipe_promote."""
         return await _call(  # type: ignore[no-any-return]
             mcp_agent.recipe_propose, workspace, path, source, recipe, reason=reason
         )

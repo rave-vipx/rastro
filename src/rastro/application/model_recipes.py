@@ -1,28 +1,23 @@
-"""Ask any ``ModelPort`` for a recipe, then verify it deterministically (INT-001, REPAIR-001).
+"""Ask any ``ModelPort`` for a recipe for a saved page, then verify it (INT-001).
 
-Two uses, one loop: a recipe for a new saved page (verified by extracting from that page)
-and a repair proposal for a job source (verified by the repair gates through
-``propose_job_recipe``). The model sees field names and the page (a bounded digest
-when it is large), never records; its output is parsed as a strict proposal and only
-kept when verification passes.
+The recipe is kept only if it extracts valid records from that page (repair proposals go
+through ``repair_job_source(..., model=...)`` instead). The model sees field names and the
+page (a bounded digest when it is large), never records; its output is parsed as a strict
+proposal and only kept when verification passes.
 Retries are bounded by the ``InferencePolicy``. No provider is special-cased.
 """
 
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass, field
-from pathlib import Path
+from dataclasses import dataclass
 from typing import Any, Literal
 
 from pydantic import BaseModel
 
-from rastro.application.agent_repair import propose_job_recipe
-from rastro.application.agent_review import job_repair_context
 from rastro.application.proposals import propose_with_model
 from rastro.domain.intelligence import InferencePolicy
 from rastro.domain.models import ExtractionResult, Outcome, RastroError, Recipe, Source
-from rastro.domain.recipe_compare import RepairReport
 from rastro.ports.model import ModelPort
 
 LOCAL_URL = "https://local.invalid/"
@@ -34,7 +29,6 @@ class ModelAnswer:
 
     recipe: Recipe | None = None
     result: ExtractionResult[Any] | None = None
-    reports: list[RepairReport] = field(default_factory=list)
     failure: str = ""
     calls: int = 0
 
@@ -103,35 +97,4 @@ async def recipe_for_page(
     )
     if not complete:
         answer.recipe = answer.result = None
-    return answer
-
-
-async def repair_with_model(
-    model: ModelPort,
-    path: Path,
-    source: int,
-    schema: type[BaseModel],
-    *,
-    policy: InferencePolicy | None = None,
-) -> ModelAnswer:
-    """Model proposals for a failing job source, each gated and stored like a repair
-    candidate; stops at the first that is not rejected."""
-    context = await asyncio.to_thread(job_repair_context, path, source)
-    answer = ModelAnswer()
-
-    async def evaluate(recipe: Recipe, _: Literal["discovery", "model"]) -> tuple[bool, str]:
-        report = await asyncio.to_thread(propose_job_recipe, path, source, recipe)
-        answer.reports.append(report)
-        evaluation = report.sources[0].comparisons[0].evaluation
-        decision = evaluation.decision if evaluation else "reject"
-        return decision != "reject", f"recipe_ci_{decision}"
-
-    _, answer.failure, answer.calls = await _ask(
-        model,
-        outline=context["page_outline"] or "",
-        schema=schema,
-        failure="recipe_repair",
-        evaluate=evaluate,
-        policy=policy,
-    )
     return answer

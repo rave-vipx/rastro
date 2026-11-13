@@ -111,18 +111,24 @@ The server instructions give this order:
    sample records as `tag.class` trees, headings, JSON-LD types and URL- or date-like
    attributes; at most 12,000 characters, labelled untrusted; see
    [prompts small models can follow](intelligence.md#prompts-small-models-can-follow)).
-3. `recipe_propose(recipe, reason)`: Rastro validates the recipe against the job's fields and
-   representation, runs the gates, stores it as a candidate (an equal stored candidate is
-   reused) and returns `decision`, the reasons, blocking record issues, a selector `diff` and
-   `next`. On `reject`, read the reasons and propose again, at most three times.
-4. `semantic_review(version)`: old values (last successful run) and new values (the candidate
-   on the current page) per changed field. Check meaning: a title must still be a title, not
-   a city or an identifier. Gates check structure and history; the agent checks meaning.
+3. `recipe_propose(recipe, reason)`: Rastro composes each changed CSS selector with the
+   serving one (`"<serving>, <proposed>"`, as model repair does, so past pages still match;
+   a union that does not validate falls back to the plain proposal), validates the recipe
+   against the job's fields and representation, runs the gates, stores it as a candidate (an
+   equal stored candidate is reused) and returns `decision`, the reasons, blocking record
+   issues, a selector `diff`, `review` and `next`. On `reject`, read the reasons and propose
+   again, at most three times.
+4. Judge meaning with `review` (the same data as `semantic_review(version)`): old values
+   (last successful run) and new values (the candidate on the current page) per changed
+   field. A title must still be a title, not a city or an identifier. Gates check structure
+   and history; the agent checks meaning.
 5. `recipe_promote(version, reason)`, then `recipe_apply`.
 
-`recipe_propose` promotes on its own only when the job sets `[repair] auto_promote = true` and
-every gate passes, exactly like `recipe_repair`. Its `reason` is checked like a promotion
-reason and returned as `agent_reason`; the lifecycle event records the recipe CI decision.
+`recipe_propose` never promotes, even when the job sets `[repair] auto_promote = true`: the
+calling agent is the semantic judge, so a passing proposal stays a candidate (reason
+`automatic_promotion_disabled`) until the agent promotes it. Its `reason` is checked like a
+promotion reason and returned as `agent_reason`; the lifecycle event records the recipe CI
+decision.
 
 For a new page without example values, `suggest_context(page_path, fields)` returns the page
 outline and the recipe format, and `recipe_try(page_path, recipe)` runs a recipe once and
@@ -144,22 +150,26 @@ rastro <- recipe.fields.title: "h2.title::text"; current.status: "failed";
 agent  -> recipe_propose(..., recipe={"strategy": "css", "record_selector": "article.card",
           "fields": {"job_id": "::attr(data-id)", "title": "span.city::text"}},
           reason="title moved")
-rastro <- decision: "reject", reasons: ["validation_or_regression_failed"],
-          next: "Rejected: read the reasons and blocking issues, then propose a corrected recipe"
-agent  -> recipe_propose(..., fields: {"job_id": "::attr(data-id)", "title": "h2::text"},
-          reason="h2 holds the title on old and new pages")
 rastro <- decision: "quarantine", reasons: ["automatic_promotion_disabled"],
-          candidate_version: 3
-agent  -> semantic_review(path="jobs/job.toml", source=1, version=3)
-rastro <- fields: [{"field": "title", "old": ["Synthetic role 1", ...],
-                    "new": ["Synthetic role 1", ...]}]
+          candidate_version: 2, diff title: "h2.title::text, span.city::text",
+          review.fields: [{"field": "title", "old": ["Synthetic role 1", ...],
+                           "new": ["Synthetic city 1", ...]}]
+agent  (judges: a city is not a title; does not promote version 2)
+agent  -> recipe_propose(..., fields: {"job_id": "::attr(data-id)",
+          "title": "h2.new-title::text"}, reason="the title class was renamed")
+rastro <- decision: "quarantine", reasons: ["automatic_promotion_disabled"],
+          candidate_version: 3, diff title: "h2.title::text, h2.new-title::text",
+          review.fields: [{"field": "title", "old": ["Synthetic role 1", ...],
+                           "new": ["Synthetic role 1", ...]}]
 agent  -> recipe_promote(..., version=3, reason="Semantic review: same titles")
 agent  -> recipe_apply(path="jobs/job.toml", source=1)
 ```
 
-The first proposal mapped the title to the city: the historical replay caught it and the
-version was retired. The serving recipe never changed until the agent promoted a candidate
-whose values it had checked.
+The first proposal mapped the title to the city. Composed with the serving selector it
+replays the old pages and fills every record, so the structural gates pass; only meaning
+tells it apart. That is why `recipe_propose` never promotes: the agent saw cities where titles
+were, left version 2 unpromoted and proposed again. The serving recipe never changed until the
+agent promoted a candidate whose values it had checked.
 
 ## Limits and safety
 

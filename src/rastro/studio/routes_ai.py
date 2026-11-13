@@ -2,21 +2,25 @@
 
 Active only when Studio was started with a model (``--model`` or ``RASTRO_MODEL``). The
 wizard asks for a recipe from field names alone, kept only if it extracts valid records; the
-repair view asks for proposals when deterministic repair finds none, each gated and stored
-as a candidate that still needs promotion. Every reply says whether page content went to a
-remote model (``--allow-remote``).
+repair view runs ``repair_job_source(..., model=...)``: relocation first, then model
+proposals composed with the serving selectors, the same gates, and the semantic judge. A
+candidate is promoted only when the job sets ``[repair] auto_promote = true`` and the judge
+agrees; otherwise it waits for promotion with a reason. Every reply says whether page
+content went to a remote model (``--allow-remote``).
 """
 
 from __future__ import annotations
 
 from typing import Any
 
+from starlette.concurrency import run_in_threadpool
 from starlette.requests import Request
 from starlette.responses import Response
 from starlette.routing import Route
 
 from rastro.application.job_loader import _read_local_source
-from rastro.application.model_recipes import ModelAnswer, recipe_for_page, repair_with_model
+from rastro.application.job_repair import repair_job_source
+from rastro.application.model_recipes import ModelAnswer, recipe_for_page
 from rastro.application.recipe_diff import with_diffs
 from rastro.domain.job_fields import build_job_schema
 from rastro.domain.models import Limits
@@ -79,17 +83,9 @@ def routes(studio: Studio) -> list[Route]:
         port = model()
         path, _, job = studio.load(text(data, "file"))
         index = integer(data, "source", 1, MAX_SOURCES)
-        answer = await repair_with_model(port, path, index, job.build_schema())
-        reports = [with_diffs(job, path.parent, index, plain(r)) for r in answer.reports]
-        return reply(
-            {
-                "ok": True,
-                "calls": answer.calls,
-                "failure": answer.failure,
-                "reports": reports,
-                "remote": studio.model_remote,
-            }
-        )
+        report = await run_in_threadpool(lambda: repair_job_source(path, index, model=port))
+        payload = with_diffs(job, path.parent, index, plain(report))
+        return reply({"ok": True, "report": payload, "remote": studio.model_remote})
 
     return [
         studio.route("/api/ai", status),

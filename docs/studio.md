@@ -41,9 +41,11 @@ classes and short text, at most 6,000 characters), never the whole page, keys or
   values are filled from the first record, so **Create job** re-checks the recipe the usual
   deterministic way.
 - **Health and repair:** when **Propose repair** finds no usable candidate, **Ask AI for a
-  repair** asks the model. Each proposal is gated like any repair candidate and stored; Studio
-  never promotes it. Check that the new values mean the same as before, then promote with a
-  reason.
+  repair** runs repair with the model (`repair_job_source(..., model=...)`): relocation first,
+  then model proposals composed with the serving selectors, the same gates, and the semantic
+  judge. A candidate becomes active on its own only when the job sets
+  `[repair] auto_promote = true` and the judge agrees the values kept their meaning; otherwise
+  check that the new values mean the same as before, then promote with a reason.
 
 ## Walkthrough
 
@@ -142,7 +144,8 @@ Studio is a local tool, not a server to expose.
 - Request bodies are limited to 16 KiB, job files to 256 KiB, and selectors to 1024 characters.
 - Ask AI (`/api/ai`, `/api/ai/suggest`, `/api/ai/repair`) uses the same token, origin and path
   rules. Model output is untrusted: it is parsed as a strict recipe proposal and kept only after
-  deterministic verification; it never becomes records directly and is never promoted by Studio.
+  deterministic verification; it never becomes records directly, and a repair candidate is
+  promoted automatically only under the job's own `auto_promote` with the judge's agreement.
 
 ## Limitations
 

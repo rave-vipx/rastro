@@ -58,8 +58,10 @@ ENVELOPE = {"error", "message", "location", "hint"}
 RIGHT = {
     "strategy": "css",
     "record_selector": "article.card",
-    "fields": {"job_id": "::attr(data-id)", "title": "h2::text"},
+    "fields": {"job_id": "::attr(data-id)", "title": "h2.new-title::text"},
 }
+PAGE = {**RIGHT, "fields": {"job_id": "::attr(data-id)", "title": "h2::text"}}
+UNION = "h2.title::text, h2.new-title::text"  # serving locator first, as relocation does
 WRONG = {**RIGHT, "fields": {"job_id": "::attr(data-id)", "title": "span.city::text"}}
 
 
@@ -116,8 +118,9 @@ async def test_repair_context_before_any_load_creates_no_store(workspace: Path) 
 
 @pytest.mark.asyncio
 async def test_a_correct_proposal_is_stored_reviewed_and_promoted(workspace: Path) -> None:
-    """REPAIR-002/003/005: the agent's recipe passes the gates, waits for promotion, is reused
-    when proposed again, and its meaning can be checked side by side before promotion."""
+    """REPAIR-002/003/005: the agent's recipe is composed with the serving locator, passes the
+    gates, waits for the agent's promotion, is reused when proposed again, and comes back with
+    the side-by-side values the agent judges."""
     await broken(workspace)
     failed, report = await call(
         workspace,
@@ -135,10 +138,12 @@ async def test_a_correct_proposal_is_stored_reviewed_and_promoted(workspace: Pat
     assert comparison["diff"]["fields"][1] == {
         "field": "title",
         "old": "h2.title::text",
-        "new": "h2::text",
+        "new": UNION,
         "changed": True,
     }
     version = report["candidate_version"]
+    (title,) = report["review"]["fields"]
+    assert title["old"] == title["new"] and title["new"][0] == "Synthetic role 1"
 
     failed, again = await call(
         workspace, "recipe_propose", path="jobs/job.toml", source=1, recipe=RIGHT, reason="Retry"
@@ -166,9 +171,13 @@ async def test_a_correct_proposal_is_stored_reviewed_and_promoted(workspace: Pat
 
 
 @pytest.mark.asyncio
-async def test_a_wrong_proposal_title_to_city_is_rejected_and_retired(workspace: Path) -> None:
-    """REPAIR-003, QUAL-006: a structurally valid but semantically wrong mapping fails the
-    historical replay; it is retired and the serving recipe is unchanged."""
+@pytest.mark.parametrize("auto", [False, True])
+async def test_wrong_proposal_title_to_city_is_never_promoted(workspace: Path, auto: bool) -> None:
+    """REPAIR-003, QUAL-006: a semantically wrong mapping is never promoted, even with the
+    serving union and the job's auto_promote; the side-by-side values expose it."""
+    if auto:
+        job = workspace / "jobs" / "job.toml"
+        job.write_text(JOB + "\n[repair]\nauto_promote = true\n", encoding="utf-8")
     await broken(workspace)
     failed, report = await call(
         workspace,
@@ -179,33 +188,29 @@ async def test_a_wrong_proposal_title_to_city_is_rejected_and_retired(workspace:
         reason="Try the span",
     )
     assert not failed, report
-    assert report["decision"] == "reject" and report["sources"][0]["promoted_version"] is None
-    assert "Rejected" in report["next"]
-    version = report["candidate_version"]
+    assert report["decision"] in {"reject", "quarantine"}
+    assert report["sources"][0]["promoted_version"] is None
     failed, history = await call(workspace, "recipe_history", path="jobs/job.toml", source=1)
     assert history["serving_version"] == 1
-    states = {v["version"]: v["state"] for v in history["versions"]}
-    assert states[version] == "retired"
-
-    failed, review = await call(
-        workspace, "semantic_review", path="jobs/job.toml", source=1, version=version
-    )
-    (title,) = review["fields"]
-    assert title["old"][0] == "Synthetic role 1" and title["new"][0] == "Synthetic city 1"
+    (title,) = report["review"]["fields"]
+    assert title["old"][0] == "Synthetic role 1" and title["new"][0] != "Synthetic role 1"
 
 
 @pytest.mark.asyncio
-async def test_proposal_promotes_only_when_the_job_opts_in(workspace: Path) -> None:
-    """REPAIR-004: the same [repair] auto_promote rule as recipe_repair."""
+async def test_proposal_never_auto_promotes_the_agent_judges(workspace: Path) -> None:
+    """REPAIR-004/005: the calling agent is the semantic judge, so even a job with
+    auto_promote keeps the passing proposal a candidate until recipe_promote."""
     job = workspace / "jobs" / "job.toml"
     job.write_text(JOB + "\n[repair]\nauto_promote = true\n", encoding="utf-8")
     await broken(workspace)
     failed, report = await call(
         workspace, "recipe_propose", path="jobs/job.toml", source=1, recipe=RIGHT, reason="Fix"
     )
-    assert not failed and report["decision"] == "promote"
-    assert report["sources"][0]["promoted_version"] == report["candidate_version"]
-    assert "recipe_apply" in report["next"]
+    assert not failed and report["decision"] == "quarantine"
+    (comparison,) = report["sources"][0]["comparisons"]
+    assert comparison["evaluation"]["reasons"] == ["automatic_promotion_disabled"]
+    assert report["sources"][0]["promoted_version"] is None
+    assert "recipe_promote" in report["next"]
 
 
 @pytest.mark.asyncio
@@ -249,13 +254,13 @@ async def test_author_a_recipe_for_a_new_page_with_context_and_try(workspace: Pa
     assert not failed and "> article.card  (count 5)" in context["page_outline"]
     assert context["fields"] == ["job_id", "title"] and "css" in context["recipe_format"]
 
-    failed, tried = await call(workspace, "recipe_try", page_path="jobs/board.html", recipe=RIGHT)
+    failed, tried = await call(workspace, "recipe_try", page_path="jobs/board.html", recipe=PAGE)
     assert not failed, tried
     assert tried["status"] == "success" and tried["total"] == 5
     assert tried["filled"] == {"job_id": 5, "title": 5}
     assert tried["preview"][0] == {"job_id": "job-1", "title": "Synthetic role 1"}
 
-    partial = {**RIGHT, "fields": {"job_id": "::attr(data-id)"}}
+    partial = {**PAGE, "fields": {"job_id": "::attr(data-id)"}}
     failed, tried = await call(
         workspace,
         "recipe_try",

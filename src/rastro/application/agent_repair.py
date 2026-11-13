@@ -1,10 +1,11 @@
-"""Gate a recipe proposed by an outside agent exactly like a repair candidate (REPAIR-001-005).
+"""Gate a recipe proposed by an outside agent like a model repair candidate (REPAIR-001-005).
 
-The agent (an MCP client's model, or any ``ModelPort``) only proposes a recipe definition.
-The proposal is validated against the job's fields and representation, evaluated by the same
-recipe CI as deterministic repair (historical fixtures, completeness, value gates), stored as
-a candidate (an equal stored candidate is reused) and promoted only when the job itself sets
-``[repair] auto_promote = true`` and every gate passes. No provider is special-cased.
+The agent (an MCP client's model) only proposes a recipe definition. Each changed CSS locator
+is composed with the serving one (``"<serving>, <proposed>"``, as model repair does) so old
+pages still match, then validated against the job's fields and representation, evaluated by
+the same recipe CI as repair and stored as a candidate (an equal stored candidate is reused).
+It is never promoted here, whatever the job's ``auto_promote``: the calling agent is the
+semantic judge and promotes with ``recipe_promote`` after checking meaning.
 """
 
 from __future__ import annotations
@@ -17,6 +18,7 @@ from pydantic import BaseModel, ValidationError
 
 from rastro.application.extraction import validate_recipe
 from rastro.application.job_repair import job_policy, run_sync
+from rastro.application.model_repair import with_history
 from rastro.application.recipe_repair import repair_candidates
 from rastro.application.repair_context import RepairContext
 from rastro.application.repair_evidence import gather_evidence
@@ -38,10 +40,10 @@ def propose_job_recipe(
 
     Raises ``ConfigurationError`` when the proposal does not fit the job or equals the
     serving recipe. The report's single comparison carries the decision, reasons and the
-    blocking record issues; ``promoted_version`` is set only by an opted-in auto promotion.
+    blocking record issues; ``promoted_version`` is always ``None``.
     """
     context = RepairContext.load(Path(path), allow_absolute_paths)
-    policy = job_policy(context, {})
+    policy = job_policy(context, {"auto_promote": False})
 
     async def run() -> RepairReport:
         evidence = await gather_evidence(context, source, policy)
@@ -54,18 +56,13 @@ def propose_job_recipe(
             evaluate=evidence.evaluate,
             at=datetime.now(UTC),
         )
-        promoted = [
-            c.candidate_version
-            for c in comparisons
-            if c.evaluation is not None and c.evaluation.decision == "promote"
-        ]
         item = SourceRepair(
             source_index=source,
             outcome="candidates",
             inference_calls=0,
             issues=(),
             comparisons=comparisons,
-            promoted_version=promoted[0] if promoted else None,
+            promoted_version=None,
         )
         return RepairReport(run_id=str(uuid4()), sources=(item,))
 
@@ -74,14 +71,18 @@ def propose_job_recipe(
 
 def normalized_candidate(proposal: Recipe, previous: Recipe, schema: type[BaseModel]) -> Recipe:
     """The proposal as a single-definition candidate: evidence required, no fallbacks, the
-    serving version (the store assigns a fresh one). Refuses a no-op proposal."""
+    serving version (the store assigns a fresh one), each changed locator composed with the
+    serving one. Refuses a no-op proposal."""
+    plain = _normalize(proposal, previous, schema)
+    if plain == previous.model_copy(update={"require_evidence": True, "fallbacks": ()}):
+        raise ConfigurationError("The proposed recipe equals the serving recipe")
+    return _normalize(with_history(proposal, previous), previous, schema)
+
+
+def _normalize(proposal: Recipe, previous: Recipe, schema: type[BaseModel]) -> Recipe:
     data = proposal.model_dump()
     data.update(require_evidence=True, fallbacks=(), version=previous.version)
     try:
-        recipe = validate_recipe(schema, Recipe.model_validate(data), previous.representation)
+        return validate_recipe(schema, Recipe.model_validate(data), previous.representation)
     except (ValidationError, ValueError):
         raise ConfigurationError("The proposed recipe is not a valid Rastro recipe") from None
-    baseline = previous.model_copy(update={"require_evidence": True, "fallbacks": ()})
-    if recipe == baseline:
-        raise ConfigurationError("The proposed recipe equals the serving recipe")
-    return recipe

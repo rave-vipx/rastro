@@ -77,16 +77,19 @@ def recipe_propose(
     payload["decision"] = evaluation.get("decision")
     payload["candidate_version"] = comparison["candidate_version"]
     payload["agent_reason"] = reason
-    payload["next"] = _next_step(payload["decision"], payload["sources"][0]["promoted_version"])
-    return bounded(payload)
+    payload["next"] = _next_step(payload["decision"])
+    result = bounded(payload)
+    result["review"] = review(root, path, source, payload["candidate_version"])
+    return result
 
 
-def _next_step(decision: str | None, promoted: int | None) -> str:
-    if promoted is not None:
-        return "Promoted by the job's auto_promote; run recipe_apply to write it to the job file"
+def _next_step(decision: str | None) -> str:
     if decision == "reject":
         return "Rejected: read the reasons and blocking issues, then propose a corrected recipe"
-    return "Quarantined: call semantic_review, then recipe_promote with a reason if it is right"
+    return (
+        "Stored as a candidate, never promoted here: judge the review values (each field must "
+        "keep its meaning), then call recipe_promote with a reason, or propose again"
+    )
 
 
 def review(root: Path, path: str, source: int, version: int) -> dict[str, Any]:

@@ -89,19 +89,21 @@ async function repair(source) {
   show("health-status", item.promoted_version ? `Version ${item.promoted_version} now serves.` : "Review the candidates below.", "muted");
 }
 
-// The model proposes; every proposal is gated and stored like any candidate, never promoted here.
+// Repair with the model: relocation, then model proposals, the same gates and the semantic
+// judge. A candidate is promoted only when the job sets auto_promote and the judge agrees.
 async function askRepair(source) {
-  const notice = state.ai.remote ? " A page outline is sent to the remote model." : "";
+  const notice = state.ai.remote ? " Page content is sent to the remote model." : "";
   show("health-status", `Asking the model for a repair of source ${source}…${notice}`, "muted");
-  const data = await api("/api/ai/repair", { file: requireFile(), source });
+  const { report } = await api("/api/ai/repair", { file: requireFile(), source });
+  const item = report.sources[0];
   const out = $("ai-repair-result");
-  out.replaceChildren(el("h3", `Model proposals for source ${source} (${data.calls} call(s))`));
-  if (!data.reports.length) out.append(el("p", `The model proposed no usable recipe (${data.failure}).`, "warn"));
-  for (const report of data.reports) {
-    const item = report.sources[0];
-    for (const comparison of item.comparisons) out.append(candidate(source, comparison, item.promoted_version));
-  }
-  show("health-status", "Check that the new values mean the same as before, then promote with a reason.", "muted");
+  out.replaceChildren(el("h3", `Repair with the model for source ${source} (${item.inference_calls || 0} model call(s))`));
+  if (item.issues && item.issues.length) out.append(el("p", `issues: ${issues(item.issues)}`, "warn"));
+  if (!item.comparisons.length) out.append(el("p", "No candidate recipe was found.", "warn"));
+  for (const comparison of item.comparisons) out.append(candidate(source, comparison, item.promoted_version));
+  show("health-status", item.promoted_version
+    ? `Version ${item.promoted_version} now serves: the job allows automatic promotion and the model judged the values unchanged in meaning.`
+    : "Check that the new values mean the same as before, then promote with a reason.", item.promoted_version ? "good" : "muted");
 }
 
 function candidate(source, comparison, promoted) {
