@@ -60,6 +60,8 @@ First public release of `rastro-engine` on PyPI: one-call typed scraping with `r
 - `recipe repair` and `recipe promote` share one evaluator: hard validation, replay or consistency failures reject before ambiguity is considered, and a rejection from either command retires the version with a `Recipe CI: reject` lifecycle event. `--override-gates` bypasses quarantine thresholds only; on a rejected candidate it exits 2 with an error that says so (REPAIR-002, REPAIR-005).
 - `recipe repair` reuses a stored candidate (or a still-rejected retired version) with the same definition instead of allocating a new version each run (REC-006).
 - `recipe apply` on a job whose sources share the job-level recipe adds a `[sources.recipe]` table for the repaired source only, instead of refusing (REC-006).
+- `recipe promote` retires a rejected candidate only when the current page is usable; on a page where neither the candidate nor the serving recipe finds records (consent wall, maintenance page) the candidate stays a candidate and the report notes `page_not_usable`. Promotion reports note `candidate_retired` when a version was retired (REPAIR-005).
+- Repair reuse prefers the newest equal candidate over a retired twin and marks reused comparisons with `"reused": true` (REC-006).
 
 ### Fixed
 
