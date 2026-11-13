@@ -1,27 +1,25 @@
-"""Bounded proposal collection, with no persistence or activation (REPAIR-001).
+"""Bounded deterministic proposal collection, with no persistence or activation (REPAIR-001).
 
-The composition layer passes a model only from the job's configured provider,
-then explicitly enables it for this call. All proposals still require recipe CI.
+Relocation, declared fallbacks and discovery only; a configured model is consulted
+afterwards, and only when none of these would pass (``application/model_repair``).
+All proposals still require recipe CI.
 """
 
 from __future__ import annotations
 
 import asyncio
-from typing import Literal, Protocol
+from typing import Protocol
 
 from pydantic import BaseModel, ValidationError
 
 from rastro.application.extraction import validate_recipe
 from rastro.application.field_aliases import discovery_aliases
-from rastro.application.proposals import propose_with_model
 from rastro.domain.intelligence import InferencePolicy
 from rastro.domain.models import (
     ConfigurationError,
     CssRecipe,
-    Issue,
     Limits,
     Recipe,
-    RecipeAttempt,
     ResourceLimitError,
     Source,
     schema_fingerprint,
@@ -33,7 +31,6 @@ from rastro.domain.repair import (
     digest,
 )
 from rastro.ports.discovery import AliasMap, RecipeDiscovery
-from rastro.ports.model import ModelPort
 
 
 class ElementRelocator(Protocol):
@@ -50,16 +47,13 @@ class RepairCandidateGenerator:
         *,
         discovery: RecipeDiscovery,
         relocation: ElementRelocator | None = None,
-        model: ModelPort | None = None,
         policy: InferencePolicy | None = None,
         aliases: AliasMap | None = None,
     ) -> None:
         self._discovery = discovery
         self._relocation = relocation
-        self._model = model
         self._policy = policy or InferencePolicy()
         self._aliases = aliases
-        self._slots = asyncio.Semaphore(self._policy.max_concurrency)
 
     async def generate(
         self,
@@ -70,9 +64,8 @@ class RepairCandidateGenerator:
         recipe: Recipe,
         limits: Limits,
         snapshot: RelocationSnapshot | None = None,
-        model_enabled: bool = False,
     ) -> RepairCandidates:
-        """Collect relocation, fallbacks, discovery, then optional model proposals.
+        """Collect relocation, fallback and discovery proposals.
 
         Supply representation-appropriate discovery. Snapshot reuse is bound to
         source, schema and recipe; the adapter checks the recipe identity.
@@ -119,7 +112,7 @@ class RepairCandidateGenerator:
             schema,
             recipe,
         )
-        return await self._with_model(html, schema, recipe, candidates, model_enabled)
+        return RepairCandidates(candidates=tuple(candidates))
 
     def _extend(
         self,
@@ -146,56 +139,6 @@ class RepairCandidateGenerator:
                 continue
             if all(existing.recipe != recipe for existing in target) and len(target) < maximum:
                 target.append(candidate)
-
-    async def _with_model(
-        self,
-        html: str,
-        schema: type[BaseModel],
-        recipe: Recipe,
-        candidates: list[RepairCandidate],
-        enabled: bool,
-    ) -> RepairCandidates:
-        if not enabled or recipe.representation != "html":
-            return RepairCandidates(candidates=tuple(candidates))
-        if self._model is None:
-            raise ConfigurationError("Model repair requires a configured job model")
-        if len(candidates) == self._policy.max_discovery_candidates:
-            return RepairCandidates(candidates=tuple(candidates))
-
-        async def collect(
-            proposal: Recipe, origin: Literal["discovery", "model"]
-        ) -> tuple[bool, str]:
-            self._extend(
-                candidates,
-                (
-                    RepairCandidate(
-                        recipe=proposal,
-                        origin=origin,
-                        rationale="Model proposal; requires recipe CI",
-                    ),
-                ),
-                schema,
-                recipe,
-            )
-            return True, "candidate_collected"
-
-        attempts: list[RecipeAttempt] = []
-        complete, failure, calls, _ = await propose_with_model(
-            model=self._model,
-            policy=self._policy,
-            slots=self._slots,
-            html=html,
-            fields=tuple(schema.model_fields),
-            required={name for name, field in schema.model_fields.items() if field.is_required()},
-            failure="recipe_repair",
-            attempts=attempts,
-            evaluate=collect,
-        )
-        return RepairCandidates(
-            candidates=tuple(candidates),
-            inference_calls=calls,
-            issues=() if complete else (Issue(code=failure),),
-        )
 
 
 def _check_input(html: str, recipe: Recipe, schema: type[BaseModel], limits: Limits) -> Recipe:

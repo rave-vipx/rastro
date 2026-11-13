@@ -63,6 +63,7 @@
       <p id="health-status" role="status" aria-live="polite"></p>
       <div id="health-result"></div>
       <div id="repair-result"></div>
+      <div id="ai-repair-result"></div>
     </section>
 
     <section class="card">
@@ -107,7 +108,9 @@
       <div class="row">
         <button type="button" id="add-field">Add field</button>
         <button type="button" id="suggest" class="primary">Suggest</button>
+        <button type="button" id="ask-ai" hidden>Ask AI (no examples needed)</button>
       </div>
+      <p id="ai-notice" hidden></p>
       <p id="suggest-status" role="status" aria-live="polite"></p>
       <div id="suggest-result"></div>
     </section>

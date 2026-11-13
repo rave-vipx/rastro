@@ -47,6 +47,11 @@ TOOLS = {
     "suggest_recipe",
     "job_new",
     "scrape_file",
+    "repair_context",
+    "recipe_propose",
+    "semantic_review",
+    "suggest_context",
+    "recipe_try",
 }
 READ_ONLY = {
     "job_validate",
@@ -57,8 +62,19 @@ READ_ONLY = {
     "recipe_history",
     "suggest_recipe",
     "scrape_file",
+    "repair_context",
+    "semantic_review",
+    "suggest_context",
+    "recipe_try",
 }
-DESTRUCTIVE = {"job_load", "job_run", "recipe_repair", "recipe_promote", "recipe_apply"}
+DESTRUCTIVE = {
+    "job_load",
+    "job_run",
+    "recipe_repair",
+    "recipe_promote",
+    "recipe_apply",
+    "recipe_propose",
+}
 # (readOnlyHint, destructiveHint, idempotentHint, openWorldHint) per tool (AGENT-002).
 HINTS = {
     "job_validate": (True, None, True, False),
@@ -76,6 +92,11 @@ HINTS = {
     "suggest_recipe": (True, None, True, False),
     "job_new": (False, False, False, False),
     "scrape_file": (True, None, True, False),
+    "repair_context": (True, None, True, True),
+    "recipe_propose": (False, True, False, True),
+    "semantic_review": (True, None, True, True),
+    "suggest_context": (True, None, True, False),
+    "recipe_try": (True, None, True, False),
 }
 
 

@@ -15,12 +15,14 @@ from rastro.domain.memory import RecipeKey
 from rastro.domain.models import Limits, RastroError, Recipe, Source
 from rastro.domain.recipe_compare import CandidateEvaluation, RepairPolicy
 from rastro.domain.repair import RelocationSnapshot, RepairCandidate
+from rastro.mocklab.bundle import FixtureBundle
+from rastro.ports.parser import DocumentParser
 
 type Evaluate = Callable[[RepairCandidate], CandidateEvaluation]
 
 
 @dataclass(frozen=True)
-class SourceEvidence:
+class Evidence:
     source: Source
     key: RecipeKey
     previous: Recipe
@@ -30,16 +32,18 @@ class SourceEvidence:
     records: Callable[[Recipe], int]
     rows: Callable[[Recipe], list[dict[str, JsonValue]]]
     history: tuple[dict[str, JsonValue], ...]
+    fixtures: tuple[FixtureBundle, ...] = ()
+    parser: DocumentParser | None = None
 
 
-async def source_evidence(
+async def gather_evidence(
     context: RepairContext,
     index: int,
     policy: RepairPolicy,
     previous: Recipe | None = None,
     *,
     allow_fallbacks: bool = False,
-) -> SourceEvidence:
+) -> Evidence:
     """Current document, retained evidence and a CI evaluator for one source.
 
     ``previous`` defaults to the serving recipe; promotion passes it explicitly so a store
@@ -90,7 +94,7 @@ async def source_evidence(
         return [record.data.model_dump(mode="json") for record in result.records]
 
     samples = tuple(dict(r.data) for fixture in fixtures for r in fixture.expected.records)
-    return SourceEvidence(
+    return Evidence(
         source,
         key,
         previous,
@@ -100,4 +104,6 @@ async def source_evidence(
         lambda recipe: len(rows(recipe)),
         rows,
         samples,
+        fixtures,
+        parser,
     )

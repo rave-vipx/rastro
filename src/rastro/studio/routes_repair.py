@@ -7,7 +7,6 @@ Each action calls the public job API (``repair_job_source``, ``promote_job_recip
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
@@ -22,10 +21,9 @@ from rastro.application.active_recipes import active_job, source_key
 from rastro.application.job_loader import resolve_job_path
 from rastro.application.job_repair import promote_job_recipe, repair_job_source
 from rastro.application.recipe_apply import write_serving_recipe
+from rastro.application.recipe_diff import with_diffs
 from rastro.domain.jobs import FileJobSource, Job
 from rastro.domain.lifecycle_history import check_reason
-from rastro.domain.models import Recipe
-from rastro.domain.recipe_compare import RepairReport
 from rastro.studio import files
 from rastro.studio.web import Studio, body, flag, integer, plain, reply, text
 
@@ -71,54 +69,6 @@ def health(job: Job, base: Path) -> dict[str, Any]:
     return {"ok": True, "has_memory": job.recipe_memory is not None, "sources": sources}
 
 
-def _shown(value: object) -> str | None:
-    if value is None or isinstance(value, str):
-        return value
-    return json.dumps(value, ensure_ascii=False)
-
-
-def _diff(old: Recipe | None, new: Recipe | None) -> dict[str, Any]:
-    """Old and new selector per field, and the record selector, for one comparison."""
-    before = old.fields if old else {}
-    after = new.fields if new else {}
-    names = list(dict.fromkeys([*before, *after]))
-    return {
-        "record_selector": [
-            getattr(old, "record_selector", None),
-            getattr(new, "record_selector", None),
-        ],
-        "fields": [
-            {
-                "field": name,
-                "old": _shown(before.get(name)),
-                "new": _shown(after.get(name)),
-                "changed": before.get(name) != after.get(name),
-            }
-            for name in names
-        ],
-    }
-
-
-def _with_diffs(job: Job, base: Path, index: int, report: RepairReport) -> dict[str, Any]:
-    payload = plain(report)
-    memory = _existing(job.recipe_memory, base)
-    if memory is None:
-        return payload
-    repository = SQLiteRecipeRepository(memory)
-    key = source_key(job, job.sources[index - 1])
-
-    def recipe(version: int) -> Recipe | None:
-        stored = repository.get(key, version=version)
-        return stored.recipe if stored else None
-
-    for source in payload["sources"]:
-        for comparison in source["comparisons"]:
-            comparison["diff"] = _diff(
-                recipe(comparison["previous_version"]), recipe(comparison["candidate_version"])
-            )
-    return payload
-
-
 def routes(studio: Studio) -> list[Route]:
     async def checked(request: Request) -> Response:
         data = await body(request)
@@ -132,7 +82,7 @@ def routes(studio: Studio) -> list[Route]:
 
         def run() -> dict[str, Any]:
             report = repair_job_source(path, index)
-            return {"ok": True, "report": _with_diffs(job, path.parent, index, report)}
+            return {"ok": True, "report": with_diffs(job, path.parent, index, plain(report))}
 
         return reply(await run_in_threadpool(run))
 
@@ -148,7 +98,7 @@ def routes(studio: Studio) -> list[Route]:
             report = promote_job_recipe(
                 path, index, version, reason=reason, override_gates=override
             )
-            return {"ok": True, "report": _with_diffs(job, path.parent, index, report)}
+            return {"ok": True, "report": with_diffs(job, path.parent, index, plain(report))}
 
         return reply(await run_in_threadpool(run))
 

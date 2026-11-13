@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable, Coroutine, Sequence
+from collections.abc import Coroutine, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -13,7 +13,7 @@ from rastro.application.model_choice import ModelChoice, resolve_model
 from rastro.application.model_repair import ModelAssist, assist_repair
 from rastro.application.recipe_repair import repair_candidates
 from rastro.application.repair_context import RepairContext
-from rastro.application.repair_evidence import source_evidence
+from rastro.application.repair_evidence import gather_evidence
 from rastro.domain.intelligence import InferencePolicy
 from rastro.domain.lifecycle import RecipeState
 from rastro.domain.models import ConfigurationError, Limits
@@ -27,7 +27,6 @@ from rastro.domain.recipe_compare import (
 from rastro.domain.repair import RepairCandidate
 
 OVERRIDE_PREFIX = "gates overridden: "
-type Evaluate = Callable[[RepairCandidate], CandidateEvaluation]
 
 
 def repair_job_source(
@@ -79,7 +78,7 @@ def repair_job_sources(
 ) -> RepairReport:
     """Repair several sources, or all of them when ``sources`` is ``None``."""
     context = RepairContext.load(Path(path), allow_absolute_paths)
-    policy = _policy(context, overrides)
+    policy = job_policy(context, overrides)
     indexes = sources if sources is not None else range(1, len(context.job.sources) + 1)
     assist = _assist(context, model, allow_remote)
 
@@ -87,7 +86,7 @@ def repair_job_sources(
         items = [await _repair_source(context, index, policy, assist) for index in indexes]
         return RepairReport(run_id=str(uuid4()), sources=tuple(items))
 
-    return _run(run())
+    return run_sync(run())
 
 
 def promote_job_recipe(
@@ -109,16 +108,16 @@ def promote_job_recipe(
         raise ConfigurationError("Promotion requires a non-empty reason")
     context = RepairContext.load(Path(path), allow_absolute_paths)
     # Explicit approval enables promotion, but cannot bypass the CI gates on its own.
-    policy = _policy(context, {"auto_promote": True})
+    policy = job_policy(context, {"auto_promote": True})
 
     async def run() -> RepairReport:
         item = await _promote(context, source, version, policy, reason, override_gates)
         return RepairReport(run_id=str(uuid4()), sources=(item,))
 
-    return _run(run())
+    return run_sync(run())
 
 
-def _policy(context: RepairContext, overrides: dict[str, Any]) -> RepairPolicy:
+def job_policy(context: RepairContext, overrides: dict[str, Any]) -> RepairPolicy:
     base = context.job.repair or RepairPolicy()
     if not overrides:
         return base
@@ -128,7 +127,7 @@ def _policy(context: RepairContext, overrides: dict[str, Any]) -> RepairPolicy:
         raise ConfigurationError("Invalid repair threshold override") from None
 
 
-def _run(coroutine: Coroutine[Any, Any, RepairReport]) -> RepairReport:
+def run_sync[T](coroutine: Coroutine[Any, Any, T]) -> T:
     with asyncio.Runner(loop_factory=asyncio.SelectorEventLoop) as runner:
         return runner.run(coroutine)
 
@@ -151,7 +150,7 @@ async def _promote(
     adopting = serving is None
     if adopting:  # No history yet; the import already replayed the bundle's records.
         policy = policy.model_copy(update={"min_historical_fixtures": 0})
-    evidence = await source_evidence(context, index, policy, previous, allow_fallbacks=adopting)
+    evidence = await gather_evidence(context, index, policy, previous, allow_fallbacks=adopting)
     evaluation = evidence.evaluate(
         RepairCandidate(recipe=stored.recipe, origin="discovery", rationale="Operator review")
     )
@@ -238,7 +237,7 @@ async def _repair_source(
     from rastro.adapters.structured import JsonDiscovery
     from rastro.application.repair_candidates import RepairCandidateGenerator
 
-    evidence = await source_evidence(context, index, policy)
+    evidence = await gather_evidence(context, index, policy)
     previous = evidence.previous
     generator = RepairCandidateGenerator(
         discovery=JsonDiscovery() if previous.representation == "json" else ScraplingDiscovery(),

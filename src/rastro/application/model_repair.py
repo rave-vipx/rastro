@@ -100,7 +100,7 @@ async def _propose(
         if plain is None:
             return False, "unchanged_recipe"
         try:
-            union = _candidate(_with_history(plain.recipe, previous), schema, previous)
+            union = _candidate(with_history(plain.recipe, previous), schema, previous)
         except ConfigurationError:
             union = None
         options = [plain] if union is None or union.recipe == plain.recipe else [union, plain]
@@ -156,7 +156,7 @@ async def _judge(
     return apply_verdicts(evaluation, await judge(assist.model, assist.policy, request, fields))
 
 
-def _with_history(proposal: Recipe, previous: Recipe) -> Recipe:
+def with_history(proposal: Recipe, previous: Recipe) -> Recipe:
     """Prefix each changed CSS locator with the serving one, as relocation does.
 
     ``"old, new"`` keeps historical pages matching, so fixture replay can pass; any
