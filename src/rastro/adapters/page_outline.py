@@ -30,6 +30,7 @@ MAX_HEADINGS = 15
 MAX_ATTRIBUTE_KINDS = 12
 TEXT_CHARS = 60
 VALUE_CHARS = 80
+_SKIPPED = frozenset({"script", "style", "template", "noscript", "head"})
 _VALUE_ATTRIBUTES = ("href", "src", "datetime", "content")
 _URL = re.compile(r"(?:https?://|/|\./)\S")
 _DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
@@ -70,7 +71,11 @@ def _signature(node: Element) -> str | None:
 
 
 def _children(node: Element) -> Iterator[Element]:
-    return (child for child in node if isinstance(child.tag, str) and tag_of(child))
+    return (
+        child
+        for child in node
+        if isinstance(child.tag, str) and tag_of(child) and child.tag.lower() not in _SKIPPED
+    )
 
 
 def _containers(nodes: list[Element]) -> tuple[ContainerCandidate, ...]:
@@ -79,11 +84,15 @@ def _containers(nodes: list[Element]) -> tuple[ContainerCandidate, ...]:
         parent_signature = _signature(parent)
         if parent_signature is None:
             continue
+        siblings: dict[str, list[Element]] = {}
         for child in _children(parent):
             child_signature = _signature(child)
             if child_signature is not None:
+                siblings.setdefault(child_signature, []).append(child)
+        for child_signature, members in siblings.items():
+            if len(members) >= 2:  # a single child per parent is not a list
                 key = f"{parent_signature} > {child_signature}"
-                groups.setdefault(key, []).append(child)
+                groups.setdefault(key, []).extend(members)
     scored = []
     for selector, members in groups.items():
         richness = min(_richness(members[0]), 10)

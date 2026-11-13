@@ -1,0 +1,185 @@
+"""Operator trust for job-declared models: a job file alone never exfiltrates or executes.
+
+Proof-of-concept shaped: a hostile job points a model at a loopback sink with
+``api_key_env`` naming a process secret, or declares a command transport.
+"""
+
+import json
+import sys
+from pathlib import Path
+
+import httpx
+import pytest
+
+from rastro import ConfigurationError, run_job_file
+from rastro.application.job_loader import _build_model_provider
+from rastro.application.operator_trust import operator_trust
+from rastro.cli import main
+from rastro.cli_trust import hoist_trust_flags
+from rastro.domain.job_providers import CommandProvider, OllamaProvider, OpenAICompatibleProvider
+from rastro.domain.secret_env import check_secret_env_name
+
+SECRET = "AKIA-SYNTHETIC-SECRET-0001"
+PAGE = "<article><h2>Lamp</h2></article>"
+
+
+@pytest.fixture(autouse=True)
+def _no_ambient_trust(monkeypatch, offline_cli_loop):
+    for name in ("RASTRO_ALLOW_REMOTE", "RASTRO_ALLOW_COMMAND", "RASTRO_ALLOWED_ENV"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", SECRET)
+    monkeypatch.setenv("RASTRO_MODEL_KEY", SECRET)
+
+
+@pytest.fixture
+def sink(monkeypatch):
+    """Record every model request instead of sending it."""
+    seen: list[httpx.Request] = []
+
+    def handle(request):
+        seen.append(request)
+        return httpx.Response(500, stream=httpx.ByteStream(b""))
+
+    client = httpx.AsyncClient
+    monkeypatch.setattr(
+        httpx, "AsyncClient", lambda **kw: client(transport=httpx.MockTransport(handle), **kw)
+    )
+    return seen
+
+
+def hostile_job(tmp_path: Path, model: str) -> Path:
+    (tmp_path / "page.html").write_text(PAGE)
+    job = tmp_path / "job.toml"
+    job.write_text(
+        f"""
+format_version = 1
+discover_recipes = true
+
+[[sources]]
+path = "page.html"
+url = "https://example.com/items"
+
+[[fields]]
+name = "name"
+type = "string"
+
+[model]
+{model}
+"""
+    )
+    return job
+
+
+EXFILTRATE = """provider = "openai_compatible"
+model = "m"
+base_url = "http://127.0.0.1:9999/v1"
+api_key_env = "AWS_SECRET_ACCESS_KEY"
+allow_remote = true"""
+
+
+def test_job_cannot_send_an_arbitrary_secret_anywhere(tmp_path, sink):
+    job = hostile_job(tmp_path, EXFILTRATE)
+    with pytest.raises(ConfigurationError, match="RASTRO_"):
+        run_job_file(job)
+    with pytest.raises(ConfigurationError, match="RASTRO_"):
+        run_job_file(job, allow_remote=True)  # remote consent does not allow the secret
+    assert not sink
+
+
+def test_allowed_secret_still_needs_operator_remote_consent(tmp_path, sink):
+    job = hostile_job(tmp_path, EXFILTRATE.replace("AWS_SECRET_ACCESS_KEY", "RASTRO_MODEL_KEY"))
+    with pytest.raises(ConfigurationError, match="--allow-remote"):
+        run_job_file(job)
+    assert not sink
+    run_job_file(job, allow_remote=True)  # operator consent: the request is made
+    assert sink and sink[0].headers["Authorization"] == f"Bearer {SECRET}"
+
+
+def test_operator_allow_list_admits_a_named_secret(monkeypatch):
+    spec = OpenAICompatibleProvider(
+        model="m",
+        base_url="https://api.example.com/v1",
+        api_key_env="AWS_SECRET_ACCESS_KEY",
+        allow_remote=True,
+    )
+    with operator_trust(allow_remote=True, allow_env=["AWS_SECRET_ACCESS_KEY"]):
+        assert _build_model_provider(spec) is not None
+    monkeypatch.setenv("RASTRO_ALLOWED_ENV", "OTHER, AWS_SECRET_ACCESS_KEY")
+    monkeypatch.setenv("RASTRO_ALLOW_REMOTE", "1")
+    assert _build_model_provider(spec) is not None
+    with pytest.raises(ConfigurationError):
+        check_secret_env_name("HOME", frozenset())
+    assert check_secret_env_name("RASTRO_X", frozenset()) == "RASTRO_X"
+
+
+@pytest.mark.parametrize(
+    "spec",
+    [
+        OpenAICompatibleProvider(model="m", base_url="http://127.0.0.1:6379/v1"),
+        OpenAICompatibleProvider(model="m", base_url="http://127.0.0.1/v1"),
+        OpenAICompatibleProvider(model="m", base_url_env="RASTRO_URL", allow_remote=True),
+        OllamaProvider(model="m", base_url="http://127.0.0.1:2375"),
+    ],
+)
+def test_job_endpoints_outside_local_model_ports_need_consent(spec, monkeypatch):
+    monkeypatch.setenv("RASTRO_URL", "http://127.0.0.1:11434/v1")
+    with pytest.raises(ConfigurationError, match="only the operator"):
+        _build_model_provider(spec)
+    with operator_trust(allow_remote=True):
+        assert _build_model_provider(spec) is not None
+
+
+def test_default_local_servers_work_without_consent():
+    assert _build_model_provider(OllamaProvider(model="qwen3:4b")) is not None
+    for port in (11434, 1234, 8000, 8080):
+        spec = OpenAICompatibleProvider(model="m", base_url=f"http://127.0.0.1:{port}/v1")
+        assert _build_model_provider(spec) is not None
+
+
+def test_job_command_needs_allow_command(tmp_path):
+    marker = tmp_path / "ran"
+    argv = f'["{sys.executable}", "-c", "open({str(marker)!r}, \'w\')"]'
+    job = hostile_job(tmp_path, f'provider = "command"\nargv = {argv}\nlocal = true')
+    with pytest.raises(ConfigurationError, match="--allow-command"):
+        run_job_file(job)
+    with pytest.raises(ConfigurationError, match="--allow-command"):
+        run_job_file(job, allow_remote=True)
+    assert not marker.exists()
+    remote = CommandProvider(argv=("llm",), allow_remote=True)
+    with operator_trust(allow_command=True), pytest.raises(ConfigurationError):
+        _build_model_provider(remote)  # a command that sends data off also needs remote
+    with operator_trust(allow_command=True, allow_remote=True):
+        assert _build_model_provider(remote) is not None
+    with pytest.raises(ValueError, match="allow_remote"):
+        CommandProvider(argv=("llm",))  # the job must still declare where data goes
+
+
+def test_job_command_runs_with_operator_consent(tmp_path):
+    marker = tmp_path / "ran"
+    argv = f'["{sys.executable}", "-c", "open({str(marker)!r}, \'w\')"]'
+    job = hostile_job(tmp_path, f'provider = "command"\nargv = {argv}\nlocal = true')
+    result = run_job_file(job, allow_command=True)
+    assert marker.exists()  # the operator allowed it; the empty answer is a failed proposal
+    assert result.results[0].status.value != "success"
+
+
+def test_cli_flags_are_hoisted_and_scoped(tmp_path, sink, capsys):
+    argv = ["mcp", "--allow-remote", "--allow-env", "A", "--", "--allow-command"]
+    assert hoist_trust_flags(argv) == [
+        "--allow-remote",
+        "--allow-env",
+        "A",
+        "mcp",
+        "--",
+        "--allow-command",
+    ]
+    job = hostile_job(tmp_path, EXFILTRATE.replace("AWS_SECRET_ACCESS_KEY", "RASTRO_MODEL_KEY"))
+    assert main(["job", "run", str(job)]) != 0
+    error = json.loads(capsys.readouterr().err)
+    assert "--allow-remote" in json.dumps(error)
+    assert not sink
+    main(["job", "run", str(job), "--allow-remote"])
+    assert sink
+    sink.clear()
+    assert main(["job", "run", str(job)]) != 0  # the opt-in did not outlive the command
+    assert not sink

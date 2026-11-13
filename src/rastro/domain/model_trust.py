@@ -65,8 +65,10 @@ def _loopback(url: str) -> bool:
 
 
 def _refused(action: str, flag: str, env: str = _REMOTE_ENV) -> ConfigurationError:
+    keyword = flag.removeprefix("--").replace("-", "_")
     return ConfigurationError(
-        f"This job file asks Rastro to {action}; only the operator can allow that",
+        f"This job file asks Rastro to {action}; only the operator can allow that "
+        f"with {flag}, {keyword}=True or {env}",
         location="model",
-        hint=f"Pass {flag} (CLI, MCP, Studio) or the SDK keyword, or set {env}",
+        hint=f"Pass {flag} to rastro job/mcp/studio, {keyword}=True to the SDK, or set {env}",
     )
