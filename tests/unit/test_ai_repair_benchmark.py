@@ -109,3 +109,19 @@ def test_escalation_consults_the_model_only_after_deterministic_repair_fails() -
 def test_hand_written_baseline_serves_decoys_silently() -> None:
     assert run_baseline(CASE["cards-decoy_blocks"]).verdict == "wrong"
     assert run_baseline(CASE["cards-semantic_swap"]).verdict == "refused"
+
+
+class _InvalidCss:
+    """A fake model whose proposal is syntactically invalid CSS."""
+
+    async def generate(self, request: object, policy: object) -> str:
+        fields = {"id": "::attr(data-id)", "title": "h3[::text"}
+        return json.dumps({"strategy": "css", "record_selector": "li", "fields": fields})
+
+
+def test_an_aborted_repair_counts_as_refused_not_as_a_harness_crash() -> None:
+    """Base 50a583c: an invalid model selector aborts `repair_job_source` with exit 2."""
+    case = CASE["cards-container_restructured"]
+    verdict = run_rastro(case, provider=PLACEHOLDER, fake=_InvalidCss())  # type: ignore[arg-type]
+    assert verdict.verdict == "refused"
+    assert verdict.detail in {"repair_error", "rejected", "no_candidates"}

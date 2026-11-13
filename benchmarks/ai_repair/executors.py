@@ -76,7 +76,13 @@ def _refusal(source: SourceRepair) -> str:
 
 
 def _repair(job: Path, case: Case) -> tuple[str, str, int]:
-    source = rastro.repair_job_source(job, 1).sources[0]
+    try:
+        source = rastro.repair_job_source(job, 1).sources[0]
+    except rastro.ConfigurationError:
+        # The whole repair aborted with a typed error (exit 2), e.g. an invalid CSS
+        # selector in a model proposal: nothing was served. The report is lost, so
+        # the call count is the one call that produced the proposal.
+        return "refused", "repair_error", 1
     calls = source.inference_calls or 0
     if source.promoted_version is None:
         return "refused", _refusal(source), calls
