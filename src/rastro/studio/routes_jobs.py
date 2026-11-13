@@ -80,7 +80,7 @@ def routes(studio: Studio) -> list[Route]:
     async def preview(request: Request) -> Response:
         data = await body(request)
         path, original, job, _ = _edited(studio, data)
-        shown = await run_in_threadpool(preview_job, job, base_dir=path.parent)
+        shown = await run_in_threadpool(preview_job, job, base_dir=path.parent, **studio.trust)
         return reply(
             {"ok": True, "sha256": files.digest(original), "preview": bounded_preview(shown)}
         )

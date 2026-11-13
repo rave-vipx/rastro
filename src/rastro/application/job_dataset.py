@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from contextlib import AbstractContextManager, nullcontext
 from datetime import timedelta
 from pathlib import Path
@@ -11,6 +12,7 @@ from rastro.adapters.sqlite_dataset import SQLiteDatasetStore
 from rastro.adapters.sqlite_drift import SQLiteDriftMonitor
 from rastro.application.dataset_load import load_results
 from rastro.application.drift import collect_snapshots
+from rastro.application.egress_trust import check_job_egress
 from rastro.application.job_loader import load_job, resolve_job_path
 from rastro.application.jobs import run_job
 from rastro.application.success_samples import collect_successes
@@ -22,16 +24,23 @@ if TYPE_CHECKING:
 
 
 def load_job_file(
-    path: str | Path, *, drift: bool = False, allow_absolute_paths: bool = False
+    path: str | Path,
+    *,
+    drift: bool = False,
+    allow_absolute_paths: bool = False,
+    allow_egress: bool = False,
+    allow_env: Iterable[str] = (),
 ) -> JobLoadResult:
     """Run a job file and load its approved fields into the job's ``[dataset]``.
 
     Raises ``ConfigurationError`` for invalid jobs or paths. With ``drift=True`` the
     structural drift of each source is measured and reported. Each loaded source
     reports whether its recipe came from the job file or from ``recipe_memory``.
+    A job-declared egress proxy needs ``allow_egress=True`` (see ``run_job``).
     """
     file = Path(path)
     job = load_job(file, allow_absolute_paths=allow_absolute_paths)
+    check_job_egress(job, allow_egress=allow_egress, allow_env=allow_env)
     spec = job.dataset
     if spec is None:
         raise ConfigurationError("job load requires a [dataset] block in the job file")
@@ -64,7 +73,13 @@ def load_job_file(
     else:
         capture = nullcontext({})
     with capture as snapshots, collect_successes() as successes:
-        report = run_job(job, base_dir=file.parent, allow_absolute_paths=allow_absolute_paths)
+        report = run_job(
+            job,
+            base_dir=file.parent,
+            allow_absolute_paths=allow_absolute_paths,
+            allow_egress=allow_egress,
+            allow_env=allow_env,
+        )
     loaded = load_results(
         spec,
         [f.name for f in job.fields],

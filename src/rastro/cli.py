@@ -33,6 +33,7 @@ from rastro.cli_studio import add_command as add_studio_command
 from rastro.cli_studio import studio_command
 from rastro.cli_suggest import add_commands as add_suggest_commands
 from rastro.cli_suggest import new_command, suggest_command
+from rastro.cli_trust import add_trust_arguments, trust_options
 from rastro.domain.job_dataset import job_preview_json_schema
 from rastro.domain.job_load import job_load_json_schema
 
@@ -61,6 +62,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     mcp = subcommands.add_parser("mcp", help="Serve jobs and datasets to an agent over stdio MCP")
     mcp.add_argument("--root", type=Path, default=Path(), help="Workspace root (default: cwd)")
+    add_trust_arguments(mcp)
 
     job_parser = subcommands.add_parser("job", help="Validate, run, or inspect declarative jobs")
     job_commands = job_parser.add_subparsers(dest="job_command", required=True)
@@ -86,6 +88,7 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Allow absolute paths for local source files and recipe memory",
     )
+    add_trust_arguments(job_run)
 
     job_preview = job_commands.add_parser(
         "preview", help="Preview what a job would load into its [dataset]; writes nothing"
@@ -102,6 +105,7 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Allow absolute paths for local source files, recipe memory and the dataset",
     )
+    add_trust_arguments(job_preview)
 
     job_schema = job_commands.add_parser("schema", help="Print JSON Schema for declarative jobs")
     job_schema.add_argument(
@@ -134,14 +138,18 @@ def _run_job_command(args: argparse.Namespace) -> int:
         print(json.dumps(job_validation_summary(job), indent=2))
         return int(JobExitCode.SUCCESS)
     if args.job_command == "preview":
-        preview = preview_job_file(args.file, allow_absolute_paths=args.allow_absolute_paths)
+        preview = preview_job_file(
+            args.file, allow_absolute_paths=args.allow_absolute_paths, **trust_options(args)
+        )
         print(
             preview.model_dump_json(indent=2)
             if args.output == "json"
             else render_preview_table(preview)
         )
         return int(preview.exit_code)
-    report = run_job_file(args.file, allow_absolute_paths=args.allow_absolute_paths)
+    report = run_job_file(
+        args.file, allow_absolute_paths=args.allow_absolute_paths, **trust_options(args)
+    )
     print(report.model_dump_json(indent=2))
     return int(report.exit_code)
 
@@ -154,7 +162,7 @@ def _mcp_command(args: argparse.Namespace) -> int:
         return int(JobExitCode.CONFIG_ERROR)
     if not args.root.is_dir():
         raise RastroError("--root must be an existing directory")
-    serve(args.root)
+    serve(args.root, **trust_options(args))
     return int(JobExitCode.SUCCESS)
 
 

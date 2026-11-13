@@ -9,7 +9,7 @@ from __future__ import annotations
 import hmac
 import json
 import secrets
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Iterable
 from pathlib import Path
 from typing import Any
 
@@ -117,9 +117,13 @@ def _origin_ok(request: Request) -> bool:
 class Studio:
     """The served root and this run's token; routers resolve every path through it."""
 
-    def __init__(self, root: Path) -> None:
+    def __init__(
+        self, root: Path, *, allow_egress: bool = False, allow_env: Iterable[str] = ()
+    ) -> None:
         self.root = root.resolve()
         self.token = secrets.token_urlsafe(32)
+        # Operator opt-ins from `rastro studio`, passed to every job run (audit H1).
+        self.trust: dict[str, Any] = {"allow_egress": allow_egress, "allow_env": tuple(allow_env)}
 
     def job_path(self, name: str) -> Path:
         return files.resolve_in_root(self.root, name)

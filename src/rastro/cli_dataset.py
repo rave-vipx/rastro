@@ -8,6 +8,7 @@ from rastro.adapters.sqlite_dataset import SQLiteDatasetStore
 from rastro.application.dataset_load import stale_sources
 from rastro.application.job_dataset import load_job_file
 from rastro.cli_dataset_export import html_export, select_records
+from rastro.cli_trust import add_trust_arguments, trust_options
 from rastro.domain.models import ConfigurationError
 
 
@@ -17,6 +18,7 @@ def add_commands(subcommands: argparse._SubParsersAction, jobs: argparse._SubPar
     load.add_argument("--drift", action="store_true", help="Measure and report structural drift")
     load.add_argument("--output", choices=("json",), default="json")
     load.add_argument("--allow-absolute-paths", action="store_true")
+    add_trust_arguments(load)
     dataset = subcommands.add_parser("dataset", help="Read dataset records and freshness")
     commands = dataset.add_subparsers(dest="dataset_command", required=True)
     for command in ("export", "status"):
@@ -38,7 +40,10 @@ def add_commands(subcommands: argparse._SubParsersAction, jobs: argparse._SubPar
 
 def load_job_command(args: argparse.Namespace) -> int:
     loaded = load_job_file(
-        args.file, drift=args.drift, allow_absolute_paths=args.allow_absolute_paths
+        args.file,
+        drift=args.drift,
+        allow_absolute_paths=args.allow_absolute_paths,
+        **trust_options(args),
     )
     print(loaded.model_dump_json(indent=2))
     return int(loaded.exit_code)

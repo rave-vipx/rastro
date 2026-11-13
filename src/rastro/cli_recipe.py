@@ -14,6 +14,7 @@ from rastro.cli_hub import add_commands as add_hub_commands
 from rastro.cli_hub import hub_command
 from rastro.cli_prune import add_commands as add_prune_commands
 from rastro.cli_prune import prune_command
+from rastro.cli_trust import add_trust_arguments, trust_options
 from rastro.domain.models import ConfigurationError
 from rastro.domain.recipe_compare import RecipeComparison, RepairReport
 
@@ -49,6 +50,8 @@ def add_commands(subcommands: argparse._SubParsersAction) -> None:  # type: igno
         if name in ("promote", "rollback"):
             command.add_argument("--version", type=int, required=True)
             command.add_argument("--reason")
+        if name in ("repair", "promote"):
+            add_trust_arguments(command)
         if name == "promote":
             command.add_argument(
                 "--override-gates",
@@ -137,6 +140,7 @@ def recipe_command(args: argparse.Namespace) -> int:
                 reason=_reason(args),
                 override_gates=args.override_gates,
                 allow_absolute_paths=args.allow_absolute_paths,
+                **trust_options(args),
             )
         )
     return _repair_command(context, args)
@@ -168,6 +172,7 @@ def _repair_command(context: RepairContext, args: argparse.Namespace) -> int:
             args.file,
             None if args.source is None else (args.source,),
             allow_absolute_paths=args.allow_absolute_paths,
+            **trust_options(args),
         )
         assert descriptor is not None
         with os.fdopen(descriptor, "w", encoding="utf-8") as output:

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import unicodedata
+from collections.abc import Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -101,6 +102,8 @@ def preview_job(
     allow_absolute_paths: bool = False,
     acquisition: AcquisitionPort | None = None,
     model: ModelPort | None = None,
+    allow_egress: bool = False,
+    allow_env: Iterable[str] = (),
 ) -> JobPreview:
     """Preview an already loaded job with a ``[dataset]`` block. Writes no file: recipe
     memory, when declared, is read through a read-only connection and never created."""
@@ -112,6 +115,8 @@ def preview_job(
         allow_absolute_paths=allow_absolute_paths,
         acquisition=acquisition,
         model=model,
+        allow_egress=allow_egress,
+        allow_env=allow_env,
     )
     return build_preview(job.dataset, [item.name for item in job.fields], report)
 
@@ -122,6 +127,8 @@ def preview_job_file(
     allow_absolute_paths: bool = False,
     acquisition: AcquisitionPort | None = None,
     model: ModelPort | None = None,
+    allow_egress: bool = False,
+    allow_env: Iterable[str] = (),
 ) -> JobPreview:
     """Load a job with a ``[dataset]`` block and preview a run. Writes no dataset file."""
     file_path = Path(path)
@@ -132,6 +139,8 @@ def preview_job_file(
         allow_absolute_paths=allow_absolute_paths,
         acquisition=acquisition,
         model=model,
+        allow_egress=allow_egress,
+        allow_env=allow_env,
     )
 
 

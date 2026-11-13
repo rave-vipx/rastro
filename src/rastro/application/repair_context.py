@@ -1,5 +1,6 @@
 """Bounded file/network inputs and adapter wiring for recipe commands."""
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -9,6 +10,7 @@ from rastro.adapters.sqlite import SQLiteRecipeRepository
 from rastro.adapters.sqlite_dataset import SQLiteDatasetStore
 from rastro.adapters.sqlite_relocation import SQLiteRelocationStore
 from rastro.application.consistency import History, history_from_store
+from rastro.application.egress_trust import check_job_egress
 from rastro.application.job_loader import load_job, resolve_job_path
 from rastro.domain.jobs import FileJobSource, Job
 from rastro.domain.memory import RecipeKey
@@ -37,9 +39,13 @@ class RepairContext:
     dataset_path: Path
     base: Path
     allow: bool
+    allow_egress: bool = False
+    allow_env: tuple[str, ...] = ()
 
     @classmethod
-    def load(cls, path: Path, allow: bool) -> "RepairContext":
+    def load(
+        cls, path: Path, allow: bool, *, allow_egress: bool = False, allow_env: Iterable[str] = ()
+    ) -> "RepairContext":
         if path.is_symlink():
             raise ConfigurationError("Recipe command paths must not contain symlinks")
         base = path.parent.resolve()
@@ -49,7 +55,16 @@ class RepairContext:
             raise ConfigurationError("Recipe commands require dataset and recipe_memory")
         memory = safe_path(job.recipe_memory, base, allow)
         dataset = safe_path(job.dataset.path, base, allow)
-        return cls(job, job.build_schema(), SQLiteRecipeRepository(memory), dataset, base, allow)
+        return cls(
+            job,
+            job.build_schema(),
+            SQLiteRecipeRepository(memory),
+            dataset,
+            base,
+            allow,
+            allow_egress,
+            tuple(allow_env),
+        )
 
     def source(self, index: int) -> tuple[Source, RecipeKey, Recipe]:
         source, key = self.locate(index)
@@ -125,6 +140,7 @@ class RepairContext:
         from rastro.application.acquisition import WebAcquirer
 
         assert self.job.acquisition is not None
+        check_job_egress(self.job, allow_egress=self.allow_egress, allow_env=self.allow_env)
         result = await WebAcquirer(
             self.job.acquisition, transport=CurlTransport(), resolver=SystemResolver()
         ).acquire(
