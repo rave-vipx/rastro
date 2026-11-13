@@ -155,3 +155,46 @@ def test_ci_refuses_weak_evidence_and_wrong_fixture_context():
             observed_at=NOW,
             fixtures=(wrong,),
         )
+
+
+@pytest.mark.parametrize(("filled", "complete"), [(2, False), (3, True), (4, True)])
+def test_optional_field_may_thin_to_three_quarters_of_the_sample(filled, complete):
+    """QUAL-006: losing an optional value in half the records quarantines; one in four does not."""
+    recipe = CssRecipe(
+        record_selector="article",
+        fields={"title": "h2::text", "extra": "p::text"},
+        require_evidence=True,
+    )
+
+    def page(count):
+        return "".join(
+            f"<article><h2>T{i}</h2>{'<p>More</p>' if i < count else ''}</article>"
+            for i in range(4)
+        )
+
+    sampled = page(4)
+    result = extract_document(
+        sampled,
+        source=SOURCE,
+        schema=Item,
+        recipe=recipe,
+        parser=ScraplingParser(),
+        limits=Limits(),
+    )
+    sample = build_fixture(
+        sampled, source=SOURCE, schema=Item, recipe=recipe, result=result, synthetic_count=0
+    )
+    evaluation = evaluate_candidate(
+        RepairCandidate(recipe=recipe, origin="discovery", rationale="Thinned optional field"),
+        page(filled),
+        source=SOURCE,
+        schema=Item,
+        parser=ScraplingParser(),
+        limits=Limits(),
+        observed_at=NOW,
+        fixtures=(sample,),
+        policy=RepairPolicy(auto_promote=True),
+    )
+    assert ("completeness_below_threshold" not in evaluation.reasons) is complete
+    if not complete:
+        assert evaluation.decision == "quarantine"

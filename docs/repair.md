@@ -122,13 +122,17 @@ writing recipes or dataset records:
 4. Declared consistency rules use dataset history read **before** any candidate
    snapshot could be applied. Completeness, structural validity and semantic
    confidence remain separate, measured indicators, compared with configured minima.
-   Completeness counts every required field, and each optional field at half the rate
-   the stored success samples had a value for it: an optional `stock` present in all
-   sample cards needs a value in at least half of the current cards, so one card without
-   it does not block a repair, but a field that vanished does. An optional field the
+   Completeness counts every required field, and each optional field at three quarters
+   of the rate the stored success samples had a value for it: an optional `stock`
+   present in all sample cards needs a value in at least 75% of the current cards, so
+   one card in five without it does not block a repair, but losing it in half the cards
+   does. An optional field the
    samples never filled is not counted. Required fields must be filled in every record.
-   Relocated record containers may omit children (an absent optional element) but not
-   add, reorder or reclass them.
+   Relocated record containers may omit children (an absent optional element, matched
+   by tag and class) but not add, reorder or reclass them, and must keep at least half
+   of them. Relocated field selectors use tag and class steps, never positions, and never
+   target an element another field already reads, so a card without an optional element
+   leaves that field empty instead of reading its neighbour.
 
 Every candidate is evaluated, by the same evaluator for `recipe repair` and
 `recipe promote`, so both reach the same verdict on the same page and samples. Hard failures

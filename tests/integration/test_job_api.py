@@ -473,3 +473,25 @@ def test_equal_reuse_prefers_the_newest_candidate(job):
     repository.transition(key, 3, rastro.RecipeState.RETIRED, reason="Rejected", at=now)
     repository.transition(key, 2, rastro.RecipeState.RETIRED, reason="Rejected", at=now)
     assert _equal_stored(repository, key, proposal) == (4, "retired")
+
+
+def test_repaired_optional_field_never_reads_a_sibling_in_a_thinned_card(job):
+    """REPAIR-002, SCR-002: relocated selectors are tag+class, never positional."""
+
+    def tagged(salary_class):
+        cards = "".join(
+            f'<article class="card" data-id="job-{n}"><h2 class="title">Synthetic role {n}</h2>'
+            + ("" if n == 3 else f'<span class="{salary_class}">{n}000</span>')
+            + '<em class="mode">Remote</em></article>'
+            for n in range(1, 6)
+        )
+        return f"<!doctype html><html><body><main>{cards}</main></body></html>"
+
+    (job.parent / "board.html").write_text(tagged("salary"), encoding="utf-8")
+    assert rastro.load_job_file(job).job.status == "success"
+    (job.parent / "board.html").write_text(tagged("pay"), encoding="utf-8")
+    report = rastro.repair_job_source(job, 1, auto_promote=True)
+    assert report.sources[0].promoted_version == 2
+    result = rastro.run_job_file(job)
+    salaries = [r.data.salary for item in result.results for r in item.records]
+    assert salaries == ["1000", "2000", None, "4000", "5000"]

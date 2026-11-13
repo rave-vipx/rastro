@@ -277,7 +277,7 @@
     },
     "Issue": {
       "additionalProperties": false,
-      "description": "Safe diagnostics: no input values or user-supplied validation messages.\n\n``message`` names Pydantic's built-in error type and message (for example\n``int_parsing: Input should be a valid integer``); custom validator text is\nnever included. It is omitted from serialized output when absent.",
+      "description": "Safe diagnostics: no input values or user-supplied validation messages.\n\n``message`` names Pydantic's error type and message (for example\n``int_parsing: Input should be a valid integer``) only for built-in types whose\nmessage cannot contain input (see ``domain.safe_messages``); custom validator\ntext is never included. It is omitted from serialized output when absent.",
       "properties": {
         "code": {
           "title": "Code",

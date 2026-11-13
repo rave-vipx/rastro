@@ -107,13 +107,14 @@ def _blocking(issues: Sequence[Issue]) -> tuple[Issue, ...]:
     return tuple(issues[:20])
 
 
-_OPTIONAL_SHARE = 0.5
+_OPTIONAL_SHARE = 0.75
 
 
 def _sample_rates(schema: type[BaseModel], fixtures: Sequence[FixtureBundle]) -> dict[str, float]:
-    """Optional fields need half the fill rate the success samples showed.
+    """Optional fields need three quarters of the fill rate the success samples showed.
 
-    An optional value may thin out (one card without a stock label) but cannot vanish.
+    An optional value may thin out (one card in five without a stock label scores 0.8)
+    but losing it in half the records stays below the completeness threshold.
     Required fields keep the strict default rate of 1.0. Without samples, optional fields
     are not counted (QUAL-006).
     """

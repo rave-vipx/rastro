@@ -190,9 +190,9 @@ def test_auto_refuses_a_relocation_onto_another_fields_values(tmp_path):
     failed = _scrape(no_titles, memory, "auto")
     assert failed.items == [] and failed.repair is not None
     assert not failed.repair.promoted
-    (candidate,) = failed.repair.candidates
-    assert candidate.decision == "quarantine"
-    assert "value_matches_other_field" in candidate.reasons
+    # The city element is already read by `city`, so relocation never proposes it; a
+    # candidate from elsewhere would still need the value gate.
+    assert all(c.decision != "promote" for c in failed.repair.candidates)
     assert SQLiteRecipeRepository(memory).get(_key()).recipe.version == 1
 
 
@@ -229,7 +229,7 @@ def _shop(css_class, missing_stock=None):
         f'<span class="price">{10 + i}.00</span>'
         + ("" if i == missing_stock else f'<span class="stock">{i} left</span>')
         + "</div>"
-        for i in range(3)
+        for i in range(5)
     )
     return f"<html><body><main>{cards}</main></body></html>"
 
@@ -243,3 +243,34 @@ def test_auto_heals_when_one_record_lacks_an_optional_field(tmp_path, missing):
     assert healed.repair is not None and healed.repair.promoted
     assert healed.status == Outcome.SUCCESS
     assert [item.stock for item in healed.items].count(None) == 1
+
+
+class Stocked(BaseModel):
+    __records__: ClassVar[str] = "div.product"
+    name: Annotated[str, rastro.css("h2.name::text")]
+    stock: Annotated[str | None, rastro.css("span.stock::text")] = None
+    price: Annotated[str, rastro.css("span.price::text")]
+
+
+def _stocked(stock_class, missing=None, card="product"):
+    cards = "".join(
+        f'<div class="{card}"><h2 class="name">Lamp {i}</h2>'
+        + ("" if i == missing else f'<span class="{stock_class}">{i} left</span>')
+        + f'<span class="price">{10 + i}.00</span></div>'
+        for i in range(4)
+    )
+    return f"<html><body><main>{cards}</main></body></html>"
+
+
+@pytest.mark.parametrize("missing", [0, 2])
+def test_auto_never_gives_a_thinned_record_its_siblings_value(tmp_path, missing):
+    """REPAIR-002, SCR-002: a relocated optional field never reads the next sibling."""
+    memory = tmp_path / "recipes.db"
+    _scrape(_stocked("stock"), memory, "auto", Stocked)
+    result = _scrape(_stocked("qty", missing, "item-card"), memory, "auto", Stocked)
+    assert result.repair is not None
+    # With record 0 thinned, relocation has no matching text to support the field and
+    # refuses; either way no record may read its sibling.
+    assert result.repair.promoted is (missing != 0)
+    assert all(item.stock != item.price for item in result.items)
+    assert all((item.stock is None) == (i == missing) for i, item in enumerate(result.items))

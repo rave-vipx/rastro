@@ -30,9 +30,10 @@ def _absent(value: object) -> bool:
 class Issue(Contract):
     """Safe diagnostics: no input values or user-supplied validation messages.
 
-    ``message`` names Pydantic's built-in error type and message (for example
-    ``int_parsing: Input should be a valid integer``); custom validator text is
-    never included. It is omitted from serialized output when absent.
+    ``message`` names Pydantic's error type and message (for example
+    ``int_parsing: Input should be a valid integer``) only for built-in types whose
+    message cannot contain input (see ``domain.safe_messages``); custom validator
+    text is never included. It is omitted from serialized output when absent.
     """
 
     code: str

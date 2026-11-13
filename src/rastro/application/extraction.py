@@ -5,11 +5,10 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import UTC, datetime
 from time import perf_counter
-from typing import Literal, get_args
+from typing import Literal
 from uuid import uuid4
 
 from pydantic import BaseModel, ValidationError
-from pydantic_core.core_schema import ErrorType
 
 from rastro.application.drift import capture_snapshot
 from rastro.application.success_samples import capture_success
@@ -28,6 +27,7 @@ from rastro.domain.models import (
     Source,
     schema_fingerprint,
 )
+from rastro.domain.safe_messages import safe_message
 from rastro.ports.parser import DocumentParser
 
 _INVALID = {
@@ -120,7 +120,7 @@ def extract_document[T: BaseModel](
                         code="validation_error",
                         record_index=index,
                         field=field,
-                        message=_safe_message(detail["type"], detail["msg"]),
+                        message=safe_message(detail["type"], detail["msg"]),
                     )
                 )
             rejected += 1
@@ -166,14 +166,6 @@ def extract_document[T: BaseModel](
     capture_snapshot(result, html, recipe, limits)
     capture_success(result, html, recipe, source, limits)
     return result
-
-
-_BUILTIN_ERRORS = frozenset(get_args(ErrorType)) - {"value_error", "assertion_error"}
-
-
-def _safe_message(kind: str, message: str) -> str | None:
-    """Pydantic's own message for a built-in error type; never custom validator text."""
-    return f"{kind}: {message}"[:512] if kind in _BUILTIN_ERRORS else None
 
 
 def validate_recipe(

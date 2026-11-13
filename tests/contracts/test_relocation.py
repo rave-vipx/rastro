@@ -57,20 +57,9 @@ def test_unchanged_template_yields_no_relocation_candidate():
 
 
 def test_tied_matches_are_not_silently_selected():
+    """REPAIR-002: two identical siblings have no unique tag+class path, so no proposal."""
     html = "<article>" + '<h2 class="new">Synthetic dance</h2>' * 2 + "</article>"
-    (candidate,) = ScraplingRelocation().relocate(html, RECIPE, successful_snapshot(), Limits())
-    assert candidate.ambiguous
-    assert candidate.evidence[0].match_count == 2
-    result = extract_document(
-        html,
-        source=SOURCE,
-        schema=Event,
-        recipe=candidate.recipe,
-        parser=ScraplingParser(),
-        limits=Limits(),
-    )
-    assert result.status == Outcome.INSUFFICIENT_EVIDENCE
-    assert not result.records
+    assert ScraplingRelocation().relocate(html, RECIPE, successful_snapshot(), Limits()) == ()
 
 
 def test_fingerprints_and_debug_logging_do_not_retain_source_content(caplog):
