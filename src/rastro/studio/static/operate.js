@@ -7,7 +7,7 @@ let offset = 0;
 
 export function resetOperate() {
   offset = 0;
-  for (const id of ["run-result", "health-result", "repair-result", "dataset-result"]) {
+  for (const id of ["run-result", "health-result", "repair-result", "ai-repair-result", "dataset-result"]) {
     $(id).replaceChildren();
   }
   for (const id of ["run-status", "health-status", "dataset-status"]) show(id, "");
@@ -83,7 +83,25 @@ async function repair(source) {
   if (item.issues && item.issues.length) out.append(el("p", `issues: ${issues(item.issues)}`, "warn"));
   if (!item.comparisons.length) out.append(el("p", "No candidate recipe was found.", "warn"));
   for (const comparison of item.comparisons) out.append(candidate(source, comparison, item.promoted_version));
+  $("ai-repair-result").replaceChildren();
+  const usable = item.comparisons.some((c) => !c.evaluation || c.evaluation.decision !== "reject");
+  if (state.ai.enabled && !usable && !item.promoted_version) out.append(button("Ask AI for a repair", () => askRepair(source)));
   show("health-status", item.promoted_version ? `Version ${item.promoted_version} now serves.` : "Review the candidates below.", "muted");
+}
+
+// The model proposes; every proposal is gated and stored like any candidate, never promoted here.
+async function askRepair(source) {
+  const notice = state.ai.remote ? " A page outline is sent to the remote model." : "";
+  show("health-status", `Asking the model for a repair of source ${source}…${notice}`, "muted");
+  const data = await api("/api/ai/repair", { file: requireFile(), source });
+  const out = $("ai-repair-result");
+  out.replaceChildren(el("h3", `Model proposals for source ${source} (${data.calls} call(s))`));
+  if (!data.reports.length) out.append(el("p", `The model proposed no usable recipe (${data.failure}).`, "warn"));
+  for (const report of data.reports) {
+    const item = report.sources[0];
+    for (const comparison of item.comparisons) out.append(candidate(source, comparison, item.promoted_version));
+  }
+  show("health-status", "Check that the new values mean the same as before, then promote with a reason.", "muted");
 }
 
 function candidate(source, comparison, promoted) {
