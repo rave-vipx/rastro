@@ -114,6 +114,25 @@ def test_create_can_add_recipe_memory(client: TestClient, root: Path) -> None:
     assert not (root / "pages/b.toml").exists()
 
 
+@pytest.mark.parametrize(
+    ("dataset", "memory"),
+    [
+        (None, "agenda.toml"),
+        (None, "./agenda.html"),
+        ("d.sqlite", "./d.sqlite"),
+        ("agenda.html", None),
+    ],
+)
+def test_create_refuses_paths_that_name_the_same_file(
+    client: TestClient, root: Path, dataset: str | None, memory: str | None
+) -> None:
+    """JOB-001: the dataset and recipe store cannot be the job, the page or each other."""
+    body = {"file": "pages/agenda.toml", "page": "pages/agenda.html", "examples": EXAMPLES}
+    extra = {"dataset": dataset, "identity": ["title"] if dataset else [], "recipe_memory": memory}
+    assert post(client, "/api/create", {**body, **extra}).status_code == 400
+    assert not (root / "pages/agenda.toml").exists()
+
+
 def test_create_requires_identity_with_a_dataset(client: TestClient, root: Path) -> None:
     body = {"file": "pages/a.toml", "page": "pages/agenda.html", "examples": EXAMPLES}
     assert post(client, "/api/create", {**body, "dataset": "a.sqlite"}).status_code == 400

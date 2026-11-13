@@ -36,6 +36,7 @@ First public release of `rastro-engine` on PyPI: one-call typed scraping with `r
 
 ### Security
 
+- `rastro new`, MCP `job_new` and Studio create resolve the dataset and `recipe_memory` paths against the job folder and refuse either one when it is the job file, the page or the other (`./data.sqlite` and `data.sqlite` count as one file) (JOB-001, REC-006, SEC-008).
 - Studio refuses a `POST` without an `Origin` header even with a valid token; GET requests are unchanged (P-008, SEC-008).
 - Studio requires the session token on every `/api` request, reads included (job and page lists, connect commands); the page and its static files stay public. Saving a selector and writing a serving recipe compare the expected digest with the bytes being replaced inside the write step, so a file changed after the check fails with `file_changed` instead of being overwritten. Dataset pages and downloads cut field and identity values longer than 2,000 characters and mark the record `truncated` (P-008, SEC-008, DATA-004, REC-006).
 

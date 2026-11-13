@@ -163,3 +163,26 @@ async def test_server_reports_the_rastro_version(workspace: Path) -> None:
     ) as client:
         info = (await client.initialize()).serverInfo
     assert (info.name, info.version) == ("rastro", rastro.__version__)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("dataset", "memory"),
+    [(None, "shop.toml"), (None, "./page.html"), ("d.sqlite", "./d.sqlite"), ("shop.toml", None)],
+)
+async def test_job_new_refuses_paths_that_name_the_same_file(
+    workspace: Path, dataset: str | None, memory: str | None
+) -> None:
+    """JOB-001, AGENT-003: resolved paths, not raw strings, are compared."""
+    failed, error = await call(
+        workspace,
+        "job_new",
+        path="work/shop.toml",
+        page_path="work/page.html",
+        examples=EXAMPLES,
+        dataset=dataset,
+        identity="name",
+        recipe_memory=memory,
+    )
+    assert failed and "same file" in error["message"]
+    assert not (workspace / "work" / "shop.toml").exists()

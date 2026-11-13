@@ -119,6 +119,33 @@ def test_new_refuses_a_bad_recipe_memory_path(page, tmp_path, capsys, memory):
     assert not job.exists()
 
 
+# (dataset, recipe_memory) pairs that name the job file, the page or each other (JOB-001).
+CLASHES = [
+    (None, "job.toml"),
+    (None, "./job.toml"),
+    (None, "page.html"),
+    ("data.sqlite", "./data.sqlite"),
+    ("data.sqlite", "data.sqlite"),
+    ("job.toml", None),
+    ("./page.html", None),
+]
+
+
+@pytest.mark.parametrize(("dataset", "memory"), CLASHES)
+def test_new_refuses_paths_that_name_the_same_file(page, tmp_path, capsys, dataset, memory):
+    """JOB-001, REC-006: paths are compared after resolving them against the job folder."""
+    job = tmp_path / "job.toml"
+    args = ["new", str(job), "--from", str(page), "--url", URL, *EXAMPLES]
+    if dataset is not None:
+        args += ["--dataset", dataset, "--identity", "title"]
+    if memory is not None:
+        args += ["--recipe-memory", memory]
+    assert main(args) == 2
+    assert "same file" in json.loads(capsys.readouterr().err)["message"]
+    assert not job.exists()
+    assert page.read_text(encoding="utf-8") == PAGE
+
+
 def test_new_refuses_to_overwrite(page, tmp_path, capsys):
     job = tmp_path / "job.toml"
     job.write_text("keep", encoding="utf-8")
