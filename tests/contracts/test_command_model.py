@@ -1,4 +1,6 @@
+import asyncio
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -15,6 +17,8 @@ PROPOSAL = '{"strategy":"css","record_selector":"li","fields":{"name":"h3::text"
 
 def fake_cli(tmp_path: Path, monkeypatch, name: str, body: str) -> str:
     """A fake model CLI on a temporary PATH; it is never run through a shell."""
+    if os.name == "nt":
+        pytest.skip("shebang scripts on PATH are POSIX-only; see the cross-platform test")
     script = tmp_path / name
     script.write_text(f"#!{sys.executable}\nimport json, os, sys, time\n{body}\n")
     script.chmod(0o755)
@@ -156,3 +160,12 @@ def test_a_missing_or_empty_program_is_refused(argv):
         CommandModel(argv, local=True)
     with pytest.raises(ConfigurationError):
         rastro_model("command", argv=argv, local=True)
+
+
+def test_a_command_runs_on_any_event_loop_and_any_os(offline_cli_loop):
+    """Windows selector loops cannot spawn asyncio subprocesses; the transport uses threads."""
+    code = f"import sys; sys.stdin.read(); print({PROPOSAL!r})"
+    model = CommandModel([sys.executable, "-c", code], local=True)
+
+    run = asyncio.run(model.generate(REQUEST, POLICY), loop_factory=asyncio.SelectorEventLoop)
+    assert json.loads(run) == json.loads(PROPOSAL)

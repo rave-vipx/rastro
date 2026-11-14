@@ -139,7 +139,7 @@ def test_default_local_servers_work_without_consent():
 
 def test_job_command_is_refused_whatever_the_operator_allows(tmp_path, monkeypatch):
     marker = tmp_path / "ran"
-    argv = f'["{sys.executable}", "-c", "open({str(marker)!r}, \'w\')"]'
+    argv = json.dumps([sys.executable, "-c", f"open({marker.as_posix()!r}, 'w')"])
     job = hostile_job(tmp_path, f'provider = "command"\nargv = {argv}\nlocal = true')
     with pytest.raises(ConfigurationError, match="cannot make Rastro start a program"):
         run_job_file(job)

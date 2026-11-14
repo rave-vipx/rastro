@@ -22,7 +22,8 @@ from rastro.domain.models import ConfigurationError
 
 _ENV = re.compile(r"[A-Za-z_][A-Za-z0-9_]{0,127}")
 _PATH_KEY = re.compile(r"[A-Za-z0-9_-]{1,64}")
-_DEFAULT_ENV = ("PATH", "HOME")
+# Windows processes (Python included) cannot start without SYSTEMROOT.
+_DEFAULT_ENV = ("PATH", "HOME", "SYSTEMROOT") if os.name == "nt" else ("PATH", "HOME")
 MAX_ARGS = 64
 MAX_ARG_CHARS = 4096
 
