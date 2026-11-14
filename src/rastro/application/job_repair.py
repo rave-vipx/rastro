@@ -261,6 +261,7 @@ async def _promote(
         context.repository.transition(
             evidence.key, version, RecipeState.ACTIVE, reason=note, at=datetime.now(UTC)
         )
+        context.serving_changed(index)
     return SourceRepair(
         source_index=index,
         comparisons=(RecipeComparison.between(evidence.previous, stored.recipe, evaluation),),
@@ -330,6 +331,8 @@ async def _repair_source(context: RepairContext, index: int, policy: RepairPolic
         for c in comparisons
         if c.evaluation is not None and c.evaluation.decision == "promote"
     ]
+    if promoted:
+        context.serving_changed(index)
     return SourceRepair(
         source_index=index,
         outcome=candidates.outcome,

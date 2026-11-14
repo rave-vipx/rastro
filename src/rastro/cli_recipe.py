@@ -121,6 +121,7 @@ def recipe_command(args: argparse.Namespace) -> int:
         stored = context.repository.rollback(
             key, args.version, reason=_reason(args), at=datetime.now(UTC)
         )
+        context.serving_changed(args.source)
         print(
             json.dumps(
                 {

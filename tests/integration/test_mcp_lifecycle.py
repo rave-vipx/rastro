@@ -189,3 +189,21 @@ def test_bounded_caps_lists_and_strings() -> None:
     assert len(payload["rows"]) == 50 and len(payload["nested"]["text"]) == 501
     assert payload["truncated"] is True
     assert bounded({"rows": [1]})["truncated"] is False
+
+
+@pytest.mark.asyncio
+async def test_drift_status_reports_open_drift_and_only_current_sources(workspace: Path) -> None:
+    """DRIFT-005, AGENT-002: open drift is reported; removed sources are listed as orphaned."""
+    assert not (await call(workspace, "job_load", path="jobs/job.toml", drift=True))[0]
+    one = CARD.format(n=1, cls="title")
+    (workspace / "jobs" / "board.html").write_text(f"<html><body>{one}</body></html>")
+    failed, loaded = await call(workspace, "job_load", path="jobs/job.toml", drift=True)
+    assert not failed and loaded["status"] == "degraded"
+    failed, status = await call(workspace, "drift_status", path="jobs/job.toml")
+    assert not failed
+    assert [d["source_url"] for d in status["open_drift"]] == ["https://example.test/jobs"]
+    job = workspace / "jobs" / "job.toml"
+    job.write_text(job.read_text().replace("example.test/jobs", "example.test/board"))
+    failed, status = await call(workspace, "drift_status", path="jobs/job.toml")
+    assert not failed and status["sources"] == [] and status["open_drift"] == []
+    assert status["orphaned_sources"] == ["https://example.test/jobs"]

@@ -27,6 +27,9 @@ from rastro.application.job_preview import preview_job_file, render_preview_tabl
 from rastro.application.job_summary import job_validation_summary
 from rastro.cli_dataset import add_commands, dataset_command, load_job_command
 from rastro.cli_errors import UsageError, classify, missing_extra_error
+from rastro.cli_ops import JOB_COMMANDS as OPS_JOB_COMMANDS
+from rastro.cli_ops import add_job_commands as add_ops_job_commands
+from rastro.cli_ops import job_command as ops_job_command
 from rastro.cli_recipe import add_commands as add_recipe_commands
 from rastro.cli_recipe import recipe_command
 from rastro.cli_studio import add_command as add_studio_command
@@ -115,6 +118,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Schema to print: 'job' input (default), 'run' or 'preview' output",
     )
     add_commands(subcommands, job_commands)
+    add_ops_job_commands(job_commands)
     add_recipe_commands(subcommands)
     add_studio_command(subcommands)
     add_suggest_commands(subcommands)
@@ -133,6 +137,8 @@ def _run_job_command(args: argparse.Namespace) -> int:
         return int(JobExitCode.SUCCESS)
     if args.job_command == "load":
         return load_job_command(args)
+    if args.job_command in OPS_JOB_COMMANDS:
+        return ops_job_command(args)
     if args.job_command == "validate":
         job = load_job(args.file, allow_absolute_paths=args.allow_absolute_paths)
         print(json.dumps(job_validation_summary(job), indent=2))

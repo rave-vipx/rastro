@@ -14,15 +14,24 @@ from typing import Any
 from pydantic import ValidationError
 
 from rastro.adapters.sqlite_dataset import SQLiteDatasetStore
+from rastro.adapters.sqlite_drift import SQLiteDriftMonitor
 from rastro.application.active_recipes import source_key
 from rastro.application.dataset_load import stale_sources
 from rastro.application.job_loader import load_job
+from rastro.application.job_maintenance import current_source_urls
 from rastro.application.job_repair import promote_job_recipe, repair_job_source
 from rastro.application.jobs import run_job_file
 from rastro.application.recipe_apply import write_serving_recipe
 from rastro.domain.lifecycle_history import check_reason
 from rastro.domain.models import ConfigurationError
 from rastro.mcp_tools import _existing, _inside, _plain, bounded, recipe_memory, source_url
+
+_EMPTY: dict[str, list[Any]] = {
+    "sources": [],
+    "stale_sources": [],
+    "open_drift": [],
+    "orphaned_sources": [],
+}
 
 
 def job_extract(
@@ -126,7 +135,10 @@ def recipe_history(root: Path, path: str, source: int) -> dict[str, Any]:
 
 
 def drift_status(root: Path, path: str) -> dict[str, Any]:
-    """Per-source freshness of the job's dataset and the stale sources; reads only."""
+    """Freshness, stale sources and open drift of the job's current sources; reads only.
+
+    Dataset sources that are no longer in the job appear only in ``orphaned_sources``.
+    """
     job_path = _existing(root, path)
     job = load_job(job_path)
     if job.dataset is None:
@@ -135,19 +147,25 @@ def drift_status(root: Path, path: str) -> dict[str, Any]:
     payload: dict[str, Any] = {"schema_version": 1, "dataset": name}
     dataset = _inside(job_path.parent, job.dataset.path)
     if not dataset.is_file():
-        return {
-            **payload,
-            "sources": [],
-            "stale_sources": [],
-            "note": "No dataset yet; run job_load",
-        }
+        return {**payload, **_EMPTY, "note": "No dataset yet; run job_load"}
     store = SQLiteDatasetStore(dataset, limits=job.limits)
     if name not in store.dataset_names():
-        return {**payload, "sources": [], "stale_sources": [], "note": "Dataset not loaded yet"}
-    payload["sources"] = [s.model_dump(mode="json") for s in store.source_status(name)]
-    payload["stale_sources"] = [s.model_dump(mode="json") for s in stale_sources(store, name)]
+        return {**payload, **_EMPTY, "note": "Dataset not loaded yet"}
+    current = set(current_source_urls(job))
+    statuses = store.source_status(name)
+    payload["sources"] = [s.model_dump(mode="json") for s in statuses if s.source_url in current]
+    payload["stale_sources"] = [
+        s.model_dump(mode="json") for s in stale_sources(store, name, current)
+    ]
+    payload["open_drift"] = [
+        d.model_dump(mode="json")
+        for d in SQLiteDriftMonitor(dataset, limits=job.limits).open_drift(name)
+        if d.source_url in current
+    ]
+    payload["orphaned_sources"] = [s.source_url for s in statuses if s.source_url not in current]
     payload["hint"] = (
         "Structural drift signals are measured by job_load with drift=true; "
-        "a stale or failing source is repaired with recipe_repair"
+        "a stale or failing source is repaired with recipe_repair; open drift is "
+        "acknowledged with `rastro job ack-drift` or cleared by promoting a repair"
     )
     return bounded(payload)

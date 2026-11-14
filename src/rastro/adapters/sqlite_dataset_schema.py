@@ -135,6 +135,7 @@ def update_status(
     at: datetime,
     complete: bool,
     reason: str | None,
+    detail: str | None = None,
 ) -> None:
     row = db.execute(
         "SELECT payload FROM dataset_sources WHERE dataset = ? AND source = ?",
@@ -150,6 +151,7 @@ def update_status(
         last_attempt=at,
         stale=not complete,
         reason=reason,
+        detail=detail,
     )
     db.execute(
         "INSERT OR REPLACE INTO dataset_sources VALUES (?, ?, ?)",

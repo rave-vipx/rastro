@@ -34,8 +34,11 @@ async function extract() {
 
 async function load() {
   const { result } = await api("/api/load", { file: requireFile(), drift: $("drift").checked });
-  show("run-status", `Load ${result.job.status} into dataset "${result.dataset}".`,
-    result.job.status === "success" ? "good" : "warn");
+  // Green only for a clean load: open drift ("degraded") or a storage error is a warning.
+  const open = (result.open_drift || []).length;
+  show("run-status", `Load ${result.status} into dataset "${result.dataset}".`
+    + (open ? ` ${open} source(s) have open drift: review, repair or acknowledge it.` : ""),
+    result.status === "success" ? "good" : "warn");
   const rows = result.sources.map((s, i) => {
     const counts = Object.entries(s.counts).map(([k, v]) => `${k} ${v}`).join(", ");
     const drift = result.drift && result.drift[i] ? `${result.drift[i].verdict} (${result.drift[i].risk})` : "not measured";
@@ -50,7 +53,10 @@ async function health() {
   const data = await api("/api/health", { file: requireFile() });
   const out = $("health-result");
   const rows = data.sources.map((s, i) => {
-    const status = s.status ? (s.status.stale ? pill("stale", false) : pill("fresh", true)) : "no dataset yet";
+    const status = !s.status ? "no dataset yet"
+      : s.status.stale ? pill("stale", false)
+      : s.open_drift ? pill(`open drift (${s.open_drift.risk})`, false)
+      : pill("fresh", true);
     const versions = s.versions.map((v) => `v${v.version} ${v.state}`).join(", ") || "-";
     const actions = el("div", undefined, "row");
     if (data.has_memory) {

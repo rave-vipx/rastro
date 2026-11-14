@@ -220,10 +220,18 @@ class SQLiteDatasetStore:
     def mark_source_unavailable(
         self, dataset: str, source_url: str, observed_at: datetime, reason: str
     ) -> None:
+        self.record_source_failure(dataset, source_url, observed_at, reason, None)
+
+    @safe
+    def record_source_failure(
+        self, dataset: str, source_url: str, observed_at: datetime, reason: str, detail: str | None
+    ) -> None:
+        """``mark_source_unavailable`` plus a content-free detail (``SourceFailureRecorder``)."""
         self._validate(dataset, source_url, observed_at)
         reason = check_reason(reason)
+        detail = None if detail is None else check_reason(detail)
         with connection(self._path, self._limits, write=True) as db:
-            update_status(db, dataset, source_url, observed_at, False, reason)
+            update_status(db, dataset, source_url, observed_at, False, reason, detail)
 
     @safe
     def records(self, dataset: str) -> tuple[StoredRecord, ...]:
