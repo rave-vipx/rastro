@@ -66,6 +66,8 @@ def test_proxy_endpoint_must_be_an_explicit_http_or_https_origin(url):
         {f"p{index}": "http://proxy.example:3128" for index in range(17)},
         {"office": {"proxy_url": "http://proxy.example", "password_env": "PASSWORD"}},
         {"office": {"proxy_url": "http://proxy.example", "username_env": "BAD-NAME"}},
+        {"office": {"proxy_url": "http://proxy.example", "username_env": "proxy_user"}},
+        {"office": {"proxy_url": "http://proxy.example", "username_env": "Proxy_User"}},
         {"office": {"proxy_url": "http://proxy.example", "username": "inline"}},
     ],
 )

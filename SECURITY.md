@@ -31,6 +31,33 @@ Evidence stores locators, not source excerpts. Query strings, fragments, and URL
 
 Persistence is opt-in. SQLite memory retains declarative recipe definitions, successful-run metadata and context fingerprints. It does not retain raw URLs, HTML, extracted records, or JSON Schema documents/defaults. Keep the database in a trusted private directory; recipe selectors and context identifiers must not contain credentials. Unknown database versions and corruption fail without reset. `delete` and `prune` provide retention controls with SQLite secure deletion, but do not erase external backups or filesystem snapshots. Stop writers before deletion if concurrent operations must not recreate entries. See the [memory guide](docs/memory.md). CLI output is data and should be handled accordingly.
 
+## Trust model for jobs, bundles and agents
+
+A job file is configuration, and it may come from someone else: a shared repository, an
+agent using the MCP server, a Studio workspace. It cannot make trust decisions on its own:
+
+- **Egress proxies.** A proxy declared in `[acquisition.egress_profiles]` sees every
+  request and receives the proxy credentials. Rastro uses it only with operator opt-in:
+  `--allow-egress` on `rastro job run|preview|load`, `rastro recipe repair|promote`,
+  `rastro mcp` and `rastro studio`; `allow_egress=True` in Python; or
+  `RASTRO_ALLOW_EGRESS=1`. Without it the run fails closed before any request.
+- **Secret environment names.** A job may make Rastro read only environment variables
+  named `RASTRO_*`, or names the operator lists in `RASTRO_ALLOWED_ENV` (comma-separated)
+  or with `--allow-env NAME` (`allow_env=` in Python). Otherwise a hostile job could name
+  `GITHUB_TOKEN` as a proxy password and send it to its own proxy.
+- **Remote models** in `[model]` (`allow_remote = true` or an endpoint from
+  `base_url_env`) are used only when the operator sets `RASTRO_ALLOW_REMOTE=1`, and the
+  model's `api_key_env`/`base_url_env` follow the same secret-name rule (`RASTRO_*` or
+  `RASTRO_ALLOWED_ENV`). Loopback models (local Ollama, LM Studio) need no opt-in. See the
+  [jobs guide](docs/jobs.md#security-boundaries).
+
+Recipes in job files, Hub bundles, MCP tool arguments, Studio edits and model proposals follow a
+CSS selector cost policy (no `:has()`, no sibling combinators, bounded compounds,
+alternatives and nesting), because lxml evaluates those shapes in quadratic or worse time
+and the evaluation cannot be interrupted. A bundle's hashes give integrity, not
+authenticity; see the [Hub guide](docs/hub.md#import). The MCP `job_preview` tool writes
+nothing but is not advertised as read-only, because a job can fetch URLs or call a model.
+
 ## Acquisition limitations
 
 Network controls are tested against synthetic URLs, DNS answers and transports,

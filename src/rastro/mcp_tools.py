@@ -8,6 +8,7 @@ are rejected. Results are JSON-ready dicts. Source values stay labelled untruste
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 
@@ -78,14 +79,33 @@ def job_validate(root: Path, path: str) -> dict[str, Any]:
     return job_validation_summary(load_job(_existing(root, path)))
 
 
-def job_preview(root: Path, path: str) -> dict[str, Any]:
-    return bounded_preview(preview_job_file(_existing(root, path)))
+def job_preview(
+    root: Path, path: str, *, allow_egress: bool = False, allow_env: Iterable[str] = ()
+) -> dict[str, Any]:
+    preview = preview_job_file(
+        _existing(root, path), allow_egress=allow_egress, allow_env=allow_env
+    )
+    return bounded_preview(preview)
 
 
-def job_load(root: Path, path: str, *, drift: bool = False) -> dict[str, Any]:
+def job_load(
+    root: Path,
+    path: str,
+    *,
+    drift: bool = False,
+    allow_egress: bool = False,
+    allow_env: Iterable[str] = (),
+) -> dict[str, Any]:
     """Run the job and load approved fields into its dataset, as `rastro job load` does."""
     job = _existing(root, path)
-    return bounded(_plain(load_job_file(job, drift=drift, allow_absolute_paths=False)))
+    loaded = load_job_file(
+        job,
+        drift=drift,
+        allow_absolute_paths=False,
+        allow_egress=allow_egress,
+        allow_env=allow_env,
+    )
+    return bounded(_plain(loaded))
 
 
 def dataset_records(

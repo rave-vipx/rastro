@@ -209,7 +209,9 @@ source = Source(url="https://example.com/article", egress="eu-office")
 - **Credentials are environment references only.** `username_env`/`password_env`
   name variables read from the process environment when each source is acquired.
   A password reference requires a username reference. Values never appear in
-  recipes, recipe keys, results, metrics, logs or policy serialization.
+  recipes, recipe keys, results, metrics, logs or policy serialization. A job file's
+  egress profiles additionally need operator opt-in and `RASTRO_*` or allow-listed
+  variable names; see [operator opt-in](jobs.md#operator-opt-in).
 - **Fail before network.** An unknown profile name returns `permanent_failure` with
   `unsupported_egress`, and a missing, empty or control-character credential
   returns `egress_credentials_unavailable`, both before DNS or any request.

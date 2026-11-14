@@ -166,3 +166,15 @@ def test_strict_proposals_select_a_variant_and_become_recipes(data, variant):
 def test_proposals_reject_other_strategies_and_definition_settings(data):
     with pytest.raises(ValidationError):
         RecipeProposal.model_validate(data, strict=True)
+
+
+def test_model_proposals_follow_the_untrusted_selector_policy() -> None:
+    """Audit H3: a model cannot propose a quadratic selector."""
+    from rastro.application.proposals import parse_proposal
+    from rastro.domain.models import ConfigurationError
+
+    output = json.dumps(
+        {"strategy": "css", "record_selector": "p ~ p ~ b", "fields": {"t": "::text"}}
+    )
+    with pytest.raises(ConfigurationError, match="sibling"):
+        parse_proposal(output, InferencePolicy())

@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import TYPE_CHECKING, Any
 
 import rastro
+from rastro.application.egress_trust import allowed_env_names
 from rastro.domain.job_providers import JobModelProvider, OllamaProvider, OpenAICompatibleProvider
 from rastro.domain.jobs import (
     MAX_JOB_BYTES,
@@ -24,6 +26,7 @@ from rastro.domain.models import (
     ResourceLimitError,
     schema_fingerprint,
 )
+from rastro.domain.secret_env import check_secret_env_name
 
 if TYPE_CHECKING:
     from pydantic import BaseModel
@@ -147,7 +150,32 @@ def _read_local_source(path: Path, max_bytes: int, representation: Representatio
         raise ConfigurationError("Local source file must be valid UTF-8") from None
 
 
+def check_job_model(spec: JobModelProvider, environ: Mapping[str, str] | None = None) -> None:
+    """Refuse a job-declared model the operator has not trusted (security audit H1).
+
+    A job file may come from someone else. Its model block may only name secrets in the
+    operator's namespace (``RASTRO_*`` or ``RASTRO_ALLOWED_ENV``), and a remote endpoint
+    (``allow_remote = true`` or an endpoint read from ``base_url_env``) needs the operator
+    to set ``RASTRO_ALLOW_REMOTE=1``; otherwise page content and the key could be sent to
+    an endpoint the job's author chose.
+    """
+    env = os.environ if environ is None else environ
+    allowed = allowed_env_names((), env)
+    for key in ("api_key_env", "base_url_env"):
+        value = getattr(spec, key, None)
+        if value is not None:
+            check_secret_env_name(value, allowed, location=f"model.{key}")
+    remote = bool(getattr(spec, "allow_remote", False)) or spec.base_url_env is not None
+    if remote and env.get("RASTRO_ALLOW_REMOTE") != "1":
+        raise ConfigurationError(
+            "This job sends page content to a remote model endpoint, which needs operator "
+            "opt-in: if you trust the job, set RASTRO_ALLOW_REMOTE=1",
+            location="model",
+        )
+
+
 def _build_model_provider(spec: JobModelProvider) -> ModelPort:
+    check_job_model(spec)
     if spec.base_url_env is not None:
         base_url = os.environ.get(spec.base_url_env, "").strip()
         if not base_url:

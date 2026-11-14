@@ -13,6 +13,7 @@ from pydantic import ValidationError
 from rastro.domain.intelligence import InferencePolicy, ModelError, ModelRequest, RecipeProposal
 from rastro.domain.json import strict_json
 from rastro.domain.models import ConfigurationError, Outcome, Recipe, RecipeAttempt
+from rastro.domain.selector_policy import check_untrusted_recipe
 from rastro.ports.model import ModelPort
 
 _SYSTEM = (
@@ -49,7 +50,8 @@ def build_proposal_request(
 def parse_proposal(output: str, policy: InferencePolicy) -> Recipe:
     if len(output.encode()) > policy.max_response_bytes:
         raise ModelError("model_response_limit")
-    return RecipeProposal.model_validate(strict_json(output), strict=True).recipe()
+    recipe = RecipeProposal.model_validate(strict_json(output), strict=True).recipe()
+    return check_untrusted_recipe(recipe)
 
 
 async def propose_with_model(

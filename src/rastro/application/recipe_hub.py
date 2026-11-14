@@ -35,6 +35,7 @@ from rastro.domain.recipe_bundle import (
     canonical_json,
     sha256_hex,
 )
+from rastro.domain.selector_policy import check_untrusted_recipe
 from rastro.ports.parser import DocumentParser
 from rastro.ports.recipes import RecipeLifecycle, RecipeRepository
 
@@ -130,6 +131,8 @@ def import_bundle(
         recipe = validate_recipe(schema, recipe, manifest.representation)
     except (ValidationError, AttributeError) as error:
         raise BundleIntegrityError("Bundle recipe or schema is invalid") from error
+    # A bundle proves integrity, not authenticity: refuse costly selectors before replay.
+    check_untrusted_recipe(recipe)
     _verify_replay(manifest, files, recipe, schema, parser_for(manifest.representation), limits)
     key = RecipeKey.for_source(
         manifest.source, schema, manifest.context, representation=manifest.representation

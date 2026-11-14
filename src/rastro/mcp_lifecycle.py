@@ -7,6 +7,7 @@ containment, gates and policies apply. Results are bounded JSON-ready dicts.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
@@ -24,9 +25,17 @@ from rastro.domain.models import ConfigurationError
 from rastro.mcp_tools import _existing, _inside, _plain, bounded, recipe_memory, source_url
 
 
-def job_extract(root: Path, path: str) -> dict[str, Any]:
+def job_extract(
+    root: Path, path: str, *, allow_egress: bool = False, allow_env: Iterable[str] = ()
+) -> dict[str, Any]:
     """Run the job and return the extracted records, as `rastro job run`; no dataset write."""
-    return bounded(_plain(run_job_file(_existing(root, path), allow_absolute_paths=False)))
+    report = run_job_file(
+        _existing(root, path),
+        allow_absolute_paths=False,
+        allow_egress=allow_egress,
+        allow_env=allow_env,
+    )
+    return bounded(_plain(report))
 
 
 def recipe_repair(
@@ -36,6 +45,8 @@ def recipe_repair(
     *,
     min_records: int | None = None,
     min_completeness: float | None = None,
+    allow_egress: bool = False,
+    allow_env: Iterable[str] = (),
 ) -> dict[str, Any]:
     """Propose and evaluate repair candidates; promotion follows the job's own ``[repair]``."""
     report = repair_job_source(
@@ -44,12 +55,22 @@ def recipe_repair(
         min_records=min_records,
         min_completeness=min_completeness,
         allow_absolute_paths=False,
+        allow_egress=allow_egress,
+        allow_env=allow_env,
     )
     return bounded(_plain(report))
 
 
 def recipe_promote(
-    root: Path, path: str, source: int, version: int, *, reason: str, override_gates: bool = False
+    root: Path,
+    path: str,
+    source: int,
+    version: int,
+    *,
+    reason: str,
+    override_gates: bool = False,
+    allow_egress: bool = False,
+    allow_env: Iterable[str] = (),
 ) -> dict[str, Any]:
     """Re-evaluate a stored candidate and activate it only if the gates pass (or are overridden)."""
     try:
@@ -63,6 +84,8 @@ def recipe_promote(
         reason=reason,
         override_gates=override_gates,
         allow_absolute_paths=False,
+        allow_egress=allow_egress,
+        allow_env=allow_env,
     )
     return bounded(_plain(report))
 

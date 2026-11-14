@@ -6,6 +6,7 @@ Origin, per-run token on every POST), bounded bodies and the Content-Security-Po
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from pathlib import Path
 
 from starlette.applications import Starlette
@@ -20,12 +21,15 @@ LOCAL_HOSTS = ("127.0.0.1", "localhost")
 __all__ = ["LOCAL_HOSTS", "MAX_BODY", "create_app"]
 
 
-def create_app(root: str | Path) -> tuple[Starlette, str]:
-    """Build the app for ``root``; returns it with this run's token (for tests and the CLI)."""
+def create_app(
+    root: str | Path, *, allow_egress: bool = False, allow_env: Iterable[str] = ()
+) -> tuple[Starlette, str]:
+    """Build the app for ``root``; returns it with this run's token (for tests and the CLI).
+    ``allow_egress`` and ``allow_env`` are the operator opt-ins for job-declared proxies."""
     folder = Path(root)
     if not folder.is_dir():
         raise ConfigurationError("Studio root must be an existing directory")
-    studio = Studio(folder)
+    studio = Studio(folder, allow_egress=allow_egress, allow_env=allow_env)
     routes = [
         *routes_jobs.routes(studio),
         *routes_wizard.routes(studio),

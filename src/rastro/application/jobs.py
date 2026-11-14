@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from rastro.application.active_recipes import active_job
+from rastro.application.egress_trust import check_job_egress
 from rastro.application.job_loader import (
     PreparedJob,
     load_job,
@@ -59,12 +61,16 @@ async def run_job_async(
     allow_absolute_paths: bool = False,
     acquisition: AcquisitionPort | None = None,
     model: ModelPort | None = None,
+    allow_egress: bool = False,
+    allow_env: Iterable[str] = (),
 ) -> JobRunResult[Any]:
     """Execute a validated job asynchronously through the public Rastro SDK.
 
     With ``recipe_memory``, a stored serving recipe newer than the job file's is used;
-    ``JobRunResult.recipes`` reports the recipe each source used.
+    ``JobRunResult.recipes`` reports the recipe each source used. A job-declared egress
+    proxy needs ``allow_egress=True``; ``allow_env`` extends the secret-name allow-list.
     """
+    check_job_egress(job, allow_egress=allow_egress, allow_env=allow_env)
     active, selections = active_job(
         job, base_dir=base_dir, allow_absolute_paths=allow_absolute_paths
     )
@@ -124,12 +130,16 @@ def run_job(
     allow_absolute_paths: bool = False,
     acquisition: AcquisitionPort | None = None,
     model: ModelPort | None = None,
+    allow_egress: bool = False,
+    allow_env: Iterable[str] = (),
 ) -> JobRunResult[Any]:
     """Run a validated job; uses synchronous extraction when offline and model-free.
 
     With ``recipe_memory``, a stored serving recipe newer than the job file's is used;
-    ``JobRunResult.recipes`` reports the recipe each source used.
+    ``JobRunResult.recipes`` reports the recipe each source used. A job-declared egress
+    proxy needs ``allow_egress=True``; ``allow_env`` extends the secret-name allow-list.
     """
+    check_job_egress(job, allow_egress=allow_egress, allow_env=allow_env)
     active, selections = active_job(
         job, base_dir=base_dir, allow_absolute_paths=allow_absolute_paths
     )
@@ -201,8 +211,10 @@ def run_job_file(
     allow_absolute_paths: bool = False,
     acquisition: AcquisitionPort | None = None,
     model: ModelPort | None = None,
+    allow_egress: bool = False,
+    allow_env: Iterable[str] = (),
 ) -> JobRunResult[Any]:
-    """Load and execute a declarative job file."""
+    """Load and execute a declarative job file (see ``run_job`` for the opt-ins)."""
     file_path = Path(path)
     job = load_job(file_path, allow_absolute_paths=allow_absolute_paths)
     return run_job(
@@ -211,6 +223,8 @@ def run_job_file(
         allow_absolute_paths=allow_absolute_paths,
         acquisition=acquisition,
         model=model,
+        allow_egress=allow_egress,
+        allow_env=allow_env,
     )
 
 
