@@ -121,6 +121,7 @@ def test_without_a_model_shape_gates_promote_a_wrong_title(tmp_path, monkeypatch
 
 
 def test_semantic_judge_blocks_a_wrong_title_that_passes_shape_gates(tmp_path, monkeypatch):
+    """QUAL-005: a relocated candidate is judged too; a mismatch vetoes it."""
     memory = tmp_path / "recipes.db"
     _scrape(V1, memory)
     _misplace_title(monkeypatch)
@@ -134,6 +135,32 @@ def test_semantic_judge_blocks_a_wrong_title_that_passes_shape_gates(tmp_path, m
     (field,) = json.loads(request.content)["fields"]
     assert field["name"] == "title" and field["reference_values"] == ["Engineer", "Designer"]
     assert field["untrusted_candidate_values"] == ["Centro", "Norte"]
+    assert SQLiteRecipeRepository(memory).get(_key(memory)).recipe.version == 1
+
+
+def test_a_recipe_that_still_serves_never_calls_the_judge(tmp_path):
+    """QUAL-005: no repair, no judgement."""
+    memory = tmp_path / "recipes.db"
+    _scrape(V1, memory)
+    model = FakeModel()
+    again = _scrape(V1, memory, model)
+    assert again.status == Outcome.SUCCESS and again.repair is None and model.requests == []
+
+
+def test_semantic_judge_blocks_a_model_candidate_that_passes_value_checks(tmp_path):
+    """QUAL-005, QUAL-006: the judge vetoes after every deterministic check passed."""
+    memory = tmp_path / "recipes.db"
+    _scrape(V1, memory)
+    model = FakeModel([RESCUE], verdict="mismatch")
+    blocked = _scrape(V3, memory, model)
+    assert blocked.items == [] and not blocked.repair.promoted
+    (candidate,) = blocked.repair.candidates
+    assert candidate.decision == "quarantine" and "semantic_mismatch" in candidate.reasons
+    assert blocked.repair.origin == "model" and blocked.repair.model_calls == 2
+    (request,) = model.judged
+    fields = {f["name"]: f for f in json.loads(request.content)["fields"]}
+    assert fields["title"]["reference_values"] == ["Engineer", "Designer"]
+    assert fields["title"]["untrusted_candidate_values"] == ["Engineer", "Designer"]
     assert SQLiteRecipeRepository(memory).get(_key(memory)).recipe.version == 1
 
 
@@ -155,7 +182,7 @@ def test_unsure_promotes_only_on_strong_gates_and_failure_blocks(
 ):
     memory = tmp_path / "recipes.db"
     _scrape(V1, memory)
-    result = _scrape(V2, memory, FakeModel(verdict=verdict))
+    result = _scrape(V3, memory, FakeModel([RESCUE], verdict=verdict))
     assert result.repair.promoted is promoted
     if reason:
         assert reason in result.repair.candidates[0].reasons
@@ -169,7 +196,7 @@ def test_wrong_model_output_is_rejected_within_the_call_budget(tmp_path):
     assert failed.items == [] and not failed.repair.promoted
     assert failed.repair.model_calls == 2 and len(model.requests) == 2  # budget: 2 calls
     (swapped,) = failed.repair.candidates
-    assert swapped.decision == "quarantine" and "value_matches_other_field" in swapped.reasons
+    assert swapped.decision == "reject" and "value_matches_other_field" in swapped.reasons
     assert json.loads(model.requests[1].content)["last_failure"] == "candidate_failed_recipe_ci"
     assert SQLiteRecipeRepository(memory).get(_key(memory)).recipe.version == 1
 

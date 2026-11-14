@@ -112,10 +112,13 @@ def test_oracle_judges_candidate_values_truthfully_or_adversarially() -> None:
     assert verdict("adversarial", swapped) == "match"
 
 
-def test_an_honest_judge_blocks_a_wrong_meaning_proposal() -> None:
-    oracle = ScriptedOracle(CASES, "wrong_recipe")
+@pytest.mark.parametrize("mode", ["wrong_recipe", "adversarial"])
+def test_a_wrong_meaning_proposal_is_rejected_before_any_judge(mode: str) -> None:
+    """REPAIR-002, QUAL-005: value checks reject swapped meanings; an approve-all judge
+    cannot wave them through."""
+    oracle = ScriptedOracle(CASES, mode)  # type: ignore[arg-type]
     verdict = run_rastro(CASE["cards-semantic_swap"], provider=PLACEHOLDER, fake=oracle)
-    assert (verdict.verdict, verdict.detail) == ("refused", "judge_blocked")
+    assert (verdict.verdict, verdict.detail) == ("refused", "rejected")
 
 
 def test_rastro_proposes_with_the_model_only_after_deterministic_repair_fails() -> None:

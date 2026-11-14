@@ -20,8 +20,8 @@ What to expect, measured on the benchmark below:
 - The small local models we tried (`qwen3:4b`, `llama3.2:3b`) recovered nothing new, and
   as judges they blocked correct repairs: 5/28 and 11/28 correct, 0 wrong.
 - A model that is wrong in both roles (a meaning-swapping recipe, then a judge that
-  approves it) got **6 of 28** wrong repairs promoted. Use a model you trust, and keep
-  deterministic consistency rules for the fields that matter.
+  approves it) gets **0 of 28** wrong repairs promoted: model candidates must pass the
+  deterministic value checks before the judge sees them. Before those checks it got 6.
 
 [Measured results](#measured-results) has the details.
 
@@ -59,8 +59,8 @@ options and presets for specific products are listed in
 | --- | --- | --- |
 | `scrape` with no selectors | JSON-LD and microdata discovery | The model proposes a recipe from field names, types and descriptions. It is kept only if it extracts valid records |
 | `suggest` | Selectors that reproduce your examples | Examples become optional. A model recipe must still reproduce every given example |
-| Repair (`scrape(..., memory=)`, `recipe repair`) | Relocation, declared fallbacks, discovery | Consulted **only when no deterministic candidate would pass**. Its recipe is joined with the serving selectors (`old, new`) and gated like any other |
-| Semantic gate | `[[consistency]]` rules and replay of the last good sample | Before every automatic promotion, the model judges whether each changed field still means the same. `mismatch` or a failed answer quarantines; it can block a promotion, never force one |
+| Repair (`scrape(..., memory=)`, `recipe repair`) | Relocation, declared fallbacks, discovery | Consulted **only when no deterministic candidate would pass**. Its recipe is joined with the serving selectors (`old, new`), gated like any other and then held to the deterministic value checks: values of the field's type and shape, never taken from another field's earlier values. A failure rejects it |
+| Semantic gate | `[[consistency]]` rules and replay of the last good sample | Before any automatic promotion, relocated or proposed, the model judges whether each changed field still means the same. `mismatch` or a failed answer quarantines; it can block a promotion, never force one |
 | MCP agent in the loop | `recipe_repair`, `recipe_promote` (a reason is required) | The agent's own model proposes and judges through the tools. The same recipe CI decides |
 
 Models are never enabled implicitly. Without `model=`, `--model`, `[model]` or
@@ -89,8 +89,8 @@ model runtime.
 retry after a rejected or invalid answer, a 30 s timeout, 32 KiB of context, 64 KiB of
 response and 2,048 output tokens (see [budgets](intelligence.md#budgets-and-outcomes)).
 With a model, a repair costs one judge call when a deterministic candidate passes, and one
-or two proposal calls plus a judge call when none does. On the benchmark that was 44 calls
-for 28 cases with the scripted oracle.
+or two proposal calls plus a judge call when none does. A recipe that still serves costs
+nothing. On the benchmark that was 44 calls for 28 cases with the scripted oracle.
 
 ## Measured results
 
@@ -107,25 +107,26 @@ anything else without warning) or **refused** (it served nothing new and said wh
 | Hand-written Scrapling + Pydantic baseline | 14/28 (0.33–0.67) | **4/28 (0.06–0.32)** | 10/28 | 0 |
 | Scripted oracle: correct recipe, honest judge | **23/28 (0.64–0.92)** | 0/28 (0.00–0.12) | 5/28 | 44 |
 | Scripted oracle: swapped recipe, honest judge | 12/28 (0.27–0.61) | 0/28 (0.00–0.12) | 16/28 | 44 |
-| Scripted oracle: swapped recipe, judge approves all | 12/28 (0.27–0.61) | **6/28 (0.10–0.40)** | 10/28 | 44 |
-| `qwen3:4b` (local) | 5/28 (0.08–0.36) | 0/28 (0.00–0.12) | 23/28 | 44 |
-| `llama3.2:3b` (local) | 11/28 (0.24–0.58) | 0/28 (0.00–0.12) | 17/28 | 44 |
+| Scripted oracle: swapped recipe, judge approves all | 12/28 (0.27–0.61) | **0/28 (0.00–0.12)** | 16/28 | 44 |
+| `qwen3:4b` (local, before the value checks) | 5/28 (0.08–0.36) | 0/28 (0.00–0.12) | 23/28 | 44 |
+| `llama3.2:3b` (local, before the value checks) | 11/28 (0.24–0.58) | 0/28 (0.00–0.12) | 17/28 | 44 |
 
 What the numbers say:
 
 - **Escalation works.** With a model that answers correctly, Rastro now recovers
   restructured containers, semantic swaps and decoy cases that deterministic repair
   refuses, and it keeps every deterministic win: 23/28, with 0 wrong.
-- **A dishonest model can get wrong data promoted.** The `old, new` union keeps the last
-  good sample parsing through the old selector, so replay no longer catches a meaning
-  swap in the new one, and the judge is the only gate left. With an honest judge, every
-  swapped recipe was blocked. With a judge that approves everything, 6 were promoted.
-  The same model writes the recipe and judges it. This is a known gap: deterministic
-  checks of model candidates against other fields' earlier values would close it.
+- **The judge is not the only gate.** The `old, new` union keeps the last good sample
+  parsing through the old selector, so replay alone cannot catch a meaning swap in the new
+  one. Model candidates therefore also meet the deterministic value checks, which reject a
+  field whose values are another field's earlier values. A swapped recipe is now rejected
+  before any judge call, so a judge that approves everything gets 0 wrong (it got 6
+  before these checks). The checks need retained earlier values to compare with.
 - **Small local models hurt more than they help as judges.** They compare values rather
   than meanings, so they call correct repairs `mismatch` and block them. `qwen3:4b`
   dropped to 5/28 and `llama3.2:3b` to 11/28, with no new recoveries and no wrong data.
-  Use a stronger model for the judge, or no model.
+  Those runs predate the value checks and have not been rerun. Use a stronger model for
+  the judge, or no model.
 - The hand-written baseline recovers two more pages than deterministic Rastro, but it
   silently served promo blocks as events four times.
 - The scripted oracle measures Rastro's gates, not model quality. Live results are from

@@ -172,3 +172,97 @@ def test_a_costly_model_selector_is_never_stored_or_evaluated(tmp_path, monkeypa
     assert source.outcome == "no_candidates" and source.comparisons == ()
     assert [issue.code for issue in source.issues] == ["invalid_model_candidate"]
     assert source.inference_calls == 2  # both proposals refused within the call budget
+
+
+# Two look-alike fields, so a swapped proposal passes every shape and schema gate.
+JOB2 = (
+    JOB.replace('title = "h2.title::text"\n', 'title = "h2.title::text"\ncompany = "p.co::text"\n')
+    + '\n[[fields]]\nname = "company"\ntype = "string"\n'
+)
+OLD2 = (
+    '<article class="card" data-id="job-{n}"><h2 class="title">Role {n}</h2>'
+    '<p class="co">Firm {n}</p></article>'
+)
+NEW2 = '<div class="row" data-id="job-{n}"><p class="role">Role {n}</p><b>Firm {n}</b></div>'
+RIGHT = {"job_id": "::attr(data-id)", "title": "p.role::text", "company": "b::text"}
+SWAPPED = {**RIGHT, "title": "b::text", "company": "p.role::text"}
+
+
+class ProposingModel(FakeModel):
+    """Proposes ``fields``; its judge approves everything (an adversarial judge)."""
+
+    def __init__(self, fields):
+        super().__init__("match")
+        self.fields = fields
+
+    async def generate(self, request, policy):
+        if request.response_schema is None:
+            self.requests.append(request)
+            return json.dumps({**PROPOSAL, "fields": self.fields})
+        return await super().generate(request, policy)
+
+
+def make_drift_job(tmp_path, old, new, job=JOB):
+    """Like ``make_job``, but the base load keeps a fixture as known-good values."""
+    (tmp_path / "board.html").write_text(page(old), encoding="utf-8")
+    path = tmp_path / "job.toml"
+    path.write_text(job.format(repair="[repair]\nauto_promote = true\n"), encoding="utf-8")
+    assert rastro.load_job_file(path, drift=True).exit_code == 0
+    (tmp_path / "board.html").write_text(page(new), encoding="utf-8")
+    return path
+
+
+def test_wrong_model_values_are_rejected_before_an_approving_judge(tmp_path):
+    """REPAIR-002, QUAL-005: the judge can only veto; deterministic value checks gate first."""
+    model = ProposingModel(SWAPPED)
+    job = make_drift_job(tmp_path, OLD2, NEW2, JOB2)
+    (source,) = rastro.repair_job_source(job, 1, model=model).sources
+    assert source.promoted_version is None
+    decisions = [c.evaluation for c in source.comparisons]
+    assert decisions and {e.decision for e in decisions} == {"reject"}
+    assert "value_matches_other_field" in decisions[0].reasons
+    judged = [r for r in model.requests if r.response_schema is not None]
+    assert judged == []  # a rejected candidate never reaches the judge
+
+
+def test_honest_model_still_repairs_with_known_good_values(tmp_path):
+    """REPAIR-001, QUAL-005: a right proposal passes the value checks and the judge."""
+    model = ProposingModel(RIGHT)
+    job = make_drift_job(tmp_path, OLD2, NEW2, JOB2)
+    (source,) = rastro.repair_job_source(job, 1, model=model).sources
+    assert source.promoted_version is not None and source.origin == "model"
+
+
+RENAMED = '<article class="job" data-id="job-{n}"><h2 class="title">Role {n}</h2></article>'
+
+
+@pytest.mark.parametrize(("verdict", "promoted"), [("match", True), ("mismatch", False)])
+def test_deterministic_repair_is_judged_once_and_can_be_vetoed(tmp_path, verdict, promoted):
+    """QUAL-005: a relocated candidate makes no proposal call, one judge call; the judge
+    can veto it but never force it."""
+    model = FakeModel(verdict)
+    job = make_drift_job(tmp_path, OLD, RENAMED)
+    (source,) = rastro.repair_job_source(job, 1, model=model).sources
+    assert (source.promoted_version is not None) is promoted
+    assert source.origin == "relocation" and source.inference_calls == 1
+    assert [r.response_schema is not None for r in model.requests] == [True]
+
+
+def test_deterministic_repair_without_a_model_makes_no_calls(tmp_path):
+    """QUAL-005: no model configured, deterministic gates only."""
+    (source,) = rastro.repair_job_source(make_drift_job(tmp_path, OLD, RENAMED), 1).sources
+    assert source.promoted_version is not None and not source.inference_calls
+
+
+def test_an_agent_proposal_with_swapped_values_is_rejected(tmp_path):
+    """REPAIR-002, AGENT-002: outside-agent proposals meet the same value checks."""
+    from rastro.application.agent_repair import propose_job_recipe
+
+    job = make_drift_job(tmp_path, OLD2, NEW2, JOB2)
+    wrong = rastro.Recipe.model_validate({**PROPOSAL, "fields": SWAPPED})
+    (comparison,) = propose_job_recipe(job, 1, wrong).sources[0].comparisons
+    assert comparison.evaluation.decision == "reject"
+    assert "value_matches_other_field" in comparison.evaluation.reasons
+    right = rastro.Recipe.model_validate({**PROPOSAL, "fields": RIGHT})
+    (comparison,) = propose_job_recipe(job, 1, right).sources[0].comparisons
+    assert comparison.evaluation.reasons == ("automatic_promotion_disabled",)  # agent decides

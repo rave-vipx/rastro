@@ -3,9 +3,10 @@
 The agent (an MCP client's model) only proposes a recipe definition. Each changed CSS locator
 is composed with the serving one (``"<serving>, <proposed>"``, as model repair does) so old
 pages still match, then validated against the job's fields and representation, evaluated by
-the same recipe CI as repair and stored as a candidate (an equal stored candidate is reused).
-It is never promoted here, whatever the job's ``auto_promote``: the calling agent is the
-semantic judge and promotes with ``recipe_promote`` after checking meaning.
+the same recipe CI and value checks as a model repair candidate and stored as a candidate
+(an equal stored candidate is reused). It is never promoted here, whatever the job's
+``auto_promote``: the calling agent is the semantic judge and promotes with
+``recipe_promote`` after checking meaning.
 """
 
 from __future__ import annotations
@@ -18,7 +19,7 @@ from pydantic import BaseModel, ValidationError
 
 from rastro.application.extraction import validate_recipe
 from rastro.application.job_repair import job_policy, run_sync
-from rastro.application.model_repair import with_history
+from rastro.application.model_repair import check_values, with_history
 from rastro.application.recipe_repair import repair_candidates
 from rastro.application.repair_context import RepairContext
 from rastro.application.repair_evidence import gather_evidence
@@ -56,7 +57,14 @@ def propose_job_recipe(
             previous=evidence.previous,
             key=evidence.key,
             lifecycle=context.repository,
-            evaluate=evidence.evaluate,
+            evaluate=lambda c: check_values(
+                evidence.evaluate(c),
+                c.recipe,
+                context.schema,
+                evidence.previous,
+                evidence.rows,
+                evidence.history,
+            ),
             at=datetime.now(UTC),
         )
         item = SourceRepair(

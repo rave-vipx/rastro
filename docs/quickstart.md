@@ -185,8 +185,9 @@ result.repair.model_calls  # proposal and judge calls this repair made
   the model propose (at most two calls by default). Rastro prefixes each changed
   selector with the remembered one (`"old, new"`), so the retained sample still parses,
   and gates the result like any candidate.
-- **Meaning.** Before `"auto"` promotes, the model judges whether each changed field's
-  new values match the field (name, type, description, earlier values). A `mismatch`
+- **Meaning.** Before `"auto"` promotes any candidate (a model candidate must first
+  pass the value checks: no values borrowed from another field), the model judges
+  whether each changed field's new values match the field (name, type, description, earlier values). A `mismatch`
   quarantines the candidate (`semantic_mismatch`); `unsure` promotes only when every
   deterministic gate is at its strictest; a failed or malformed answer quarantines
   (`semantic_judge_failed`). Without a model nothing changes.
