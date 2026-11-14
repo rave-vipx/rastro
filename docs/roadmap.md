@@ -4,7 +4,9 @@
 
 v0.1 remains the reference release. It is complete: `0.1.0rc1` is its release candidate, with M1–M4 implemented, the M5 technical evidence recorded, every section 18 acceptance criterion evidenced, and DIFF-001 partially demonstrated. Publication (namespace ownership, legal/trademark review, tag and Trusted Publishing) awaits maintainer approval through the release gates in issue #5; nothing has been published.
 
-## After 0.6.0: monitoring and alerts (unreleased)
+## 0.7.0 (2026-11-14): AI-assisted repair with any model, monitoring and alerts
+
+**AI in the everyday flows (ADR 0022):** a provider-agnostic `rastro.model()` (OpenAI-compatible HTTP, any local CLI, a Python callable, `RASTRO_MODEL`) is consulted only when deterministic repair fails. Model candidates pass recipe CI, value checks and the selector policy before a veto-only semantic judge. Offline benchmark: 23/28 repaired with a good model against 12/28 without one, with 0 wrong promotions even under an approve-all judge. MCP agent tools and one operator-trust model (`--allow-remote`, `--allow-egress`, `--allow-env`) complete it.
 
 **Delivered from an operator-notification audit:** open drift that stays open until acknowledged or repaired, exit code 4 (needs attention) and 5 (storage error after the run), `rastro health`, `rastro job ack-drift`, `rastro job forget-source`, an operator-only `--on-failure` hook, WARNING logs per failed source, clock-skew clamping and owner-only dataset files (DRIFT-004, OBS-002, OBS-007, DATA-004, REPAIR-005, SEC-009). See [Monitoring and alerts](operations.md) and [ADR 0023](decisions/0023-open-drift-and-attention-exit-codes.md).
 

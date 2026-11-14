@@ -2,7 +2,7 @@
 
 All notable user-facing changes are recorded here. The project follows [Semantic Versioning](docs/stability.md) from 0.6.0. Versions before 0.6.0 were never published to a package registry.
 
-## Unreleased (0.7.0)
+## 0.7.0 — 2026-11-14
 
 Bring your own AI: any model or agent proposes recipes and repairs while Rastro verifies. Operators also hear about drift and stuck state, not only hard failures; see [Monitoring and alerts](docs/operations.md) and ADR 0023.
 

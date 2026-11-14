@@ -18,7 +18,7 @@
 
 **Typed, self-healing web scraping: declare a Pydantic model, get validated records with provenance; when the site changes Rastro detects it and proposes or applies a verified repair.**
 
-> **Status: Beta — 0.6.0.** The public API follows the [stability policy](https://rave-vipx.github.io/rastro/stability/).
+> **Status: Beta — 0.7.0.** The public API follows the [stability policy](https://rave-vipx.github.io/rastro/stability/).
 
 ## Install
 
