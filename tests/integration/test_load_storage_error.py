@@ -76,3 +76,24 @@ def test_drift_write_failure_keeps_committed_rows_visible(job, capsys, monkeypat
     assert [issue["code"] for issue in first["issues"]] == ["drift_storage_error"]
     assert [issue["code"] for issue in second["issues"]] == ["storage_error"]
     assert report["drift"] == []
+
+
+def test_unreadable_history_reports_storage_error_and_runs_the_hook(tmp_path, capsys):
+    import sqlite3
+    from contextlib import closing
+
+    from tests.integration.test_failure_hook import RECORD, hook
+
+    rule = '\n[[consistency]]\nkind = "distinct_ratio"\nfield = "name"\n'
+    (tmp_path / "job.toml").write_text(JOB.replace("[[sources]]", rule + "[[sources]]", 1))
+    (tmp_path / "page.html").write_text(page(2), encoding="utf-8")
+    with closing(sqlite3.connect(tmp_path / "data.sqlite")) as db:
+        db.execute("CREATE TABLE x (y)")
+    out = tmp_path / "summary.json"
+    argv = ["job", "load", str(tmp_path / "job.toml"), "--on-failure", hook(RECORD, str(out))]
+    assert main(argv) == 5
+    report = json.loads(capsys.readouterr().out)
+    assert report["status"] == "storage_error"
+    (source,) = report["sources"]
+    assert [issue["code"] for issue in source["issues"]] == ["storage_error"]
+    assert json.loads(out.read_text())["exit_code"] == 5

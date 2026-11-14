@@ -162,7 +162,9 @@ def test_dataset_symlink_is_refused(sample, capsys):
     target = sample / "target.sqlite"
     target.write_text("untouched")
     (sample / "agenda.sqlite").symlink_to(target)
-    assert main(["job", "load", str(sample / "job.toml")]) == 2
+    # The refusal happens after the run, like any storage failure (exit 5, ADR 0023).
+    assert main(["job", "load", str(sample / "job.toml")]) == 5
+    assert json.loads(capsys.readouterr().out)["status"] == "storage_error"
     assert target.read_text() == "untouched"
 
 

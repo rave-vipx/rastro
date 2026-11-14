@@ -39,8 +39,12 @@ def load_results(
     sources: list[LoadedSource] = []
     assessments = []
     approved = spec.approved_fields(names)
-    history = history_from_store(store, spec.name, approved) if rules else {}
+    history: History = {}
     failed = False
+    try:
+        history = history_from_store(store, spec.name, approved) if rules else {}
+    except DatasetStorageError:
+        failed = True  # An unreadable dataset loads nothing, but still reports (exit 5).
     for result in report.results:
         if failed:
             sources.append(_unloaded(result))
