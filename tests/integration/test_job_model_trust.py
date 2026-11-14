@@ -221,3 +221,23 @@ def test_hoisted_allow_remote_reaches_subcommands_with_their_own_flag():
         assert args.allow_remote is True
     finally:
         set_process_trust(previous)
+
+
+def test_trust_flags_after_the_subcommand_reach_explicit_options():
+    from rastro.cli import _build_parser
+    from rastro.cli_trust import trust_options
+
+    argv = hoist_trust_flags(["job", "run", "j.toml", "--allow-egress", "--allow-env", "PROXY_PW"])
+    args = _build_parser().parse_args(argv)
+    assert trust_options(args) == {"allow_egress": True, "allow_env": ["PROXY_PW"]}
+    plain = _build_parser().parse_args(["job", "run", "j.toml"])
+    assert trust_options(plain) == {"allow_egress": False, "allow_env": []}
+
+
+def test_operator_scope_extends_the_egress_secret_allow_list():
+    from rastro.application.egress_trust import allowed_env_names
+
+    assert "PROXY_PW" not in allowed_env_names((), {})
+    with operator_trust(allow_env=["PROXY_PW"]):
+        assert "PROXY_PW" in allowed_env_names((), {})
+    assert "PROXY_PW" not in allowed_env_names((), {})
