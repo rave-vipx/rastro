@@ -42,8 +42,8 @@ def add_trust_arguments(parser: argparse.ArgumentParser, *, root: bool = False) 
         "--allow-env",
         action="append",
         metavar="NAME",
-        help="Let the job read this environment variable besides RASTRO_* (repeatable; "
-        "also RASTRO_ALLOWED_ENV)",
+        help="Let the job's model keys and egress proxy credentials read this environment "
+        "variable besides RASTRO_* (repeatable; also RASTRO_ALLOWED_ENV)",
         **({"default": []} if root else default),
     )
 

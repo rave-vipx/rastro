@@ -74,3 +74,28 @@ def test_recipe_check_covers_records_fields_and_fallbacks() -> None:
             check_untrusted_recipe(bad)
     jsonld = Recipe.model_validate({"strategy": "jsonld", "fields": {"t": "/name"}})
     assert check_untrusted_recipe(jsonld) is jsonld
+
+
+def test_job_file_recipes_follow_the_selector_policy():
+    """Security audit H3: a shared job file cannot carry a costly selector."""
+    import pytest
+
+    from rastro import ConfigurationError, parse_job
+
+    job = """
+format_version = 1
+
+[recipe]
+strategy = "css"
+record_selector = "p ~ p ~ p ~ b"
+fields = { name = "::text" }
+
+[[sources]]
+path = "page.html"
+
+[[fields]]
+name = "name"
+type = "string"
+"""
+    with pytest.raises(ConfigurationError, match="sibling"):
+        parse_job(job, format="toml")

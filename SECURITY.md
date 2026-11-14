@@ -71,7 +71,7 @@ The trust flags may come before or after the subcommand and apply to the whole p
 [jobs guide](docs/jobs.md#security-boundaries) and
 [optional intelligence](docs/intelligence.md#operator-trust-for-models-in-job-files).
 
-Recipes from Hub bundles, MCP tool arguments (`scrape_file`, `recipe_propose`,
+Recipes in job files, Hub bundles, MCP tool arguments (`scrape_file`, `recipe_propose`,
 `recipe_try`), Studio edits and every model proposal (scrape, suggest and repair
 escalation) are checked before evaluation against a CSS selector cost policy (no `:has()`, no sibling combinators, bounded compounds,
 alternatives and nesting), because lxml evaluates those shapes in quadratic or worse time

@@ -38,6 +38,7 @@ from rastro.domain.json import strict_json
 from rastro.domain.memory import RecipeContext
 from rastro.domain.models import Limits, Recipe, ResourceLimitError
 from rastro.domain.recipe_compare import RepairPolicy
+from rastro.domain.selector_policy import check_untrusted_recipe
 
 JOB_SCHEMA_ID = "https://rave-vipx.github.io/rastro/schemas/job.schema.json"
 MAX_JOB_BYTES = 262_144
@@ -215,7 +216,13 @@ def parse_job(raw: str | bytes, *, format: Literal["toml", "json"]) -> Job:
         raise ValueError("Job format must be 'toml' or 'json'")
     if not isinstance(parsed, dict):
         raise ValueError("Job definition must be a top-level object")
-    return Job.model_validate(parsed)
+    job = Job.model_validate(parsed)
+    # A job file may come from someone else (SECURITY.md): its recipes follow the same
+    # selector cost policy as bundles, MCP and model proposals (security audit H3).
+    for recipe in (job.recipe, *(source.recipe for source in job.sources)):
+        if recipe is not None:
+            check_untrusted_recipe(recipe)
+    return job
 
 
 def job_json_schema() -> dict[str, Any]:
