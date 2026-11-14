@@ -48,7 +48,8 @@ env = rastro.model()  # reads RASTRO_MODEL
 | An agent that already uses Rastro over MCP | No model inside Rastro. The agent calls `repair_context`, proposes with `recipe_propose` and judges, and Rastro verifies | Under the agent's own terms |
 
 Pass the result as `model=` to `rastro.scrape`, `rastro.suggest`, `repair_job_source` or
-`Rastro(...)`, put `--model SPEC` on the CLI, or declare `[model]` in a job file. Exact
+`Rastro(...)`, put `--model SPEC` on the CLI, or declare an HTTP or Ollama `[model]` in a
+job file. Exact
 options and presets for specific products are listed in
 [optional intelligence](intelligence.md). Model names here are placeholders.
 
@@ -73,7 +74,10 @@ model runtime.
   to two clipped earlier values go with it. Page text is labelled untrusted data.
 - Any non-loopback endpoint, and any command that may call a hosted service, requires
   `allow_remote=True` (`--allow-remote`, `RASTRO_MODEL_ALLOW_REMOTE=1`). A model declared
-  in a job file gets those permissions only with the operator's consent.
+  in a job file gets those permissions only with the operator's consent, and a job file
+  can never declare a command model.
+- Every proposed recipe passes the untrusted-recipe selector policy (no `:has()`, no
+  sibling combinators) before it runs.
 - A subscription CLI forwards prompts to its vendor's service under your plan's terms.
   Treat it as remote, even though the process runs locally.
 - Keys are passed by environment variable name only. They never go into recipes, reports,

@@ -30,8 +30,9 @@ stays the only provider interface, and a model passed in code is trusted.
 For job files, the job declares and the operator consents. A job-declared model may use a
 loopback endpoint on a local model server's default port (11434, 1234, 8000, 8080) without
 consent. Any other endpoint, `base_url_env` or `allow_remote = true` needs operator remote
-consent (`--allow-remote`, `allow_remote=True`, `RASTRO_ALLOW_REMOTE=1`); a command needs
-`--allow-command`; secret variable names outside `RASTRO_*` need `--allow-env NAME` or
+consent (`--allow-remote`, `allow_remote=True`, `RASTRO_ALLOW_REMOTE=1`); a job file can
+never declare a command (amended after security audit H1: running a program is an
+operator decision made in `rastro.model`, `--model` or `RASTRO_MODEL`); secret variable names outside `RASTRO_*` need `--allow-env NAME` or
 `RASTRO_ALLOWED_ENV`. Checks run before any request or secret read and fail closed with
 an error naming the flag. CLI flags apply process-wide, so `rastro mcp` and
 `rastro studio` inherit them; SDK keywords are scoped to the call.

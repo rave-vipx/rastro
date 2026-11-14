@@ -200,18 +200,22 @@ A job file is data that anyone (including an agent through MCP or Studio) may wr
 | --- | --- |
 | uses a loopback endpoint on 11434, 1234, 8000 or 8080 | nothing |
 | uses any other endpoint, `base_url_env`, or sets `allow_remote = true` | `--allow-remote`, `allow_remote=True` or `RASTRO_ALLOW_REMOTE=1` |
-| uses `provider = "command"` | `--allow-command`, `allow_command=True` or `RASTRO_ALLOW_COMMAND=1` (plus remote consent if the job sets `allow_remote = true`) |
-| reads `api_key_env`, `base_url_env` or command `env` names outside `RASTRO_*` | `--allow-env NAME`, `allow_env=["NAME"]` or `RASTRO_ALLOWED_ENV="NAME,..."` |
+| uses `provider = "command"` | always refused: configure a command model as the operator (`rastro.model`, `--model`, `RASTRO_MODEL`) |
+| reads `api_key_env` or `base_url_env` names outside `RASTRO_*` | `--allow-env NAME`, `allow_env=["NAME"]` or `RASTRO_ALLOWED_ENV="NAME,..."` (the refusal never echoes the name) |
 
 `allow_remote = true` inside a job means "this job needs a remote model"; it is not consent.
 Without the operator's opt-in the run fails closed with a `ConfigurationError` naming the
 flag, before any request is made or any secret is read. The CLI flags work with every
 command and may follow the subcommand (`rastro job run job.toml --allow-remote`,
-`rastro mcp --allow-remote`, `rastro studio --allow-command`). The SDK keywords
-`allow_remote`, `allow_command` and `allow_env` exist on `run_job`, `run_job_async`,
-`run_job_file` and `load_job_file`; `repair_job_source(s)` take `allow_remote` (use the
-environment variables for the others). A model passed in code (`model=` or `rastro.model(...)`) is trusted
-and not restricted.
+`rastro mcp --allow-remote`, `rastro studio --allow-env NAME`). The SDK keywords
+`allow_remote`, `allow_egress` and `allow_env` exist on `run_job`, `run_job_async`,
+`run_job_file`, `load_job_file` and `repair_job_source(s)`. A model passed in code
+(`model=` or `rastro.model(...)`) is trusted and not restricted.
+
+Every recipe a model or an MCP agent proposes is checked against the untrusted-recipe
+selector policy (no `:has()`, no sibling combinators, bounded compounds, alternatives and
+nesting) before it is evaluated; a refused proposal counts as `invalid_model_candidate`
+and uses one call of the budget.
 
 ## Add a local Ollama model
 
