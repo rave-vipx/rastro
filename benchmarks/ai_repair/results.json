@@ -1,7 +1,7 @@
 {
  "environment": {
-  "recorded_at": "2026-11-14T03:47Z",
-  "git_head": "2ba6bae",
+  "recorded_at": "2026-11-14T03:50Z",
+  "git_head": "c60b9e3",
   "rastro": "0.6.0",
   "python": "3.12.16",
   "cases": 28
@@ -87,7 +87,7 @@
      "verdict": "refused",
      "detail": "no_candidates",
      "model_calls": 0,
-     "seconds": 0.04
+     "seconds": 0.05
     },
     {
      "case": "cards-semantic_swap",
@@ -95,7 +95,7 @@
      "verdict": "refused",
      "detail": "no_candidates",
      "model_calls": 0,
-     "seconds": 0.04
+     "seconds": 0.05
     },
     {
      "case": "cards-tag_change",
@@ -103,7 +103,7 @@
      "verdict": "correct",
      "detail": "promoted",
      "model_calls": 0,
-     "seconds": 0.06
+     "seconds": 0.05
     },
     {
      "case": "cards-wrapper_added",
@@ -119,7 +119,7 @@
      "verdict": "correct",
      "detail": "promoted",
      "model_calls": 0,
-     "seconds": 0.05
+     "seconds": 0.06
     },
     {
      "case": "dlist-container_restructured",
@@ -143,7 +143,7 @@
      "verdict": "correct",
      "detail": "promoted",
      "model_calls": 0,
-     "seconds": 0.06
+     "seconds": 0.07
     },
     {
      "case": "dlist-field_to_attribute",
@@ -167,7 +167,7 @@
      "verdict": "correct",
      "detail": "promoted",
      "model_calls": 0,
-     "seconds": 0.05
+     "seconds": 0.06
     },
     {
      "case": "grid-container_restructured",
@@ -191,7 +191,7 @@
      "verdict": "correct",
      "detail": "promoted",
      "model_calls": 0,
-     "seconds": 0.05
+     "seconds": 0.06
     },
     {
      "case": "grid-field_to_attribute",
@@ -215,7 +215,7 @@
      "verdict": "refused",
      "detail": "no_candidates",
      "model_calls": 0,
-     "seconds": 0.05
+     "seconds": 0.04
     },
     {
      "case": "table-class_rename",
@@ -546,7 +546,7 @@
   "oracle_correct": {
    "summary": {
     "cases": 28,
-    "model_calls": 32,
+    "model_calls": 44,
     "correct": {
      "count": 23,
      "rate": 0.821,
@@ -590,7 +590,7 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 0,
+     "model_calls": 1,
      "seconds": 0.06
     },
     {
@@ -607,14 +607,14 @@
      "verdict": "correct",
      "detail": "promoted",
      "model_calls": 2,
-     "seconds": 0.08
+     "seconds": 0.07
     },
     {
      "case": "cards-field_rename",
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 0,
+     "model_calls": 1,
      "seconds": 0.06
     },
     {
@@ -638,7 +638,7 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 0,
+     "model_calls": 1,
      "seconds": 0.06
     },
     {
@@ -646,7 +646,7 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 0,
+     "model_calls": 1,
      "seconds": 0.06
     },
     {
@@ -654,7 +654,7 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 0,
+     "model_calls": 1,
      "seconds": 0.06
     },
     {
@@ -671,14 +671,14 @@
      "verdict": "correct",
      "detail": "promoted",
      "model_calls": 2,
-     "seconds": 0.06
+     "seconds": 0.07
     },
     {
      "case": "dlist-field_rename",
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 0,
+     "model_calls": 1,
      "seconds": 0.06
     },
     {
@@ -687,7 +687,7 @@
      "verdict": "refused",
      "detail": "rejected",
      "model_calls": 2,
-     "seconds": 0.06
+     "seconds": 0.07
     },
     {
      "case": "dlist-semantic_swap",
@@ -702,7 +702,7 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 0,
+     "model_calls": 1,
      "seconds": 0.06
     },
     {
@@ -710,7 +710,7 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 0,
+     "model_calls": 1,
      "seconds": 0.06
     },
     {
@@ -719,14 +719,14 @@
      "verdict": "correct",
      "detail": "promoted",
      "model_calls": 2,
-     "seconds": 0.06
+     "seconds": 0.07
     },
     {
      "case": "grid-field_rename",
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 0,
+     "model_calls": 1,
      "seconds": 0.06
     },
     {
@@ -742,7 +742,7 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 0,
+     "model_calls": 1,
      "seconds": 0.06
     },
     {
@@ -751,14 +751,14 @@
      "verdict": "correct",
      "detail": "promoted",
      "model_calls": 2,
-     "seconds": 0.07
+     "seconds": 0.06
     },
     {
      "case": "table-class_rename",
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 0,
+     "model_calls": 1,
      "seconds": 0.06
     },
     {
@@ -767,7 +767,7 @@
      "verdict": "correct",
      "detail": "promoted",
      "model_calls": 2,
-     "seconds": 0.07
+     "seconds": 0.06
     },
     {
      "case": "table-decoy_blocks",
@@ -775,14 +775,14 @@
      "verdict": "correct",
      "detail": "promoted",
      "model_calls": 2,
-     "seconds": 0.07
+     "seconds": 0.06
     },
     {
      "case": "table-field_rename",
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 0,
+     "model_calls": 1,
      "seconds": 0.06
     },
     {
@@ -799,7 +799,7 @@
      "verdict": "refused",
      "detail": "quarantined",
      "model_calls": 2,
-     "seconds": 0.06
+     "seconds": 0.07
     },
     {
      "case": "table-semantic_swap",
@@ -814,7 +814,7 @@
   "oracle_wrong_recipe": {
    "summary": {
     "cases": 28,
-    "model_calls": 32,
+    "model_calls": 44,
     "correct": {
      "count": 12,
      "rate": 0.429,
@@ -858,7 +858,7 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 0,
+     "model_calls": 1,
      "seconds": 0.06
     },
     {
@@ -882,7 +882,7 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 0,
+     "model_calls": 1,
      "seconds": 0.06
     },
     {
@@ -906,23 +906,23 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 0,
-     "seconds": 0.06
+     "model_calls": 1,
+     "seconds": 0.07
     },
     {
      "case": "cards-wrapper_added",
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 0,
-     "seconds": 0.06
+     "model_calls": 1,
+     "seconds": 0.07
     },
     {
      "case": "dlist-class_rename",
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 0,
+     "model_calls": 1,
      "seconds": 0.06
     },
     {
@@ -946,7 +946,7 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 0,
+     "model_calls": 1,
      "seconds": 0.06
     },
     {
@@ -970,7 +970,7 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 0,
+     "model_calls": 1,
      "seconds": 0.06
     },
     {
@@ -978,7 +978,7 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 0,
+     "model_calls": 1,
      "seconds": 0.06
     },
     {
@@ -994,7 +994,7 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 0,
+     "model_calls": 1,
      "seconds": 0.06
     },
     {
@@ -1010,7 +1010,7 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 0,
+     "model_calls": 1,
      "seconds": 0.06
     },
     {
@@ -1026,7 +1026,7 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 0,
+     "model_calls": 1,
      "seconds": 0.06
     },
     {
@@ -1043,15 +1043,15 @@
      "verdict": "refused",
      "detail": "quarantined",
      "model_calls": 2,
-     "seconds": 0.06
+     "seconds": 0.07
     },
     {
      "case": "table-field_rename",
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 0,
-     "seconds": 0.06
+     "model_calls": 1,
+     "seconds": 0.07
     },
     {
      "case": "table-field_to_attribute",
@@ -1059,7 +1059,7 @@
      "verdict": "refused",
      "detail": "rejected",
      "model_calls": 2,
-     "seconds": 0.06
+     "seconds": 0.07
     },
     {
      "case": "table-optional_thinned",
@@ -1075,14 +1075,14 @@
      "verdict": "refused",
      "detail": "rejected",
      "model_calls": 2,
-     "seconds": 0.07
+     "seconds": 0.06
     }
    ]
   },
   "oracle_adversarial": {
    "summary": {
     "cases": 28,
-    "model_calls": 32,
+    "model_calls": 44,
     "correct": {
      "count": 12,
      "rate": 0.429,
@@ -1126,7 +1126,7 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 0,
+     "model_calls": 1,
      "seconds": 0.06
     },
     {
@@ -1150,7 +1150,7 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 0,
+     "model_calls": 1,
      "seconds": 0.06
     },
     {
@@ -1174,7 +1174,7 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 0,
+     "model_calls": 1,
      "seconds": 0.06
     },
     {
@@ -1182,7 +1182,7 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 0,
+     "model_calls": 1,
      "seconds": 0.06
     },
     {
@@ -1190,7 +1190,7 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 0,
+     "model_calls": 1,
      "seconds": 0.06
     },
     {
@@ -1214,7 +1214,7 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 0,
+     "model_calls": 1,
      "seconds": 0.06
     },
     {
@@ -1223,7 +1223,7 @@
      "verdict": "refused",
      "detail": "rejected",
      "model_calls": 2,
-     "seconds": 0.07
+     "seconds": 0.06
     },
     {
      "case": "dlist-semantic_swap",
@@ -1238,7 +1238,7 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 0,
+     "model_calls": 1,
      "seconds": 0.06
     },
     {
@@ -1246,7 +1246,7 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 0,
+     "model_calls": 1,
      "seconds": 0.06
     },
     {
@@ -1262,7 +1262,7 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 0,
+     "model_calls": 1,
      "seconds": 0.06
     },
     {
@@ -1278,7 +1278,7 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 0,
+     "model_calls": 1,
      "seconds": 0.06
     },
     {
@@ -1287,14 +1287,14 @@
      "verdict": "refused",
      "detail": "rejected",
      "model_calls": 2,
-     "seconds": 0.06
+     "seconds": 0.07
     },
     {
      "case": "table-class_rename",
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 0,
+     "model_calls": 1,
      "seconds": 0.06
     },
     {
@@ -1318,7 +1318,7 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 0,
+     "model_calls": 1,
      "seconds": 0.06
     },
     {
@@ -1343,7 +1343,7 @@
      "verdict": "refused",
      "detail": "rejected",
      "model_calls": 2,
-     "seconds": 0.06
+     "seconds": 0.07
     }
    ]
   }

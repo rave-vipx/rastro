@@ -18,8 +18,7 @@ What to expect, measured on the benchmark below:
 - With a model that proposes the right recipe and judges honestly, Rastro repaired
   **23 of 28** broken pages. Without a model it repaired 12. Neither served wrong data.
 - The small local models we tried (`qwen3:4b`, `llama3.2:3b`) recovered nothing new, and
-  as judges they blocked correct repairs: 5/28 and 11/28 correct, 0 wrong. That run
-  predates the change that stopped judging deterministic candidates.
+  as judges they blocked correct repairs: 5/28 and 11/28 correct, 0 wrong.
 - A model that is wrong in both roles (a meaning-swapping recipe, then a judge that
   approves it) gets **0 of 28** wrong repairs promoted: model candidates must pass the
   deterministic value checks before the judge sees them. Before those checks it got 6.
@@ -60,7 +59,7 @@ options and presets for specific products are listed in
 | `scrape` with no selectors | JSON-LD and microdata discovery | The model proposes a recipe from field names, types and descriptions. It is kept only if it extracts valid records |
 | `suggest` | Selectors that reproduce your examples | Examples become optional. A model recipe must still reproduce every given example |
 | Repair (`scrape(..., memory=)`, `recipe repair`) | Relocation, declared fallbacks, discovery | Consulted **only when no deterministic candidate would pass**. Its recipe is joined with the serving selectors (`old, new`), gated like any other and then held to the deterministic value checks: values of the field's type and shape, never taken from another field's earlier values. A failure rejects it |
-| Semantic gate | `[[consistency]]` rules and replay of the last good sample | Before a model candidate is promoted automatically, the model judges whether each changed field still means the same. `mismatch` or a failed answer quarantines; it can block a promotion, never force one. Deterministic candidates are never sent to the judge |
+| Semantic gate | `[[consistency]]` rules and replay of the last good sample | Before any automatic promotion, relocated or proposed, the model judges whether each changed field still means the same. `mismatch` or a failed answer quarantines; it can block a promotion, never force one |
 | MCP agent in the loop | `recipe_repair`, `recipe_promote` (a reason is required) | The agent's own model proposes and judges through the tools. The same recipe CI decides |
 
 Models are never enabled implicitly. Without `model=`, `--model`, `[model]` or
@@ -85,9 +84,9 @@ model runtime.
 `InferencePolicy` bounds every model phase: at most 2 calls by default (4 at most), 1
 retry after a rejected or invalid answer, a 30 s timeout, 32 KiB of context, 64 KiB of
 response and 2,048 output tokens (see [budgets](intelligence.md#budgets-and-outcomes)).
-With a model, a repair costs nothing when a deterministic candidate passes, and one or two
-proposal calls plus a judge call when none does. On the benchmark that was 32 calls for 28
-cases with the scripted oracle.
+With a model, a repair costs one judge call when a deterministic candidate passes, and one
+or two proposal calls plus a judge call when none does. A recipe that still serves costs
+nothing. On the benchmark that was 44 calls for 28 cases with the scripted oracle.
 
 ## Measured results
 
@@ -102,9 +101,9 @@ anything else without warning) or **refused** (it served nothing new and said wh
 | --- | ---: | ---: | ---: | ---: |
 | Deterministic Rastro, no model | 12/28 (0.27–0.61) | 0/28 (0.00–0.12) | 16/28 | 0 |
 | Hand-written Scrapling + Pydantic baseline | 14/28 (0.33–0.67) | **4/28 (0.06–0.32)** | 10/28 | 0 |
-| Scripted oracle: correct recipe, honest judge | **23/28 (0.64–0.92)** | 0/28 (0.00–0.12) | 5/28 | 32 |
-| Scripted oracle: swapped recipe, honest judge | 12/28 (0.27–0.61) | 0/28 (0.00–0.12) | 16/28 | 32 |
-| Scripted oracle: swapped recipe, judge approves all | 12/28 (0.27–0.61) | **0/28 (0.00–0.12)** | 16/28 | 32 |
+| Scripted oracle: correct recipe, honest judge | **23/28 (0.64–0.92)** | 0/28 (0.00–0.12) | 5/28 | 44 |
+| Scripted oracle: swapped recipe, honest judge | 12/28 (0.27–0.61) | 0/28 (0.00–0.12) | 16/28 | 44 |
+| Scripted oracle: swapped recipe, judge approves all | 12/28 (0.27–0.61) | **0/28 (0.00–0.12)** | 16/28 | 44 |
 | `qwen3:4b` (local, before the value checks) | 5/28 (0.08–0.36) | 0/28 (0.00–0.12) | 23/28 | 44 |
 | `llama3.2:3b` (local, before the value checks) | 11/28 (0.24–0.58) | 0/28 (0.00–0.12) | 17/28 | 44 |
 
@@ -122,8 +121,8 @@ What the numbers say:
 - **Small local models hurt more than they help as judges.** They compare values rather
   than meanings, so they call correct repairs `mismatch` and block them. `qwen3:4b`
   dropped to 5/28 and `llama3.2:3b` to 11/28, with no new recoveries and no wrong data.
-  Those runs also judged deterministic candidates, which Rastro no longer does; they have
-  not been rerun. Use a stronger model for the judge, or no model.
+  Those runs predate the value checks and have not been rerun. Use a stronger model for
+  the judge, or no model.
 - The hand-written baseline recovers two more pages than deterministic Rastro, but it
   silently served promo blocks as events four times.
 - The scripted oracle measures Rastro's gates, not model quality. Live results are from

@@ -33,9 +33,8 @@ descriptions, so prompts get field names and types only.
 
 With a model configured, Rastro itself decides when to call it (since the AI wave):
 proposals only when no deterministic candidate would pass, joined with the serving
-selectors (`old, new`) and held to the deterministic value checks, then the semantic
-judge before a model candidate's automatic promotion. Deterministic candidates are not
-judged (since `2ba6bae`; the live rows below predate it and judged them too).
+selectors (`old, new`) and held to the deterministic value checks (since `2ba6bae`), and
+the semantic judge before every automatic promotion, deterministic ones included.
 
 **Verdicts.** **correct**: exactly the expected records, compared as text,
 order-insensitive, absent optional values ignored. **wrong**: anything else served
@@ -63,7 +62,7 @@ Wilson score intervals over 28 cases.
 
 ## Results
 
-Offline rows recorded on 2026-11-14 at `2ba6bae` (`ai/flows2`); live rows on 2026-11-13
+Offline rows recorded on 2026-11-14 at `c60b9e3` (`ai/flows2`); live rows on 2026-11-13
 from `cut/ai-wave`. The offline rows are reproducible with
 `python -m benchmarks.ai_repair.run`. Python 3.12.16.
 
@@ -71,14 +70,14 @@ from `cut/ai-wave`. The offline rows are reproducible with
 | --- | ---: | ---: | ---: | ---: |
 | Deterministic Rastro, no model | 12/28 (0.27–0.61) | 0/28 (0.00–0.12) | 16/28 | 0 |
 | Hand-written Scrapling + Pydantic baseline | 14/28 (0.33–0.67) | **4/28 (0.06–0.32)** | 10/28 | 0 |
-| Scripted oracle: correct recipe, honest judge | **23/28 (0.64–0.92)** | 0/28 (0.00–0.12) | 5/28 | 32 |
-| Scripted oracle: swapped recipe, honest judge | 12/28 (0.27–0.61) | 0/28 (0.00–0.12) | 16/28 | 32 |
-| Scripted oracle: swapped recipe, judge approves all | 12/28 (0.27–0.61) | **0/28 (0.00–0.12)** | 16/28 | 32 |
+| Scripted oracle: correct recipe, honest judge | **23/28 (0.64–0.92)** | 0/28 (0.00–0.12) | 5/28 | 44 |
+| Scripted oracle: swapped recipe, honest judge | 12/28 (0.27–0.61) | 0/28 (0.00–0.12) | 16/28 | 44 |
+| Scripted oracle: swapped recipe, judge approves all | 12/28 (0.27–0.61) | **0/28 (0.00–0.12)** | 16/28 | 44 |
 | `qwen3:4b` (local, before the value checks) | 5/28 (0.08–0.36) | 0/28 (0.00–0.12) | 23/28 | 44 |
 | `llama3.2:3b` (local, before the value checks) | 11/28 (0.24–0.58) | 0/28 (0.00–0.12) | 17/28 | 44 |
 
 The live rows are on commit `a3ba147`, which fixes the judge schema; they have not been
-rerun since the value checks, and then the judge also saw deterministic candidates. On `7d4a84f`, before
+rerun since the value checks. On `7d4a84f`, before
 that fix, both local models scored 0/28 correct, 0 wrong and 28 refused: every judge call
 was rejected by Ollama, and every promotion was quarantined
 (`results-live-*-7d4a84f.json`).
@@ -107,8 +106,9 @@ no serving recipe in the prompt, no judge) was: deterministic 12, scripted corre
    Model candidates now also meet the relocation value checks (type, shape and
    `value_matches_other_field` against the retained sample): every swapped proposal is
    rejected before the judge is called, so the approve-all row is **0/28 wrong**, and the
-   correct oracle still recovers 23/28. Model calls fell from 44 to 32 because
-   deterministic candidates are no longer judged.
+   correct oracle still recovers 23/28 with the same 44 model calls. The judge still
+   reviews relocated candidates too, so it can veto a relocation that lands on the
+   wrong element.
 3. **Small local models make repair worse here.** Their judge compares values instead of
    meanings. A correct title from a different event is called `mismatch` (seen on both
    models with a hand-made pair). So the judge blocks correct deterministic repairs:

@@ -126,15 +126,15 @@ has a `[model]` table, when `[repair] model = true` (the `RASTRO_MODEL` spec, th
    shape, and no values drawn only from another field's history. A failure rejects it
    (`value_type_changed`, `value_shape_changed`, `value_matches_other_field`). Fields
    with no retained values are not checked.
-3. **Semantic gate.** Before a model candidate is promoted, the model judges whether the
+3. **Semantic gate.** Before any candidate is promoted, relocated or proposed, the model judges whether the
    changed fields' current values (clipped, labelled untrusted, with earlier sample
    values as reference) match each field's meaning. Verdicts appear in
    `indicators.results` with `kind = "model_judge"` and lower
    `indicators.semantic_confidence`. `mismatch` quarantines (`semantic_mismatch`);
    `unsure` promotes only with complete history, completeness and validity;
    a failed answer quarantines (`semantic_judge_failed`). The judge only vetoes:
-   it never sees a candidate the value checks rejected, and deterministic candidates
-   are never sent to it.
+   it reviews relocated and model candidates alike, never sees a candidate the value
+   checks rejected, and is not called for a recipe that still serves.
 
 `SourceRepair.origin` says whether candidates came from `relocation` or the `model`;
 `inference_calls` counts proposal and judge calls. Without a model, repair is unchanged.
