@@ -43,17 +43,16 @@ def field_scope(expression: str, page: Selector, node: Selector) -> tuple[Select
 def element_count(scope: Selector, selector: str) -> int:
     """Elements a selector list matches; pseudo-elements select values of their element."""
     count = 0
-    seen: set[str] = set()
+    seen: set[object] = set()
     for tree in parse(selector):
         if tree.canonical().startswith("::"):
             count += 1
             continue
         tree.pseudo_element = None
-        # A selector list ("a, b") matching the same element twice is one match.
-        seen.update(
-            element._root.getroottree().getpath(element._root)
-            for element in scope.css(tree.canonical())
-        )
+        # A selector list ("a, b") matching the same element twice is one match. lxml returns
+        # the same proxy for a node while it is referenced, so identity dedupes in linear
+        # time (an XPath per match was quadratic in sibling count, audit H2).
+        seen.update(element._root for element in scope.css(tree.canonical()))
     return count + len(seen)
 
 

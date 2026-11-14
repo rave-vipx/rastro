@@ -20,7 +20,7 @@ from pydantic_core import PydanticCustomError
 
 from rastro.domain.models import EGRESS_NAME, Contract, Outcome
 
-_ENVIRONMENT_NAME = r"^[A-Za-z_][A-Za-z0-9_]{0,127}$"
+_ENVIRONMENT_NAME = r"^[A-Z_][A-Z0-9_]{0,127}$"
 
 
 def _exact_host(host: str) -> str:

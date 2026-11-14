@@ -12,7 +12,9 @@ rastro studio --root path/to/jobs --port 8765
 ```
 
 `--root` defaults to the current directory and `--port` to 8765. Studio always binds
-`127.0.0.1`. Without the extra, `rastro studio` exits with code 2 and prints a JSON error on
+`127.0.0.1`. Jobs that declare egress proxies run only with `--allow-egress`, and
+`--allow-env NAME` extends the secret allow-list (see [operator opt-in](jobs.md#operator-opt-in));
+selector edits follow the [untrusted-recipe selector policy](hub.md#import). Without the extra, `rastro studio` exits with code 2 and prints a JSON error on
 stderr: `{"error": "missing_extra", "message": ..., "location": null, "hint": "pip install
 'rastro-engine[studio]'"}`. The page is one HTML file plus a few scripts and one stylesheet shipped in the package;
 there is no build step.

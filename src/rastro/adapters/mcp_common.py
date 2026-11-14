@@ -27,6 +27,10 @@ Selector = Annotated[str, Field(min_length=1, max_length=1024)]
 
 READ = ToolAnnotations(readOnlyHint=True, idempotentHint=True, openWorldHint=False)
 READ_JOB = ToolAnnotations(readOnlyHint=True, idempotentHint=True, openWorldHint=True)
+# job_preview writes nothing, but a job can fetch URLs or call a model: not read-only.
+PREVIEW = ToolAnnotations(
+    readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=True
+)
 LOAD = ToolAnnotations(
     readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=True
 )

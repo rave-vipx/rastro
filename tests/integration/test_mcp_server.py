@@ -55,7 +55,6 @@ TOOLS = {
 }
 READ_ONLY = {
     "job_validate",
-    "job_preview",
     "dataset_records",
     "drift_status",
     "recipe_list",
@@ -78,7 +77,8 @@ DESTRUCTIVE = {
 # (readOnlyHint, destructiveHint, idempotentHint, openWorldHint) per tool (AGENT-002).
 HINTS = {
     "job_validate": (True, None, True, False),
-    "job_preview": (True, None, True, True),
+    # Writes nothing, but a job can fetch URLs or call a model (audit): not read-only.
+    "job_preview": (False, False, True, True),
     "job_extract": (False, False, False, True),
     "job_load": (False, True, False, True),
     "job_run": (False, True, False, True),
@@ -325,3 +325,39 @@ async def test_dataset_records_values_are_bounded(
     monkeypatch.setattr(mcp_tools, "bounded", spy)
     failed, data = await _call(workspace, "dataset_records", path="jobs/agenda.sqlite", limit=1)
     assert not failed and seen and data["truncated"] is True
+
+
+_PROXY_JOB = """format_version = 1
+discover_recipes = true
+[region]
+egress = "p"
+[acquisition]
+allowed_hosts = ["example.com"]
+[acquisition.egress_profiles.p]
+proxy_url = "http://127.0.0.1:9"
+username_env = "USER"
+password_env = "GITHUB_TOKEN"
+[[sources]]
+url = "https://example.com/"
+[[fields]]
+name = "name"
+type = "string"
+[dataset]
+path = "data.sqlite3"
+name = "d"
+identity = ["name"]
+"""
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("tool", ["job_preview", "job_extract", "job_load"])
+async def test_job_declared_proxy_needs_the_operator_flag(workspace: Path, tool: str) -> None:
+    """Audit H1 (MCP PoC): an agent-supplied job cannot route through its own proxy."""
+    (workspace / "proxy.toml").write_text(_PROXY_JOB, encoding="utf-8")
+    failed, text = await _call(workspace, tool, path="proxy.toml")
+    assert failed and "allow-egress" in text
+    server = build_server(workspace, allow_egress=True)._mcp_server
+    async with create_connected_server_and_client_session(server) as client:
+        result = await client.call_tool(tool, {"path": "proxy.toml"})
+    text = result.content[0].text  # type: ignore[union-attr]
+    assert result.isError and "RASTRO_ALLOWED_ENV" in text and "GITHUB" not in text

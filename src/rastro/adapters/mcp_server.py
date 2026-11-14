@@ -8,6 +8,7 @@ source text. Inputs carry JSON Schema bounds; every path is workspace-relative.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -21,9 +22,9 @@ from rastro.adapters.mcp_common import (
     CREATE,
     EXTRACT,
     LOAD,
+    PREVIEW,
     PROMOTE,
     READ,
-    READ_JOB,
     REPAIR,
     Examples,
     FieldName,
@@ -65,45 +66,49 @@ of that field (a title, not a city). Gates check structure and history; you chec
 Never promote with override_gates unless the user asks."""
 
 
-def build_server(root: Path) -> FastMCP:
-    """Create the server; every path argument is resolved inside ``root``."""
+def build_server(
+    root: Path, *, allow_egress: bool = False, allow_env: Iterable[str] = ()
+) -> FastMCP:
+    """Create the server; every path argument is resolved inside ``root``. Job-declared
+    egress proxies and extra secret names are operator opt-ins, as on the CLI."""
     workspace = root.resolve()
     server = RastroMCP("rastro", instructions=INSTRUCTIONS)
     server._mcp_server.version = __version__  # serverInfo: Rastro's version, not the library's
-    _register_jobs(server, workspace)
-    _register_recipes(server, workspace)
+    trust: dict[str, Any] = {"allow_egress": allow_egress, "allow_env": tuple(allow_env)}
+    _register_jobs(server, workspace, trust)
+    _register_recipes(server, workspace, trust)
     _register_authoring(server, workspace)
     mcp_agent_tools.register(server, workspace)
     return server
 
 
-def _register_jobs(server: FastMCP, workspace: Path) -> None:
+def _register_jobs(server: FastMCP, workspace: Path, trust: dict[str, Any]) -> None:
     @server.tool(annotations=READ)
     async def job_validate(path: Path_) -> dict[str, Any]:
         """Validate a job file (.toml/.json). Reads no sources."""
         return await call(mcp_tools.job_validate, workspace, path)  # type: ignore[no-any-return]
 
-    @server.tool(annotations=READ_JOB)
+    @server.tool(annotations=PREVIEW)
     async def job_preview(path: Path_) -> dict[str, Any]:
         """Run a job and show what would be loaded, with provenance. Writes nothing."""
-        return await call(mcp_tools.job_preview, workspace, path)  # type: ignore[no-any-return]
+        return await call(mcp_tools.job_preview, workspace, path, **trust)  # type: ignore[no-any-return]
 
     @server.tool(annotations=EXTRACT)
     async def job_extract(path: Path_) -> dict[str, Any]:
         """Run a job and return its records (rastro job run). Writes no dataset; a job with
         recipe_memory records recipe versions there, as the CLI does."""
-        return await call(mcp_lifecycle.job_extract, workspace, path)  # type: ignore[no-any-return]
+        return await call(mcp_lifecycle.job_extract, workspace, path, **trust)  # type: ignore[no-any-return]
 
     @server.tool(annotations=LOAD)
     async def job_load(path: Path_, drift: bool = False) -> dict[str, Any]:
         """Run a job and load approved fields into its dataset (rastro job load). drift=true
         also measures structural drift per source."""
-        return await call(mcp_tools.job_load, workspace, path, drift=drift)  # type: ignore[no-any-return]
+        return await call(mcp_tools.job_load, workspace, path, drift=drift, **trust)  # type: ignore[no-any-return]
 
     @server.tool(annotations=LOAD)
     async def job_run(path: Path_) -> dict[str, Any]:
         """Deprecated: use job_load. Same effect: writes the job's dataset."""
-        return await call(mcp_tools.job_load, workspace, path)  # type: ignore[no-any-return]
+        return await call(mcp_tools.job_load, workspace, path, **trust)  # type: ignore[no-any-return]
 
     @server.tool(annotations=READ)
     async def dataset_records(
@@ -132,7 +137,7 @@ def _register_jobs(server: FastMCP, workspace: Path) -> None:
         return await call(mcp_lifecycle.drift_status, workspace, path)  # type: ignore[no-any-return]
 
 
-def _register_recipes(server: FastMCP, workspace: Path) -> None:
+def _register_recipes(server: FastMCP, workspace: Path, trust: dict[str, Any]) -> None:
     @server.tool(annotations=READ)
     async def recipe_list(path: Path_) -> dict[str, Any]:
         """List stored recipe versions and states for each source of a job."""
@@ -159,6 +164,7 @@ def _register_recipes(server: FastMCP, workspace: Path) -> None:
             source,
             min_records=min_records,
             min_completeness=min_completeness,
+            **trust,
         )
 
     @server.tool(annotations=PROMOTE)
@@ -179,6 +185,7 @@ def _register_recipes(server: FastMCP, workspace: Path) -> None:
             version,
             reason=reason,
             override_gates=override_gates,
+            **trust,
         )
 
     @server.tool(annotations=APPLY)
@@ -245,6 +252,6 @@ def _register_authoring(server: FastMCP, workspace: Path) -> None:
         )
 
 
-def serve(root: Path) -> None:
+def serve(root: Path, *, allow_egress: bool = False, allow_env: Iterable[str] = ()) -> None:
     """Run the stdio server until the client disconnects."""
-    build_server(root).run(transport="stdio")
+    build_server(root, allow_egress=allow_egress, allow_env=allow_env).run(transport="stdio")

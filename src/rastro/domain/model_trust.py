@@ -1,8 +1,10 @@
 """Operator trust for models declared in job files (SEC-004/005/011, P-001).
 
 A job file may declare a model, but only the operator running Rastro decides whether
-page content may leave the machine, a program may be started, or a secret may be read.
-``allow_remote = true`` inside a job means "this job needs remote"; it is not consent.
+page content may leave the machine or a secret may be read. ``allow_remote = true``
+inside a job means "this job needs remote"; it is not consent. A job file can never make
+Rastro start a program: a command model comes only from operator configuration
+(``rastro.model(...)``, ``--model`` or ``RASTRO_MODEL``).
 """
 
 from __future__ import annotations
@@ -23,13 +25,11 @@ _REMOTE_ENV = "RASTRO_ALLOW_REMOTE=1"
 @dataclass(frozen=True)
 class OperatorTrust:
     allow_remote: bool = False
-    allow_command: bool = False
     allowed_env: frozenset[str] = frozenset()
 
     def merged(self, other: OperatorTrust) -> OperatorTrust:
         return OperatorTrust(
             allow_remote=self.allow_remote or other.allow_remote,
-            allow_command=self.allow_command or other.allow_command,
             allowed_env=self.allowed_env | other.allowed_env,
         )
 
@@ -37,16 +37,17 @@ class OperatorTrust:
 def check_job_model(spec: JobModelProvider, trust: OperatorTrust) -> None:
     """Raise ``ConfigurationError`` unless the operator allows this job-declared model."""
     if isinstance(spec, CommandProvider):
-        if not trust.allow_command:
-            raise _refused("start a model command", "--allow-command", "RASTRO_ALLOW_COMMAND=1")
-        if spec.allow_remote and not trust.allow_remote:
-            raise _refused("let a command send page content off this machine", "--allow-remote")
-        for name in spec.env:
-            check_secret_env_name(name, trust.allowed_env)
-        return
-    for env_name in (spec.base_url_env, getattr(spec, "api_key_env", None)):
+        raise ConfigurationError(
+            "A job file cannot make Rastro start a program; configure a command model as "
+            "the operator instead",
+            location="model",
+            hint="Use rastro.model('command:...') in Python, --model on the CLI or the "
+            "RASTRO_MODEL environment variable",
+        )
+    for key in ("base_url_env", "api_key_env"):
+        env_name = getattr(spec, key, None)
         if env_name is not None:
-            check_secret_env_name(env_name, trust.allowed_env)
+            check_secret_env_name(env_name, trust.allowed_env, location=f"model.{key}")
     if trust.allow_remote:
         return
     if spec.base_url_env is not None or getattr(spec, "allow_remote", False):

@@ -1,25 +1,29 @@
-"""Which environment variables a job file may make Rastro read (SEC-004/005).
+"""Which environment variables a job file may make Rastro read (security audit H1).
 
-A job file is data written by anyone; it must not choose an arbitrary process secret
-(say ``AWS_SECRET_ACCESS_KEY``) and send it to an endpoint. Names it references must
-start with ``RASTRO_`` or be allow-listed by the operator.
+A job file is configuration that may come from someone else. It can name the variable that
+holds a proxy or model credential, but only one whose name the operator controls: the
+``RASTRO_`` namespace, or a name the operator listed in ``RASTRO_ALLOWED_ENV`` or with
+``--allow-env``. Otherwise a hostile job could name ``GITHUB_TOKEN`` and send it to its own
+endpoint.
 """
 
 from __future__ import annotations
 
 import re
 
-from rastro.domain.models import ConfigurationError
+from rastro.domain.sources import ConfigurationError
 
-JOB_ENV_NAME = re.compile(r"RASTRO_[A-Z0-9_]{1,64}")
+_RASTRO_NAME = re.compile(r"RASTRO_[A-Z0-9_]{1,64}")
 
 
-def check_secret_env_name(name: str, allowed: frozenset[str]) -> str:
-    """Return ``name`` if a job file may reference it, else raise ``ConfigurationError``."""
-    if JOB_ENV_NAME.fullmatch(name) or name in allowed:
+def check_secret_env_name(
+    name: str, allowed: frozenset[str], *, location: str | None = None
+) -> str:
+    """Return ``name`` when the operator trusts it; the error never echoes the name."""
+    if _RASTRO_NAME.fullmatch(name) or name in allowed:
         return name
     raise ConfigurationError(
-        f"Job files may read only RASTRO_* environment variables; {name} is not allowed",
-        hint="Rename the variable to RASTRO_..., or allow it with --allow-env NAME "
-        "or RASTRO_ALLOWED_ENV",
+        "A job file may only reference environment variables named RASTRO_* or listed by "
+        "the operator in RASTRO_ALLOWED_ENV (comma-separated) or with --allow-env NAME",
+        location=location,
     )

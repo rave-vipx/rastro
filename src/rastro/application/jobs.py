@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Sequence
+from collections.abc import Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from rastro.application.active_recipes import active_job
+from rastro.application.egress_trust import check_job_egress
 from rastro.application.job_loader import (
     PreparedJob,
     load_job,
@@ -62,22 +63,23 @@ async def run_job_async(
     acquisition: AcquisitionPort | None = None,
     model: ModelPort | None = None,
     allow_remote: bool = False,
-    allow_command: bool = False,
-    allow_env: Sequence[str] = (),
+    allow_egress: bool = False,
+    allow_env: Iterable[str] = (),
 ) -> JobRunResult[Any]:
     """Execute a validated job asynchronously through the public Rastro SDK.
 
     With ``recipe_memory``, a stored serving recipe newer than the job file's is used;
-    ``JobRunResult.recipes`` reports the recipe each source used.
-    The operator, not the job file, allows a remote model endpoint (``allow_remote``), a
-    model command (``allow_command``) or extra secret variable names (``allow_env``).
+    ``JobRunResult.recipes`` reports the recipe each source used. The operator, not the
+    job file, allows a remote model endpoint (``allow_remote``), a job-declared egress
+    proxy (``allow_egress``) and extra secret variable names (``allow_env``). A job file
+    can never make Rastro start a model command.
     """
-    active, selections = active_job(
-        job, base_dir=base_dir, allow_absolute_paths=allow_absolute_paths
-    )
-    with operator_trust(
-        allow_remote=allow_remote, allow_command=allow_command, allow_env=allow_env
-    ):
+    allow_env = tuple(allow_env)
+    with operator_trust(allow_remote=allow_remote, allow_env=allow_env):
+        check_job_egress(job, allow_egress=allow_egress, allow_env=allow_env)
+        active, selections = active_job(
+            job, base_dir=base_dir, allow_absolute_paths=allow_absolute_paths
+        )
         report = await _run_active_async(
             active,
             base_dir=base_dir,
@@ -135,22 +137,23 @@ def run_job(
     acquisition: AcquisitionPort | None = None,
     model: ModelPort | None = None,
     allow_remote: bool = False,
-    allow_command: bool = False,
-    allow_env: Sequence[str] = (),
+    allow_egress: bool = False,
+    allow_env: Iterable[str] = (),
 ) -> JobRunResult[Any]:
     """Run a validated job; uses synchronous extraction when offline and model-free.
 
     With ``recipe_memory``, a stored serving recipe newer than the job file's is used;
-    ``JobRunResult.recipes`` reports the recipe each source used.
-    The operator, not the job file, allows a remote model endpoint (``allow_remote``), a
-    model command (``allow_command``) or extra secret variable names (``allow_env``).
+    ``JobRunResult.recipes`` reports the recipe each source used. The operator, not the
+    job file, allows a remote model endpoint (``allow_remote``), a job-declared egress
+    proxy (``allow_egress``) and extra secret variable names (``allow_env``). A job file
+    can never make Rastro start a model command.
     """
-    active, selections = active_job(
-        job, base_dir=base_dir, allow_absolute_paths=allow_absolute_paths
-    )
-    with operator_trust(
-        allow_remote=allow_remote, allow_command=allow_command, allow_env=allow_env
-    ):
+    allow_env = tuple(allow_env)
+    with operator_trust(allow_remote=allow_remote, allow_env=allow_env):
+        check_job_egress(job, allow_egress=allow_egress, allow_env=allow_env)
+        active, selections = active_job(
+            job, base_dir=base_dir, allow_absolute_paths=allow_absolute_paths
+        )
         report = _run_active(
             active,
             base_dir=base_dir,
@@ -220,8 +223,8 @@ def run_job_file(
     acquisition: AcquisitionPort | None = None,
     model: ModelPort | None = None,
     allow_remote: bool = False,
-    allow_command: bool = False,
-    allow_env: Sequence[str] = (),
+    allow_egress: bool = False,
+    allow_env: Iterable[str] = (),
 ) -> JobRunResult[Any]:
     """Load and execute a declarative job file; see ``run_job`` for the ``allow_*`` options."""
     file_path = Path(path)
@@ -233,7 +236,7 @@ def run_job_file(
         acquisition=acquisition,
         model=model,
         allow_remote=allow_remote,
-        allow_command=allow_command,
+        allow_egress=allow_egress,
         allow_env=allow_env,
     )
 

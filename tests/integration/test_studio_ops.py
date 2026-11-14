@@ -220,3 +220,17 @@ def test_new_endpoints_require_token_and_origin(root: Path) -> None:
             assert http.get(path).status_code == 405, path
         assert http.get("/api/pages", headers={"Origin": "https://evil.example"}).status_code == 403
     assert not list(root.rglob("*.toml"))
+
+
+@pytest.mark.parametrize("path", ["/api/extract", "/api/load"])
+def test_job_declared_proxy_needs_the_operator_flag(root: Path, path: str) -> None:
+    """Audit H1: `rastro studio` without --allow-egress refuses a job's own proxy."""
+    from tests.integration.test_mcp_server import _PROXY_JOB
+
+    (root / "proxy.toml").write_text(_PROXY_JOB, encoding="utf-8")
+    for allow, expected in ((False, "allow-egress"), (True, "RASTRO_ALLOWED_ENV")):
+        app, token = create_app(root, allow_egress=allow)
+        with serving(app, "http://127.0.0.1:8765") as http:
+            http.headers["X-Studio-Token"] = token
+            reply = post(http, path, {"file": "proxy.toml"})
+        assert reply.status_code >= 400 and expected in reply.text

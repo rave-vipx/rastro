@@ -1,37 +1,50 @@
-"""Operator opt-in flags for every command (SEC-004/005/011).
+"""Operator opt-in flags for every command (security audit H1, SEC-004/005/011).
 
-``--allow-remote``, ``--allow-command`` and ``--allow-env NAME`` may appear before or
-after the subcommand (``rastro mcp --allow-remote``); they are hoisted to the root parser
-and apply process-wide, so Studio and MCP servers inherit them.
+``--allow-remote``, ``--allow-egress`` and ``--allow-env NAME`` may appear before or after
+the subcommand (``rastro mcp --allow-remote``); they are hoisted to the root parser and
+apply process-wide, so Studio and MCP servers inherit them. A job file can never make
+Rastro start a local command; a command model comes only from operator configuration.
 """
 
 from __future__ import annotations
 
 import argparse
+from typing import Any
 
 from rastro.application.operator_trust import env_names, set_process_trust
 from rastro.domain.model_trust import OperatorTrust
 
-_FLAGS = frozenset({"--allow-remote", "--allow-command"})
+_FLAGS = frozenset({"--allow-remote", "--allow-egress"})
 _VALUED = "--allow-env"
 
 
-def add_trust_arguments(parser: argparse.ArgumentParser) -> None:
-    group = parser.add_argument_group("operator opt-ins for models declared in job files")
+def add_trust_arguments(parser: argparse.ArgumentParser, *, root: bool = False) -> None:
+    """Root parser: the real flags. Subcommands: the same flags listed for ``--help`` only.
+
+    Hoisting means the root parser always consumes them; subcommand copies default to
+    ``SUPPRESS`` so they never overwrite the root's parsed values.
+    """
+    default: dict[str, Any] = {} if root else {"default": argparse.SUPPRESS}
+    group = parser.add_argument_group("operator opt-ins for job files")
+    if root:
+        group.add_argument(
+            "--allow-remote",
+            action="store_true",
+            help="Let job-declared models use non-loopback endpoints (page content leaves)",
+        )
     group.add_argument(
-        "--allow-remote",
+        "--allow-egress",
         action="store_true",
-        help="Let job-declared models use non-loopback endpoints (page content leaves)",
-    )
-    group.add_argument(
-        "--allow-command", action="store_true", help="Let job-declared models run a command"
+        help="Use the egress proxies the job declares (also RASTRO_ALLOW_EGRESS=1)",
+        **default,
     )
     group.add_argument(
         "--allow-env",
         action="append",
-        default=[],
         metavar="NAME",
-        help="Let job files read this environment variable (repeatable)",
+        help="Let the job read this environment variable besides RASTRO_* (repeatable; "
+        "also RASTRO_ALLOWED_ENV)",
+        **({"default": []} if root else default),
     )
 
 
@@ -68,7 +81,14 @@ def apply_trust(args: argparse.Namespace, argv: list[str]) -> OperatorTrust:
     return set_process_trust(
         OperatorTrust(
             allow_remote=bool(getattr(args, "allow_remote", False)),
-            allow_command=bool(getattr(args, "allow_command", False)),
             allowed_env=env_names(getattr(args, "allow_env", None) or ()),
         )
     )
+
+
+def trust_options(args: argparse.Namespace) -> dict[str, Any]:
+    """The egress opt-ins passed explicitly to job, dataset, repair, MCP and Studio entries."""
+    return {
+        "allow_egress": bool(getattr(args, "allow_egress", False)),
+        "allow_env": list(getattr(args, "allow_env", None) or ()),
+    }

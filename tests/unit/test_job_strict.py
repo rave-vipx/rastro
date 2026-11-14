@@ -86,7 +86,11 @@ def test_env_references_must_be_uppercase(name):
         Job.model_validate(
             _acq(
                 egress_profiles={
-                    "p": {"proxy_url": "https://proxy.example.com", "password_env": name}
+                    "p": {
+                        "proxy_url": "https://proxy.example.com",
+                        "username_env": "RASTRO_PROXY_USER",
+                        "password_env": name,
+                    }
                 }
             )
         )

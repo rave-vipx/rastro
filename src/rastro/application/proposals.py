@@ -25,6 +25,7 @@ from rastro.domain.models import (
     Recipe,
     RecipeAttempt,
 )
+from rastro.domain.selector_policy import check_untrusted_recipe
 from rastro.ports.model import ModelPort
 
 __all__ = ["CandidateEvaluator", "parse_proposal", "propose_with_model", "schema_hints"]
@@ -37,7 +38,8 @@ type CandidateEvaluator = Callable[
 def parse_proposal(output: str, policy: InferencePolicy) -> Recipe:
     if len(output.encode()) > policy.max_response_bytes:
         raise ModelError("model_response_limit")
-    return RecipeProposal.model_validate(strict_json(output), strict=True).recipe()
+    recipe = RecipeProposal.model_validate(strict_json(output), strict=True).recipe()
+    return check_untrusted_recipe(recipe)
 
 
 async def propose_with_model(

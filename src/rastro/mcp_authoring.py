@@ -18,6 +18,11 @@ from rastro.application.suggest import suggest
 from rastro.cli_suggest import suggestion_payload
 from rastro.domain.job_fields import StringField, build_job_schema
 from rastro.domain.models import ConfigurationError, Limits, Recipe
+from rastro.domain.selector_policy import (
+    check_untrusted_field,
+    check_untrusted_recipe,
+    check_untrusted_selector,
+)
 from rastro.domain.suggest import check_examples
 from rastro.mcp_tools import _existing, _inside, bounded
 from rastro.scrape import scrape
@@ -92,6 +97,11 @@ def scrape_file(
             parsed = Recipe.model_validate(dict(recipe))
         except (ValidationError, ValueError):
             raise ConfigurationError("recipe is not a valid Rastro recipe") from None
+        check_untrusted_recipe(parsed)
+    for expression in (fields or {}).values():
+        check_untrusted_field(expression)
+    if records is not None:
+        check_untrusted_selector(records)
     names = list(fields or parsed.fields)  # type: ignore[union-attr]
     result = scrape(
         _existing(root, page_path),

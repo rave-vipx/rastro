@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Coroutine, Sequence
+from collections.abc import Coroutine, Iterable, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -40,6 +40,8 @@ def repair_job_source(
     allow_absolute_paths: bool = False,
     model: ModelChoice = None,
     allow_remote: bool = False,
+    allow_egress: bool = False,
+    allow_env: Iterable[str] = (),
 ) -> RepairReport:
     """Propose, evaluate and store repair candidates for one source (1-based index).
 
@@ -47,7 +49,8 @@ def repair_job_source(
     automatic promotion is enabled. Keyword thresholds override the job's ``[repair]``.
     ``model`` (a ``ModelPort`` or a spec for ``rastro.model``) overrides the job's model:
     it proposes candidates when relocation finds none that passes and judges every
-    would-be promotion. Remote specs need ``allow_remote=True``.
+    would-be promotion. Remote specs need ``allow_remote=True``. Re-fetching through a
+    job-declared egress proxy needs ``allow_egress=True``.
     """
     overrides = {
         name: value
@@ -64,6 +67,8 @@ def repair_job_source(
         allow_absolute_paths=allow_absolute_paths,
         model=model,
         allow_remote=allow_remote,
+        allow_egress=allow_egress,
+        allow_env=allow_env,
         **overrides,
     )
 
@@ -75,13 +80,18 @@ def repair_job_sources(
     allow_absolute_paths: bool = False,
     model: ModelChoice = None,
     allow_remote: bool = False,
+    allow_egress: bool = False,
+    allow_env: Iterable[str] = (),
     **overrides: Any,
 ) -> RepairReport:
     """Repair several sources, or all of them when ``sources`` is ``None``."""
-    context = RepairContext.load(Path(path), allow_absolute_paths)
+    allow_env = tuple(allow_env)
+    context = RepairContext.load(
+        Path(path), allow_absolute_paths, allow_egress=allow_egress, allow_env=allow_env
+    )
     policy = job_policy(context, overrides)
     indexes = sources if sources is not None else range(1, len(context.job.sources) + 1)
-    assist = _assist(context, model, allow_remote)
+    assist = _assist(context, model, allow_remote, allow_env)
 
     async def run() -> RepairReport:
         items = [await _repair_source(context, index, policy, assist) for index in indexes]
@@ -98,6 +108,8 @@ def promote_job_recipe(
     reason: str,
     override_gates: bool = False,
     allow_absolute_paths: bool = False,
+    allow_egress: bool = False,
+    allow_env: Iterable[str] = (),
 ) -> RepairReport:
     """Re-evaluate a stored candidate and activate it when every gate passes.
 
@@ -107,7 +119,9 @@ def promote_job_recipe(
     """
     if not isinstance(reason, str) or not reason.strip():
         raise ConfigurationError("Promotion requires a non-empty reason")
-    context = RepairContext.load(Path(path), allow_absolute_paths)
+    context = RepairContext.load(
+        Path(path), allow_absolute_paths, allow_egress=allow_egress, allow_env=allow_env
+    )
     # Explicit approval enables promotion, but cannot bypass the CI gates on its own.
     policy = job_policy(context, {"auto_promote": True})
 
@@ -214,7 +228,12 @@ def _describe(evaluation: CandidateEvaluation) -> str:
     return f" ({detail})" if detail else ""
 
 
-def _assist(context: RepairContext, model: ModelChoice, allow_remote: bool) -> ModelAssist | None:
+def _assist(
+    context: RepairContext,
+    model: ModelChoice,
+    allow_remote: bool,
+    allow_env: Iterable[str] = (),
+) -> ModelAssist | None:
     """The override, else the job's ``[model]``, else ``RASTRO_MODEL`` with ``[repair] model``.
 
     The override and ``RASTRO_MODEL`` come from the operator and are trusted; a model
@@ -225,7 +244,7 @@ def _assist(context: RepairContext, model: ModelChoice, allow_remote: bool) -> M
         from rastro.application.job_loader import _build_model_provider
 
         # Declared by the job file: only the operator's opt-ins apply (H1).
-        with operator_trust(allow_remote=allow_remote):
+        with operator_trust(allow_remote=allow_remote, allow_env=allow_env):
             port = _build_model_provider(context.job.model)
     if port is None and context.job.repair is not None and context.job.repair.model:
         port = resolve_model("env", allow_remote=allow_remote)

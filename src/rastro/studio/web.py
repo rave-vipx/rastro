@@ -9,7 +9,7 @@ from __future__ import annotations
 import hmac
 import json
 import secrets
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Iterable
 from pathlib import Path
 from typing import Any
 
@@ -120,13 +120,21 @@ class Studio:
     resolve every path through it."""
 
     def __init__(
-        self, root: Path, *, model: ModelPort | None = None, model_remote: bool = False
+        self,
+        root: Path,
+        *,
+        model: ModelPort | None = None,
+        model_remote: bool = False,
+        allow_egress: bool = False,
+        allow_env: Iterable[str] = (),
     ) -> None:
         self.root = root.resolve()
         self.token = secrets.token_urlsafe(32)
         self.model = model
         # Set by --allow-remote: Studio then says page content may leave this machine.
         self.model_remote = model_remote
+        # Operator opt-ins from `rastro studio`, passed to every job run (audit H1).
+        self.trust: dict[str, Any] = {"allow_egress": allow_egress, "allow_env": tuple(allow_env)}
 
     def job_path(self, name: str) -> Path:
         return files.resolve_in_root(self.root, name)

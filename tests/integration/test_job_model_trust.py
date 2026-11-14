@@ -26,7 +26,7 @@ PAGE = "<article><h2>Lamp</h2></article>"
 
 @pytest.fixture(autouse=True)
 def _no_ambient_trust(monkeypatch, offline_cli_loop):
-    for name in ("RASTRO_ALLOW_REMOTE", "RASTRO_ALLOW_COMMAND", "RASTRO_ALLOWED_ENV"):
+    for name in ("RASTRO_ALLOW_REMOTE", "RASTRO_ALLOW_EGRESS", "RASTRO_ALLOWED_ENV"):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", SECRET)
     monkeypatch.setenv("RASTRO_MODEL_KEY", SECRET)
@@ -137,42 +137,43 @@ def test_default_local_servers_work_without_consent():
         assert _build_model_provider(spec) is not None
 
 
-def test_job_command_needs_allow_command(tmp_path):
+def test_job_command_is_refused_whatever_the_operator_allows(tmp_path, monkeypatch):
     marker = tmp_path / "ran"
     argv = f'["{sys.executable}", "-c", "open({str(marker)!r}, \'w\')"]'
     job = hostile_job(tmp_path, f'provider = "command"\nargv = {argv}\nlocal = true')
-    with pytest.raises(ConfigurationError, match="--allow-command"):
+    with pytest.raises(ConfigurationError, match="cannot make Rastro start a program"):
         run_job_file(job)
-    with pytest.raises(ConfigurationError, match="--allow-command"):
-        run_job_file(job, allow_remote=True)
-    assert not marker.exists()
+    with pytest.raises(ConfigurationError, match="cannot make Rastro start a program"):
+        run_job_file(job, allow_remote=True, allow_env=["PATH"])
+    monkeypatch.setenv("RASTRO_ALLOW_REMOTE", "1")
+    monkeypatch.setenv("RASTRO_ALLOW_COMMAND", "1")  # not a Rastro opt-in: ignored
+    with pytest.raises(ConfigurationError, match="cannot make Rastro start a program"):
+        run_job_file(job)
     remote = CommandProvider(argv=("llm",), allow_remote=True)
-    with operator_trust(allow_command=True), pytest.raises(ConfigurationError):
-        _build_model_provider(remote)  # a command that sends data off also needs remote
-    with operator_trust(allow_command=True, allow_remote=True):
-        assert _build_model_provider(remote) is not None
+    with operator_trust(allow_remote=True), pytest.raises(ConfigurationError):
+        _build_model_provider(remote)
+    assert not marker.exists()
     with pytest.raises(ValueError, match="allow_remote"):
         CommandProvider(argv=("llm",))  # the job must still declare where data goes
 
 
-def test_job_command_runs_with_operator_consent(tmp_path):
-    marker = tmp_path / "ran"
-    argv = f'["{sys.executable}", "-c", "open({str(marker)!r}, \'w\')"]'
-    job = hostile_job(tmp_path, f'provider = "command"\nargv = {argv}\nlocal = true')
-    result = run_job_file(job, allow_command=True)
-    assert marker.exists()  # the operator allowed it; the empty answer is a failed proposal
-    assert result.results[0].status.value != "success"
+def test_cli_rejects_the_removed_allow_command_flag(tmp_path, capsys):
+    job = hostile_job(tmp_path, 'provider = "command"\nargv = ["llm"]\nlocal = true')
+    assert main(["job", "run", str(job), "--allow-command"]) != 0
+    assert main(["job", "run", str(job)]) != 0
+    assert "start a program" in capsys.readouterr().err
 
 
 def test_cli_flags_are_hoisted_and_scoped(tmp_path, sink, capsys):
-    argv = ["mcp", "--allow-remote", "--allow-env", "A", "--", "--allow-command"]
+    argv = ["mcp", "--allow-remote", "--allow-env", "A", "--allow-egress", "--", "--allow-env"]
     assert hoist_trust_flags(argv) == [
         "--allow-remote",
         "--allow-env",
         "A",
+        "--allow-egress",
         "mcp",
         "--",
-        "--allow-command",
+        "--allow-env",
     ]
     job = hostile_job(tmp_path, EXFILTRATE.replace("AWS_SECRET_ACCESS_KEY", "RASTRO_MODEL_KEY"))
     assert main(["job", "run", str(job)]) != 0

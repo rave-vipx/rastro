@@ -83,7 +83,9 @@ def routes(studio: Studio) -> list[Route]:
         port = model()
         path, _, job = studio.load(text(data, "file"))
         index = integer(data, "source", 1, MAX_SOURCES)
-        report = await run_in_threadpool(lambda: repair_job_source(path, index, model=port))
+        report = await run_in_threadpool(
+            lambda: repair_job_source(path, index, model=port, **studio.trust)
+        )
         payload = with_diffs(job, path.parent, index, plain(report))
         return reply({"ok": True, "report": payload, "remote": studio.model_remote})
 

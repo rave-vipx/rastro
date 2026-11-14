@@ -19,6 +19,7 @@ from starlette.testclient import TestClient
 
 from rastro.application.job_loader import load_job
 from rastro.cli import main
+from rastro.domain.models import ConfigurationError
 from rastro.studio.app import MAX_BODY, create_app
 from rastro.studio.editing import SelectorEdit, apply_edit
 from tests.conftest import _ORIGINAL_SOCKET
@@ -249,6 +250,14 @@ def test_ambiguous_toml_selector_is_refused() -> None:
     )
     with pytest.raises(Exception, match="not unique"):
         apply_edit(text, ".toml", SelectorEdit("a", "i::text"))
+
+
+def test_costly_selector_edit_is_refused() -> None:
+    """Audit H3: Studio edits follow the untrusted-recipe selector policy."""
+    text = 'format_version = 1\n[recipe]\nstrategy = "css"\nrecord_selector = "li"\n'
+    text += 'fields = { a = "b::text" }\n'
+    with pytest.raises(ConfigurationError, match="untrusted-recipe policy"):
+        apply_edit(text, ".toml", SelectorEdit("a", "p ~ p ~ b::text"))
 
 
 def test_cli_without_extra_fails_clearly(

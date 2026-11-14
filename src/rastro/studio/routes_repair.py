@@ -81,7 +81,7 @@ def routes(studio: Studio) -> list[Route]:
         index = integer(data, "source", 1, MAX_SOURCES)
 
         def run() -> dict[str, Any]:
-            report = repair_job_source(path, index)
+            report = repair_job_source(path, index, **studio.trust)
             return {"ok": True, "report": with_diffs(job, path.parent, index, plain(report))}
 
         return reply(await run_in_threadpool(run))
@@ -96,7 +96,7 @@ def routes(studio: Studio) -> list[Route]:
 
         def run() -> dict[str, Any]:
             report = promote_job_recipe(
-                path, index, version, reason=reason, override_gates=override
+                path, index, version, reason=reason, override_gates=override, **studio.trust
             )
             return {"ok": True, "report": with_diffs(job, path.parent, index, plain(report))}
 

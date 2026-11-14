@@ -50,7 +50,7 @@ def routes(studio: Studio) -> list[Route]:
         def run() -> dict[str, Any]:
             _, selections = active_job(job, base_dir=path.parent, allow_absolute_paths=False)
             view = read_only_job(job, base_dir=path.parent)
-            report = run_job(view, base_dir=path.parent)
+            report = run_job(view, base_dir=path.parent, **studio.trust)
             return _extract_summary(report, [plain(s) for s in selections])
 
         return reply(await run_in_threadpool(run))
@@ -59,7 +59,7 @@ def routes(studio: Studio) -> list[Route]:
         data = await body(request)
         path = studio.job_path(text(data, "file"))
         drift = flag(data, "drift")
-        loaded = await run_in_threadpool(lambda: load_job_file(path, drift=drift))
+        loaded = await run_in_threadpool(lambda: load_job_file(path, drift=drift, **studio.trust))
         return reply({"ok": True, "result": plain(loaded)})
 
     return [
