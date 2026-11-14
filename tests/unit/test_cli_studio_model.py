@@ -48,3 +48,38 @@ def test_missing_factory_is_an_explicit_error() -> None:
         pytest.skip("the rastro.model factory is available")
     with pytest.raises(ConfigurationError, match=r"rastro\.model"):
         _model("x", False)
+
+
+def test_cli_notice_follows_the_models_real_remoteness(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Any, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """P-001: RASTRO_MODEL names a hosted model and RASTRO_ALLOW_REMOTE allows it; without
+    --allow-remote Studio must still say page content may go to a remote model."""
+    pytest.importorskip("starlette")
+    uvicorn = pytest.importorskip("uvicorn")
+    from rastro.cli import main
+
+    monkeypatch.setattr(uvicorn, "run", lambda app, **options: None)
+    monkeypatch.setenv("RASTRO_MODEL", "http:m@https://api.example.com/v1")
+    monkeypatch.setenv("RASTRO_ALLOW_REMOTE", "1")
+    assert main(["studio", "--root", str(tmp_path)]) == 0
+    err = capsys.readouterr().err
+    assert "may go to a remote model" in err and "loopback" not in err
+    monkeypatch.setenv("RASTRO_MODEL", "http:m@http://127.0.0.1:11434/v1")
+    assert main(["studio", "--root", str(tmp_path), "--allow-remote"]) == 0
+    assert "stays on loopback models" in capsys.readouterr().err
+
+
+def test_is_remote_reads_the_built_model() -> None:
+    from rastro.adapters.command_model import CommandModel
+    from rastro.adapters.openai_compatible import OpenAICompatibleModel
+    from rastro.model_factory import is_remote
+
+    hosted = OpenAICompatibleModel("m", base_url="https://api.example.com/v1", allow_remote=True)
+    cloud = OpenAICompatibleModel("m-cloud", base_url="http://127.0.0.1:1234/v1", allow_remote=True)
+    plain = OpenAICompatibleModel("m", base_url="http://127.0.0.1:11434/v1")
+    assert is_remote(hosted) and is_remote(cloud) and not is_remote(plain, True)
+    assert is_remote(CommandModel(["my-cli"], allow_remote=True))
+    assert not is_remote(CommandModel(["my-cli"], local=True), True)
+    # A port that does not say keeps the operator's declaration.
+    assert is_remote(object(), True) and not is_remote(object())

@@ -59,7 +59,8 @@ agent using the MCP server, a Studio workspace. It cannot make trust decisions o
   `RASTRO_ALLOW_REMOTE=1` (the same opt-in that lets `RASTRO_MODEL` name a remote model),
   and the model's `api_key_env`/`base_url_env` follow the same
   secret-name rule; the refusal never echoes the name. Loopback models on those ports
-  (local Ollama, LM Studio) need no opt-in.
+  (local Ollama, LM Studio) need no opt-in. Studio's Ask AI notice reads whether content
+  may leave the machine from the model it built, not from the flag.
 - **Commands.** A job file can never make Rastro start a program: a `provider =
   "command"` model in a job is always refused. A command model comes only from the
   operator: `rastro.model(...)` in Python, `--model` on the CLI or the `RASTRO_MODEL`

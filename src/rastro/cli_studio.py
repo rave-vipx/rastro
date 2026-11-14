@@ -11,6 +11,7 @@ from pathlib import Path
 from rastro.application.errors import missing_extra_error
 from rastro.cli_trust import add_trust_arguments, trust_options
 from rastro.domain.models import ConfigurationError
+from rastro.model_factory import is_remote
 from rastro.ports.model import ModelPort
 
 HOST = "127.0.0.1"
@@ -65,7 +66,8 @@ def studio_command(args: argparse.Namespace) -> int:
     url = f"http://{HOST}:{args.port}/#token={token}"
     print(f"Rastro Studio: open {url}  (Ctrl+C to stop)", file=sys.stderr)
     if model is not None:
-        where = "may go to a remote model" if args.allow_remote else "stays on loopback models"
+        remote = is_remote(model, args.allow_remote)
+        where = "may go to a remote model" if remote else "stays on loopback models"
         print(f"Ask AI is on; page content {where}.", file=sys.stderr)
     uvicorn.run(app, host=HOST, port=args.port, log_level="warning")
     return 0

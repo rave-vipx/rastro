@@ -55,6 +55,8 @@ class CommandModel:
             raise ConfigurationError("json_path must be dot-separated keys such as result")
         if isinstance(env, str) or not all(isinstance(n, str) and _ENV.fullmatch(n) for n in env):
             raise ConfigurationError("env must list environment variable names")
+        # Without local=True the command may send page content to a hosted service.
+        self.remote = not local
         self._timeout = timeout
         self._output = output
         self._json_path = json_path

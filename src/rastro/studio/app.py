@@ -39,8 +39,9 @@ def create_app(
 ) -> tuple[Starlette, str]:
     """Build the app for ``root``; returns it with this run's token (for tests and the CLI).
 
-    ``model`` enables "Ask AI" (any ``ModelPort``); ``model_remote`` records the explicit
-    ``--allow-remote`` opt-in so the page can say that content may be sent off this machine.
+    ``model`` enables "Ask AI" (any ``ModelPort``). The page says whether content may leave
+    this machine from the built model itself (``rastro.model_factory.is_remote``);
+    ``model_remote`` (``--allow-remote``) is used only for a ``ModelPort`` that does not say.
     ``allow_egress`` and ``allow_env`` are the operator opt-ins for job-declared proxies.
     """
     folder = Path(root)

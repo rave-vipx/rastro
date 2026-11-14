@@ -168,3 +168,17 @@ def test_ai_repair_uses_repair_with_model_and_the_judge(
     assert (source["promoted_version"] is not None) is promoted
     diff = {f["field"]: f for f in source["comparisons"][-1]["diff"]["fields"]}
     assert diff["title"]["new"].endswith("p.role::text") and diff["title"]["changed"] is True
+
+
+def test_studio_reports_the_models_real_remoteness_not_the_flag(root: Path) -> None:
+    """P-001, P-008: a remote model reached through RASTRO_ALLOW_REMOTE is reported as
+    remote even without --allow-remote, and a loopback model is not remote."""
+    from rastro.adapters.openai_compatible import OpenAICompatibleModel
+
+    hosted = OpenAICompatibleModel("m", base_url="https://api.example.com/v1", allow_remote=True)
+    local = OpenAICompatibleModel("m", base_url="http://127.0.0.1:11434/v1", allow_remote=True)
+    for model, flag, expected in [(hosted, False, True), (local, True, False)]:
+        app, token = create_app(root, model=model, model_remote=flag)
+        with serving(app, BASE) as http:
+            http.headers["X-Studio-Token"] = token
+            assert http.get("/api/ai").json() == {"enabled": True, "remote": expected}

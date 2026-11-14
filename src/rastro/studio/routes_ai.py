@@ -6,7 +6,7 @@ repair view runs ``repair_job_source(..., model=...)``: relocation first, then m
 proposals composed with the serving selectors, the same gates, and the semantic judge. A
 candidate is promoted only when the job sets ``[repair] auto_promote = true`` and the judge
 agrees; otherwise it waits for promotion with a reason. Every reply says whether page
-content went to a remote model (``--allow-remote``).
+content may go to a remote model, read from the configured model, not from a flag.
 """
 
 from __future__ import annotations

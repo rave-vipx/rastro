@@ -55,6 +55,17 @@ def model(spec: object = None, **options: Any) -> ModelPort:
     return build_model(provider_from(data))
 
 
+def is_remote(model: object, declared: bool = False) -> bool:
+    """Whether page content sent to ``model`` may leave this machine.
+
+    Built-in transports know it (their ``remote`` attribute, set from the endpoint or the
+    command's ``local`` flag); for any other ``ModelPort`` the operator's ``declared`` value
+    is kept.
+    """
+    remote = getattr(model, "remote", None)
+    return remote if isinstance(remote, bool) else declared
+
+
 def provider_from(data: dict[str, Any]) -> JobModelProvider:
     try:
         return _PROVIDER.validate_python(data)

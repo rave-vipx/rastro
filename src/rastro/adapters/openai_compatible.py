@@ -94,6 +94,9 @@ class OpenAICompatibleModel:
         port = f":{parts.port}" if parts.port is not None else ""
         self._url = f"{parts.scheme}://{host}{port}{parts.path.rstrip('/')}/chat/completions"
         self._model = model
+        # Whether page content may leave this machine: any non-loopback endpoint, or a
+        # loopback server proxying a "cloud" model (allowed only with allow_remote).
+        self.remote = not loopback or "cloud" in model.lower()
         # Only the variable name is kept; the key is read per request and never stored.
         self._api_key_env = api_key_env
         self._response_format = response_format

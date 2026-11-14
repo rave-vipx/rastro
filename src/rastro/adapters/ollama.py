@@ -43,6 +43,7 @@ class OllamaModel:
         port = f":{parts.port}" if parts.port is not None else ""
         self._url = f"{parts.scheme}://{host}{port}/api/chat"
         self._model = model
+        self.remote = False  # loopback only, and "cloud" model names are refused
 
     async def generate(self, request: ModelRequest, policy: InferencePolicy) -> str:
         if request.context_bytes > policy.max_context_bytes:

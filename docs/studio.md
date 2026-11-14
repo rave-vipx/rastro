@@ -33,8 +33,10 @@ OpenAI-compatible endpoint or a local command); Studio has no provider-specific 
 code can pass any `ModelPort` to `rastro.studio.app.create_app(root, model=...)`.
 Without `--model` or `RASTRO_MODEL`, Ask AI stays hidden and nothing is sent anywhere.
 Sending page content to a non-loopback endpoint or a hosted subscription requires
-`--allow-remote`; Studio then says on the page and in the terminal that page content may leave
-the machine. The model receives the field names and a bounded page outline (tags, ids,
+`--allow-remote` (or `RASTRO_ALLOW_REMOTE=1` with `RASTRO_MODEL`). Studio reads from the
+model it built, not from the flag, whether page content may leave the machine, and says so
+on the page and in the terminal. A `ModelPort` passed from Python that does not report it
+(`remote` attribute) is treated as `create_app(..., model_remote=...)` declares. The model receives the field names and a bounded page outline (tags, ids,
 classes and short text, at most 6,000 characters), never the whole page, keys or tokens.
 
 - **New scraper:** name the fields (example values are optional) and press **Ask AI**. The

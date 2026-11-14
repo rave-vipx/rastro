@@ -24,6 +24,7 @@ from rastro.application.job_loader import load_job
 from rastro.cli_errors import classify
 from rastro.domain.jobs import Job
 from rastro.domain.models import RastroError
+from rastro.model_factory import is_remote
 from rastro.ports.model import ModelPort
 from rastro.studio import files
 
@@ -131,8 +132,9 @@ class Studio:
         self.root = root.resolve()
         self.token = secrets.token_urlsafe(32)
         self.model = model
-        # Set by --allow-remote: Studio then says page content may leave this machine.
-        self.model_remote = model_remote
+        # Whether Ask AI page content may leave this machine, read from the built model;
+        # ``model_remote`` (--allow-remote) only speaks for a ModelPort that does not say.
+        self.model_remote = model is not None and is_remote(model, model_remote)
         # Operator opt-ins from `rastro studio`, passed to every job run (audit H1).
         self.trust: dict[str, Any] = {"allow_egress": allow_egress, "allow_env": tuple(allow_env)}
 
