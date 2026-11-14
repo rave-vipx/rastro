@@ -58,9 +58,11 @@ def forget_job_source(
 ) -> dict[str, Any]:
     """Forget a dataset origin that is no longer one of the job's sources (DATA-004).
 
-    Deletes its source status, drift history and open drift, plus the relocation samples
-    of every source no longer in the job (they are stored by digest, not URL). Stored
-    records keep their values and provenance. A current source is refused.
+    Deletes its source status, drift history and open drift. Relocation samples are stored
+    by a digest of the full source, so only samples of this exact URL under one of the
+    job's regions are deleted; samples of other jobs sharing the dataset are kept, and so
+    are this URL's samples taken with a query string or a region no longer in the job.
+    Stored records keep their values and provenance. A current source is refused.
     """
     from rastro.adapters.sqlite_dataset_admin import forget_source
 
@@ -74,11 +76,14 @@ def forget_job_source(
             "This URL is a current job source; remove it from the job file first",
             location="url",
         )
+    regions = {job.region, *(item.region for item in job.sources if item.region is not None)}
     removed = forget_source(
         location,
         job.dataset.name,
         source_url,
-        keep_sources={digest(source.model_dump_json()) for source in sources},
+        sample_sources={
+            digest(region.to_source(source_url).model_dump_json()) for region in regions
+        },
         limits=job.limits,
     )
     return {"schema_version": 1, "source_url": source_url, "removed": removed}

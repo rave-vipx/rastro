@@ -56,15 +56,14 @@ def forget_source(
     dataset: str,
     source_url: str,
     *,
-    keep_sources: Collection[str],
+    sample_sources: Collection[str],
     limits: Limits | None = None,
 ) -> dict[str, int]:
-    """Delete one origin's status, drift history and open drift in one transaction.
+    """Delete one origin's status, drift history, open drift and samples in one transaction.
 
     Relocation samples are keyed by a digest of the full source (query and region
-    included), so every sample of this dataset whose digest is not in ``keep_sources`` is
-    removed: those samples belong to no current source and are never read again. Stored
-    records and their provenance are kept.
+    included), so only samples whose digest is in ``sample_sources`` are removed; another
+    job sharing the dataset keeps its samples. Stored records and their provenance are kept.
     """
     DatasetRecordKey(dataset=dataset, identity=("validation",))
     limits = limits or Limits()
@@ -82,7 +81,7 @@ def forget_source(
         if version == 2:
             removed["open_drift"] = drift_open.clear(db, dataset, source_url)
             drift_open.take_rebase(db, dataset, source_url)
-        removed["relocation_samples"] = _forget_samples(db, dataset, keep_sources)
+        removed["relocation_samples"] = _forget_samples(db, dataset, sample_sources)
     return removed
 
 
@@ -98,22 +97,15 @@ def _forget_runs(db: sqlite3.Connection, dataset: str, source_url: str, limits: 
     return len(runs)
 
 
-def _forget_samples(db: sqlite3.Connection, dataset: str, keep: Collection[str]) -> int:
+def _forget_samples(db: sqlite3.Connection, dataset: str, sources: Collection[str]) -> int:
     found = db.execute(
         "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'relocation_samples'"
     ).fetchone()
     if not found:
         return 0
-    orphans = [
-        (dataset, *row)
-        for row in db.execute(
-            "SELECT source, schema, recipe FROM relocation_samples WHERE dataset = ?", (dataset,)
-        ).fetchall()
-        if row[0] not in keep
-    ]
-    db.executemany(
-        "DELETE FROM relocation_samples WHERE dataset = ? AND source = ? AND schema = ? "
-        "AND recipe = ?",
-        orphans,
+    return sum(
+        db.execute(
+            "DELETE FROM relocation_samples WHERE dataset = ? AND source = ?", (dataset, source)
+        ).rowcount
+        for source in sorted(sources)
     )
-    return len(orphans)

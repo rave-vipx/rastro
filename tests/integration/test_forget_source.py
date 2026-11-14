@@ -67,3 +67,18 @@ def test_forget_source_refuses_a_current_source(job, capsys):
     capsys.readouterr()
     assert main(["job", "forget-source", str(job), "--url", OLD]) == 2
     assert json.loads(capsys.readouterr().err)["location"] == "url"
+
+
+def test_forget_source_keeps_samples_of_another_job_sharing_the_dataset(job, capsys):
+    other = job.parent / "other.toml"
+    other.write_text(JOB.replace(OLD, "https://shop.example/other"), encoding="utf-8")
+    assert main(["job", "load", str(job), "--drift"]) == 0
+    assert main(["job", "load", str(other), "--drift"]) == 0
+    job.write_text(job.read_text().replace(OLD, NEW), encoding="utf-8")
+    assert main(["job", "load", str(job), "--drift"]) == 0
+    assert counts(job.parent / "data.sqlite")["relocation_samples"] == 3
+    capsys.readouterr()
+
+    assert main(["job", "forget-source", str(job), "--url", OLD]) == 0
+    assert json.loads(capsys.readouterr().out)["removed"]["relocation_samples"] == 1
+    assert counts(job.parent / "data.sqlite")["relocation_samples"] == 2
