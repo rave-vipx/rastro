@@ -31,6 +31,8 @@ Evidence stores locators, not source excerpts. Query strings, fragments, and URL
 
 Persistence is opt-in. SQLite memory retains declarative recipe definitions, successful-run metadata and context fingerprints. It does not retain raw URLs, HTML, extracted records, or JSON Schema documents/defaults. Keep the database in a trusted private directory; recipe selectors and context identifiers must not contain credentials. Unknown database versions and corruption fail without reset. `delete` and `prune` provide retention controls with SQLite secure deletion, but do not erase external backups or filesystem snapshots. Stop writers before deletion if concurrent operations must not recreate entries. See the [memory guide](docs/memory.md). CLI output is data and should be handled accordingly.
 
+On POSIX systems dataset and recipe-memory files, and their SQLite `-journal`, `-wal` and `-shm` files, are created readable and writable by the owner only (0600), and existing files the user owns are tightened to 0600 when opened. Dataset files hold sanitized page samples for repair (`relocation_samples`), so keep them in a private directory. On Windows the folder's access rules apply. `rastro job forget-source` deletes a removed source's status, drift history and repair samples (SEC-009).
+
 ## Trust model for jobs, bundles and agents
 
 A job file is configuration, and it may come from someone else: a shared repository, an
@@ -45,6 +47,14 @@ agent using the MCP server, a Studio workspace. It cannot make trust decisions o
   named `RASTRO_*`, or names the operator lists in `RASTRO_ALLOWED_ENV` (comma-separated)
   or with `--allow-env NAME` (`allow_env=` in Python). Otherwise a hostile job could name
   `GITHUB_TOKEN` as a proxy password and send it to its own proxy.
+- **Failure hook.** `--on-failure CMD` and `RASTRO_ON_FAILURE` come only from the operator
+  running `rastro job load|run`; a job file cannot set them (unknown keys are rejected).
+  The command runs without a shell (`shlex.split`), with a 30 second timeout and with
+  stdout and stderr discarded. It receives outcome codes, hosts and drift levels on
+  stdin, never records, page content, paths, URL queries or secrets. Its failure is
+  reported without echoing the command line, which may hold a webhook token. The hook
+  inherits the environment of the `rastro` process. See
+  [Monitoring and alerts](docs/operations.md#failure-hook).
 - **Remote models** in `[model]` (`allow_remote = true` or an endpoint from
   `base_url_env`) are used only when the operator sets `RASTRO_ALLOW_REMOTE=1`, and the
   model's `api_key_env`/`base_url_env` follow the same secret-name rule (`RASTRO_*` or

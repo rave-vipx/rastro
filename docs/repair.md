@@ -55,6 +55,10 @@ rastro recipe show job.toml --source 1 --version 2
 rastro recipe rollback job.toml --source 1 --version 1 --reason "Restore previous recipe"
 ```
 
+A promotion, automatic or by hand, and `recipe rollback` clear the source's
+[open drift](drift.md#open-drift) and make its next successful load the new drift
+baseline (ADR 0022).
+
 `--source` is one-based; repair defaults to all sources. `--report new-report.json`
 selects a new report filename within the job directory. Otherwise each repair run
 creates `repair-report-<run-id>.json`, with mode 0600, and prints the same JSON.

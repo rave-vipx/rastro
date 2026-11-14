@@ -2,6 +2,37 @@
 
 All notable user-facing changes are recorded here. The project follows [Semantic Versioning](docs/stability.md) from 0.6.0. Versions before 0.6.0 were never published to a package registry.
 
+## Unreleased
+
+Operators now hear about drift and stuck state, not only hard failures. See
+[Monitoring and alerts](docs/operations.md) and ADR 0022.
+
+### Added
+
+- Open drift: an elevated or high drift on a successful `rastro job load` stays open, keeps the drift baseline at the run before it and is reported on every load until acknowledged. `JobLoadResult` gains `status` (`success`, `degraded`, `partial_success`, `failed`, `storage_error`) and `open_drift`; the job-load JSON Schema is updated (DRIFT-003, DRIFT-004, DRIFT-006).
+- New exit codes: `4` (`JobExitCode.NEEDS_ATTENTION`) for a successful load with open drift and for `rastro health` / `rastro dataset status` findings; `5` (`JobExitCode.STORAGE_ERROR`) when dataset storage fails after the job ran (DRIFT-004, DATA-001).
+- `rastro job ack-drift job.toml --source N|--all` and `rastro.acknowledge_job_drift`; promoting a repair and `rastro recipe rollback` clear open drift and rebaseline the source (DRIFT-004, REPAIR-005).
+- `rastro health job.toml [--output table|json]` and `rastro.job_health`: last success and attempt, stale reason, open drift and quarantined candidates per current source; exit 0 healthy, 4 needs attention. Schema in `docs/schemas/health.schema.json` (`rastro job schema --target health`) (OBS-007, DRIFT-004, REPAIR-005).
+- `rastro job forget-source job.toml --url URL` and `rastro.forget_job_source` delete a removed source's status, drift history, open drift and orphaned repair samples (DATA-004, SEC-009).
+- Operator-only failure hook: `--on-failure CMD` on `rastro job load|run` and `RASTRO_ON_FAILURE` run a command without a shell, with a timeout and a content-free JSON summary on stdin; a hook failure never changes the exit code (DRIFT-004, SCHED-002, SEC-011).
+- Failed sources store a content-free `detail` (`robots_denied`, `http_403`, `http_429`, `timeout` or the issue code) next to `reason`; the load report shows it as `sources[].reason`. Optional `SourceFailureRecorder` port (DATA-005, OBS-001).
+- A `missing_data` source suggests `next_action = "rastro recipe repair"` (REPAIR-002).
+- Each non-successful source logs a `source_failed` WARNING with index, host, outcome and detail, visible without `--verbose`; no paths, queries or content (OBS-002).
+- MCP `drift_status` reports `open_drift` and `orphaned_sources`; Studio shows open drift instead of green (AGENT-002, P-008).
+
+### Changed
+
+- `rastro dataset status` exits 4 when a source is stale or has open drift, and lists `open_drift`. Scripts that treated any non-zero exit as a crash should treat 4 as "needs attention" (DATA-004).
+- `rastro job load` exits 4 instead of 0 while drift is open. Run `rastro job ack-drift` after reviewing, or promote a repair (DRIFT-004).
+- A dataset storage failure after the job ran prints the per-source report and exits 5 instead of printing nothing and exiting 2. Error objects for dataset storage failures use the new code `storage_error` instead of `configuration_error` (DATA-001).
+- Load reports, MCP `drift_status` and Studio consider only the job's current sources; a removed or renamed source no longer stays stale forever (DATA-004).
+- Drift storage moves to schema 2 (adds `drift_open`, `drift_rebase`). Schema 1 files upgrade on the first drift write; 0.6.0 refuses a schema 2 file explicitly (DRIFT-001).
+- A clock that goes backwards no longer fails every run with "Out-of-order": source status, records, drift runs and repair samples clamp to the last recorded time (DATA-004, DRIFT-001).
+
+### Security
+
+- Dataset and recipe-memory files and their SQLite sidecars are created 0600 on POSIX, and existing files the user owns are tightened when opened; datasets hold sanitized page samples (SEC-009, SEC-004).
+
 ## 0.6.0 — 2026-11-12
 
 First public release of `rastro-engine` on PyPI: one-call typed scraping with `rastro.scrape`, selectors suggested from example values, verified self-repair, a complete MCP server for AI agents and a local Studio GUI.
