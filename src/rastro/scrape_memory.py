@@ -5,8 +5,8 @@ The recipe database holds versions and their lifecycle. A sibling samples file
 per page and recipe, which repair replays as a regression gate. Repair is
 deterministic: relocation, declared fallbacks and exact-name discovery, gated by
 recipe CI plus a value-shape check against the sample. With a configured model, the
-model proposes candidates only when none of those would pass, and a semantic judge
-checks every would-be promotion (``application/model_repair``). It never fetches.
+model proposes candidates only when none of those would pass; they meet the same
+value checks, then a semantic judge can veto (``application/model_repair``). It never fetches.
 An identical stored candidate is reused, not duplicated.
 """
 

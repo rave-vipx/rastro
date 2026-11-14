@@ -90,7 +90,8 @@ off the machine requires an explicit `allow_remote`.
 On our 28-case synthetic benchmark, Rastro repaired 12 broken pages without a model, and 23
 with a scripted model that answered correctly, with no wrong data in either case. The small
 local models we tried recovered nothing new, and as judges they blocked correct repairs. A model
-that is wrong both when it proposes and when it judges got 6 wrong repairs through. See
+that is wrong both when it proposes and when it judges gets no wrong repair through: its
+candidates must pass deterministic value checks before the judge. See
 [bring your own AI](https://rave-vipx.github.io/rastro/ai/) for the numbers.
 
 ## Suggest selectors from examples

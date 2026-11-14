@@ -1,7 +1,7 @@
 {
  "environment": {
-  "recorded_at": "2026-11-13T12:57Z",
-  "git_head": "a3ba147",
+  "recorded_at": "2026-11-14T03:47Z",
+  "git_head": "2ba6bae",
   "rastro": "0.6.0",
   "python": "3.12.16",
   "cases": 28
@@ -55,7 +55,7 @@
      "verdict": "correct",
      "detail": "promoted",
      "model_calls": 0,
-     "seconds": 0.07
+     "seconds": 0.06
     },
     {
      "case": "cards-container_restructured",
@@ -71,7 +71,7 @@
      "verdict": "refused",
      "detail": "quarantined",
      "model_calls": 0,
-     "seconds": 0.04
+     "seconds": 0.05
     },
     {
      "case": "cards-field_rename",
@@ -79,7 +79,7 @@
      "verdict": "correct",
      "detail": "promoted",
      "model_calls": 0,
-     "seconds": 0.05
+     "seconds": 0.06
     },
     {
      "case": "cards-field_to_attribute",
@@ -103,7 +103,7 @@
      "verdict": "correct",
      "detail": "promoted",
      "model_calls": 0,
-     "seconds": 0.05
+     "seconds": 0.06
     },
     {
      "case": "cards-wrapper_added",
@@ -135,7 +135,7 @@
      "verdict": "refused",
      "detail": "quarantined",
      "model_calls": 0,
-     "seconds": 0.04
+     "seconds": 0.05
     },
     {
      "case": "dlist-field_rename",
@@ -143,7 +143,7 @@
      "verdict": "correct",
      "detail": "promoted",
      "model_calls": 0,
-     "seconds": 0.05
+     "seconds": 0.06
     },
     {
      "case": "dlist-field_to_attribute",
@@ -151,7 +151,7 @@
      "verdict": "refused",
      "detail": "rejected",
      "model_calls": 0,
-     "seconds": 0.04
+     "seconds": 0.05
     },
     {
      "case": "dlist-semantic_swap",
@@ -183,7 +183,7 @@
      "verdict": "refused",
      "detail": "quarantined",
      "model_calls": 0,
-     "seconds": 0.04
+     "seconds": 0.05
     },
     {
      "case": "grid-field_rename",
@@ -215,7 +215,7 @@
      "verdict": "refused",
      "detail": "no_candidates",
      "model_calls": 0,
-     "seconds": 0.04
+     "seconds": 0.05
     },
     {
      "case": "table-class_rename",
@@ -223,7 +223,7 @@
      "verdict": "correct",
      "detail": "promoted",
      "model_calls": 0,
-     "seconds": 0.05
+     "seconds": 0.06
     },
     {
      "case": "table-container_restructured",
@@ -239,7 +239,7 @@
      "verdict": "refused",
      "detail": "quarantined",
      "model_calls": 0,
-     "seconds": 0.04
+     "seconds": 0.05
     },
     {
      "case": "table-field_rename",
@@ -247,7 +247,7 @@
      "verdict": "correct",
      "detail": "promoted",
      "model_calls": 0,
-     "seconds": 0.05
+     "seconds": 0.06
     },
     {
      "case": "table-field_to_attribute",
@@ -255,7 +255,7 @@
      "verdict": "refused",
      "detail": "rejected",
      "model_calls": 0,
-     "seconds": 0.04
+     "seconds": 0.05
     },
     {
      "case": "table-optional_thinned",
@@ -263,7 +263,7 @@
      "verdict": "refused",
      "detail": "quarantined",
      "model_calls": 0,
-     "seconds": 0.04
+     "seconds": 0.05
     },
     {
      "case": "table-semantic_swap",
@@ -546,7 +546,7 @@
   "oracle_correct": {
    "summary": {
     "cases": 28,
-    "model_calls": 44,
+    "model_calls": 32,
     "correct": {
      "count": 23,
      "rate": 0.821,
@@ -590,8 +590,8 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 1,
-     "seconds": 0.05
+     "model_calls": 0,
+     "seconds": 0.06
     },
     {
      "case": "cards-container_restructured",
@@ -599,7 +599,7 @@
      "verdict": "correct",
      "detail": "promoted",
      "model_calls": 2,
-     "seconds": 0.05
+     "seconds": 0.06
     },
     {
      "case": "cards-decoy_blocks",
@@ -607,15 +607,15 @@
      "verdict": "correct",
      "detail": "promoted",
      "model_calls": 2,
-     "seconds": 0.07
+     "seconds": 0.08
     },
     {
      "case": "cards-field_rename",
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 1,
-     "seconds": 0.05
+     "model_calls": 0,
+     "seconds": 0.06
     },
     {
      "case": "cards-field_to_attribute",
@@ -631,31 +631,31 @@
      "verdict": "correct",
      "detail": "promoted",
      "model_calls": 2,
-     "seconds": 0.06
+     "seconds": 0.07
     },
     {
      "case": "cards-tag_change",
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 1,
-     "seconds": 0.05
+     "model_calls": 0,
+     "seconds": 0.06
     },
     {
      "case": "cards-wrapper_added",
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 1,
-     "seconds": 0.05
+     "model_calls": 0,
+     "seconds": 0.06
     },
     {
      "case": "dlist-class_rename",
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 1,
-     "seconds": 0.05
+     "model_calls": 0,
+     "seconds": 0.06
     },
     {
      "case": "dlist-container_restructured",
@@ -663,7 +663,7 @@
      "verdict": "correct",
      "detail": "promoted",
      "model_calls": 2,
-     "seconds": 0.05
+     "seconds": 0.06
     },
     {
      "case": "dlist-decoy_blocks",
@@ -678,7 +678,7 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 1,
+     "model_calls": 0,
      "seconds": 0.06
     },
     {
@@ -687,7 +687,7 @@
      "verdict": "refused",
      "detail": "rejected",
      "model_calls": 2,
-     "seconds": 0.07
+     "seconds": 0.06
     },
     {
      "case": "dlist-semantic_swap",
@@ -702,16 +702,16 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 1,
-     "seconds": 0.05
+     "model_calls": 0,
+     "seconds": 0.06
     },
     {
      "case": "grid-container_restructured",
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 1,
-     "seconds": 0.05
+     "model_calls": 0,
+     "seconds": 0.06
     },
     {
      "case": "grid-decoy_blocks",
@@ -726,7 +726,7 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 1,
+     "model_calls": 0,
      "seconds": 0.06
     },
     {
@@ -742,7 +742,7 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 1,
+     "model_calls": 0,
      "seconds": 0.06
     },
     {
@@ -751,14 +751,14 @@
      "verdict": "correct",
      "detail": "promoted",
      "model_calls": 2,
-     "seconds": 0.06
+     "seconds": 0.07
     },
     {
      "case": "table-class_rename",
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 1,
+     "model_calls": 0,
      "seconds": 0.06
     },
     {
@@ -767,7 +767,7 @@
      "verdict": "correct",
      "detail": "promoted",
      "model_calls": 2,
-     "seconds": 0.06
+     "seconds": 0.07
     },
     {
      "case": "table-decoy_blocks",
@@ -775,15 +775,15 @@
      "verdict": "correct",
      "detail": "promoted",
      "model_calls": 2,
-     "seconds": 0.06
+     "seconds": 0.07
     },
     {
      "case": "table-field_rename",
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 1,
-     "seconds": 0.05
+     "model_calls": 0,
+     "seconds": 0.06
     },
     {
      "case": "table-field_to_attribute",
@@ -807,14 +807,14 @@
      "verdict": "correct",
      "detail": "promoted",
      "model_calls": 2,
-     "seconds": 0.06
+     "seconds": 0.07
     }
    ]
   },
   "oracle_wrong_recipe": {
    "summary": {
     "cases": 28,
-    "model_calls": 44,
+    "model_calls": 32,
     "correct": {
      "count": 12,
      "rate": 0.429,
@@ -858,7 +858,7 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 1,
+     "model_calls": 0,
      "seconds": 0.06
     },
     {
@@ -867,7 +867,7 @@
      "verdict": "refused",
      "detail": "rejected",
      "model_calls": 2,
-     "seconds": 0.05
+     "seconds": 0.06
     },
     {
      "case": "cards-decoy_blocks",
@@ -882,8 +882,8 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 1,
-     "seconds": 0.05
+     "model_calls": 0,
+     "seconds": 0.06
     },
     {
      "case": "cards-field_to_attribute",
@@ -897,41 +897,41 @@
      "case": "cards-semantic_swap",
      "kind": "trap",
      "verdict": "refused",
-     "detail": "judge_blocked",
+     "detail": "rejected",
      "model_calls": 2,
-     "seconds": 0.05
+     "seconds": 0.06
     },
     {
      "case": "cards-tag_change",
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 1,
-     "seconds": 0.05
+     "model_calls": 0,
+     "seconds": 0.06
     },
     {
      "case": "cards-wrapper_added",
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 1,
-     "seconds": 0.05
+     "model_calls": 0,
+     "seconds": 0.06
     },
     {
      "case": "dlist-class_rename",
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 1,
-     "seconds": 0.05
+     "model_calls": 0,
+     "seconds": 0.06
     },
     {
      "case": "dlist-container_restructured",
      "kind": "structural",
      "verdict": "refused",
-     "detail": "judge_blocked",
+     "detail": "rejected",
      "model_calls": 2,
-     "seconds": 0.05
+     "seconds": 0.06
     },
     {
      "case": "dlist-decoy_blocks",
@@ -946,7 +946,7 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 1,
+     "model_calls": 0,
      "seconds": 0.06
     },
     {
@@ -955,31 +955,31 @@
      "verdict": "refused",
      "detail": "rejected",
      "model_calls": 2,
-     "seconds": 0.06
+     "seconds": 0.07
     },
     {
      "case": "dlist-semantic_swap",
      "kind": "trap",
      "verdict": "refused",
-     "detail": "judge_blocked",
+     "detail": "rejected",
      "model_calls": 2,
-     "seconds": 0.05
+     "seconds": 0.06
     },
     {
      "case": "grid-class_rename",
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 1,
-     "seconds": 0.05
+     "model_calls": 0,
+     "seconds": 0.06
     },
     {
      "case": "grid-container_restructured",
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 1,
-     "seconds": 0.05
+     "model_calls": 0,
+     "seconds": 0.06
     },
     {
      "case": "grid-decoy_blocks",
@@ -994,8 +994,8 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 1,
-     "seconds": 0.05
+     "model_calls": 0,
+     "seconds": 0.06
     },
     {
      "case": "grid-field_to_attribute",
@@ -1010,32 +1010,32 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 1,
-     "seconds": 0.05
+     "model_calls": 0,
+     "seconds": 0.06
     },
     {
      "case": "grid-semantic_swap",
      "kind": "trap",
      "verdict": "refused",
-     "detail": "judge_blocked",
+     "detail": "rejected",
      "model_calls": 2,
-     "seconds": 0.05
+     "seconds": 0.06
     },
     {
      "case": "table-class_rename",
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 1,
-     "seconds": 0.05
+     "model_calls": 0,
+     "seconds": 0.06
     },
     {
      "case": "table-container_restructured",
      "kind": "structural",
      "verdict": "refused",
-     "detail": "judge_blocked",
+     "detail": "rejected",
      "model_calls": 2,
-     "seconds": 0.05
+     "seconds": 0.06
     },
     {
      "case": "table-decoy_blocks",
@@ -1050,8 +1050,8 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 1,
-     "seconds": 0.05
+     "model_calls": 0,
+     "seconds": 0.06
     },
     {
      "case": "table-field_to_attribute",
@@ -1067,22 +1067,22 @@
      "verdict": "refused",
      "detail": "quarantined",
      "model_calls": 2,
-     "seconds": 0.05
+     "seconds": 0.06
     },
     {
      "case": "table-semantic_swap",
      "kind": "trap",
      "verdict": "refused",
-     "detail": "judge_blocked",
+     "detail": "rejected",
      "model_calls": 2,
-     "seconds": 0.05
+     "seconds": 0.07
     }
    ]
   },
   "oracle_adversarial": {
    "summary": {
     "cases": 28,
-    "model_calls": 44,
+    "model_calls": 32,
     "correct": {
      "count": 12,
      "rate": 0.429,
@@ -1092,31 +1092,31 @@
      ]
     },
     "wrong": {
-     "count": 6,
-     "rate": 0.214,
+     "count": 0,
+     "rate": 0.0,
      "wilson95": [
-      0.102,
-      0.395
+      0.0,
+      0.121
      ]
     },
     "refused": {
-     "count": 10,
-     "rate": 0.357,
+     "count": 16,
+     "rate": 0.571,
      "wilson95": [
-      0.207,
-      0.542
+      0.391,
+      0.735
      ]
     },
     "by_kind": {
      "structural": {
       "correct": 12,
-      "wrong": 2,
-      "refused": 6
+      "wrong": 0,
+      "refused": 8
      },
      "trap": {
       "correct": 0,
-      "wrong": 4,
-      "refused": 4
+      "wrong": 0,
+      "refused": 8
      }
     }
    },
@@ -1126,7 +1126,7 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 1,
+     "model_calls": 0,
      "seconds": 0.06
     },
     {
@@ -1135,7 +1135,7 @@
      "verdict": "refused",
      "detail": "rejected",
      "model_calls": 2,
-     "seconds": 0.05
+     "seconds": 0.06
     },
     {
      "case": "cards-decoy_blocks",
@@ -1150,7 +1150,7 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 1,
+     "model_calls": 0,
      "seconds": 0.06
     },
     {
@@ -1159,13 +1159,13 @@
      "verdict": "refused",
      "detail": "rejected",
      "model_calls": 2,
-     "seconds": 0.05
+     "seconds": 0.06
     },
     {
      "case": "cards-semantic_swap",
      "kind": "trap",
-     "verdict": "wrong",
-     "detail": "promoted",
+     "verdict": "refused",
+     "detail": "rejected",
      "model_calls": 2,
      "seconds": 0.06
     },
@@ -1174,32 +1174,32 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 1,
-     "seconds": 0.05
+     "model_calls": 0,
+     "seconds": 0.06
     },
     {
      "case": "cards-wrapper_added",
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 1,
-     "seconds": 0.05
+     "model_calls": 0,
+     "seconds": 0.06
     },
     {
      "case": "dlist-class_rename",
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 1,
-     "seconds": 0.05
+     "model_calls": 0,
+     "seconds": 0.06
     },
     {
      "case": "dlist-container_restructured",
      "kind": "structural",
-     "verdict": "wrong",
-     "detail": "promoted",
+     "verdict": "refused",
+     "detail": "rejected",
      "model_calls": 2,
-     "seconds": 0.05
+     "seconds": 0.06
     },
     {
      "case": "dlist-decoy_blocks",
@@ -1214,8 +1214,8 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 1,
-     "seconds": 0.05
+     "model_calls": 0,
+     "seconds": 0.06
     },
     {
      "case": "dlist-field_to_attribute",
@@ -1223,13 +1223,13 @@
      "verdict": "refused",
      "detail": "rejected",
      "model_calls": 2,
-     "seconds": 0.06
+     "seconds": 0.07
     },
     {
      "case": "dlist-semantic_swap",
      "kind": "trap",
-     "verdict": "wrong",
-     "detail": "promoted",
+     "verdict": "refused",
+     "detail": "rejected",
      "model_calls": 2,
      "seconds": 0.06
     },
@@ -1238,16 +1238,16 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 1,
-     "seconds": 0.05
+     "model_calls": 0,
+     "seconds": 0.06
     },
     {
      "case": "grid-container_restructured",
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 1,
-     "seconds": 0.05
+     "model_calls": 0,
+     "seconds": 0.06
     },
     {
      "case": "grid-decoy_blocks",
@@ -1262,7 +1262,7 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 1,
+     "model_calls": 0,
      "seconds": 0.06
     },
     {
@@ -1278,14 +1278,14 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 1,
-     "seconds": 0.05
+     "model_calls": 0,
+     "seconds": 0.06
     },
     {
      "case": "grid-semantic_swap",
      "kind": "trap",
-     "verdict": "wrong",
-     "detail": "promoted",
+     "verdict": "refused",
+     "detail": "rejected",
      "model_calls": 2,
      "seconds": 0.06
     },
@@ -1294,14 +1294,14 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 1,
+     "model_calls": 0,
      "seconds": 0.06
     },
     {
      "case": "table-container_restructured",
      "kind": "structural",
-     "verdict": "wrong",
-     "detail": "promoted",
+     "verdict": "refused",
+     "detail": "rejected",
      "model_calls": 2,
      "seconds": 0.06
     },
@@ -1318,8 +1318,8 @@
      "kind": "structural",
      "verdict": "correct",
      "detail": "promoted",
-     "model_calls": 1,
-     "seconds": 0.05
+     "model_calls": 0,
+     "seconds": 0.06
     },
     {
      "case": "table-field_to_attribute",
@@ -1327,7 +1327,7 @@
      "verdict": "refused",
      "detail": "rejected",
      "model_calls": 2,
-     "seconds": 0.06
+     "seconds": 0.07
     },
     {
      "case": "table-optional_thinned",
@@ -1340,10 +1340,10 @@
     {
      "case": "table-semantic_swap",
      "kind": "trap",
-     "verdict": "wrong",
-     "detail": "promoted",
+     "verdict": "refused",
+     "detail": "rejected",
      "model_calls": 2,
-     "seconds": 0.07
+     "seconds": 0.06
     }
    ]
   }
