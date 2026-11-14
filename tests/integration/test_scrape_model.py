@@ -203,3 +203,30 @@ def test_zero_selector_scrape_learns_a_recipe_from_the_model(tmp_path):
 def test_model_argument_is_validated():
     with pytest.raises(rastro.ConfigurationError, match="ModelPort"):
         rastro.scrape(V1, Offer, url=URL, model=object())
+
+
+HAS = {
+    "strategy": "css",
+    "record_selector": "div.card:has(p.name)",
+    "fields": {"title": "p.name::text", "city": "em.place::text"},
+}
+
+
+def test_a_costly_model_selector_is_refused_and_the_next_proposal_used(tmp_path):
+    """Security audit H3: model repair proposals pass the untrusted-recipe policy."""
+    memory = tmp_path / "recipes.db"
+    _scrape(V1, memory)
+    model = FakeModel([HAS, RESCUE])
+    healed = _scrape(V3, memory, model)
+    assert healed.repair.promoted and healed.repair.origin == "model"
+    served = SQLiteRecipeRepository(memory).get(_key(memory)).recipe
+    assert ":has(" not in served.record_selector
+    assert json.loads(model.requests[1].content)["last_failure"] == "invalid_model_candidate"
+
+
+def test_zero_selector_scrape_never_learns_a_costly_model_selector(tmp_path):
+    learn = {**HAS, "record_selector": "li.job:has(h3)"}
+    learn["fields"] = {"title": "h3.title::text", "city": ".city::text"}
+    result = rastro.scrape(V1, Plain, url=URL, model=FakeModel([learn, learn]))
+    assert result.status != Outcome.SUCCESS and result.items == []
+    assert result.learned_recipe is None

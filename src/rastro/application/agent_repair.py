@@ -25,6 +25,7 @@ from rastro.application.repair_evidence import gather_evidence
 from rastro.domain.models import ConfigurationError, Recipe
 from rastro.domain.recipe_compare import RepairReport, SourceRepair
 from rastro.domain.repair import RepairCandidate
+from rastro.domain.selector_policy import check_untrusted_recipe
 
 RATIONALE = "Agent proposal; requires recipe CI"
 
@@ -40,8 +41,10 @@ def propose_job_recipe(
 
     Raises ``ConfigurationError`` when the proposal does not fit the job or equals the
     serving recipe. The report's single comparison carries the decision, reasons and the
-    blocking record issues; ``promoted_version`` is always ``None``.
+    blocking record issues; ``promoted_version`` is always ``None``. Costly selectors are
+    refused before any evaluation (``rastro.domain.selector_policy``).
     """
+    check_untrusted_recipe(recipe)
     context = RepairContext.load(Path(path), allow_absolute_paths)
     policy = job_policy(context, {"auto_promote": False})
 

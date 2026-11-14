@@ -23,6 +23,7 @@ from rastro.application.page_digest import digest_page
 from rastro.application.recipe_diff import with_diffs
 from rastro.domain.lifecycle_history import check_reason
 from rastro.domain.models import ConfigurationError, Limits, Recipe
+from rastro.domain.selector_policy import check_untrusted_recipe
 from rastro.mcp_authoring import _schema
 from rastro.mcp_tools import _existing, _plain, bounded
 from rastro.scrape import scrape
@@ -33,7 +34,8 @@ PREVIEW_ROWS = 20
 
 
 def parse_recipe(raw: Mapping[str, Any]) -> Recipe:
-    """A strict Rastro recipe from agent JSON; refuses oversized or unknown shapes."""
+    """A strict Rastro recipe from agent JSON; refuses oversized or unknown shapes and
+    costly selectors (``:has()``, sibling combinators) before any evaluation."""
     try:
         text = json.dumps(dict(raw))
     except (TypeError, ValueError):
@@ -41,9 +43,10 @@ def parse_recipe(raw: Mapping[str, Any]) -> Recipe:
     if len(text.encode()) > MAX_RECIPE_BYTES:
         raise ConfigurationError("recipe exceeds 64 KiB")
     try:
-        return Recipe.model_validate_json(text, strict=True)
+        recipe = Recipe.model_validate_json(text, strict=True)
     except (ValidationError, ValueError):
         raise ConfigurationError("recipe is not a valid Rastro recipe") from None
+    return check_untrusted_recipe(recipe)
 
 
 def _with_outline(payload: dict[str, Any], outline: str | None) -> dict[str, Any]:

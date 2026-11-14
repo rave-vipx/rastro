@@ -5,6 +5,7 @@ are deterministic fakes; nothing leaves the process.
 """
 
 import json
+import sys
 
 import pytest
 
@@ -160,3 +161,14 @@ def test_an_invalid_model_selector_rejects_the_candidate_not_the_run(tmp_path):
     (source,) = rastro.repair_job_source(make_job(tmp_path), 1, model=model).sources
     assert source.promoted_version is None and len(model.requests) == 2
     assert [issue.code for issue in source.issues] == ["invalid_model_candidate"]
+
+
+def test_a_costly_model_selector_is_never_stored_or_evaluated(tmp_path, monkeypatch):
+    """Security audit H3: repair escalation applies the untrusted-recipe policy."""
+    costly = {**PROPOSAL, "record_selector": "div.row:has(p.role)"}
+    monkeypatch.setattr(sys.modules[__name__], "PROPOSAL", costly)
+    job = make_job(tmp_path)
+    (source,) = rastro.repair_job_source(job, 1, model=FakeModel()).sources
+    assert source.outcome == "no_candidates" and source.comparisons == ()
+    assert [issue.code for issue in source.issues] == ["invalid_model_candidate"]
+    assert source.inference_calls == 2  # both proposals refused within the call budget

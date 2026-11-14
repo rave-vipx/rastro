@@ -101,3 +101,12 @@ def test_cli_new_with_model_writes_a_job(tmp_path, monkeypatch):
     args = ["new", str(job), "--from", str(page), "--model", "env", "--field", "title"]
     assert main([*args, "--field", "city"]) == 0
     assert 'title = "p.name::text"' in job.read_text(encoding="utf-8")
+
+
+def test_a_costly_model_selector_is_refused_before_verification():
+    """Security audit H3: suggest never evaluates a model's :has() selector."""
+    costly = {**GOOD, "record_selector": "div.card:has(p.name)"}
+    with pytest.raises(SuggestionError, match="invalid_model_candidate"):
+        rastro.suggest(PAGE, Offer, model=FakeModel(costly, costly))
+    model = FakeModel(costly, GOOD)
+    assert rastro.suggest(PAGE, Offer, model=model).recipe.record_selector == "div.card"

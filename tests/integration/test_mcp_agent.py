@@ -294,3 +294,24 @@ async def test_outline_is_bounded_on_a_huge_page(workspace: Path) -> None:
     )
     assert not failed and len(context["page_outline"]) <= 12_000
     assert "div.row  (count 3000)" in context["page_outline"]
+
+
+HAS = {**RIGHT, "fields": {"job_id": "::attr(data-id)", "title": "article:has(h2) h2::text"}}
+SIBLING = {**RIGHT, "record_selector": "main ~ article.card"}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("recipe", [HAS, SIBLING])
+async def test_costly_agent_selectors_are_refused_before_evaluation(
+    workspace: Path, recipe: dict[str, Any]
+) -> None:
+    """Security audit H3: recipe_propose and recipe_try apply the untrusted-recipe policy."""
+    await broken(workspace)
+    failed, error = await call(
+        workspace, "recipe_propose", path="jobs/job.toml", source=1, recipe=recipe, reason="x"
+    )
+    assert failed and set(error) == ENVELOPE and "untrusted-recipe policy" in error["message"]
+    _, history = await call(workspace, "recipe_history", path="jobs/job.toml", source=1)
+    assert [v["version"] for v in history["versions"]] == [1]
+    failed, error = await call(workspace, "recipe_try", page_path="jobs/board.html", recipe=recipe)
+    assert failed and "untrusted-recipe policy" in error["message"]
