@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from rastro.adapters.sqlite import SQLiteRecipeRepository
 from rastro.application.engine import Rastro
 from rastro.application.job_dataset import load_job_file
-from rastro.application.job_maintenance import acknowledge_job_drift
+from rastro.application.job_maintenance import acknowledge_job_drift, forget_job_source
 from rastro.application.job_repair import promote_job_recipe, repair_job_source
 from rastro.application.jobs import load_job, run_job, run_job_async, run_job_file
 from rastro.application.recipe_apply import apply_job_recipe
@@ -222,6 +222,7 @@ __all__ = [
     "build_fixture",
     "build_job_schema",
     "css",
+    "forget_job_source",
     "job_json_schema",
     "job_run_json_schema",
     "load_fixture",
