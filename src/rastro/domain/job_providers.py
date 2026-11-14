@@ -112,13 +112,12 @@ class CommandProvider(RedactedContract):
 
     The command may forward page content to a hosted service, so it needs either
     ``allow_remote = true`` or ``local = true``. ``env`` lists extra variable names
-    passed through besides ``PATH`` and ``HOME``.
+    passed through besides ``PATH`` and ``HOME``. Arguments may be empty strings; the
+    program (the first item) may not.
     """
 
     provider: Literal["command"] = "command"
-    argv: tuple[Annotated[str, Field(min_length=1, max_length=4096)], ...] = Field(
-        min_length=1, max_length=64
-    )
+    argv: tuple[Annotated[str, Field(max_length=4096)], ...] = Field(min_length=1, max_length=64)
     allow_remote: StrictBool = False
     local: StrictBool = False
     timeout: float | None = Field(default=None, gt=0, le=3600, allow_inf_nan=False)

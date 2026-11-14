@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from rastro import ConfigurationError, InferencePolicy, ModelError, ModelRequest
+from rastro import model as rastro_model
 from rastro.adapters.command_model import CommandModel, first_json_object, render_prompt
 
 REQUEST = ModelRequest(system="Trusted instructions", content='{"untrusted_html":"<h1>hi</h1>"}')
@@ -129,3 +130,29 @@ def test_prompt_rendering_and_json_extraction():
     assert first_json_object('noise {bad json} then {"a": {"b": 1}} tail') == '{"a": {"b": 1}}'
     with pytest.raises(ValueError):
         first_json_object("[1] and nothing else")
+
+
+@pytest.mark.asyncio
+async def test_empty_string_arguments_are_passed_through(tmp_path, monkeypatch):
+    """Some CLIs take an empty value (``--system ""``); only the program must be non-empty."""
+    log = tmp_path / "argv.json"
+    program = fake_cli(
+        tmp_path,
+        monkeypatch,
+        "empty-args",
+        f"sys.stdin.read(); open({str(log)!r}, 'w').write(json.dumps(sys.argv[1:]))\n"
+        f"print({PROPOSAL!r})",
+    )
+    model = rastro_model(f"command:{program} --system '' -p", local=True)
+    assert json.loads(await model.generate(REQUEST, POLICY)) == json.loads(PROPOSAL)
+    assert json.loads(log.read_text()) == ["--system", "", "-p"]
+    direct = CommandModel([program, ""], local=True)
+    assert json.loads(await direct.generate(REQUEST, POLICY)) == json.loads(PROPOSAL)
+
+
+@pytest.mark.parametrize("argv", [[], [""], ["  "], ["", "llm"]])
+def test_a_missing_or_empty_program_is_refused(argv):
+    with pytest.raises(ConfigurationError):
+        CommandModel(argv, local=True)
+    with pytest.raises(ConfigurationError):
+        rastro_model("command", argv=argv, local=True)

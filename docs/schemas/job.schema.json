@@ -177,7 +177,7 @@
     },
     "CommandProvider": {
       "additionalProperties": false,
-      "description": "A local model command run without a shell; the prompt goes to stdin.\n\nThe command may forward page content to a hosted service, so it needs either\n``allow_remote = true`` or ``local = true``. ``env`` lists extra variable names\npassed through besides ``PATH`` and ``HOME``.",
+      "description": "A local model command run without a shell; the prompt goes to stdin.\n\nThe command may forward page content to a hosted service, so it needs either\n``allow_remote = true`` or ``local = true``. ``env`` lists extra variable names\npassed through besides ``PATH`` and ``HOME``. Arguments may be empty strings; the\nprogram (the first item) may not.",
       "properties": {
         "allow_remote": {
           "default": false,
@@ -187,7 +187,6 @@
         "argv": {
           "items": {
             "maxLength": 4096,
-            "minLength": 1,
             "type": "string"
           },
           "maxItems": 64,
