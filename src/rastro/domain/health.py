@@ -5,6 +5,7 @@ from typing import Any, Literal
 from pydantic import AwareDatetime, Field
 
 from rastro.domain.drift import Rate
+from rastro.domain.job_results import JobExitCode
 from rastro.domain.models import Contract
 
 HEALTH_SCHEMA_ID = "https://rave-vipx.github.io/rastro/schemas/health.schema.json"
@@ -49,6 +50,10 @@ class JobHealth(Contract):
     sources: tuple[SourceHealth, ...] = Field(min_length=1)
     orphaned_sources: tuple[str, ...]
     """Dataset sources no longer in the job; never affect health (``rastro job forget-source``)."""
+
+    @property
+    def exit_code(self) -> JobExitCode:
+        return JobExitCode.SUCCESS if self.healthy else JobExitCode.NEEDS_ATTENTION
 
 
 def job_health_json_schema() -> dict[str, Any]:

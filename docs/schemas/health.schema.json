@@ -1,0 +1,230 @@
+{
+  "$defs": {
+    "Attention": {
+      "enum": [
+        "never_loaded",
+        "stale",
+        "open_drift",
+        "quarantined_candidate"
+      ],
+      "type": "string"
+    },
+    "OpenDrift": {
+      "additionalProperties": false,
+      "description": "An unacknowledged elevated or high drift on a successful run of one source.\n\nWhile it is open the drift baseline stays at ``baseline_run``; acknowledging it, or\npromoting a repaired recipe for the source, clears it.",
+      "properties": {
+        "baseline_run": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Baseline Run"
+        },
+        "observed_at": {
+          "format": "date-time",
+          "title": "Observed At",
+          "type": "string"
+        },
+        "risk": {
+          "enum": [
+            "elevated",
+            "high"
+          ],
+          "title": "Risk",
+          "type": "string"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "score": {
+          "$ref": "#/$defs/Rate"
+        },
+        "source_url": {
+          "title": "Source Url",
+          "type": "string"
+        },
+        "verdict": {
+          "enum": [
+            "structural_drift",
+            "extraction_failure",
+            "none"
+          ],
+          "title": "Verdict",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_url",
+        "run_id",
+        "baseline_run",
+        "observed_at",
+        "risk",
+        "score",
+        "verdict"
+      ],
+      "title": "OpenDrift",
+      "type": "object"
+    },
+    "Rate": {
+      "maximum": 1,
+      "minimum": 0,
+      "type": "number"
+    },
+    "SourceHealth": {
+      "additionalProperties": false,
+      "properties": {
+        "attention": {
+          "items": {
+            "$ref": "#/$defs/Attention"
+          },
+          "title": "Attention",
+          "type": "array"
+        },
+        "detail": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Detail"
+        },
+        "last_attempt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Last Attempt"
+        },
+        "last_success": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Last Success"
+        },
+        "open_drift": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OpenDrift"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "quarantined_versions": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Quarantined Versions",
+          "type": "array"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Reason"
+        },
+        "source_index": {
+          "minimum": 1,
+          "title": "Source Index",
+          "type": "integer"
+        },
+        "source_url": {
+          "title": "Source Url",
+          "type": "string"
+        },
+        "stale": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Stale"
+        }
+      },
+      "required": [
+        "source_index",
+        "source_url",
+        "last_success",
+        "last_attempt",
+        "stale",
+        "reason",
+        "detail",
+        "open_drift",
+        "quarantined_versions",
+        "attention"
+      ],
+      "title": "SourceHealth",
+      "type": "object"
+    }
+  },
+  "$id": "https://rave-vipx.github.io/rastro/schemas/health.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "dataset": {
+      "title": "Dataset",
+      "type": "string"
+    },
+    "healthy": {
+      "title": "Healthy",
+      "type": "boolean"
+    },
+    "orphaned_sources": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Orphaned Sources",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "sources": {
+      "items": {
+        "$ref": "#/$defs/SourceHealth"
+      },
+      "minItems": 1,
+      "title": "Sources",
+      "type": "array"
+    }
+  },
+  "required": [
+    "dataset",
+    "healthy",
+    "sources",
+    "orphaned_sources"
+  ],
+  "title": "JobHealth",
+  "type": "object"
+}
