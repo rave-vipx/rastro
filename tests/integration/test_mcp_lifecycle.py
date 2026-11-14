@@ -66,8 +66,11 @@ def workspace(tmp_path: Path) -> Path:
     return tmp_path
 
 
-async def call(root: Path, tool: str, **arguments: Any) -> tuple[bool, Any]:
-    async with create_connected_server_and_client_session(build_server(root)._mcp_server) as client:
+async def call(
+    root: Path, tool: str, server: dict[str, Any] | None = None, **arguments: Any
+) -> tuple[bool, Any]:
+    built = build_server(root, **(server or {}))
+    async with create_connected_server_and_client_session(built._mcp_server) as client:
         result = await client.call_tool(tool, arguments)
     return result.isError, json.loads(result.content[0].text)  # type: ignore[union-attr]
 
@@ -136,6 +139,34 @@ async def test_repair_proposes_then_promote_and_apply_through_mcp(workspace: Pat
     assert f"version = {version}" in (workspace / "jobs" / "job.toml").read_text(encoding="utf-8")
     failed, again = await call(workspace, "recipe_apply", path="jobs/job.toml", source=1)
     assert not failed and again["changed"] is False
+
+
+@pytest.mark.asyncio
+async def test_override_gates_needs_the_operator_opt_in_at_server_start(workspace: Path) -> None:
+    """REPAIR-005, AGENT-003, SEC-011: page content can prompt-inject the MCP client, so
+    the client alone cannot override gates; the operator opts in when starting the server."""
+    await call(workspace, "job_load", path="jobs/job.toml")
+    break_title(workspace)
+    failed, report = await call(workspace, "recipe_repair", path="jobs/job.toml", source=1)
+    assert not failed, report
+    version = report["sources"][0]["comparisons"][0]["candidate_version"]
+    promote = {"path": "jobs/job.toml", "source": 1, "version": version, "reason": "Asked"}
+
+    failed, error = await call(workspace, "recipe_promote", override_gates=True, **promote)
+    assert failed and set(error) == ENVELOPE
+    assert "rastro recipe promote --override-gates" in error["message"] + error["hint"]
+    assert "--allow-override-gates" in error["hint"]
+    failed, history = await call(workspace, "recipe_history", path="jobs/job.toml", source=1)
+    assert not failed and history["serving_version"] == 1
+
+    failed, promoted = await call(
+        workspace,
+        "recipe_promote",
+        server={"allow_override_gates": True},
+        override_gates=True,
+        **promote,
+    )
+    assert not failed and promoted["sources"][0]["promoted_version"] == version
 
 
 @pytest.mark.asyncio

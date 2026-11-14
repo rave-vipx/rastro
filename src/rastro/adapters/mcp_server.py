@@ -63,20 +63,27 @@ recipe_propose never promotes, even when the job sets auto_promote: you are the 
 judge. Its reply includes review (old and new values per changed field; semantic_review
 gives the same). Promote only if each new value is the same kind of data as the old value
 of that field (a title, not a city). Gates check structure and history; you check meaning.
-Never promote with override_gates unless the user asks."""
+Never promote with override_gates unless the user asks; it works only when the operator
+started the server with --allow-override-gates."""
 
 
 def build_server(
-    root: Path, *, allow_egress: bool = False, allow_env: Iterable[str] = ()
+    root: Path,
+    *,
+    allow_egress: bool = False,
+    allow_env: Iterable[str] = (),
+    allow_override_gates: bool = False,
 ) -> FastMCP:
     """Create the server; every path argument is resolved inside ``root``. Job-declared
-    egress proxies and extra secret names are operator opt-ins, as on the CLI."""
+    egress proxies and extra secret names are operator opt-ins, as on the CLI.
+    ``allow_override_gates`` lets the client call ``recipe_promote(override_gates=true)``;
+    off by default because page content can prompt-inject the client."""
     workspace = root.resolve()
     server = RastroMCP("rastro", instructions=INSTRUCTIONS)
     server._mcp_server.version = __version__  # serverInfo: Rastro's version, not the library's
     trust: dict[str, Any] = {"allow_egress": allow_egress, "allow_env": tuple(allow_env)}
     _register_jobs(server, workspace, trust)
-    _register_recipes(server, workspace, trust)
+    _register_recipes(server, workspace, trust, allow_override_gates)
     _register_authoring(server, workspace)
     mcp_agent_tools.register(server, workspace)
     return server
@@ -137,7 +144,9 @@ def _register_jobs(server: FastMCP, workspace: Path, trust: dict[str, Any]) -> N
         return await call(mcp_lifecycle.drift_status, workspace, path)  # type: ignore[no-any-return]
 
 
-def _register_recipes(server: FastMCP, workspace: Path, trust: dict[str, Any]) -> None:
+def _register_recipes(
+    server: FastMCP, workspace: Path, trust: dict[str, Any], allow_override_gates: bool
+) -> None:
     @server.tool(annotations=READ)
     async def recipe_list(path: Path_) -> dict[str, Any]:
         """List stored recipe versions and states for each source of a job."""
@@ -176,7 +185,8 @@ def _register_recipes(server: FastMCP, workspace: Path, trust: dict[str, Any]) -
         override_gates: bool = False,
     ) -> dict[str, Any]:
         """Re-evaluate a stored candidate and make it the serving recipe if every gate passes.
-        override_gates=true activates a quarantined candidate; never a rejected one."""
+        override_gates=true activates a quarantined candidate, never a rejected one, and only
+        when the operator started the server with --allow-override-gates."""
         return await call(  # type: ignore[no-any-return]
             mcp_lifecycle.recipe_promote,
             workspace,
@@ -185,6 +195,7 @@ def _register_recipes(server: FastMCP, workspace: Path, trust: dict[str, Any]) -
             version,
             reason=reason,
             override_gates=override_gates,
+            allow_override_gates=allow_override_gates,
             **trust,
         )
 
@@ -252,6 +263,17 @@ def _register_authoring(server: FastMCP, workspace: Path) -> None:
         )
 
 
-def serve(root: Path, *, allow_egress: bool = False, allow_env: Iterable[str] = ()) -> None:
+def serve(
+    root: Path,
+    *,
+    allow_egress: bool = False,
+    allow_env: Iterable[str] = (),
+    allow_override_gates: bool = False,
+) -> None:
     """Run the stdio server until the client disconnects."""
-    build_server(root, allow_egress=allow_egress, allow_env=allow_env).run(transport="stdio")
+    build_server(
+        root,
+        allow_egress=allow_egress,
+        allow_env=allow_env,
+        allow_override_gates=allow_override_gates,
+    ).run(transport="stdio")

@@ -64,6 +64,12 @@ def _build_parser() -> argparse.ArgumentParser:
 
     mcp = subcommands.add_parser("mcp", help="Serve jobs and datasets to an agent over stdio MCP")
     mcp.add_argument("--root", type=Path, default=Path(), help="Workspace root (default: cwd)")
+    mcp.add_argument(
+        "--allow-override-gates",
+        action="store_true",
+        help="Let the agent call recipe_promote with override_gates (off: page content can "
+        "prompt-inject the agent; run rastro recipe promote --override-gates yourself)",
+    )
     add_trust_arguments(mcp)
 
     job_parser = subcommands.add_parser("job", help="Validate, run, or inspect declarative jobs")
@@ -164,7 +170,7 @@ def _mcp_command(args: argparse.Namespace) -> int:
         return int(JobExitCode.CONFIG_ERROR)
     if not args.root.is_dir():
         raise RastroError("--root must be an existing directory")
-    serve(args.root, **trust_options(args))
+    serve(args.root, allow_override_gates=args.allow_override_gates, **trust_options(args))
     return int(JobExitCode.SUCCESS)
 
 

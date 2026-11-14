@@ -69,10 +69,23 @@ def recipe_promote(
     *,
     reason: str,
     override_gates: bool = False,
+    allow_override_gates: bool = False,
     allow_egress: bool = False,
     allow_env: Iterable[str] = (),
 ) -> dict[str, Any]:
-    """Re-evaluate a stored candidate and activate it only if the gates pass (or are overridden)."""
+    """Re-evaluate a stored candidate and activate it only if the gates pass (or are overridden).
+
+    ``override_gates`` needs ``allow_override_gates``, the operator's opt-in at server start:
+    page content can prompt-inject the MCP client, so the client alone cannot bypass gates.
+    """
+    if override_gates and not allow_override_gates:
+        raise ConfigurationError(
+            "override_gates is off for MCP clients: to activate a quarantined candidate, run "
+            "rastro recipe promote --override-gates --reason TEXT yourself",
+            location="override_gates",
+            hint="Run rastro recipe promote --override-gates yourself, or restart the server "
+            "with rastro mcp --allow-override-gates if you let this agent override gates",
+        )
     try:
         reason = check_reason(reason)
     except ValidationError:

@@ -17,7 +17,9 @@ Without the extra, `rastro mcp` exits non-zero and prints a JSON error on stderr
 `--root` is the workspace root (default: the current directory) and must exist.
 An agent can write job files, so the server applies the [operator opt-in](jobs.md#operator-opt-in):
 jobs that declare egress proxies run only when you start it with `--allow-egress`, and
-`--allow-env NAME` adds names to the secret allow-list. Recipes and selectors passed to
+`--allow-env NAME` adds names to the secret allow-list. `recipe_promote(override_gates=true)`
+works only with `--allow-override-gates` (see [Repair and promotion](#repair-and-promotion)).
+Recipes and selectors passed to
 `scrape_file` follow the [untrusted-recipe selector policy](hub.md#import).
 
 ## Workflow
@@ -80,6 +82,19 @@ the agent reviews the report and calls `recipe_promote` with a `reason` (1 to 50
 characters). Promotion re-runs every check; `override_gates=true` can activate a candidate
 that missed a threshold, never one that failed validation, and the recorded reason says the
 checks were overridden. Rollback is not exposed; use `rastro recipe rollback`.
+
+`override_gates` is off for MCP clients unless you start the server with
+`rastro mcp --allow-override-gates` (`build_server(root, allow_override_gates=True)` or
+`serve(..., allow_override_gates=True)` in Python). The agent reads untrusted page content,
+which can prompt-inject it, and an override can activate a quarantined candidate, including
+one the semantic judge vetoed. Without the flag the call fails with a tool error telling
+you to run `rastro recipe promote --override-gates --reason TEXT` yourself.
+
+`recipe_apply` writes to a job file in the workspace, but only the recipe that already
+serves: one that passed every gate, the job's own `auto_promote`, or your override. It
+keeps the rest of the file, refuses symlinks, checks that the rewritten file loads with that
+recipe and writes atomically. Keep job files under version control if you want to review
+these writes.
 
 ### Authoring without a job
 

@@ -47,6 +47,12 @@ agent using the MCP server, a Studio workspace. It cannot make trust decisions o
   named `RASTRO_*`, or names the operator lists in `RASTRO_ALLOWED_ENV` (comma-separated)
   or with `--allow-env NAME` (`allow_env=` in Python). Otherwise a hostile job could name
   `GITHUB_TOKEN` as a proxy password and send it to its own proxy.
+- **Gate overrides from agents.** The MCP `recipe_promote(override_gates=true)` can activate
+  a quarantined candidate, including one the semantic judge vetoed, and the agent calling
+  it reads untrusted pages that can prompt-inject it. It is refused unless the operator
+  starts the server with `rastro mcp --allow-override-gates`
+  (`build_server(..., allow_override_gates=True)`); otherwise a person runs
+  `rastro recipe promote --override-gates --reason TEXT`.
 - **Remote models** in `[model]` (`allow_remote = true`, an endpoint from `base_url_env`,
   or any endpoint other than loopback on the local model ports 11434, 1234, 8000 and
   8080) are used only with the operator's `--allow-remote`, `allow_remote=True` or

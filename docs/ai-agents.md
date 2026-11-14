@@ -78,7 +78,9 @@ is the semantic judge and nothing serves until it promotes. Rules for the agent:
 - Before `recipe_promote`, compare old and new values (`review` in the reply, or
   `semantic_review`): each field must keep
   its meaning (a title stays a title, not a city).
-- Never use `override_gates` unless the user asks.
+- Never use `override_gates` unless the user asks. The server refuses it unless the
+  operator started it with `rastro mcp --allow-override-gates`; otherwise ask the user to
+  run `rastro recipe promote --override-gates` themselves.
 
 See the [example transcript](mcp.md#example-transcript).
 
