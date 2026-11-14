@@ -107,12 +107,12 @@ def run_rastro(
     started = time.perf_counter()
     with tempfile.TemporaryDirectory(prefix="ai-repair-") as raw, _injected(fake):
         job = Path(raw) / "job.toml"
-        job.write_text(job_toml(case.recipe(), provider), "utf-8")
+        job.write_text(job_toml(case.recipe(), provider), encoding="utf-8", newline="\n")
         page = job.with_name("page.html")
-        page.write_text(render(case.before), encoding="utf-8")
+        page.write_text(render(case.before), encoding="utf-8", newline="\n")
         if rastro.load_job_file(job, drift=True).exit_code != 0:
             raise AssertionError(f"{case.name}: the base page must load")
-        page.write_text(render(case.after), encoding="utf-8")
+        page.write_text(render(case.after), encoding="utf-8", newline="\n")
         if rastro.load_job_file(job, drift=True).exit_code == 0:
             verdict, detail, calls = judge(_served(job), case), "load_succeeded", 0
         else:
