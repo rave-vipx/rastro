@@ -43,7 +43,9 @@ until one of these happens:
 - `rastro job ack-drift job.toml --source 1` (or `--all`) accepts the new structure. The
   next run compares with the latest success.
 - A repaired recipe is promoted, or `rastro recipe rollback` changes the serving recipe.
-  The next successful run becomes the new baseline.
+  The next successful run becomes the new baseline. If the dataset write fails after
+  the recipe changed, the command exits 2 with `storage_error` and a hint: the recipe
+  change stays, so fix the dataset file and run `rastro job ack-drift`.
 
 The MCP `drift_status` tool and Studio's health view show open drift too.
 
@@ -56,9 +58,11 @@ its URL changed, its old state stays in the dataset until you forget it:
 rastro job forget-source job.toml --url https://old.example/list
 ```
 
-This deletes that origin's status, drift history and open drift, plus repair samples of
-every source no longer in the job (they are stored by digest, so they cannot be matched
-by URL). Stored records keep their values and provenance. A current source is refused.
+This deletes that origin's status, drift history and open drift, plus its repair
+samples. Samples are stored by a digest of the full source, so only samples of that exact
+URL under one of the job's regions are deleted; samples of other jobs that share the
+dataset are kept, and so are samples taken with a query string. Stored records keep their
+values and provenance. A current source is refused.
 
 ## Failure hook
 

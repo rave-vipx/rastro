@@ -57,7 +57,9 @@ rastro recipe rollback job.toml --source 1 --version 1 --reason "Restore previou
 
 A promotion, automatic or by hand, and `recipe rollback` clear the source's
 [open drift](drift.md#open-drift) and make its next successful load the new drift
-baseline (ADR 0023).
+baseline (ADR 0023). The recipe change commits first; if clearing the drift then fails,
+the command exits 2 with `storage_error` and a hint to run `rastro job ack-drift` once the
+dataset file is fixed.
 
 `--source` is one-based; repair defaults to all sources. `--report new-report.json`
 selects a new report filename within the job directory. Otherwise each repair run

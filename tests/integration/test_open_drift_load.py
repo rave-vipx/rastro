@@ -112,3 +112,23 @@ def test_serving_recipe_change_clears_open_drift(job, capsys):
     code, report = run(capsys, *load)
     assert (code, report["open_drift"]) == (0, [])
     assert run(capsys, *load)[0] == 0
+
+
+def test_failed_rebaseline_after_a_recipe_change_names_ack_drift(job, capsys, monkeypatch):
+    """The recipe transition already committed, so the error tells the operator what to run."""
+    from rastro.adapters import sqlite_dataset_admin
+    from rastro.application.repair_context import RepairContext
+    from rastro.cli_errors import classify
+    from rastro.domain.dataset import DatasetStorageError
+
+    def broken(*args, **kwargs):
+        raise DatasetStorageError("Dataset operation failed")
+
+    text = job.read_text(encoding="utf-8")
+    job.write_text(text.replace("[dataset]", 'recipe_memory = "recipes.sqlite"\n\n[dataset]'))
+    monkeypatch.setattr(sqlite_dataset_admin, "rebaseline_drift", broken)
+    with pytest.raises(DatasetStorageError) as caught:
+        RepairContext.load(job, False).serving_changed(1)
+    error = classify(caught.value)
+    assert error["error"] == "storage_error"
+    assert "rastro job ack-drift" in error["hint"] and "--source 1" in error["hint"]
