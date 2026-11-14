@@ -51,7 +51,7 @@ agent using the MCP server, a Studio workspace. It cannot make trust decisions o
   `RASTRO_ALLOWED_ENV`). Loopback models (local Ollama, LM Studio) need no opt-in. See the
   [jobs guide](docs/jobs.md#security-boundaries).
 
-Recipes from Hub bundles, MCP tool arguments, Studio edits and model proposals follow a
+Recipes in job files, Hub bundles, MCP tool arguments, Studio edits and model proposals follow a
 CSS selector cost policy (no `:has()`, no sibling combinators, bounded compounds,
 alternatives and nesting), because lxml evaluates those shapes in quadratic or worse time
 and the evaluation cannot be interrupted. A bundle's hashes give integrity, not
