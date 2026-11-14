@@ -9,6 +9,7 @@ from functools import wraps
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from rastro.adapters.sqlite_files import create_private, restrict
 from rastro.domain.dataset import DatasetStorageError, SourceStatus
 from rastro.domain.sources import Limits, ResourceLimitError
 
@@ -107,6 +108,9 @@ def connection(path: Path, limits: Limits, *, write: bool = False) -> Iterator[s
         if write and not path.exists():
             staging = cleanup.enter_context(TemporaryDirectory(dir=path.parent))
             target = Path(staging) / "dataset.sqlite"
+            create_private(target)
+        else:
+            restrict(path)
         with _transaction(target, limits, write=write) as db:
             yield db
         if target != path:
