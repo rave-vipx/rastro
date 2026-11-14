@@ -16,6 +16,7 @@ from rastro.application.job_loader import (
     resolve_job_path,
     validate_job_paths,
 )
+from rastro.application.run_log import log_failures
 from rastro.domain.job_results import JobRunResult
 from rastro.domain.jobs import FileJobSource, Job, UrlJobSource
 from rastro.domain.models import ExtractionResult
@@ -81,6 +82,7 @@ async def run_job_async(
         acquisition=acquisition,
         model=model,
     )
+    log_failures(report)
     return report.model_copy(update={"recipes": selections})
 
 
@@ -150,6 +152,7 @@ def run_job(
         acquisition=acquisition,
         model=model,
     )
+    log_failures(report)
     return report.model_copy(update={"recipes": selections})
 
 
