@@ -4,7 +4,7 @@
 
 Please use [GitHub private vulnerability reporting](https://github.com/rave-vipx/rastro/security/advisories/new), or email **admin@rave-app.com** if that channel is unavailable. Include the affected commit or version, a minimal synthetic reproduction, and the impact. Avoid posting credentials or sensitive page contents in a public issue.
 
-Rastro is in beta (0.6.0 release candidate). Security fixes target `main` and the latest released minor version; no support SLA is offered.
+Rastro is in beta (0.7.0). Security fixes target `main` and the latest released minor version; no support SLA is offered.
 
 ## Current boundary
 

@@ -1,6 +1,6 @@
 # Working on Rastro
 
-Read `docs/roadmap.md` (the planning source) before implementation; `RASTRO_MASTER_SPEC.md` is reference only. Release **0.6.0** (first public PyPI release) is delivered; new work waits for a real user request or a reported bug.
+Read `docs/roadmap.md` (the planning source) before implementation; `RASTRO_MASTER_SPEC.md` is reference only. Release **0.7.0** (AI-assisted repair, monitoring and alerts) is delivered on top of 0.6.0, the first public PyPI release; new work waits for a real user request or a reported bug.
 Work is done by a Claude agent team: one coordinator, one worker per slice in its own worktree, one reviewer. A cross-model review per cut is required only for changes to persistence, security, network/egress or CI; small docs-only changes need no external review.
 
 - Deliver one usable vertical slice at a time, with tests and documentation.
