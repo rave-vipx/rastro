@@ -139,7 +139,8 @@ the [complete job example](https://rave-vipx.github.io/rastro/jobs/#complete-tom
   exposes job validate, preview and run, dataset records and recipe listing.
 - **JSON CLI:** stdout is JSON; errors are one JSON object on stderr
   (`{"error", "message", "location"}`) and never echo page text or secrets.
-- **Exit codes:** `0` success, `1` failed, `2` configuration or usage error, `3` partial success.
+- **Exit codes:** `0` success, `1` failed, `2` configuration or usage error, `3` partial success,
+  `4` needs attention (open drift, stale source), `5` storage error after the run.
 - Source values are labelled `"data_trust": "untrusted_source_data"`.
 
 See [Rastro for AI agents](https://rave-vipx.github.io/rastro/ai-agents/) and [`llms.txt`](https://github.com/rave-vipx/rastro/blob/main/llms.txt).

@@ -4,7 +4,7 @@ All notable user-facing changes are recorded here. The project follows [Semantic
 
 ## Unreleased (0.7.0)
 
-Bring your own AI: any model or agent proposes recipes and repairs while Rastro verifies, plus failure notifications for unattended jobs.
+Bring your own AI: any model or agent proposes recipes and repairs while Rastro verifies. Operators also hear about drift and stuck state, not only hard failures; see [Monitoring and alerts](docs/operations.md) and ADR 0023.
 
 ### Added
 
@@ -21,6 +21,28 @@ Bring your own AI: any model or agent proposes recipes and repairs while Rastro 
 - Studio **Ask AI**: with `rastro studio --model SPEC` or `RASTRO_MODEL`, the wizard asks the model for a recipe from field names alone (kept only if it extracts valid records) and the repair view runs repair with the model (`repair_job_source(..., model=...)`: relocation, then model proposals composed with the serving selectors, the same gates and the semantic judge; promoted automatically only when the job sets `auto_promote` and the judge agrees). `--allow-remote` is required for non-loopback or hosted models, and Studio then says that page content may leave the machine; the model receives a bounded page outline, not the page (INT-001, REPAIR-001-005, P-008).
 - `benchmarks/ai_repair/`: an offline benchmark of 28 synthetic before/after pages, run with deterministic Rastro, Rastro plus a fake `ModelPort` (scripted oracle: correct, backward-compatible, adversarial, and escalation only after deterministic failure), and a hand-written Scrapling + Pydantic baseline. It reports correct, wrong (silent) and refused outcomes, model calls and Wilson 95% intervals; the oracle is not a quality claim. Recorded local runs: `qwen3:4b` and `llama3.2:3b` (QUAL-001, REPAIR-001-005, AI-001).
 - `docs/ai.md` ("Bring your own AI") explains how to connect any provider (local, API, subscription CLI, MCP agent), what a model does in each flow, privacy, call budgets and the measured results; `docs/ai-evidence.md` records the benchmark runs. README and overview pages now say Rastro works offline and deterministically and that a connected model proposes while Rastro verifies (AI-001-005, AGENT-002, P-001).
+- Open drift: an elevated or high drift on a successful `rastro job load` stays open, keeps the drift baseline at the run before it and is reported on every load until acknowledged. `JobLoadResult` gains `status` (`success`, `degraded`, `partial_success`, `failed`, `storage_error`) and `open_drift`; the job-load JSON Schema is updated (DRIFT-003, DRIFT-004, DRIFT-006).
+- New exit codes: `4` (`JobExitCode.NEEDS_ATTENTION`) for a successful load with open drift and for `rastro health` / `rastro dataset status` findings; `5` (`JobExitCode.STORAGE_ERROR`) when dataset storage fails after the job ran (DRIFT-004, DATA-001).
+- `rastro job ack-drift job.toml --source N|--all` and `rastro.acknowledge_job_drift`; promoting a repair and `rastro recipe rollback` clear open drift and rebaseline the source (DRIFT-004, REPAIR-005).
+- `rastro health job.toml [--output table|json]` and `rastro.job_health`: last success and attempt, stale reason, open drift and quarantined candidates per current source; exit 0 healthy, 4 needs attention. Schema in `docs/schemas/health.schema.json` (`rastro job schema --target health`) (OBS-007, DRIFT-004, REPAIR-005).
+- `rastro job forget-source job.toml --url URL` and `rastro.forget_job_source` delete a removed source's status, drift history, open drift and orphaned repair samples (DATA-004, SEC-009).
+- Operator-only failure hook: `--on-failure CMD` on `rastro job load|run` and `RASTRO_ON_FAILURE` run a command without a shell, with a timeout and a content-free JSON summary on stdin; a hook failure never changes the exit code (DRIFT-004, SCHED-002, SEC-011).
+- Failed sources store a content-free `detail` (`robots_denied`, `http_403`, `http_429`, `timeout` or the issue code) next to `reason`; the load report shows it as `sources[].reason`. Optional `SourceFailureRecorder` port (DATA-005, OBS-001).
+- A `missing_data` source suggests `next_action = "rastro recipe repair"` (REPAIR-002).
+- Each non-successful source logs a `source_failed` WARNING with index, host, outcome and detail, visible without `--verbose`; no paths, queries or content (OBS-002).
+- MCP `drift_status` reports `open_drift` and `orphaned_sources`; Studio shows open drift instead of green (AGENT-002, P-008).
+
+### Changed
+
+- Recipe proposal prompts include `field_hints` (each field's type and description, clipped) so models map fields by meaning; docs/intelligence.md lists what is sent (AI-002, P-001).
+- With a configured model, job repair asks it only when no deterministic candidate would pass (escalation, not competition), so a model candidate can no longer quarantine a passing relocation as `competing_candidates`; an invalid model selector rejects that proposal (`invalid_model_candidate`) instead of aborting the repair (REPAIR-001, REPAIR-002).
+- Internal: `RepairCandidateGenerator` no longer takes `model` or `model_enabled`; model proposals live in `application/model_repair` (REPAIR-001).
+- `rastro dataset status` exits 4 when a source is stale or has open drift, and lists `open_drift`. Scripts that treated any non-zero exit as a crash should treat 4 as "needs attention" (DATA-004).
+- `rastro job load` exits 4 instead of 0 while drift is open. Run `rastro job ack-drift` after reviewing, or promote a repair (DRIFT-004).
+- A dataset storage failure after the job ran prints the per-source report and exits 5 instead of printing nothing and exiting 2. Error objects for dataset storage failures use the new code `storage_error` instead of `configuration_error` (DATA-001).
+- Load reports, MCP `drift_status` and Studio consider only the job's current sources; a removed or renamed source no longer stays stale forever (DATA-004).
+- Drift storage moves to schema 2 (adds `drift_open`, `drift_rebase`). Schema 1 files upgrade on the first drift write; 0.6.0 refuses a schema 2 file explicitly (DRIFT-001).
+- A clock that goes backwards no longer fails every run with "Out-of-order": source status, records, drift runs and repair samples clamp to the last recorded time (DATA-004, DRIFT-001).
 
 ### Security
 
@@ -30,12 +52,7 @@ Bring your own AI: any model or agent proposes recipes and repairs while Rastro 
 - One consent vocabulary: `RASTRO_ALLOW_REMOTE` is the only remote opt-in, for `RASTRO_MODEL` as for job-declared models (the pre-release `RASTRO_MODEL_ALLOW_REMOTE` is removed), and every boolean opt-in (`RASTRO_ALLOW_REMOTE`, `RASTRO_ALLOW_EGRESS`, `RASTRO_MODEL_LOCAL`) accepts `1`, `true` or `yes`; before, `RASTRO_ALLOW_EGRESS` accepted only `1` (SEC-004, SEC-005).
 - MCP `recipe_promote(override_gates=true)` is refused unless the operator starts the server with `rastro mcp --allow-override-gates` (`build_server`/`serve(..., allow_override_gates=True)`): page content can prompt-inject the client agent, which could otherwise activate a quarantined candidate, including one the semantic judge vetoed. The error tells the user to run `rastro recipe promote --override-gates` themselves; the CLI is unchanged. `docs/mcp.md` documents what `recipe_apply` writes (REPAIR-005, AGENT-003, SEC-011).
 - Studio Ask AI reports the model's real remoteness: with `RASTRO_MODEL` naming a hosted endpoint and `RASTRO_ALLOW_REMOTE=1` but no `--allow-remote`, `/api/ai` said `remote: false` and the terminal said page content "stays on loopback models". The built-in transports now expose `remote` (`rastro.model_factory.is_remote`), and Studio uses it; the flag only speaks for a custom `ModelPort` (P-001, P-008).
-
-### Changed
-
-- Recipe proposal prompts include `field_hints` (each field's type and description, clipped) so models map fields by meaning; docs/intelligence.md lists what is sent (AI-002, P-001).
-- With a configured model, job repair asks it only when no deterministic candidate would pass (escalation, not competition), so a model candidate can no longer quarantine a passing relocation as `competing_candidates`; an invalid model selector rejects that proposal (`invalid_model_candidate`) instead of aborting the repair (REPAIR-001, REPAIR-002).
-- Internal: `RepairCandidateGenerator` no longer takes `model` or `model_enabled`; model proposals live in `application/model_repair` (REPAIR-001).
+- Dataset and recipe-memory files and their SQLite sidecars are created 0600 on POSIX, and existing files the user owns are tightened when opened; datasets hold sanitized page samples (SEC-009, SEC-004).
 
 ### Fixed
 

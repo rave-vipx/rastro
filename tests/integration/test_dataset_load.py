@@ -174,7 +174,7 @@ def test_multiple_datasets_require_name(sample, capsys):
     store.mark_source_unavailable("other", status.source_url, status.last_attempt, "unavailable")
     assert main(["dataset", "status", str(sample / "agenda.sqlite")]) == 2
     capsys.readouterr()
-    assert main(["dataset", "status", str(sample / "agenda.sqlite"), "--dataset", "other"]) == 0
+    assert main(["dataset", "status", str(sample / "agenda.sqlite"), "--dataset", "other"]) == 4
     assert json.loads(capsys.readouterr().out)["stale_sources"][0]["last_success"] is None
 
 

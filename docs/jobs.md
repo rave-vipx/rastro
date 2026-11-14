@@ -318,6 +318,10 @@ uv run rastro job preview job.toml --output table
 uv run rastro job schema --target job
 uv run rastro job schema --target run
 uv run rastro job schema --target preview
+uv run rastro job load job.toml --drift --on-failure "notify-script"
+uv run rastro job ack-drift job.toml --source 1
+uv run rastro job forget-source job.toml --url https://old.example/list
+uv run rastro health job.toml --output json
 ```
 
 | Exit code | Constant | Meaning |
@@ -326,6 +330,12 @@ uv run rastro job schema --target preview
 | `1` | `JobExitCode.FAILED` | The job ran, no source succeeded or partially succeeded, and zero records were accepted (`status = "failed"`). |
 | `2` | `JobExitCode.CONFIG_ERROR` | The job did not run: usage error, missing or unreadable file, TOML/JSON syntax error, schema validation error, path escape, missing extra or environment variable, or resource limit on supplied files. |
 | `3` | `JobExitCode.PARTIAL_SUCCESS` | At least one source succeeded or partially succeeded, but not all of them succeeded (`status = "partial_success"`). |
+| `4` | `JobExitCode.NEEDS_ATTENTION` | The command succeeded but an operator must act: `load` finished with open drift (`status = "degraded"`); `rastro health` or `rastro dataset status` found a stale source, open drift or a quarantined candidate. |
+| `5` | `JobExitCode.STORAGE_ERROR` | `load` ran but a dataset write or read failed. The report is still printed: committed sources keep their counts, the rest carry a `storage_error` issue (`status = "storage_error"`). |
+
+Severity order: 5, 1, 3, 4, 0. See [Monitoring and alerts](operations.md) for open drift,
+`rastro health`, the `--on-failure` hook and `RASTRO_ON_FAILURE`, and
+[ADR 0023](decisions/0023-open-drift-and-attention-exit-codes.md) for the reasoning.
 
 ### Error objects
 
@@ -354,6 +364,7 @@ option) use the same format:
 | `schema_error` | The target fields could not be compiled into a record model. |
 | `configuration_error` | Missing file or extension, path containment, absolute paths without the flag, missing environment variable or optional extra. |
 | `resource_limit` | Oversized job file or local source. |
+| `storage_error` | A dataset file could not be read or written (foreign or newer schema, symlinked path, SQLite failure) before a report existed. |
 | `file_error` | The operating system refused to read a file. |
 | `internal_error` | Unexpected failure. Run with `--verbose` for a traceback on `stderr`. |
 

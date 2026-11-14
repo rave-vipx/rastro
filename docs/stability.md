@@ -15,7 +15,8 @@ across patch releases, and get at least one minor release of warnings before a c
   `rastro.OpenAICompatibleModel` are public too, although they are left out of `__all__` so a
   star import never needs an extra.
 - **CLI commands and flags** of the `rastro` executable, and its exit codes (`0` success,
-  `1` failed, `2` configuration or usage error, `3` partial success).
+  `1` failed, `2` configuration or usage error, `3` partial success, `4` needs attention,
+  `5` storage error after the run).
 - **CLI JSON output.** Objects that carry `schema_version` keep their meaning for that version;
   a breaking change bumps `schema_version`. New fields may be added at any time, so parse
   leniently and ignore unknown keys. The error object on stderr keeps the keys `error`,

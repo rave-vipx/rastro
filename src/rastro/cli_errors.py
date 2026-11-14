@@ -18,6 +18,7 @@ from pydantic import ValidationError
 from pydantic_core import SchemaError
 
 from rastro.application.errors import missing_extra_error
+from rastro.domain.dataset import DatasetNotFoundError, DatasetStorageError
 from rastro.domain.models import RastroError, ResourceLimitError
 
 __all__ = ["UsageError", "classify", "missing_extra_error"]
@@ -72,6 +73,9 @@ def classify(error: BaseException) -> dict[str, Any]:
         code, message = "syntax_error", "Job file must be UTF-8 text"
     elif isinstance(error, ResourceLimitError):
         code, message = "resource_limit", str(error)
+    elif isinstance(error, DatasetStorageError) and not isinstance(error, DatasetNotFoundError):
+        code, message = "storage_error", str(error) or "Dataset operation failed"
+        location = error.location
     elif isinstance(error, RastroError):
         message, location = str(error) or message, error.location
     elif isinstance(error, OSError):

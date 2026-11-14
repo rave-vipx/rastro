@@ -3,14 +3,16 @@
 Use the same job for each run. These examples run at 08:00 local time; replace
 absolute paths and the `rastro` executable path with your own. Both save the
 load report, its exit code, and export errors to a log. Exit 0 means success,
-1 means failure, 2 means configuration error, and 3 means partial success:
+1 means failure, 2 means configuration error, 3 means partial success, 4 means
+the load succeeded but needs attention (open drift) and 5 means a storage error
+after the run (see [Monitoring and alerts](operations.md)). On 3 and 4
 the load updates what it can, so the agenda is still exported. Inspect the log
 and `rastro dataset status /absolute/path/agenda.sqlite` for stale sources.
 
 Crontab (`crontab -e`):
 
 ```cron
-0 8 * * * cd /absolute/path && /bin/sh -c '/absolute/path/to/rastro job load job.toml; rc=$?; echo "load exit: $rc"; [ "$rc" -eq 0 ] || [ "$rc" -eq 3 ] && /absolute/path/to/rastro dataset export agenda.sqlite --format html --sort-field starts_on --upcoming --timezone America/Montevideo > agenda.html' >> /absolute/path/rastro.log 2>&1
+0 8 * * * cd /absolute/path && /bin/sh -c '/absolute/path/to/rastro job load job.toml; rc=$?; echo "load exit: $rc"; [ "$rc" -eq 0 ] || [ "$rc" -eq 3 ] || [ "$rc" -eq 4 ] && /absolute/path/to/rastro dataset export agenda.sqlite --format html --sort-field starts_on --upcoming --timezone America/Montevideo > agenda.html' >> /absolute/path/rastro.log 2>&1
 ```
 
 macOS launchd (`~/Library/LaunchAgents/org.example.rastro.plist`):
@@ -22,7 +24,7 @@ macOS launchd (`~/Library/LaunchAgents/org.example.rastro.plist`):
   <key>Label</key><string>org.example.rastro</string>
   <key>WorkingDirectory</key><string>/absolute/path</string>
   <key>ProgramArguments</key><array><string>/bin/sh</string><string>-c</string>
-    <string>/absolute/path/to/rastro job load job.toml; rc=$?; echo "load exit: $rc"; [ "$rc" -eq 0 ] || [ "$rc" -eq 3 ] &amp;&amp; /absolute/path/to/rastro dataset export agenda.sqlite --format html --sort-field starts_on --upcoming --timezone America/Montevideo &gt; agenda.html</string>
+    <string>/absolute/path/to/rastro job load job.toml; rc=$?; echo "load exit: $rc"; [ "$rc" -eq 0 ] || [ "$rc" -eq 3 ] || [ "$rc" -eq 4 ] &amp;&amp; /absolute/path/to/rastro dataset export agenda.sqlite --format html --sort-field starts_on --upcoming --timezone America/Montevideo &gt; agenda.html</string>
   </array>
   <key>StartCalendarInterval</key><dict><key>Hour</key><integer>8</integer><key>Minute</key><integer>0</integer></dict>
   <key>StandardOutPath</key><string>/absolute/path/rastro.log</string>

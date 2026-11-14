@@ -111,6 +111,8 @@ published in `docs/schemas/` and printed by `rastro job schema`.
 | `1` | Failed: the job ran and no source produced records | Read `issues` per source; do not treat as empty data |
 | `2` | Configuration or usage error: nothing ran | Read the error object on stderr and fix the input |
 | `3` | Partial success: some sources succeeded | Use the records and report the failing sources |
+| `4` | Needs attention: `job load` succeeded with open drift, or `rastro health` / `dataset status` found a stale source, open drift or a quarantined candidate | Use the records, but tell the operator; see [Monitoring and alerts](operations.md) |
+| `5` | Storage error: `job load` ran but a dataset write or read failed | Read the per-source report; do not treat uncommitted sources as loaded |
 
 ### Error object
 

@@ -38,6 +38,7 @@ nav:
   - Recipe lifecycle: recipe-lifecycle.md
   - Recipe hub (bundles): hub.md
   - Structural drift: drift.md
+  - Monitoring and alerts: operations.md
   - Semantic consistency: consistency.md
   - Recipe CI and repair: repair.md
   - Instant Mock Lab: mock-lab.md
@@ -58,6 +59,7 @@ nav:
   - Clean code and module size: development/clean-code.md
   - Development work log: development/work-log.md
   - Engineering decisions:
+      - Open drift and attention exit codes: decisions/0023-open-drift-and-attention-exit-codes.md
       - Bring your own AI: decisions/0022-bring-your-own-ai.md
       - Newer serving recipe wins: decisions/0021-serving-recipe-over-job-file.md
       - Minimal Studio, MCP and Hub: decisions/0020-studio-mcp-hub-minimal.md

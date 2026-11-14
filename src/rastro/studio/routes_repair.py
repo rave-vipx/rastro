@@ -17,12 +17,14 @@ from starlette.routing import Route
 
 from rastro.adapters.sqlite import SQLiteRecipeRepository
 from rastro.adapters.sqlite_dataset import SQLiteDatasetStore
+from rastro.adapters.sqlite_drift import SQLiteDriftMonitor
 from rastro.application.active_recipes import active_job, source_key
 from rastro.application.job_loader import resolve_job_path
+from rastro.application.job_maintenance import current_source_urls
 from rastro.application.job_repair import promote_job_recipe, repair_job_source
 from rastro.application.recipe_apply import write_serving_recipe
 from rastro.application.recipe_diff import with_diffs
-from rastro.domain.jobs import FileJobSource, Job
+from rastro.domain.jobs import Job
 from rastro.domain.lifecycle_history import check_reason
 from rastro.studio import files
 from rastro.studio.web import Studio, body, flag, integer, plain, reply, text
@@ -38,14 +40,19 @@ def _existing(raw: str | None, base: Path) -> Path | None:
     return path if path.is_file() else None
 
 
-def _statuses(job: Job, base: Path) -> dict[str, dict[str, Any]]:
+def _statuses(job: Job, base: Path) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Source status and open drift by source URL (DRIFT-005)."""
     file = _existing(job.dataset.path if job.dataset else None, base)
     if file is None or job.dataset is None:
-        return {}
+        return {}, {}
     store = SQLiteDatasetStore(file, limits=job.limits)
     if job.dataset.name not in store.dataset_names():
-        return {}
-    return {s.source_url: plain(s) for s in store.source_status(job.dataset.name)}
+        return {}, {}
+    drift = SQLiteDriftMonitor(file, limits=job.limits).open_drift(job.dataset.name)
+    return (
+        {s.source_url: plain(s) for s in store.source_status(job.dataset.name)},
+        {d.source_url: plain(d) for d in drift},
+    )
 
 
 def health(job: Job, base: Path) -> dict[str, Any]:
@@ -53,10 +60,9 @@ def health(job: Job, base: Path) -> dict[str, Any]:
     _, selections = active_job(job, base_dir=base, allow_absolute_paths=False)
     memory = _existing(job.recipe_memory, base)
     repository = SQLiteRecipeRepository(memory) if memory is not None else None
-    statuses = _statuses(job, base)
+    statuses, drift = _statuses(job, base)
     sources = []
-    for index, item in enumerate(job.sources, start=1):
-        url = item.resolved_source_url() if isinstance(item, FileJobSource) else item.url
+    for index, (item, url) in enumerate(zip(job.sources, current_source_urls(job), strict=True), 1):
         history = repository.history(source_key(job, item)) if repository else None
         sources.append(
             {
@@ -64,6 +70,7 @@ def health(job: Job, base: Path) -> dict[str, Any]:
                 "source_url": url,
                 "versions": [plain(v) for v in history.versions] if history else [],
                 "status": statuses.get(url),
+                "open_drift": drift.get(url),
             }
         )
     return {"ok": True, "has_memory": job.recipe_memory is not None, "sources": sources}

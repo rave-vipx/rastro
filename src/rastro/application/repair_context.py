@@ -109,6 +109,16 @@ class RepairContext:
                 fixtures.append(bundle)
         return snapshot, tuple(fixtures)
 
+    def serving_changed(self, index: int) -> None:
+        """A promotion or rollback clears open drift and rebaselines the source (ADR 0023)."""
+        from rastro.adapters.sqlite_dataset_admin import rebaseline_drift
+
+        assert self.job.dataset is not None
+        source, _ = self.locate(index)
+        rebaseline_drift(
+            self.dataset_path, self.job.dataset.name, source.evidence_url, limits=self.job.limits
+        )
+
     @property
     def source_fingerprint(self) -> str:
         from rastro.domain.models import schema_fingerprint

@@ -89,7 +89,7 @@ class SQLiteRelocationStore:
                 key,
             ).fetchone()
             if previous and previous[0] > observed:
-                raise DatasetStorageError("Out-of-order relocation sample")
+                observed = previous[0]  # The clock went backwards: clamp (docs/operations.md).
             db.execute(
                 "INSERT OR REPLACE INTO relocation_samples VALUES (?, ?, ?, ?, ?, ?, ?)",
                 (

@@ -28,6 +28,11 @@ from rastro.application.job_summary import job_validation_summary
 from rastro.application.operator_trust import set_process_trust
 from rastro.cli_dataset import add_commands, dataset_command, load_job_command
 from rastro.cli_errors import UsageError, classify, missing_extra_error
+from rastro.cli_hook import add_hook_argument, hook_argv, notify, run_summary
+from rastro.cli_ops import JOB_COMMANDS as OPS_JOB_COMMANDS
+from rastro.cli_ops import add_health_command, health_command
+from rastro.cli_ops import add_job_commands as add_ops_job_commands
+from rastro.cli_ops import job_command as ops_job_command
 from rastro.cli_recipe import add_commands as add_recipe_commands
 from rastro.cli_recipe import recipe_command
 from rastro.cli_studio import add_command as add_studio_command
@@ -35,11 +40,12 @@ from rastro.cli_studio import studio_command
 from rastro.cli_suggest import add_commands as add_suggest_commands
 from rastro.cli_suggest import new_command, suggest_command
 from rastro.cli_trust import add_trust_arguments, apply_trust, hoist_trust_flags, trust_options
+from rastro.domain.health import job_health_json_schema
 from rastro.domain.job_dataset import job_preview_json_schema
 from rastro.domain.job_load import job_load_json_schema
 
 # Commands whose errors are reported as one JSON object on stderr.
-_JSON_ERRORS = frozenset({"job", "recipe", "suggest", "new"})
+_JSON_ERRORS = frozenset({"job", "recipe", "suggest", "new", "health"})
 
 
 class _ArgumentParser(argparse.ArgumentParser):
@@ -97,6 +103,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Allow absolute paths for local source files and recipe memory",
     )
     add_trust_arguments(job_run)
+    add_hook_argument(job_run)
 
     job_preview = job_commands.add_parser(
         "preview", help="Preview what a job would load into its [dataset]; writes nothing"
@@ -118,11 +125,13 @@ def _build_parser() -> argparse.ArgumentParser:
     job_schema = job_commands.add_parser("schema", help="Print JSON Schema for declarative jobs")
     job_schema.add_argument(
         "--target",
-        choices=("job", "run", "preview", "load"),
+        choices=("job", "run", "preview", "load", "health"),
         default="job",
-        help="Schema to print: 'job' input (default), 'run' or 'preview' output",
+        help="Schema to print: 'job' input (default), 'run', 'preview', 'load' or 'health' output",
     )
     add_commands(subcommands, job_commands)
+    add_ops_job_commands(job_commands)
+    add_health_command(subcommands)
     add_recipe_commands(subcommands)
     add_studio_command(subcommands)
     add_suggest_commands(subcommands)
@@ -136,11 +145,14 @@ def _run_job_command(args: argparse.Namespace) -> int:
             "run": job_run_json_schema,
             "preview": job_preview_json_schema,
             "load": job_load_json_schema,
+            "health": job_health_json_schema,
         }[args.target]()
         print(json.dumps(payload, indent=2, sort_keys=True))
         return int(JobExitCode.SUCCESS)
     if args.job_command == "load":
         return load_job_command(args)
+    if args.job_command in OPS_JOB_COMMANDS:
+        return ops_job_command(args)
     if args.job_command == "validate":
         job = load_job(args.file, allow_absolute_paths=args.allow_absolute_paths)
         print(json.dumps(job_validation_summary(job), indent=2))
@@ -155,10 +167,12 @@ def _run_job_command(args: argparse.Namespace) -> int:
             else render_preview_table(preview)
         )
         return int(preview.exit_code)
+    hook = hook_argv(args)
     report = run_job_file(
         args.file, allow_absolute_paths=args.allow_absolute_paths, **trust_options(args)
     )
-    print(report.model_dump_json(indent=2))
+    print(report.model_dump_json(indent=2), flush=True)
+    notify(hook, run_summary(args.file, report))
     return int(report.exit_code)
 
 
@@ -183,6 +197,8 @@ def _dispatch(args: argparse.Namespace) -> int:
         return dataset_command(args)
     if args.command == "studio":
         return studio_command(args)
+    if args.command == "health":
+        return health_command(args)
     if args.command == "suggest":
         return suggest_command(args)
     if args.command == "new":

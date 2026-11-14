@@ -15,12 +15,20 @@ type JobRunStatus = Literal["success", "partial_success", "failed"]
 
 
 class JobExitCode(IntEnum):
-    """CLI exit codes distinguishing full success, partial success, failure, and config errors."""
+    """CLI exit codes distinguishing full success, partial success, failure, and config errors.
+
+    ``NEEDS_ATTENTION`` means the command succeeded but the operator must act: open drift
+    after a successful load, or stale sources, open drift or quarantined candidates in
+    ``rastro health`` and ``rastro dataset status``. ``STORAGE_ERROR`` means the job ran but
+    a dataset write or read failed; the report lists what was already committed (ADR 0023).
+    """
 
     SUCCESS = 0
     FAILED = 1
     CONFIG_ERROR = 2
     PARTIAL_SUCCESS = 3
+    NEEDS_ATTENTION = 4
+    STORAGE_ERROR = 5
 
 
 class JobRecordData(BaseModel):
