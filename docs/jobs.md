@@ -402,6 +402,10 @@ need operator opt-in. The job file cannot grant it to itself.
   (`RASTRO_[A-Z0-9_]{1,64}`) or appear in the operator allow-list: `RASTRO_ALLOWED_ENV`
   (comma-separated) or `--allow-env NAME` (repeatable; `allow_env=` in Python). The error
   names the job key, never the variable.
+- A job-declared remote model (`[model]` with `allow_remote = true` or `base_url_env`) runs
+  only when the operator sets `RASTRO_ALLOW_REMOTE=1`; its `api_key_env` and `base_url_env`
+  must be named `RASTRO_*` or listed in `RASTRO_ALLOWED_ENV`. Otherwise the run fails at
+  `model` / `model.api_key_env` before any request. Loopback models need no opt-in.
 
 ```console
 $ RASTRO_PROXY_USER=me RASTRO_PROXY_PASS=secret rastro job run job.toml --allow-egress

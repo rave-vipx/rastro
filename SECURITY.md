@@ -45,7 +45,10 @@ agent using the MCP server, a Studio workspace. It cannot make trust decisions o
   named `RASTRO_*`, or names the operator lists in `RASTRO_ALLOWED_ENV` (comma-separated)
   or with `--allow-env NAME` (`allow_env=` in Python). Otherwise a hostile job could name
   `GITHUB_TOKEN` as a proxy password and send it to its own proxy.
-- **Remote models** in `[model]` likewise need operator opt-in; see the
+- **Remote models** in `[model]` (`allow_remote = true` or an endpoint from
+  `base_url_env`) are used only when the operator sets `RASTRO_ALLOW_REMOTE=1`, and the
+  model's `api_key_env`/`base_url_env` follow the same secret-name rule (`RASTRO_*` or
+  `RASTRO_ALLOWED_ENV`). Loopback models (local Ollama, LM Studio) need no opt-in. See the
   [jobs guide](docs/jobs.md#security-boundaries).
 
 Recipes from Hub bundles, MCP tool arguments, Studio edits and model proposals follow a
