@@ -9,6 +9,7 @@ from rastro.adapters.sqlite_drift import SQLiteDriftMonitor
 from rastro.application.dataset_load import stale_sources
 from rastro.application.job_dataset import load_job_file
 from rastro.cli_dataset_export import html_export, select_records
+from rastro.cli_hook import add_hook_argument, hook_argv, load_summary, notify
 from rastro.cli_trust import add_trust_arguments, trust_options
 from rastro.domain.job_results import JobExitCode
 from rastro.domain.models import ConfigurationError
@@ -21,6 +22,7 @@ def add_commands(subcommands: argparse._SubParsersAction, jobs: argparse._SubPar
     load.add_argument("--output", choices=("json",), default="json")
     load.add_argument("--allow-absolute-paths", action="store_true")
     add_trust_arguments(load)
+    add_hook_argument(load)
     dataset = subcommands.add_parser("dataset", help="Read dataset records and freshness")
     commands = dataset.add_subparsers(dest="dataset_command", required=True)
     for command in ("export", "status"):
@@ -41,13 +43,15 @@ def add_commands(subcommands: argparse._SubParsersAction, jobs: argparse._SubPar
 
 
 def load_job_command(args: argparse.Namespace) -> int:
+    hook = hook_argv(args)
     loaded = load_job_file(
         args.file,
         drift=args.drift,
         allow_absolute_paths=args.allow_absolute_paths,
         **trust_options(args),
     )
-    print(loaded.model_dump_json(indent=2))
+    print(loaded.model_dump_json(indent=2), flush=True)
+    notify(hook, load_summary(args.file, loaded))
     return int(loaded.exit_code)
 
 

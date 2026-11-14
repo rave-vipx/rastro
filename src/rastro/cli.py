@@ -27,6 +27,7 @@ from rastro.application.job_preview import preview_job_file, render_preview_tabl
 from rastro.application.job_summary import job_validation_summary
 from rastro.cli_dataset import add_commands, dataset_command, load_job_command
 from rastro.cli_errors import UsageError, classify, missing_extra_error
+from rastro.cli_hook import add_hook_argument, hook_argv, notify, run_summary
 from rastro.cli_ops import JOB_COMMANDS as OPS_JOB_COMMANDS
 from rastro.cli_ops import add_job_commands as add_ops_job_commands
 from rastro.cli_ops import job_command as ops_job_command
@@ -92,6 +93,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Allow absolute paths for local source files and recipe memory",
     )
     add_trust_arguments(job_run)
+    add_hook_argument(job_run)
 
     job_preview = job_commands.add_parser(
         "preview", help="Preview what a job would load into its [dataset]; writes nothing"
@@ -153,10 +155,12 @@ def _run_job_command(args: argparse.Namespace) -> int:
             else render_preview_table(preview)
         )
         return int(preview.exit_code)
+    hook = hook_argv(args)
     report = run_job_file(
         args.file, allow_absolute_paths=args.allow_absolute_paths, **trust_options(args)
     )
-    print(report.model_dump_json(indent=2))
+    print(report.model_dump_json(indent=2), flush=True)
+    notify(hook, run_summary(args.file, report))
     return int(report.exit_code)
 
 
