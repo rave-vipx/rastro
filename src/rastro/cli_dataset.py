@@ -5,10 +5,12 @@ import json
 from pathlib import Path
 
 from rastro.adapters.sqlite_dataset import SQLiteDatasetStore
+from rastro.adapters.sqlite_drift import SQLiteDriftMonitor
 from rastro.application.dataset_load import stale_sources
 from rastro.application.job_dataset import load_job_file
 from rastro.cli_dataset_export import html_export, select_records
 from rastro.cli_trust import add_trust_arguments, trust_options
+from rastro.domain.job_results import JobExitCode
 from rastro.domain.models import ConfigurationError
 
 
@@ -78,20 +80,33 @@ def dataset_command(args: argparse.Namespace) -> int:
             return 0
         items = [r.model_dump(mode="json") for r in records]
     else:
-        items = [s.model_dump(mode="json") for s in store.source_status(args.dataset)]
+        return _status(store, args)
     label = {"schema_version": 1, "data_trust": "untrusted_source_data"}
     if args.format == "jsonl":
         for item in items:
             print(json.dumps({**label, **item}, ensure_ascii=True))
     else:
+        payload = {**label, "dataset": args.dataset, "records": items}
+        print(json.dumps(payload, indent=2, ensure_ascii=True))
+    return 0
+
+
+def _status(store: SQLiteDatasetStore, args: argparse.Namespace) -> int:
+    """Exit 4 (needs attention) when a source is stale or has open drift (DATA-004)."""
+    label = {"schema_version": 1, "data_trust": "untrusted_source_data"}
+    statuses = store.source_status(args.dataset)
+    stale = stale_sources(store, args.dataset)
+    drift = SQLiteDriftMonitor(args.path).open_drift(args.dataset)
+    if args.format == "jsonl":
+        for status in statuses:
+            print(json.dumps({**label, **status.model_dump(mode="json")}, ensure_ascii=True))
+    else:
         payload = {
             **label,
             "dataset": args.dataset,
-            "records" if args.dataset_command == "export" else "sources": items,
+            "sources": [s.model_dump(mode="json") for s in statuses],
+            "stale_sources": [s.model_dump(mode="json") for s in stale],
+            "open_drift": [d.model_dump(mode="json") for d in drift],
         }
-        if args.dataset_command == "status":
-            payload["stale_sources"] = [
-                s.model_dump(mode="json") for s in stale_sources(store, args.dataset)
-            ]
         print(json.dumps(payload, indent=2, ensure_ascii=True))
-    return 0
+    return int(JobExitCode.NEEDS_ATTENTION if stale or drift else JobExitCode.SUCCESS)

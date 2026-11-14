@@ -154,3 +154,15 @@ def test_clock_going_backwards_clamps_source_times_instead_of_failing(store):
     store.mark_source_unavailable("agenda", URL, earlier, "transient_failure")
     status = store.source_status("agenda")[0]
     assert (status.last_success, status.last_attempt, status.stale) == (AT, AT, True)
+
+
+def test_failure_detail_is_stored_without_changing_the_reason(store):
+    """DATA-005: the outcome stays the reason; the detail tells 403, 429 and timeouts apart."""
+    from rastro.ports.dataset import SourceFailureRecorder
+
+    assert isinstance(store, SourceFailureRecorder)
+    store.record_source_failure("agenda", URL, AT, "access_restriction", "http_403")
+    status = store.source_status("agenda")[0]
+    assert (status.reason, status.detail) == ("access_restriction", "http_403")
+    store.mark_source_unavailable("agenda", URL, AT + timedelta(1), "transient_failure")
+    assert "detail" not in store.source_status("agenda")[0].model_dump(mode="json")
