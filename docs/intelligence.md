@@ -82,8 +82,11 @@ keywords override what the spec string says (`allow_remote`, `local`, `timeout`,
 `temperature`); unknown options are refused, never ignored.
 
 **Environment.** With no spec, `RASTRO_MODEL` holds a spec string. Because a string cannot
-carry consent, set `RASTRO_MODEL_ALLOW_REMOTE=1` to allow a remote endpoint or a command
+carry consent, set `RASTRO_ALLOW_REMOTE=1` to allow a remote endpoint or a command
 that may send data off the machine, or `RASTRO_MODEL_LOCAL=1` to declare a command local.
+`RASTRO_ALLOW_REMOTE` is the one remote opt-in for `RASTRO_MODEL` and for models declared in
+job files. Every boolean opt-in (`RASTRO_ALLOW_REMOTE`, `RASTRO_ALLOW_EGRESS`,
+`RASTRO_MODEL_LOCAL`) accepts `1`, `true` or `yes` in any case; anything else is off.
 
 **Command strings are never run by a shell.** `command:` text is split with `shlex` into an
 argument list for `exec`; `|`, `;`, `$(...)` and redirections are passed as literal

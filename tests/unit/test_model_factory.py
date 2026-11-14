@@ -18,7 +18,7 @@ POLICY = InferencePolicy(timeout_seconds=5)
 
 @pytest.fixture(autouse=True)
 def _clean_env(monkeypatch):
-    for name in ("RASTRO_MODEL", "RASTRO_MODEL_ALLOW_REMOTE", "RASTRO_MODEL_LOCAL"):
+    for name in ("RASTRO_MODEL", "RASTRO_ALLOW_REMOTE", "RASTRO_MODEL_LOCAL"):
         monkeypatch.delenv(name, raising=False)
 
 
@@ -116,7 +116,18 @@ def test_environment_spec_and_opt_in(monkeypatch):
     monkeypatch.setenv("RASTRO_MODEL", "http:gpt-x@https://api.example.com/v1")
     with pytest.raises(ConfigurationError):
         rastro.model()
-    monkeypatch.setenv("RASTRO_MODEL_ALLOW_REMOTE", "true")
+    monkeypatch.setenv("RASTRO_ALLOW_REMOTE", "true")
+    assert isinstance(rastro.model(), OpenAICompatibleModel)
+
+
+def test_one_remote_opt_in_name_for_rastro_model(monkeypatch):
+    """SEC-004: RASTRO_ALLOW_REMOTE is the only remote opt-in; the unreleased
+    RASTRO_MODEL_ALLOW_REMOTE spelling is gone."""
+    monkeypatch.setenv("RASTRO_MODEL", "http:gpt-x@https://api.example.com/v1")
+    monkeypatch.setenv("RASTRO_MODEL_ALLOW_REMOTE", "1")
+    with pytest.raises(ConfigurationError):
+        rastro.model()
+    monkeypatch.setenv("RASTRO_ALLOW_REMOTE", "1")
     assert isinstance(rastro.model(), OpenAICompatibleModel)
 
 

@@ -13,6 +13,7 @@ from typing import Any
 
 from pydantic import TypeAdapter, ValidationError
 
+from rastro.application.operator_trust import REMOTE_ENV, env_flag
 from rastro.domain.job_providers import (
     CommandProvider,
     JobModelProvider,
@@ -24,16 +25,14 @@ from rastro.domain.models import ConfigurationError
 from rastro.ports.model import ModelPort
 
 ENV_SPEC = "RASTRO_MODEL"
-ENV_ALLOW_REMOTE = "RASTRO_MODEL_ALLOW_REMOTE"
 ENV_LOCAL = "RASTRO_MODEL_LOCAL"
-_TRUE = frozenset({"1", "true", "yes"})
 _PROVIDER: TypeAdapter[JobModelProvider] = TypeAdapter(JobModelProvider)
 
 
 def model(spec: object = None, **options: Any) -> ModelPort:
     """Build a ``ModelPort`` from a spec string, a provider name with options, or a function.
 
-    With no spec, ``RASTRO_MODEL`` is read; ``RASTRO_MODEL_ALLOW_REMOTE=1`` (or
+    With no spec, ``RASTRO_MODEL`` is read; ``RASTRO_ALLOW_REMOTE=1`` (or
     ``RASTRO_MODEL_LOCAL=1`` for a command) then records the privacy opt-in.
     Raises ``ConfigurationError`` listing the valid forms for anything else.
     """
@@ -120,9 +119,8 @@ def _from_object(spec: object, options: dict[str, Any]) -> ModelPort:
 
 def _env_opt_in(data: dict[str, Any]) -> dict[str, Any]:
     opt_in: dict[str, Any] = {}
-    remote = os.environ.get(ENV_ALLOW_REMOTE, "").strip().lower() in _TRUE
-    if remote and data.get("provider") != "ollama":
+    if env_flag(REMOTE_ENV) and data.get("provider") != "ollama":
         opt_in["allow_remote"] = True
-    if data.get("provider") == "command" and os.environ.get(ENV_LOCAL, "").strip().lower() in _TRUE:
+    if data.get("provider") == "command" and env_flag(ENV_LOCAL):
         opt_in["local"] = True
     return opt_in

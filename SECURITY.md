@@ -40,7 +40,9 @@ agent using the MCP server, a Studio workspace. It cannot make trust decisions o
   request and receives the proxy credentials. Rastro uses it only with operator opt-in:
   `--allow-egress` on `rastro job run|preview|load`, `rastro recipe repair|promote`,
   `rastro mcp` and `rastro studio`; `allow_egress=True` in Python; or
-  `RASTRO_ALLOW_EGRESS=1`. Without it the run fails closed before any request.
+  `RASTRO_ALLOW_EGRESS=1`. Without it the run fails closed before any request. Every
+  boolean opt-in in the environment (`RASTRO_ALLOW_REMOTE`, `RASTRO_ALLOW_EGRESS`) accepts
+  `1`, `true` or `yes`; anything else is off.
 - **Secret environment names.** A job may make Rastro read only environment variables
   named `RASTRO_*`, or names the operator lists in `RASTRO_ALLOWED_ENV` (comma-separated)
   or with `--allow-env NAME` (`allow_env=` in Python). Otherwise a hostile job could name
@@ -48,7 +50,8 @@ agent using the MCP server, a Studio workspace. It cannot make trust decisions o
 - **Remote models** in `[model]` (`allow_remote = true`, an endpoint from `base_url_env`,
   or any endpoint other than loopback on the local model ports 11434, 1234, 8000 and
   8080) are used only with the operator's `--allow-remote`, `allow_remote=True` or
-  `RASTRO_ALLOW_REMOTE=1`, and the model's `api_key_env`/`base_url_env` follow the same
+  `RASTRO_ALLOW_REMOTE=1` (the same opt-in that lets `RASTRO_MODEL` name a remote model),
+  and the model's `api_key_env`/`base_url_env` follow the same
   secret-name rule; the refusal never echoes the name. Loopback models on those ports
   (local Ollama, LM Studio) need no opt-in.
 - **Commands.** A job file can never make Rastro start a program: a `provider =

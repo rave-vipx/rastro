@@ -73,7 +73,7 @@ model runtime.
   over the context budget. Field names, types and descriptions, the serving recipe and up
   to two clipped earlier values go with it. Page text is labelled untrusted data.
 - Any non-loopback endpoint, and any command that may call a hosted service, requires
-  `allow_remote=True` (`--allow-remote`, `RASTRO_MODEL_ALLOW_REMOTE=1`). A model declared
+  `allow_remote=True` (`--allow-remote`, `RASTRO_ALLOW_REMOTE=1`). A model declared
   in a job file gets those permissions only with the operator's consent, and a job file
   can never declare a command model.
 - Every proposed recipe passes the untrusted-recipe selector policy (no `:has()`, no

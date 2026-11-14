@@ -11,7 +11,7 @@ from __future__ import annotations
 import os
 from collections.abc import Iterable, Mapping
 
-from rastro.application.operator_trust import granted_env
+from rastro.application.operator_trust import EGRESS_ENV, env_flag, granted_env
 from rastro.domain.jobs import Job
 from rastro.domain.models import ConfigurationError
 from rastro.domain.secret_env import check_secret_env_name
@@ -39,7 +39,7 @@ def check_job_egress(
     if not profiles:
         return
     env = os.environ if environ is None else environ
-    if not (allow_egress or env.get("RASTRO_ALLOW_EGRESS") == "1"):
+    if not (allow_egress or env_flag(EGRESS_ENV, env)):
         raise ConfigurationError(
             "This job declares egress proxies, which need operator opt-in: if you trust "
             "the job, pass --allow-egress (allow_egress=True in Python) or set "
