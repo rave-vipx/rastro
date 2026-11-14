@@ -11,6 +11,8 @@ import asyncio
 import json
 import os
 import re
+import subprocess
+import threading
 from collections.abc import Sequence
 from typing import Literal
 
@@ -137,41 +139,45 @@ def first_json_object(text: str) -> str:
 
 
 async def _run(argv: tuple[str, ...], prompt: bytes, env: dict[str, str], limit: int) -> bytes:
+    """Blocking pipes on worker threads, so any event loop works (Windows selector loops
+    cannot spawn asyncio subprocesses). Cancellation kills the child, which ends the read."""
     try:
-        process = await asyncio.create_subprocess_exec(
-            *argv,
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.DEVNULL,
+        process = subprocess.Popen(
+            argv,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
             env=env,
         )
     except (OSError, ValueError):
         raise ModelError("model_unavailable") from None
     try:
-        _, stdout = await asyncio.gather(_feed(process, prompt), _read(process, limit))
-        if await process.wait() != 0:
+        threading.Thread(target=_feed, args=(process, prompt), daemon=True).start()
+        stdout = await asyncio.to_thread(_read, process, limit)
+        if await asyncio.to_thread(process.wait) != 0:
             raise ModelError("model_unavailable")
         return stdout
     finally:
-        if process.returncode is None:
+        if process.poll() is None:
             process.kill()
-            await asyncio.shield(process.wait())
+        process.wait()
+        assert process.stdout is not None
+        process.stdout.close()
 
 
-async def _feed(process: asyncio.subprocess.Process, prompt: bytes) -> None:
+def _feed(process: subprocess.Popen[bytes], prompt: bytes) -> None:
     assert process.stdin is not None
     try:
         process.stdin.write(prompt)
-        await process.stdin.drain()
         process.stdin.close()
-    except (BrokenPipeError, ConnectionResetError):
+    except OSError:
         pass  # A command may answer without reading all input; its exit code decides.
 
 
-async def _read(process: asyncio.subprocess.Process, limit: int) -> bytes:
+def _read(process: subprocess.Popen[bytes], limit: int) -> bytes:
     assert process.stdout is not None
     body = bytearray()
-    while chunk := await process.stdout.read(65_536):
+    while chunk := process.stdout.read(65_536):
         if len(body) + len(chunk) > limit:
             raise ModelError("model_response_limit")
         body.extend(chunk)
