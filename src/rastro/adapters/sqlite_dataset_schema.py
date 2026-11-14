@@ -116,6 +116,14 @@ def connection(path: Path, limits: Limits, *, write: bool = False) -> Iterator[s
                 raise ConcurrentDatasetCreation from None
 
 
+def last_attempt(db: sqlite3.Connection, dataset: str, source: str) -> datetime | None:
+    row = db.execute(
+        "SELECT payload FROM dataset_sources WHERE dataset = ? AND source = ?",
+        (dataset, source),
+    ).fetchone()
+    return SourceStatus.model_validate_json(row[0]).last_attempt if row else None
+
+
 def update_status(
     db: sqlite3.Connection,
     dataset: str,
@@ -130,7 +138,8 @@ def update_status(
     ).fetchone()
     old = SourceStatus.model_validate_json(row[0]) if row else None
     if old and at < old.last_attempt:
-        raise DatasetStorageError("Out-of-order source observation")
+        # The clock went backwards: clamp to the last recorded attempt (docs/operations.md).
+        at = old.last_attempt
     status = SourceStatus(
         source_url=source,
         last_success=at if complete else old.last_success if old else None,

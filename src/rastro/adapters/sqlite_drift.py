@@ -116,7 +116,7 @@ class SQLiteDriftMonitor:
                 key[:2],
             ).fetchone()[0]
             if last is not None and observed < last:
-                raise DatasetStorageError("Out-of-order drift observation")
+                observed = last  # The clock went backwards: clamp (docs/operations.md).
             assessment = assess_drift(
                 self._baseline(db, dataset, snapshot),
                 snapshot,

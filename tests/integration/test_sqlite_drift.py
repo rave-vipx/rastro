@@ -49,7 +49,7 @@ def test_existing_dataset_coexists_with_drift_and_repeated_runs_are_idempotent(t
         assert db.execute("SELECT version FROM drift_schema").fetchone()[0] == 1
 
 
-def test_failed_runs_do_not_replace_last_success_and_out_of_order_is_refused(tmp_path):
+def test_failed_runs_do_not_replace_last_success_and_conflicts_are_refused(tmp_path):
     monitor = SQLiteDriftMonitor(tmp_path / "data.sqlite")
     first = snapshot()
     monitor.assess("events", first)
@@ -61,8 +61,6 @@ def test_failed_runs_do_not_replace_last_success_and_out_of_order_is_refused(tmp
     assert monitor.assess("events", failed).verdict == "extraction_failure"
     assert monitor.baseline("events", first) == first
     assert monitor.baseline("other", first) is None
-    with pytest.raises(DatasetStorageError, match="Out-of-order"):
-        monitor.assess("events", snapshot(run_id="old"))
     with pytest.raises(DatasetStorageError, match="Conflicting"):
         monitor.assess("events", snapshot(status=Outcome.INVALID_DATA))
 
@@ -140,3 +138,17 @@ def test_aborted_migration_preserves_existing_dataset(tmp_path, monkeypatch):
     assert store.source_status("events") == before
     with closing(sqlite3.connect(path)) as db:
         assert not db.execute("SELECT 1 FROM sqlite_master WHERE name = 'drift_schema'").fetchall()
+
+
+def test_clock_going_backwards_is_clamped_not_refused(tmp_path):
+    """DRIFT-001, QUAL-005: an earlier observation time is clamped to the last recorded one."""
+    monitor = SQLiteDriftMonitor(tmp_path / "data.sqlite")
+    first = snapshot()
+    monitor.assess("events", first)
+    earlier = snapshot(run_id="earlier", observed_at=first.observed_at - timedelta(hours=1))
+    assert monitor.assess("events", earlier).risk == "low"
+    later = snapshot(run_id="later", observed_at=first.observed_at - timedelta(minutes=30))
+    assert monitor.assess("events", later).risk == "low"
+    with closing(sqlite3.connect(tmp_path / "data.sqlite")) as db:
+        observed = {row[0] for row in db.execute("SELECT observed FROM drift_runs")}
+    assert len(observed) == 1

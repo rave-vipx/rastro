@@ -142,3 +142,15 @@ def test_concurrent_apply_is_serialized(store):
     assert sum(r.counts["created"] for r in reports) == 1
     assert sum(r.counts["unchanged"] for r in reports) == 1
     assert len(store.records("agenda")) == 1
+
+
+def test_clock_going_backwards_clamps_source_times_instead_of_failing(store):
+    """DATA-004, QUAL-005: an earlier clock is clamped to the last recorded attempt."""
+    apply(store, record())
+    earlier = AT - timedelta(hours=1)
+    assert apply(store, record(at=earlier), at=earlier).counts["unchanged"] == 1
+    status = store.source_status("agenda")[0]
+    assert (status.last_success, status.last_attempt, status.stale) == (AT, AT, False)
+    store.mark_source_unavailable("agenda", URL, earlier, "transient_failure")
+    status = store.source_status("agenda")[0]
+    assert (status.last_success, status.last_attempt, status.stale) == (AT, AT, True)

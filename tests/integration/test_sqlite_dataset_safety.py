@@ -56,16 +56,19 @@ def test_invalid_snapshot_creates_no_database(tmp_path, mutation):
     assert not path.exists()
 
 
-def test_late_run_cannot_regress_fields_or_source_health(tmp_path):
+def test_late_run_is_clamped_and_never_regresses_observation_times(tmp_path):
+    """DATA-004: a backwards clock is clamped to the last attempt, never stored as older."""
     store = SQLiteDatasetStore(tmp_path / "data.sqlite")
     later = AT + timedelta(days=1)
     apply(store, record(at=later), at=later)
-    with pytest.raises(DatasetStorageError):
-        apply(store, record(start="2026-11-08T20:00:00+00:00"))
-    with pytest.raises(DatasetStorageError):
-        store.mark_source_unavailable("agenda", URL, AT, "failure")
-    assert store.records("agenda")[0].last_observed_at == later
-    assert not store.source_status("agenda")[0].stale
+    apply(store, record(start="2026-11-08T20:00:00+00:00"))
+    stored = store.records("agenda")[0]
+    assert stored.last_observed_at == later
+    assert stored.origins[URL].observed_at == later
+    assert stored.fields["start_time"] == "2026-11-08T20:00:00+00:00"
+    store.mark_source_unavailable("agenda", URL, AT, "failure")
+    status = store.source_status("agenda")[0]
+    assert (status.last_attempt, status.stale) == (later, True)
 
 
 @pytest.mark.parametrize("version,app", [(99, APPLICATION_ID), (0, 0), (1, 123)])
