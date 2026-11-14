@@ -1,0 +1,33 @@
+[
+ {
+  "name": "id",
+  "type": "string",
+  "description": "Stable event identifier"
+ },
+ {
+  "name": "title",
+  "type": "string",
+  "description": "Name of the show, not the artist"
+ },
+ {
+  "name": "performer",
+  "type": "string",
+  "description": "Artist, band or company performing; never the show name"
+ },
+ {
+  "name": "starts_at",
+  "type": "datetime",
+  "description": "Start time with UTC offset"
+ },
+ {
+  "name": "url",
+  "type": "url",
+  "description": "Ticket or detail page link"
+ },
+ {
+  "name": "price",
+  "type": "decimal",
+  "required": false,
+  "description": "Ticket price in pesos; some events omit it"
+ }
+]

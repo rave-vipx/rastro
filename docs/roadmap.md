@@ -4,6 +4,10 @@
 
 v0.1 remains the reference release. It is complete: `0.1.0rc1` is its release candidate, with M1–M4 implemented, the M5 technical evidence recorded, every section 18 acceptance criterion evidenced, and DIFF-001 partially demonstrated. Publication (namespace ownership, legal/trademark review, tag and Trusted Publishing) awaits maintainer approval through the release gates in issue #5; nothing has been published.
 
+## After 0.6.0: monitoring and alerts (unreleased)
+
+**Delivered from an operator-notification audit:** open drift that stays open until acknowledged or repaired, exit code 4 (needs attention) and 5 (storage error after the run), `rastro health`, `rastro job ack-drift`, `rastro job forget-source`, an operator-only `--on-failure` hook, WARNING logs per failed source, clock-skew clamping and owner-only dataset files (DRIFT-004, OBS-002, OBS-007, DATA-004, REPAIR-005, SEC-009). See [Monitoring and alerts](operations.md) and [ADR 0023](decisions/0023-open-drift-and-attention-exit-codes.md).
+
 ## v0.4 and v0.5 close (2026-11-11)
 
 **Delivered:** `rastro studio`, a loopback-only page over the same services (pick a job, validate, preview, correct one selector, accept, connect) (P-008); `rastro mcp`, a stdio MCP server for Claude Code with job validate/preview/load, dataset reads and recipe listing (AGENT-002, AGENT-003); `rastro recipe export`/`import`, Git-friendly recipe bundles verified offline before storage (HUB-001, first step). Minimal shapes and what was left out are in [ADR 0020](decisions/0020-studio-mcp-hub-minimal.md). Version 0.5.0, not published.

@@ -141,6 +141,7 @@ class SourceStatus(Contract):
     last_attempt: AwareDatetime
     stale: bool
     reason: str | None = None
+    detail: str | None = Field(default=None, exclude_if=lambda v: v is None)
 
 
 def near_match(

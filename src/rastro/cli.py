@@ -25,20 +25,27 @@ from rastro import (
 )
 from rastro.application.job_preview import preview_job_file, render_preview_table
 from rastro.application.job_summary import job_validation_summary
+from rastro.application.operator_trust import set_process_trust
 from rastro.cli_dataset import add_commands, dataset_command, load_job_command
 from rastro.cli_errors import UsageError, classify, missing_extra_error
+from rastro.cli_hook import add_hook_argument, hook_argv, notify, run_summary
+from rastro.cli_ops import JOB_COMMANDS as OPS_JOB_COMMANDS
+from rastro.cli_ops import add_health_command, health_command
+from rastro.cli_ops import add_job_commands as add_ops_job_commands
+from rastro.cli_ops import job_command as ops_job_command
 from rastro.cli_recipe import add_commands as add_recipe_commands
 from rastro.cli_recipe import recipe_command
 from rastro.cli_studio import add_command as add_studio_command
 from rastro.cli_studio import studio_command
 from rastro.cli_suggest import add_commands as add_suggest_commands
 from rastro.cli_suggest import new_command, suggest_command
-from rastro.cli_trust import add_trust_arguments, trust_options
+from rastro.cli_trust import add_trust_arguments, apply_trust, hoist_trust_flags, trust_options
+from rastro.domain.health import job_health_json_schema
 from rastro.domain.job_dataset import job_preview_json_schema
 from rastro.domain.job_load import job_load_json_schema
 
 # Commands whose errors are reported as one JSON object on stderr.
-_JSON_ERRORS = frozenset({"job", "recipe", "suggest", "new"})
+_JSON_ERRORS = frozenset({"job", "recipe", "suggest", "new", "health"})
 
 
 class _ArgumentParser(argparse.ArgumentParser):
@@ -54,6 +61,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--version", action="version", version=f"rastro {__version__}")
     parser.add_argument("--verbose", action="store_true", help="Write structured logs to stderr")
+    add_trust_arguments(parser, root=True)
     subcommands = parser.add_subparsers(dest="command", required=True)
     subcommands.add_parser("demo", help="Run a synthetic JSON-LD extraction without network access")
     subcommands.add_parser("doctor", help="Report installed core versions and capabilities as JSON")
@@ -62,6 +70,12 @@ def _build_parser() -> argparse.ArgumentParser:
 
     mcp = subcommands.add_parser("mcp", help="Serve jobs and datasets to an agent over stdio MCP")
     mcp.add_argument("--root", type=Path, default=Path(), help="Workspace root (default: cwd)")
+    mcp.add_argument(
+        "--allow-override-gates",
+        action="store_true",
+        help="Let the agent call recipe_promote with override_gates (off: page content can "
+        "prompt-inject the agent; run rastro recipe promote --override-gates yourself)",
+    )
     add_trust_arguments(mcp)
 
     job_parser = subcommands.add_parser("job", help="Validate, run, or inspect declarative jobs")
@@ -89,6 +103,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Allow absolute paths for local source files and recipe memory",
     )
     add_trust_arguments(job_run)
+    add_hook_argument(job_run)
 
     job_preview = job_commands.add_parser(
         "preview", help="Preview what a job would load into its [dataset]; writes nothing"
@@ -110,11 +125,13 @@ def _build_parser() -> argparse.ArgumentParser:
     job_schema = job_commands.add_parser("schema", help="Print JSON Schema for declarative jobs")
     job_schema.add_argument(
         "--target",
-        choices=("job", "run", "preview", "load"),
+        choices=("job", "run", "preview", "load", "health"),
         default="job",
-        help="Schema to print: 'job' input (default), 'run' or 'preview' output",
+        help="Schema to print: 'job' input (default), 'run', 'preview', 'load' or 'health' output",
     )
     add_commands(subcommands, job_commands)
+    add_ops_job_commands(job_commands)
+    add_health_command(subcommands)
     add_recipe_commands(subcommands)
     add_studio_command(subcommands)
     add_suggest_commands(subcommands)
@@ -128,11 +145,14 @@ def _run_job_command(args: argparse.Namespace) -> int:
             "run": job_run_json_schema,
             "preview": job_preview_json_schema,
             "load": job_load_json_schema,
+            "health": job_health_json_schema,
         }[args.target]()
         print(json.dumps(payload, indent=2, sort_keys=True))
         return int(JobExitCode.SUCCESS)
     if args.job_command == "load":
         return load_job_command(args)
+    if args.job_command in OPS_JOB_COMMANDS:
+        return ops_job_command(args)
     if args.job_command == "validate":
         job = load_job(args.file, allow_absolute_paths=args.allow_absolute_paths)
         print(json.dumps(job_validation_summary(job), indent=2))
@@ -147,10 +167,12 @@ def _run_job_command(args: argparse.Namespace) -> int:
             else render_preview_table(preview)
         )
         return int(preview.exit_code)
+    hook = hook_argv(args)
     report = run_job_file(
         args.file, allow_absolute_paths=args.allow_absolute_paths, **trust_options(args)
     )
-    print(report.model_dump_json(indent=2))
+    print(report.model_dump_json(indent=2), flush=True)
+    notify(hook, run_summary(args.file, report))
     return int(report.exit_code)
 
 
@@ -162,7 +184,7 @@ def _mcp_command(args: argparse.Namespace) -> int:
         return int(JobExitCode.CONFIG_ERROR)
     if not args.root.is_dir():
         raise RastroError("--root must be an existing directory")
-    serve(args.root, **trust_options(args))
+    serve(args.root, allow_override_gates=args.allow_override_gates, **trust_options(args))
     return int(JobExitCode.SUCCESS)
 
 
@@ -175,6 +197,8 @@ def _dispatch(args: argparse.Namespace) -> int:
         return dataset_command(args)
     if args.command == "studio":
         return studio_command(args)
+    if args.command == "health":
+        return health_command(args)
     if args.command == "suggest":
         return suggest_command(args)
     if args.command == "new":
@@ -224,7 +248,7 @@ def _is_job_command(argv: list[str]) -> bool:
 
 
 def main(argv: list[str] | None = None) -> int:
-    arguments = sys.argv[1:] if argv is None else argv
+    arguments = hoist_trust_flags(sys.argv[1:] if argv is None else argv)
     parser = _build_parser()
     try:
         args = parser.parse_args(arguments)
@@ -240,7 +264,9 @@ def main(argv: list[str] | None = None) -> int:
         handler = logging.StreamHandler(sys.stderr)
         logger.addHandler(handler)
         logger.setLevel(logging.INFO)
+    previous_trust = None
     try:
+        previous_trust = apply_trust(args, arguments)
         return _dispatch(args)
     except (OSError, ValueError, ValidationError, SchemaError, RastroError) as error:
         if args.command in _JSON_ERRORS:
@@ -259,6 +285,8 @@ def main(argv: list[str] | None = None) -> int:
             logger.exception("Unexpected error while handling a job command")
         return _report_job_error(error)
     finally:
+        if previous_trust is not None:
+            set_process_trust(previous_trust)
         if handler is not None:
             logger.removeHandler(handler)
             handler.close()

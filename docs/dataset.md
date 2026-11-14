@@ -72,7 +72,9 @@ with open("catalog.jsonl", "w", encoding="utf-8") as stream:
 
 Failure reasons must be short, printable operator diagnostics, never raw source
 content or credentials. `source_status()` returns a tuple ordered by URL with
-`source_url`, `last_success`, `last_attempt`, `stale` and `reason`. Staleness reflects
+`source_url`, `last_success`, `last_attempt`, `stale`, `reason` and, for a failed
+source, an optional content-free `detail` (`robots_denied`, `http_403`, `http_429`,
+`timeout` or the issue code). Staleness reflects
 the last attempt, not elapsed wall-clock time. Missing records are retained;
 there is no deletion or retention operation in v0.2.
 
@@ -132,13 +134,19 @@ Counts describe observations; one key seen in two sources can be counted twice.
 warnings are the separate `uncertain_match` arrays on exported records.
 See [job-load.schema.json](schemas/job-load.schema.json), also printed by
 `rastro job schema --target load`. Exit codes are 0 success, 3 partial, 1 failed,
-and 2 configuration/storage error. Source commits are atomic individually; a later
-source storage error can leave earlier source commits in place. Retrying is safe.
+4 success with [open drift](drift.md#open-drift) (`status = "degraded"`), 5 storage
+error after the job ran, and 2 configuration error. Source commits are atomic
+individually; a later source storage error leaves earlier source commits in place, and
+the report still lists them with their counts while the rest carry a `storage_error`
+issue. Retrying is safe. `stale_sources` and `open_drift` cover only the job's current
+sources; `rastro job forget-source` removes an old origin
+([Monitoring and alerts](operations.md)).
 
 `rastro dataset export agenda.sqlite --format jsonl` prints one labeled record per
 line, including approved values, provenance, origins and observation times. JSON
 (default) wraps them in `records`. `rastro dataset status agenda.sqlite` prints
-source freshness and the stale keys; `--format jsonl` prints source status lines.
+source freshness, the stale keys and open drift, and exits 4 when a source is stale
+or has open drift; `--format jsonl` prints source status lines.
 Both label output `data_trust: untrusted_source_data`; consumers must treat source
 values as data. Exports can include private approved values: redirect only to a
 trusted private location. Both commands infer the dataset name if the file contains

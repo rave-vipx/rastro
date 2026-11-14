@@ -7,7 +7,7 @@ let offset = 0;
 
 export function resetOperate() {
   offset = 0;
-  for (const id of ["run-result", "health-result", "repair-result", "dataset-result"]) {
+  for (const id of ["run-result", "health-result", "repair-result", "ai-repair-result", "dataset-result"]) {
     $(id).replaceChildren();
   }
   for (const id of ["run-status", "health-status", "dataset-status"]) show(id, "");
@@ -34,8 +34,11 @@ async function extract() {
 
 async function load() {
   const { result } = await api("/api/load", { file: requireFile(), drift: $("drift").checked });
-  show("run-status", `Load ${result.job.status} into dataset "${result.dataset}".`,
-    result.job.status === "success" ? "good" : "warn");
+  // Green only for a clean load: open drift ("degraded") or a storage error is a warning.
+  const open = (result.open_drift || []).length;
+  show("run-status", `Load ${result.status} into dataset "${result.dataset}".`
+    + (open ? ` ${open} source(s) have open drift: review, repair or acknowledge it.` : ""),
+    result.status === "success" ? "good" : "warn");
   const rows = result.sources.map((s, i) => {
     const counts = Object.entries(s.counts).map(([k, v]) => `${k} ${v}`).join(", ");
     const drift = result.drift && result.drift[i] ? `${result.drift[i].verdict} (${result.drift[i].risk})` : "not measured";
@@ -50,7 +53,10 @@ async function health() {
   const data = await api("/api/health", { file: requireFile() });
   const out = $("health-result");
   const rows = data.sources.map((s, i) => {
-    const status = s.status ? (s.status.stale ? pill("stale", false) : pill("fresh", true)) : "no dataset yet";
+    const status = !s.status ? "no dataset yet"
+      : s.status.stale ? pill("stale", false)
+      : s.open_drift ? pill(`open drift (${s.open_drift.risk})`, false)
+      : pill("fresh", true);
     const versions = s.versions.map((v) => `v${v.version} ${v.state}`).join(", ") || "-";
     const actions = el("div", undefined, "row");
     if (data.has_memory) {
@@ -83,7 +89,27 @@ async function repair(source) {
   if (item.issues && item.issues.length) out.append(el("p", `issues: ${issues(item.issues)}`, "warn"));
   if (!item.comparisons.length) out.append(el("p", "No candidate recipe was found.", "warn"));
   for (const comparison of item.comparisons) out.append(candidate(source, comparison, item.promoted_version));
+  $("ai-repair-result").replaceChildren();
+  const usable = item.comparisons.some((c) => !c.evaluation || c.evaluation.decision !== "reject");
+  if (state.ai.enabled && !usable && !item.promoted_version) out.append(button("Ask AI for a repair", () => askRepair(source)));
   show("health-status", item.promoted_version ? `Version ${item.promoted_version} now serves.` : "Review the candidates below.", "muted");
+}
+
+// Repair with the model: relocation, then model proposals, the same gates and the semantic
+// judge. A candidate is promoted only when the job sets auto_promote and the judge agrees.
+async function askRepair(source) {
+  const notice = state.ai.remote ? " Page content is sent to the remote model." : "";
+  show("health-status", `Asking the model for a repair of source ${source}…${notice}`, "muted");
+  const { report } = await api("/api/ai/repair", { file: requireFile(), source });
+  const item = report.sources[0];
+  const out = $("ai-repair-result");
+  out.replaceChildren(el("h3", `Repair with the model for source ${source} (${item.inference_calls || 0} model call(s))`));
+  if (item.issues && item.issues.length) out.append(el("p", `issues: ${issues(item.issues)}`, "warn"));
+  if (!item.comparisons.length) out.append(el("p", "No candidate recipe was found.", "warn"));
+  for (const comparison of item.comparisons) out.append(candidate(source, comparison, item.promoted_version));
+  show("health-status", item.promoted_version
+    ? `Version ${item.promoted_version} now serves: the job allows automatic promotion and the model judged the values unchanged in meaning.`
+    : "Check that the new values mean the same as before, then promote with a reason.", item.promoted_version ? "good" : "muted");
 }
 
 function candidate(source, comparison, promoted) {

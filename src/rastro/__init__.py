@@ -6,7 +6,9 @@ from typing import TYPE_CHECKING
 
 from rastro.adapters.sqlite import SQLiteRecipeRepository
 from rastro.application.engine import Rastro
+from rastro.application.health import job_health
 from rastro.application.job_dataset import load_job_file
+from rastro.application.job_maintenance import acknowledge_job_drift, forget_job_source
 from rastro.application.job_repair import promote_job_recipe, repair_job_source
 from rastro.application.jobs import load_job, run_job, run_job_async, run_job_file
 from rastro.application.recipe_apply import apply_job_recipe
@@ -28,6 +30,7 @@ from rastro.domain.job_fields import (
 )
 from rastro.domain.job_load import JobLoadResult, LoadedSource
 from rastro.domain.job_providers import (
+    CommandProvider,
     JobModelProvider,
     OllamaProvider,
     OpenAICompatibleProvider,
@@ -104,6 +107,7 @@ from rastro.mocklab import (
     load_fixture,
     verify_fixture,
 )
+from rastro.model_factory import model
 from rastro.ports.model import ModelPort
 from rastro.ports.recipes import RecipeLifecycle, RecipeRepository
 from rastro.scrape import scrape, scrape_async
@@ -138,6 +142,7 @@ __all__ = [
     "AcquisitionPolicy",
     "BooleanField",
     "CandidateEvaluation",
+    "CommandProvider",
     "ConfigurationError",
     "CssRecipe",
     "DateField",
@@ -216,15 +221,19 @@ __all__ = [
     "UrlJobSource",
     "VersionStatus",
     "__version__",
+    "acknowledge_job_drift",
     "apply_job_recipe",
     "build_fixture",
     "build_job_schema",
     "css",
+    "forget_job_source",
+    "job_health",
     "job_json_schema",
     "job_run_json_schema",
     "load_fixture",
     "load_job",
     "load_job_file",
+    "model",
     "parse_job",
     "promote_job_recipe",
     "repair_job_source",

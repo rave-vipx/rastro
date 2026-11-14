@@ -1,6 +1,6 @@
 // Shared helpers. All source-derived text is set as plain text content; markup is never parsed.
 export const $ = (id) => document.getElementById(id);
-export const state = { token: "", file: "", sha: null };
+export const state = { token: "", file: "", sha: null, ai: { enabled: false, remote: false } };
 
 export async function api(path, body) {
   // Every API call, reads included, carries the session token.

@@ -11,6 +11,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
+from rastro.adapters.sqlite_files import create_private, restrict
 from rastro.adapters.sqlite_lifecycle import (
     apply_changes,
     delete_events,
@@ -66,6 +67,8 @@ class SQLiteRecipeRepository:
         if self._read_only:
             uri = f"{self._path.as_uri()}?mode=ro"
             return sqlite3.connect(uri, timeout=self._timeout, isolation_level=None, uri=True)
+        create_private(self._path)
+        restrict(self._path)
         return sqlite3.connect(self._path, timeout=self._timeout, isolation_level=None)
 
     @contextmanager

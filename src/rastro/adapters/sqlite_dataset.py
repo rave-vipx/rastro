@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import TextIO
 
-from rastro.adapters.sqlite_dataset_schema import connection, safe, update_status
+from rastro.adapters.sqlite_dataset_schema import connection, last_attempt, safe, update_status
 from rastro.adapters.structured import load_json
 from rastro.domain.dataset import (
     ChangeKind,
@@ -85,6 +85,14 @@ class SQLiteDatasetStore:
             raise DatasetStorageError("Invalid snapshot completeness or record count")
         incoming = self._prepare(dataset, source_url, records, observed_at)
         with connection(self._path, self._limits, write=True) as db:
+            last = last_attempt(db, dataset, source_url)
+            if last is not None and observed_at < last:
+                # The clock went backwards: clamp so observation times never regress.
+                observed_at = last
+                incoming = {
+                    key: item.model_copy(update={"observed_at": last})
+                    for key, item in incoming.items()
+                }
             rows = self._read(db, dataset)
             update_status(
                 db,
@@ -212,10 +220,18 @@ class SQLiteDatasetStore:
     def mark_source_unavailable(
         self, dataset: str, source_url: str, observed_at: datetime, reason: str
     ) -> None:
+        self.record_source_failure(dataset, source_url, observed_at, reason, None)
+
+    @safe
+    def record_source_failure(
+        self, dataset: str, source_url: str, observed_at: datetime, reason: str, detail: str | None
+    ) -> None:
+        """``mark_source_unavailable`` plus a content-free detail (``SourceFailureRecorder``)."""
         self._validate(dataset, source_url, observed_at)
         reason = check_reason(reason)
+        detail = None if detail is None else check_reason(detail)
         with connection(self._path, self._limits, write=True) as db:
-            update_status(db, dataset, source_url, observed_at, False, reason)
+            update_status(db, dataset, source_url, observed_at, False, reason, detail)
 
     @safe
     def records(self, dataset: str) -> tuple[StoredRecord, ...]:

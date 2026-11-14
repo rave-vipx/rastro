@@ -9,7 +9,7 @@ from urllib.parse import urlsplit
 
 import httpx
 
-from rastro.domain.intelligence import InferencePolicy, ModelError, ModelRequest, proposal_schema
+from rastro.domain.intelligence import InferencePolicy, ModelError, ModelRequest
 from rastro.domain.json import strict_json
 from rastro.domain.models import ConfigurationError
 
@@ -43,6 +43,7 @@ class OllamaModel:
         port = f":{parts.port}" if parts.port is not None else ""
         self._url = f"{parts.scheme}://{host}{port}/api/chat"
         self._model = model
+        self.remote = False  # loopback only, and "cloud" model names are refused
 
     async def generate(self, request: ModelRequest, policy: InferencePolicy) -> str:
         if request.context_bytes > policy.max_context_bytes:
@@ -54,7 +55,7 @@ class OllamaModel:
                 {"role": "system", "content": request.system},
                 {"role": "user", "content": request.content},
             ],
-            "format": proposal_schema(),
+            "format": request.output_schema,
             # Capable models otherwise spend the output budget on hidden reasoning.
             "think": False,
             "options": {

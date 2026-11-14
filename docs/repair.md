@@ -55,6 +55,12 @@ rastro recipe show job.toml --source 1 --version 2
 rastro recipe rollback job.toml --source 1 --version 1 --reason "Restore previous recipe"
 ```
 
+A promotion, automatic or by hand, and `recipe rollback` clear the source's
+[open drift](drift.md#open-drift) and make its next successful load the new drift
+baseline (ADR 0023). The recipe change commits first; if clearing the drift then fails,
+the command exits 2 with `storage_error` and a hint to run `rastro job ack-drift` once the
+dataset file is fixed.
+
 `--source` is one-based; repair defaults to all sources. `--report new-report.json`
 selects a new report filename within the job directory. Otherwise each repair run
 creates `repair-report-<run-id>.json`, with mode 0600, and prints the same JSON.
@@ -104,6 +110,40 @@ rastro.apply_job_recipe("job.toml", 1)  # writes the serving recipe back
 `repair_job_source` accepts `min_records`, `min_completeness` and `auto_promote` to
 override the job's `[repair]` values for one call. `RepairReport.exit_code` follows the
 command's exit codes.
+
+## With a model
+
+A model helps repair in two places and never supplies values. It is used when the job
+has a `[model]` table, when `[repair] model = true` (the `RASTRO_MODEL` spec, through
+`rastro.model`), or when `rastro recipe repair --model SPEC [--allow-remote]` or
+`repair_job_source(..., model=...)` overrides both.
+
+1. **Escalation.** Relocation, declared fallbacks and discovery run first. The model
+   proposes only when none of their candidates would pass every gate, so it cannot
+   compete with a passing deterministic candidate. The prompt carries the serving
+   recipe and the field types and descriptions. Each changed selector is composed as
+   `"<serving>, <proposed>"`, as relocation does, so historical pages keep matching; the
+   plain proposal is gated only if the union does not pass. A rejected proposal is
+   retried once (by default) with only a failure category. A proposal whose selector
+   is invalid counts as `invalid_model_candidate`; it never aborts the run.
+2. **Value checks.** A model candidate (and an agent's `recipe_propose` candidate) that
+   passes recipe CI must also pass the relocation value checks on its changed fields,
+   or on every field when only the record container moved: the retained values' type and
+   shape, and no values drawn only from another field's history. A failure rejects it
+   (`value_type_changed`, `value_shape_changed`, `value_matches_other_field`). Fields
+   with no retained values are not checked.
+3. **Semantic gate.** Before any candidate is promoted, relocated or proposed, the model judges whether the
+   changed fields' current values (clipped, labelled untrusted, with earlier sample
+   values as reference) match each field's meaning. Verdicts appear in
+   `indicators.results` with `kind = "model_judge"` and lower
+   `indicators.semantic_confidence`. `mismatch` quarantines (`semantic_mismatch`);
+   `unsure` promotes only with complete history, completeness and validity;
+   a failed answer quarantines (`semantic_judge_failed`). The judge only vetoes:
+   it reviews relocated and model candidates alike, never sees a candidate the value
+   checks rejected, and is not called for a recipe that still serves.
+
+`SourceRepair.origin` says whether candidates came from `relocation` or the `model`;
+`inference_calls` counts proposal and judge calls. Without a model, repair is unchanged.
 
 ## What CI measures
 
@@ -212,8 +252,9 @@ recipe CI; any heterogeneous, extra or unverified single-container match is mark
 ambiguous and quarantined when its fields validate, and rejected when they do not. Promotion still requires the
 ordinary history, evidence and configured CI gates.
 
-If no container candidate is available, repair tries declared fallbacks, discovery and
-optionally the job's configured model. Models are never enabled implicitly. Last-success replay conservatively
+If no container candidate is available, repair tries declared fallbacks and discovery,
+then the configured model (see [With a model](#with-a-model)). Models are never enabled
+implicitly. Last-success replay conservatively
 rejects a candidate that changes historical field values, even when that change might be
 intentional. Automatic semantic monitoring of ordinary loads, score calibration,
 retention pruning and heterogeneous-template relocation remain open work.

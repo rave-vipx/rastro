@@ -17,7 +17,7 @@ from urllib.parse import urlsplit
 
 import httpx
 
-from rastro.domain.intelligence import InferencePolicy, ModelError, ModelRequest, proposal_schema
+from rastro.domain.intelligence import InferencePolicy, ModelError, ModelRequest
 from rastro.domain.json import strict_json
 from rastro.domain.models import ConfigurationError
 
@@ -94,6 +94,9 @@ class OpenAICompatibleModel:
         port = f":{parts.port}" if parts.port is not None else ""
         self._url = f"{parts.scheme}://{host}{port}{parts.path.rstrip('/')}/chat/completions"
         self._model = model
+        # Whether page content may leave this machine: any non-loopback endpoint, or a
+        # loopback server proxying a "cloud" model (allowed only with allow_remote).
+        self.remote = not loopback or "cloud" in model.lower()
         # Only the variable name is kept; the key is read per request and never stored.
         self._api_key_env = api_key_env
         self._response_format = response_format
@@ -128,12 +131,14 @@ class OpenAICompatibleModel:
                 "json_schema": {
                     "name": "rastro_recipe_proposal",
                     "strict": False,
-                    "schema": proposal_schema(),
+                    "schema": request.output_schema,
                 },
             }
         else:
             # JSON mode constrains syntax only, so the trusted prompt carries the schema.
-            system += "\nRespond with JSON matching this schema: " + json.dumps(proposal_schema())
+            system += "\nRespond with JSON matching this schema: " + json.dumps(
+                request.output_schema
+            )
             response_format = {"type": "json_object"}
         payload: dict[str, Any] = {
             "model": self._model,

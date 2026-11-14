@@ -131,9 +131,12 @@ def test_operator_allow_list_from_sdk(tmp_path: Path) -> None:
     assert report.job.source_count == 1
 
 
-def test_operator_opt_in_from_environment(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize("value", ["1", "true", "YES"])
+def test_operator_opt_in_from_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, value: str
+) -> None:
     job = _write(tmp_path, _job(9))
-    monkeypatch.setenv("RASTRO_ALLOW_EGRESS", "1")
+    monkeypatch.setenv("RASTRO_ALLOW_EGRESS", value)
     with pytest.raises(ConfigurationError, match="RASTRO_ALLOWED_ENV"):
         run_job_file(job, acquisition=_Acquirer())
     monkeypatch.setenv("RASTRO_ALLOWED_ENV", "USER, GITHUB_TOKEN")

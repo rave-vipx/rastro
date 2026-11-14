@@ -1,0 +1,27 @@
+{
+ "kind": "structural",
+ "layout": "table",
+ "mutation": "field_to_attribute",
+ "recipe": {
+  "record_selector": "table.listing tr.row",
+  "fields": {
+   "id": "::attr(data-id)",
+   "title": "td.col-title::text",
+   "performer": "td.col-artist::text",
+   "starts_at": "td.col-date::text",
+   "price": "td.col-price::text",
+   "url": "a.col-link::attr(href)"
+  }
+ },
+ "correct_recipe": {
+  "record_selector": "table.listing tr.row",
+  "fields": {
+   "id": "::attr(data-id)",
+   "title": "td.col-title::text",
+   "performer": "td.col-artist::text",
+   "starts_at": "::attr(data-starts-at)",
+   "price": "td.col-price::text",
+   "url": "a.col-link::attr(href)"
+  }
+ }
+}

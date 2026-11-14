@@ -28,3 +28,12 @@ class DatasetStore(Protocol):
     def export_jsonl(self, dataset: str, stream: TextIO) -> None: ...
 
     def source_status(self, dataset: str) -> tuple[SourceStatus, ...]: ...
+
+
+@runtime_checkable
+class SourceFailureRecorder(Protocol):
+    """Optional: also store a content-free failure detail such as ``http_403`` or ``timeout``."""
+
+    def record_source_failure(
+        self, dataset: str, source_url: str, observed_at: datetime, reason: str, detail: str | None
+    ) -> None: ...

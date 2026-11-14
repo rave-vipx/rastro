@@ -11,7 +11,8 @@ Rastro converts supplied HTML or permitted web sources into validated Python rec
 - [Run the offline example](getting-started.md).
 - [Acquire permitted URLs](acquisition.md).
 - [Remember validated recipes across restarts](memory.md).
-- [Discover recipes with optional local assistance](intelligence.md).
+- [Bring your own AI](ai.md): fully offline by default. Connect a local model, any API, a subscription CLI or your MCP agent. The model proposes and Rastro verifies.
+- [Discover recipes with optional model assistance](intelligence.md).
 - [Understand results, evidence, and limits](api.md).
 - [See the architecture and tradeoffs](architecture.md).
 - [Use Rastro from an AI agent](ai-agents.md).

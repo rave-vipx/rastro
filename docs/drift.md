@@ -19,6 +19,33 @@ successful observation time. Failed and partial loads retain earlier observation
 only validated records enter the dataset. Drift warnings never change extraction
 outcomes or authorize repairs.
 
+## Open drift
+
+An `elevated` or `high` assessment of a **successful** run opens a drift alert for that
+source (DRIFT-004). The load report then has `status = "degraded"`, lists the alert in
+`open_drift` and exits **4** (`JobExitCode.NEEDS_ATTENTION`). While the alert is open:
+
+- the baseline stays at the last run before the drift, so every later run keeps
+  comparing with it and keeps reporting the drift;
+- every `job load` reports it and exits 4, with or without `--drift`;
+- `rastro health`, `rastro dataset status`, the MCP `drift_status` tool and Studio's
+  health view show it.
+
+It closes in one of two ways:
+
+```sh
+rastro job ack-drift job.toml --source 1   # or --all; Python: rastro.acknowledge_job_drift
+```
+
+accepts the new structure: the next run compares with the latest success. Promoting a
+repaired recipe (`rastro recipe promote`, or `rastro recipe repair` with
+`auto_promote`) or `rastro recipe rollback` clears it as well, and the source's next
+successful run becomes the new baseline without opening drift, because a changed recipe
+measures differently. Low drift, failed and partial runs never open an alert; failures
+are already reported as stale sources. See
+[ADR 0023](decisions/0023-open-drift-and-attention-exit-codes.md) and
+[Monitoring and alerts](operations.md).
+
 ## Measurements and classification
 
 A `StructuralSnapshot` identifies a source, extraction run, observation time,
@@ -79,13 +106,18 @@ can exist, and high validation failure alone does not prove structural drift.
 
 ## Storage and Python integration
 
-`SQLiteDriftMonitor(path, *, limits=None, thresholds=None)` writes `drift_schema`
-and `drift_runs` in the existing dataset file, without altering its version or any
-recipe-memory tables. `assess(dataset, snapshot)` compares and persists atomically;
-`baseline(dataset, snapshot)` reads the last successful comparable observation
-without creating or migrating a file. Failed/partial runs are recorded but never
-replace that baseline. Repeated identical run IDs are idempotent; conflicting IDs
-or out-of-order observations fail explicitly.
+`SQLiteDriftMonitor(path, *, limits=None, thresholds=None)` writes `drift_schema`,
+`drift_runs`, `drift_open` and `drift_rebase` (drift schema 2) in the existing dataset
+file, without altering its version or any recipe-memory tables. A schema 1 file from
+0.6.0 is upgraded inside the first drift write transaction; reads never migrate, and
+0.6.0 refuses a schema 2 file explicitly. `assess(dataset, snapshot)` compares and
+persists atomically; `baseline(dataset, snapshot)` reads the baseline (the last
+successful comparable observation, or the pinned one while drift is open) without
+creating or migrating a file; `open_drift(dataset)` lists open alerts and returns an
+empty tuple for a missing file. Failed/partial runs are recorded but never replace that
+baseline. Repeated identical run IDs are idempotent and conflicting IDs fail explicitly.
+An observation time earlier than the last recorded one (a clock that went backwards) is
+clamped to that time instead of failing.
 
 ```python
 from rastro.adapters.drift_probe import ScraplingDriftProbe

@@ -793,7 +793,7 @@
     },
     "SelfRepair": {
       "additionalProperties": false,
-      "description": "What offline self-repair did after a remembered recipe stopped matching.\n\n``promoted`` is true only when a candidate passed every gate, became the serving\nrecipe and produced this result. ``candidates`` lists every stored proposal.",
+      "description": "What offline self-repair did after a remembered recipe stopped matching.\n\n``promoted`` is true only when a candidate passed every gate, became the serving\nrecipe and produced this result. ``candidates`` lists every stored proposal.\nWith a model, ``origin`` says whether candidates came from relocation or the model\nand ``model_calls`` counts its proposal and judge calls.",
       "properties": {
         "candidates": {
           "default": [],
@@ -810,6 +810,28 @@
           ],
           "title": "Mode",
           "type": "string"
+        },
+        "model_calls": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Model Calls",
+          "type": "integer"
+        },
+        "origin": {
+          "anyOf": [
+            {
+              "enum": [
+                "relocation",
+                "model"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Origin"
         },
         "previous_version": {
           "title": "Previous Version",

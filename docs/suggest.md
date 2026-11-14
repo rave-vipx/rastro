@@ -89,6 +89,28 @@ it; otherwise it stays a `string`. The new job passes `rastro job validate` and
 runs with `rastro job run`. Review it, then edit types and constraints as you
 need.
 
+## With a model
+
+Give a model and the examples become optional:
+
+```python
+s = rastro.suggest(html, Offer, model="env")  # RASTRO_MODEL, or any ModelPort
+```
+
+```bash
+rastro suggest careers.html --model env --field title --field salary
+rastro new job.toml --from careers.html --model env --field title --field salary
+```
+
+The model proposes a CSS recipe from the field names, types and descriptions (at most
+two calls by default). It is verified exactly like an example-built one: it must
+extract at least `--records-min` records that pass the schema, and reproduce every
+example you did give. With examples, the deterministic suggester runs first and the
+model is asked only when it finds nothing. `confidence[field].method` is `model` for
+its fields. `--model` takes a spec for `rastro.model` or `env` (`RASTRO_MODEL`);
+remote models need `--allow-remote`. Review the preview: without examples, only the
+schema checks the values.
+
 ## How it works
 
 1. **Find the examples.** Each example value is looked up in the page text,

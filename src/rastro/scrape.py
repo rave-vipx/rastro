@@ -16,7 +16,10 @@ from pydantic import BaseModel
 
 from rastro.application.engine import Rastro
 from rastro.application.field_aliases import discovery_aliases
+from rastro.application.model_choice import ModelChoice, resolve_model
+from rastro.application.model_repair import ModelAssist
 from rastro.application.success_samples import collect_successes
+from rastro.domain.intelligence import InferencePolicy
 from rastro.domain.memory import RecipeContext, RecipeKey
 from rastro.domain.model_selectors import recipe_from_model
 from rastro.domain.models import (
@@ -52,6 +55,7 @@ def scrape[T: BaseModel](
     repair: RepairMode = "propose",
     locale: str = "en-US",
     limits: Limits | None = None,
+    model: ModelChoice = None,
 ) -> ExtractionResult[T]:
     """Extract ``schema`` records from HTML text, a file or a URL. See ``scrape_async``."""
     try:
@@ -77,6 +81,7 @@ def scrape[T: BaseModel](
                 repair=repair,
                 locale=locale,
                 limits=limits,
+                model=model,
             )
         )
 
@@ -93,6 +98,7 @@ async def scrape_async[T: BaseModel](
     repair: RepairMode = "propose",
     locale: str = "en-US",
     limits: Limits | None = None,
+    model: ModelChoice = None,
 ) -> ExtractionResult[T]:
     """Extract ``schema`` records; ``result.items`` holds the validated instances.
 
@@ -100,6 +106,12 @@ async def scrape_async[T: BaseModel](
     ``https://localhost/`` for text and files). With ``memory``, a remembered
     recipe that stops matching is repaired offline: ``"propose"`` stores a gated
     candidate, ``"auto"`` also promotes it when every gate passes, ``"off"`` does neither.
+
+    ``model`` (a ``ModelPort``, a spec for ``rastro.model`` or ``"env"`` for
+    ``RASTRO_MODEL``) proposes a recipe when there are no selectors and discovery finds
+    nothing, proposes repairs when relocation finds none that passes, and judges the
+    meaning of changed fields before an automatic promotion. Its output is never data:
+    every proposal is verified by extraction, the schema and the repair gates.
     """
     if not (isinstance(schema, type) and issubclass(schema, BaseModel)):
         raise ConfigurationError("schema must be a Pydantic model class")
@@ -108,18 +120,22 @@ async def scrape_async[T: BaseModel](
     if recipe is not None and (records is not None or fields):
         raise ConfigurationError("recipe= replaces model selectors; omit records= and fields=")
     limits = limits or Limits()
+    port = resolve_model(model)
+    assist = None if port is None else ModelAssist(port, InferencePolicy())
     seed = recipe or recipe_from_model(schema, records=records, fields=fields)
     representation: Representation = "html" if seed is None else seed.representation
     page = await load_page(
         target, url=url, locale=locale, limits=limits, representation=representation
     )
     if page.document is None:  # acquisition failed: the engine reports the explicit outcome
-        return await _extract(_engine(page, limits, discover=seed is None), page, schema, seed)
+        engine = _engine(page, limits, discover=seed is None, assist=assist)
+        return await _extract(engine, page, schema, seed)
     if memory is None:
-        seed = seed or await asyncio.to_thread(_discover, page.document, schema, limits)
-        return await _extract(_engine(page, limits), page, schema, seed)
+        if seed is None and assist is None:
+            seed = await asyncio.to_thread(_discover, page.document, schema, limits)
+        return await _extract(_engine(page, limits, assist=assist), page, schema, seed)
     store = ScrapeMemory(memory, limits)
-    return await _remembered(store, page, schema, seed, repair, limits)
+    return await _remembered(store, page, schema, seed, repair, limits, assist)
 
 
 async def _remembered[T: BaseModel](
@@ -129,14 +145,15 @@ async def _remembered[T: BaseModel](
     seed: Recipe | None,
     repair: RepairMode,
     limits: Limits,
+    assist: ModelAssist | None,
 ) -> ExtractionResult[T]:
     assert page.document is not None
     context = _context(seed)
     key = RecipeKey.for_source(page.source, schema, context, representation=page.representation)
     previous = await asyncio.to_thread(store.serving, key)
-    engine = _engine(page, limits, store)
-    first: Recipe | None = None  # None: the engine serves the remembered recipe
-    if previous is None:
+    engine = _engine(page, limits, store, assist=assist)
+    first: Recipe | None = None  # None: the engine serves (or, with a model, learns) one
+    if previous is None and (seed is not None or assist is None):
         first = seed or await asyncio.to_thread(_discover, page.document, schema, limits)
     result = await _extract_and_retain(store, engine, page, schema, first, context)
     if previous is None or repair == "off" or result.records or result.status not in _STRUCTURAL:
@@ -148,6 +165,7 @@ async def _remembered[T: BaseModel](
         document=page.document,
         schema=schema,
         previous=previous,
+        assist=assist,
     )
     if report.promoted:
         result = await _extract_and_retain(store, engine, page, schema, None, context)
@@ -195,10 +213,17 @@ async def _extract[T: BaseModel](
 
 
 def _engine(
-    page: Page, limits: Limits, store: ScrapeMemory | None = None, *, discover: bool = False
+    page: Page,
+    limits: Limits,
+    store: ScrapeMemory | None = None,
+    *,
+    discover: bool = False,
+    assist: ModelAssist | None = None,
 ) -> Rastro:
     fetched = page.fetched
     return Rastro(
+        model=None if assist is None else assist.model,
+        inference_policy=None if assist is None else assist.policy,
         limits=limits,
         repository=None if store is None else store.repository,
         acquisition=None if fetched is None else Prefetched(fetched),

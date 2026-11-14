@@ -9,6 +9,7 @@ from functools import wraps
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from rastro.adapters.sqlite_files import create_private, restrict
 from rastro.domain.dataset import DatasetStorageError, SourceStatus
 from rastro.domain.sources import Limits, ResourceLimitError
 
@@ -107,6 +108,9 @@ def connection(path: Path, limits: Limits, *, write: bool = False) -> Iterator[s
         if write and not path.exists():
             staging = cleanup.enter_context(TemporaryDirectory(dir=path.parent))
             target = Path(staging) / "dataset.sqlite"
+            create_private(target)
+        else:
+            restrict(path)
         with _transaction(target, limits, write=write) as db:
             yield db
         if target != path:
@@ -116,6 +120,14 @@ def connection(path: Path, limits: Limits, *, write: bool = False) -> Iterator[s
                 raise ConcurrentDatasetCreation from None
 
 
+def last_attempt(db: sqlite3.Connection, dataset: str, source: str) -> datetime | None:
+    row = db.execute(
+        "SELECT payload FROM dataset_sources WHERE dataset = ? AND source = ?",
+        (dataset, source),
+    ).fetchone()
+    return SourceStatus.model_validate_json(row[0]).last_attempt if row else None
+
+
 def update_status(
     db: sqlite3.Connection,
     dataset: str,
@@ -123,6 +135,7 @@ def update_status(
     at: datetime,
     complete: bool,
     reason: str | None,
+    detail: str | None = None,
 ) -> None:
     row = db.execute(
         "SELECT payload FROM dataset_sources WHERE dataset = ? AND source = ?",
@@ -130,13 +143,15 @@ def update_status(
     ).fetchone()
     old = SourceStatus.model_validate_json(row[0]) if row else None
     if old and at < old.last_attempt:
-        raise DatasetStorageError("Out-of-order source observation")
+        # The clock went backwards: clamp to the last recorded attempt (docs/operations.md).
+        at = old.last_attempt
     status = SourceStatus(
         source_url=source,
         last_success=at if complete else old.last_success if old else None,
         last_attempt=at,
         stale=not complete,
         reason=reason,
+        detail=detail,
     )
     db.execute(
         "INSERT OR REPLACE INTO dataset_sources VALUES (?, ?, ?)",

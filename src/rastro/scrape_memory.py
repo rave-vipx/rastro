@@ -4,8 +4,11 @@ The recipe database holds versions and their lifecycle. A sibling samples file
 (``recipes.samples.db`` next to ``recipes.db``) keeps the latest sanitized success
 per page and recipe, which repair replays as a regression gate. Repair is
 deterministic: relocation, declared fallbacks and exact-name discovery, gated by
-recipe CI plus a value-shape check against the sample. It never calls a model
-and never fetches anything. An identical stored candidate is reused, not duplicated.
+recipe CI plus a value-shape check against the sample. With a configured model, the
+model proposes candidates only when none of those would pass; they meet the same
+value checks, and a semantic judge can veto any would-be promotion
+(``application/model_repair``). It never fetches.
+An identical stored candidate is reused, not duplicated.
 """
 
 from __future__ import annotations
@@ -15,9 +18,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, JsonValue
 
 from rastro.adapters.sqlite import SQLiteRecipeRepository
+from rastro.application.extraction import extract_document
+from rastro.application.model_repair import ModelAssist, assist_repair
 from rastro.application.recipe_ci import evaluate_candidate
 from rastro.application.repair_candidates import RepairCandidateGenerator
 from rastro.application.self_repair import gate_values, store_candidates
@@ -33,7 +38,7 @@ from rastro.domain.models import (
     Source,
     schema_fingerprint,
 )
-from rastro.domain.recipe_compare import CandidateEvaluation, RecipeComparison, RepairPolicy
+from rastro.domain.recipe_compare import CandidateEvaluation, RepairPolicy
 from rastro.domain.repair import RepairCandidate
 from rastro.domain.results import RepairProposal, SelfRepair
 
@@ -78,6 +83,7 @@ class ScrapeMemory:
         document: str,
         schema: type[BaseModel],
         previous: Recipe,
+        assist: ModelAssist | None = None,
     ) -> SelfRepair:
         """Generate, gate and store candidates; promote only one that passes every gate."""
         from rastro.adapters.discovery import ScraplingDiscovery
@@ -138,13 +144,38 @@ class ScrapeMemory:
                 history=history,
             )
 
-        def persist() -> tuple[RecipeComparison, ...]:
-            evaluated = [(c, evaluate(c)) for c in generated.candidates]
-            return store_candidates(
-                evaluated, previous=previous, key=key, lifecycle=self.repository, at=now
+        def rows(recipe: Recipe) -> list[dict[str, JsonValue]]:
+            result = extract_document(
+                document,
+                source=source,
+                schema=schema,
+                recipe=recipe,
+                parser=parser,
+                limits=self._limits,
             )
+            return [record.data.model_dump(mode="json") for record in result.records]
 
-        comparisons = await asyncio.to_thread(persist)
+        evaluated = await asyncio.to_thread(
+            lambda: [(c, evaluate(c)) for c in generated.candidates]
+        )
+        assisted = await assist_repair(
+            assist,
+            evaluated,
+            html=document,
+            schema=schema,
+            previous=previous,
+            gate=evaluate,
+            rows=rows,
+            history=history,
+        )
+        comparisons = await asyncio.to_thread(
+            store_candidates,
+            assisted.evaluated,
+            previous=previous,
+            key=key,
+            lifecycle=self.repository,
+            at=now,
+        )
         proposals = tuple(
             RepairProposal(
                 version=item.candidate_version,
@@ -162,4 +193,6 @@ class ScrapeMemory:
             promoted=promoted is not None,
             promoted_version=promoted,
             candidates=proposals,
+            origin=assisted.origin if assist is not None else None,
+            model_calls=assisted.model_calls,
         )

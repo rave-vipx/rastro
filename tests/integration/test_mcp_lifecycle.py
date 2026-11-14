@@ -66,8 +66,11 @@ def workspace(tmp_path: Path) -> Path:
     return tmp_path
 
 
-async def call(root: Path, tool: str, **arguments: Any) -> tuple[bool, Any]:
-    async with create_connected_server_and_client_session(build_server(root)._mcp_server) as client:
+async def call(
+    root: Path, tool: str, server: dict[str, Any] | None = None, **arguments: Any
+) -> tuple[bool, Any]:
+    built = build_server(root, **(server or {}))
+    async with create_connected_server_and_client_session(built._mcp_server) as client:
         result = await client.call_tool(tool, arguments)
     return result.isError, json.loads(result.content[0].text)  # type: ignore[union-attr]
 
@@ -139,6 +142,34 @@ async def test_repair_proposes_then_promote_and_apply_through_mcp(workspace: Pat
 
 
 @pytest.mark.asyncio
+async def test_override_gates_needs_the_operator_opt_in_at_server_start(workspace: Path) -> None:
+    """REPAIR-005, AGENT-003, SEC-011: page content can prompt-inject the MCP client, so
+    the client alone cannot override gates; the operator opts in when starting the server."""
+    await call(workspace, "job_load", path="jobs/job.toml")
+    break_title(workspace)
+    failed, report = await call(workspace, "recipe_repair", path="jobs/job.toml", source=1)
+    assert not failed, report
+    version = report["sources"][0]["comparisons"][0]["candidate_version"]
+    promote = {"path": "jobs/job.toml", "source": 1, "version": version, "reason": "Asked"}
+
+    failed, error = await call(workspace, "recipe_promote", override_gates=True, **promote)
+    assert failed and set(error) == ENVELOPE
+    assert "rastro recipe promote --override-gates" in error["message"] + error["hint"]
+    assert "--allow-override-gates" in error["hint"]
+    failed, history = await call(workspace, "recipe_history", path="jobs/job.toml", source=1)
+    assert not failed and history["serving_version"] == 1
+
+    failed, promoted = await call(
+        workspace,
+        "recipe_promote",
+        server={"allow_override_gates": True},
+        override_gates=True,
+        **promote,
+    )
+    assert not failed and promoted["sources"][0]["promoted_version"] == version
+
+
+@pytest.mark.asyncio
 async def test_repair_promotes_only_when_the_job_opts_in(workspace: Path) -> None:
     """REPAIR-004: auto promotion comes from the job's own [repair] block."""
     job = workspace / "jobs" / "job.toml"
@@ -189,3 +220,21 @@ def test_bounded_caps_lists_and_strings() -> None:
     assert len(payload["rows"]) == 50 and len(payload["nested"]["text"]) == 501
     assert payload["truncated"] is True
     assert bounded({"rows": [1]})["truncated"] is False
+
+
+@pytest.mark.asyncio
+async def test_drift_status_reports_open_drift_and_only_current_sources(workspace: Path) -> None:
+    """DRIFT-005, AGENT-002: open drift is reported; removed sources are listed as orphaned."""
+    assert not (await call(workspace, "job_load", path="jobs/job.toml", drift=True))[0]
+    one = CARD.format(n=1, cls="title")
+    (workspace / "jobs" / "board.html").write_text(f"<html><body>{one}</body></html>")
+    failed, loaded = await call(workspace, "job_load", path="jobs/job.toml", drift=True)
+    assert not failed and loaded["status"] == "degraded"
+    failed, status = await call(workspace, "drift_status", path="jobs/job.toml")
+    assert not failed
+    assert [d["source_url"] for d in status["open_drift"]] == ["https://example.test/jobs"]
+    job = workspace / "jobs" / "job.toml"
+    job.write_text(job.read_text().replace("example.test/jobs", "example.test/board"))
+    failed, status = await call(workspace, "drift_status", path="jobs/job.toml")
+    assert not failed and status["sources"] == [] and status["open_drift"] == []
+    assert status["orphaned_sources"] == ["https://example.test/jobs"]

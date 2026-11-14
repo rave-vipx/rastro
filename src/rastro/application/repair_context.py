@@ -12,6 +12,7 @@ from rastro.adapters.sqlite_relocation import SQLiteRelocationStore
 from rastro.application.consistency import History, history_from_store
 from rastro.application.egress_trust import check_job_egress
 from rastro.application.job_loader import load_job, resolve_job_path
+from rastro.domain.dataset import DatasetStorageError
 from rastro.domain.jobs import FileJobSource, Job
 from rastro.domain.memory import RecipeKey
 from rastro.domain.models import ConfigurationError, Limits, Recipe, Source
@@ -108,6 +109,29 @@ class RepairContext:
             if bundle.manifest.source == _evidence_source(source):
                 fixtures.append(bundle)
         return snapshot, tuple(fixtures)
+
+    def serving_changed(self, index: int) -> None:
+        """A promotion or rollback clears open drift and rebaselines the source (ADR 0023).
+
+        The recipe transition has already committed. When the dataset write fails, a retry
+        would fail as "already active", so the error names ``rastro job ack-drift`` instead.
+        """
+        from rastro.adapters import sqlite_dataset_admin
+
+        assert self.job.dataset is not None
+        source, _ = self.locate(index)
+        try:
+            sqlite_dataset_admin.rebaseline_drift(
+                self.dataset_path,
+                self.job.dataset.name,
+                source.evidence_url,
+                limits=self.job.limits,
+            )
+        except DatasetStorageError as error:
+            raise DatasetStorageError(
+                "The serving recipe changed, but its open drift could not be cleared",
+                hint=f"Fix the dataset file, then run: rastro job ack-drift JOB --source {index}",
+            ) from error
 
     @property
     def source_fingerprint(self) -> str:

@@ -31,6 +31,8 @@ Evidence stores locators, not source excerpts. Query strings, fragments, and URL
 
 Persistence is opt-in. SQLite memory retains declarative recipe definitions, successful-run metadata and context fingerprints. It does not retain raw URLs, HTML, extracted records, or JSON Schema documents/defaults. Keep the database in a trusted private directory; recipe selectors and context identifiers must not contain credentials. Unknown database versions and corruption fail without reset. `delete` and `prune` provide retention controls with SQLite secure deletion, but do not erase external backups or filesystem snapshots. Stop writers before deletion if concurrent operations must not recreate entries. See the [memory guide](docs/memory.md). CLI output is data and should be handled accordingly.
 
+On POSIX systems dataset and recipe-memory files, and their SQLite `-journal`, `-wal` and `-shm` files, are created readable and writable by the owner only (0600), and existing files the user owns are tightened to 0600 when opened. Dataset files hold sanitized page samples for repair (`relocation_samples`), so keep them in a private directory. On Windows the folder's access rules apply. `rastro job forget-source` deletes a removed source's status, drift history and repair samples (SEC-009).
+
 ## Trust model for jobs, bundles and agents
 
 A job file is configuration, and it may come from someone else: a shared repository, an
@@ -40,19 +42,48 @@ agent using the MCP server, a Studio workspace. It cannot make trust decisions o
   request and receives the proxy credentials. Rastro uses it only with operator opt-in:
   `--allow-egress` on `rastro job run|preview|load`, `rastro recipe repair|promote`,
   `rastro mcp` and `rastro studio`; `allow_egress=True` in Python; or
-  `RASTRO_ALLOW_EGRESS=1`. Without it the run fails closed before any request.
+  `RASTRO_ALLOW_EGRESS=1`. Without it the run fails closed before any request. Every
+  boolean opt-in in the environment (`RASTRO_ALLOW_REMOTE`, `RASTRO_ALLOW_EGRESS`) accepts
+  `1`, `true` or `yes`; anything else is off.
 - **Secret environment names.** A job may make Rastro read only environment variables
   named `RASTRO_*`, or names the operator lists in `RASTRO_ALLOWED_ENV` (comma-separated)
   or with `--allow-env NAME` (`allow_env=` in Python). Otherwise a hostile job could name
   `GITHUB_TOKEN` as a proxy password and send it to its own proxy.
-- **Remote models** in `[model]` (`allow_remote = true` or an endpoint from
-  `base_url_env`) are used only when the operator sets `RASTRO_ALLOW_REMOTE=1`, and the
-  model's `api_key_env`/`base_url_env` follow the same secret-name rule (`RASTRO_*` or
-  `RASTRO_ALLOWED_ENV`). Loopback models (local Ollama, LM Studio) need no opt-in. See the
-  [jobs guide](docs/jobs.md#security-boundaries).
+- **Gate overrides from agents.** The MCP `recipe_promote(override_gates=true)` can activate
+  a quarantined candidate, including one the semantic judge vetoed, and the agent calling
+  it reads untrusted pages that can prompt-inject it. It is refused unless the operator
+  starts the server with `rastro mcp --allow-override-gates`
+  (`build_server(..., allow_override_gates=True)`); otherwise a person runs
+  `rastro recipe promote --override-gates --reason TEXT`.
+- **Remote models** in `[model]` (`allow_remote = true`, an endpoint from `base_url_env`,
+  or any endpoint other than loopback on the local model ports 11434, 1234, 8000 and
+  8080) are used only with the operator's `--allow-remote`, `allow_remote=True` or
+  `RASTRO_ALLOW_REMOTE=1` (the same opt-in that lets `RASTRO_MODEL` name a remote model),
+  and the model's `api_key_env`/`base_url_env` follow the same
+  secret-name rule; the refusal never echoes the name. Loopback models on those ports
+  (local Ollama, LM Studio) need no opt-in. Studio's Ask AI notice reads whether content
+  may leave the machine from the model it built, not from the flag.
+- **Commands.** A job file can never make Rastro start a program: a `provider =
+  "command"` model in a job is always refused. A command model comes only from the
+  operator: `rastro.model(...)` in Python, `--model` on the CLI or the `RASTRO_MODEL`
+  environment variable. A model passed in code is trusted.
+- **Failure hook.** `--on-failure CMD` and `RASTRO_ON_FAILURE` come only from the operator
+  running `rastro job load|run`; a job file cannot set them (unknown keys are rejected).
+  The command runs without a shell (`shlex.split`), with a 30 second timeout and with
+  stdout and stderr discarded. It receives outcome codes, hosts and drift levels on
+  stdin, never records, page content, paths, URL queries or secrets. Its failure is
+  reported without echoing the command line, which may hold a webhook token. The hook
+  inherits the environment of the `rastro` process. See
+  [Monitoring and alerts](docs/operations.md#failure-hook).
 
-Recipes in job files, Hub bundles, MCP tool arguments, Studio edits and model proposals follow a
-CSS selector cost policy (no `:has()`, no sibling combinators, bounded compounds,
+The trust flags may come before or after the subcommand and apply to the whole process, so
+`rastro mcp` and `rastro studio` pass them to every job they run. See the
+[jobs guide](docs/jobs.md#security-boundaries) and
+[optional intelligence](docs/intelligence.md#operator-trust-for-models-in-job-files).
+
+Recipes in job files, Hub bundles, MCP tool arguments (`scrape_file`, `recipe_propose`,
+`recipe_try`), Studio edits and every model proposal (scrape, suggest and repair
+escalation) are checked before evaluation against a CSS selector cost policy (no `:has()`, no sibling combinators, bounded compounds,
 alternatives and nesting), because lxml evaluates those shapes in quadratic or worse time
 and the evaluation cannot be interrupted. A bundle's hashes give integrity, not
 authenticity; see the [Hub guide](docs/hub.md#import). The MCP `job_preview` tool writes

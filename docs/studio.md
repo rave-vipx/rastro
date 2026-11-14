@@ -19,6 +19,38 @@ stderr: `{"error": "missing_extra", "message": ..., "location": null, "hint": "p
 'rastro-engine[studio]'"}`. The page is one HTML file plus a few scripts and one stylesheet shipped in the package;
 there is no build step.
 
+### Ask AI (optional)
+
+Start Studio with a model to get **Ask AI** buttons:
+
+```bash
+rastro studio --model SPEC                  # or set RASTRO_MODEL=SPEC
+rastro studio --model SPEC --allow-remote   # a hosted or non-loopback model
+```
+
+`SPEC` is resolved by `rastro.model`, so any supported provider works (for example an
+OpenAI-compatible endpoint or a local command); Studio has no provider-specific code. Python
+code can pass any `ModelPort` to `rastro.studio.app.create_app(root, model=...)`.
+Without `--model` or `RASTRO_MODEL`, Ask AI stays hidden and nothing is sent anywhere.
+Sending page content to a non-loopback endpoint or a hosted subscription requires
+`--allow-remote` (or `RASTRO_ALLOW_REMOTE=1` with `RASTRO_MODEL`). Studio reads from the
+model it built, not from the flag, whether page content may leave the machine, and says so
+on the page and in the terminal. A `ModelPort` passed from Python that does not report it
+(`remote` attribute) is treated as `create_app(..., model_remote=...)` declares. The model receives the field names and a bounded page outline (tags, ids,
+classes and short text, at most 6,000 characters), never the whole page, keys or tokens.
+
+- **New scraper:** name the fields (example values are optional) and press **Ask AI**. The
+  model proposes a recipe; Studio keeps it only if it extracts valid records from the page,
+  retrying within the model budget. The verified recipe and preview are shown and the example
+  values are filled from the first record, so **Create job** re-checks the recipe the usual
+  deterministic way.
+- **Health and repair:** when **Propose repair** finds no usable candidate, **Ask AI for a
+  repair** runs repair with the model (`repair_job_source(..., model=...)`): relocation first,
+  then model proposals composed with the serving selectors, the same gates, and the semantic
+  judge. A candidate becomes active on its own only when the job sets
+  `[repair] auto_promote = true` and the judge agrees the values kept their meaning; otherwise
+  check that the new values mean the same as before, then promote with a reason.
+
 ## Walkthrough
 
 The page has two views, **Jobs** and **New scraper**, switched with the buttons at the top.
@@ -114,6 +146,10 @@ Studio is a local tool, not a server to expose.
   Content-Security-Policy allows only same-origin script and style, and no inline code. The
   page loads nothing from other sites.
 - Request bodies are limited to 16 KiB, job files to 256 KiB, and selectors to 1024 characters.
+- Ask AI (`/api/ai`, `/api/ai/suggest`, `/api/ai/repair`) uses the same token, origin and path
+  rules. Model output is untrusted: it is parsed as a strict recipe proposal and kept only after
+  deterministic verification; it never becomes records directly, and a repair candidate is
+  promoted automatically only under the job's own `auto_promote` with the judge's agreement.
 
 ## Limitations
 

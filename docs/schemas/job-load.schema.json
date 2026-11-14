@@ -397,6 +397,16 @@
       "title": "JobSummary",
       "type": "object"
     },
+    "LoadStatus": {
+      "enum": [
+        "success",
+        "degraded",
+        "partial_success",
+        "failed",
+        "storage_error"
+      ],
+      "type": "string"
+    },
     "LoadedSource": {
       "additionalProperties": false,
       "properties": {
@@ -442,6 +452,18 @@
           "default": null,
           "title": "Next Action"
         },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
         "recipe_origin": {
           "anyOf": [
             {
@@ -484,6 +506,67 @@
         "counts"
       ],
       "title": "LoadedSource",
+      "type": "object"
+    },
+    "OpenDrift": {
+      "additionalProperties": false,
+      "description": "An unacknowledged elevated or high drift on a successful run of one source.\n\nWhile it is open the drift baseline stays at ``baseline_run``; acknowledging it, or\npromoting a repaired recipe for the source, clears it.",
+      "properties": {
+        "baseline_run": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Baseline Run"
+        },
+        "observed_at": {
+          "format": "date-time",
+          "title": "Observed At",
+          "type": "string"
+        },
+        "risk": {
+          "enum": [
+            "elevated",
+            "high"
+          ],
+          "title": "Risk",
+          "type": "string"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "score": {
+          "$ref": "#/$defs/Rate"
+        },
+        "source_url": {
+          "title": "Source Url",
+          "type": "string"
+        },
+        "verdict": {
+          "enum": [
+            "structural_drift",
+            "extraction_failure",
+            "none"
+          ],
+          "title": "Verdict",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_url",
+        "run_id",
+        "baseline_run",
+        "observed_at",
+        "risk",
+        "score",
+        "verdict"
+      ],
+      "title": "OpenDrift",
       "type": "object"
     },
     "Outcome": {
@@ -598,6 +681,18 @@
           "title": "Affected Keys",
           "type": "array"
         },
+        "detail": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Detail"
+        },
         "last_attempt": {
           "format": "date-time",
           "title": "Last Attempt",
@@ -679,6 +774,14 @@
     "job": {
       "$ref": "#/$defs/JobSummary"
     },
+    "open_drift": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/OpenDrift"
+      },
+      "title": "Open Drift",
+      "type": "array"
+    },
     "schema_version": {
       "const": 1,
       "default": 1,
@@ -699,6 +802,10 @@
       },
       "title": "Stale Sources",
       "type": "array"
+    },
+    "status": {
+      "$ref": "#/$defs/LoadStatus",
+      "default": "success"
     }
   },
   "required": [

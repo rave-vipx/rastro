@@ -11,6 +11,7 @@ from __future__ import annotations
 import os
 from collections.abc import Iterable, Mapping
 
+from rastro.application.operator_trust import EGRESS_ENV, env_flag, granted_env
 from rastro.domain.jobs import Job
 from rastro.domain.models import ConfigurationError
 from rastro.domain.secret_env import check_secret_env_name
@@ -19,10 +20,11 @@ from rastro.domain.secret_env import check_secret_env_name
 def allowed_env_names(
     allow_env: Iterable[str] = (), environ: Mapping[str, str] | None = None
 ) -> frozenset[str]:
-    """The operator allow-list: ``allow_env`` plus the comma list in ``RASTRO_ALLOWED_ENV``."""
+    """The operator allow-list: ``allow_env``, the comma list in ``RASTRO_ALLOWED_ENV`` and
+    names granted by ``--allow-env`` or an SDK ``operator_trust`` scope."""
     env = os.environ if environ is None else environ
     listed = (name.strip() for name in env.get("RASTRO_ALLOWED_ENV", "").split(","))
-    return frozenset(name for name in (*allow_env, *listed) if name)
+    return frozenset(name for name in (*allow_env, *listed) if name) | granted_env()
 
 
 def check_job_egress(
@@ -37,7 +39,7 @@ def check_job_egress(
     if not profiles:
         return
     env = os.environ if environ is None else environ
-    if not (allow_egress or env.get("RASTRO_ALLOW_EGRESS") == "1"):
+    if not (allow_egress or env_flag(EGRESS_ENV, env)):
         raise ConfigurationError(
             "This job declares egress proxies, which need operator opt-in: if you trust "
             "the job, pass --allow-egress (allow_egress=True in Python) or set "

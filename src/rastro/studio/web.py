@@ -24,6 +24,8 @@ from rastro.application.job_loader import load_job
 from rastro.cli_errors import classify
 from rastro.domain.jobs import Job
 from rastro.domain.models import RastroError
+from rastro.model_factory import is_remote
+from rastro.ports.model import ModelPort
 from rastro.studio import files
 
 MAX_BODY = 16 * 1024
@@ -115,13 +117,24 @@ def _origin_ok(request: Request) -> bool:
 
 
 class Studio:
-    """The served root and this run's token; routers resolve every path through it."""
+    """The served root, this run's token and the optional model for "Ask AI"; routers
+    resolve every path through it."""
 
     def __init__(
-        self, root: Path, *, allow_egress: bool = False, allow_env: Iterable[str] = ()
+        self,
+        root: Path,
+        *,
+        model: ModelPort | None = None,
+        model_remote: bool = False,
+        allow_egress: bool = False,
+        allow_env: Iterable[str] = (),
     ) -> None:
         self.root = root.resolve()
         self.token = secrets.token_urlsafe(32)
+        self.model = model
+        # Whether Ask AI page content may leave this machine, read from the built model;
+        # ``model_remote`` (--allow-remote) only speaks for a ModelPort that does not say.
+        self.model_remote = model is not None and is_remote(model, model_remote)
         # Operator opt-ins from `rastro studio`, passed to every job run (audit H1).
         self.trust: dict[str, Any] = {"allow_egress": allow_egress, "allow_env": tuple(allow_env)}
 

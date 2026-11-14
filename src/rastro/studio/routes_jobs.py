@@ -19,7 +19,7 @@ from rastro.studio import editing, files
 from rastro.studio.web import HEADERS, Refused, Studio, body, reply, text
 
 STATIC = Path(__file__).parent / "static"
-ASSETS = frozenset({"studio.js", "studio.css", "wizard.js", "operate.js", "dom.js"})
+ASSETS = frozenset({"studio.js", "studio.css", "wizard.js", "operate.js", "dom.js", "ai.js"})
 
 
 def _edit_of(data: dict[str, Any]) -> editing.SelectorEdit | None:

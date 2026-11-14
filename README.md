@@ -73,8 +73,26 @@ When the site renames a class or moves a block, the remembered recipe fails and 
 searches offline for a replacement, then checks it against the saved sample and your schema.
 With `repair="propose"` (the default) it stores the candidate for review; with `repair="auto"`
 it promotes the candidate only if every gate passes and returns the repaired result.
-`repair="off"` reports the failure as is. No AI and no extra network requests are involved.
+`repair="off"` reports the failure as is. Repair needs no AI and makes no extra network requests.
 See [self-repair](https://rave-vipx.github.io/rastro/repair/).
+
+## Bring your own AI
+
+Rastro works fully offline and deterministically. You can also connect a model: a local one,
+any API you have a key for, the command-line tool of a subscription you already have, or the
+agent that drives Rastro over MCP. No provider is preferred. Rastro uses the model to propose
+recipes when it has no examples, to propose repairs for pages whose structure changed, and to
+check that a repair's values still mean the same thing.
+**A model never writes your data. It proposes, and Rastro verifies:** every proposal goes
+through the same validation and repair gates as a deterministic one, and sending page content
+off the machine requires an explicit `allow_remote`.
+
+On our 28-case synthetic benchmark, Rastro repaired 12 broken pages without a model, and 23
+with a scripted model that answered correctly, with no wrong data in either case. The small
+local models we tried recovered nothing new, and as judges they blocked correct repairs. A model
+that is wrong both when it proposes and when it judges gets no wrong repair through: its
+candidates must pass deterministic value checks before the judge. See
+[bring your own AI](https://rave-vipx.github.io/rastro/ai/) for the numbers.
 
 ## Suggest selectors from examples
 
@@ -121,7 +139,8 @@ the [complete job example](https://rave-vipx.github.io/rastro/jobs/#complete-tom
   exposes job validate, preview and run, dataset records and recipe listing.
 - **JSON CLI:** stdout is JSON; errors are one JSON object on stderr
   (`{"error", "message", "location"}`) and never echo page text or secrets.
-- **Exit codes:** `0` success, `1` failed, `2` configuration or usage error, `3` partial success.
+- **Exit codes:** `0` success, `1` failed, `2` configuration or usage error, `3` partial success,
+  `4` needs attention (open drift, stale source), `5` storage error after the run.
 - Source values are labelled `"data_trust": "untrusted_source_data"`.
 
 See [Rastro for AI agents](https://rave-vipx.github.io/rastro/ai-agents/) and [`llms.txt`](https://github.com/rave-vipx/rastro/blob/main/llms.txt).

@@ -21,29 +21,17 @@ from rastro.domain.models import ConfigurationError
 
 if TYPE_CHECKING:
     from rastro.domain.drift import StructuralSnapshot
+    from rastro.domain.jobs import Job
 
 
-def load_job_file(
-    path: str | Path,
-    *,
-    drift: bool = False,
-    allow_absolute_paths: bool = False,
-    allow_egress: bool = False,
-    allow_env: Iterable[str] = (),
-) -> JobLoadResult:
-    """Run a job file and load its approved fields into the job's ``[dataset]``.
+def dataset_location(file: Path, job: Job, *, allow_absolute_paths: bool) -> Path:
+    """The job's dataset path, contained like every job path; symlinks are left for the adapter.
 
-    Raises ``ConfigurationError`` for invalid jobs or paths. With ``drift=True`` the
-    structural drift of each source is measured and reported. Each loaded source
-    reports whether its recipe came from the job file or from ``recipe_memory``.
-    A job-declared egress proxy needs ``allow_egress=True`` (see ``run_job``).
+    Raises ``ConfigurationError`` without a ``[dataset]`` block or a dataset folder.
     """
-    file = Path(path)
-    job = load_job(file, allow_absolute_paths=allow_absolute_paths)
-    check_job_egress(job, allow_egress=allow_egress, allow_env=allow_env)
     spec = job.dataset
     if spec is None:
-        raise ConfigurationError("job load requires a [dataset] block in the job file")
+        raise ConfigurationError("This command requires a [dataset] block in the job file")
     resolved = resolve_job_path(
         spec.path, base_dir=file.parent, allow_absolute_paths=allow_absolute_paths
     )
@@ -55,16 +43,41 @@ def load_job_file(
             location="dataset.path",
         )
     # Preserve symlink components for the adapter's refusal, after containment validation.
-    raw_path = (
-        Path(spec.path) if Path(spec.path).is_absolute() else file.parent.resolve() / spec.path
-    )
+    return Path(spec.path) if Path(spec.path).is_absolute() else file.parent.resolve() / spec.path
+
+
+def load_job_file(
+    path: str | Path,
+    *,
+    drift: bool = False,
+    allow_absolute_paths: bool = False,
+    allow_remote: bool = False,
+    allow_egress: bool = False,
+    allow_env: Iterable[str] = (),
+) -> JobLoadResult:
+    """Run a job file and load its approved fields into the job's ``[dataset]``.
+
+    Raises ``ConfigurationError`` for invalid jobs or paths. With ``drift=True`` the
+    structural drift of each source is measured and reported. Each loaded source
+    reports whether its recipe came from the job file or from ``recipe_memory``.
+    ``allow_*`` are the operator's opt-ins, as for ``run_job``.
+    """
+    file = Path(path)
+    job = load_job(file, allow_absolute_paths=allow_absolute_paths)
+    allow_env = tuple(allow_env)
+    check_job_egress(job, allow_egress=allow_egress, allow_env=allow_env)
+    spec = job.dataset
+    if spec is None:
+        raise ConfigurationError("job load requires a [dataset] block in the job file")
+    raw_path = dataset_location(file, job, allow_absolute_paths=allow_absolute_paths)
     store = SQLiteDatasetStore(
         raw_path,
         limits=job.limits,
         near_match_fields=spec.match_fields,
         near_match_tolerance=timedelta(minutes=spec.match_tolerance_minutes or 30),
     )
-    monitor = SQLiteDriftMonitor(raw_path, limits=job.limits) if drift else None
+    drift_state = SQLiteDriftMonitor(raw_path, limits=job.limits)
+    monitor = drift_state if drift else None
     capture: AbstractContextManager[dict[str, StructuralSnapshot]]
     if drift:
         from rastro.adapters.drift_probe import ScraplingDriftProbe
@@ -77,6 +90,7 @@ def load_job_file(
             job,
             base_dir=file.parent,
             allow_absolute_paths=allow_absolute_paths,
+            allow_remote=allow_remote,
             allow_egress=allow_egress,
             allow_env=allow_env,
         )
@@ -88,13 +102,14 @@ def load_job_file(
         rules=job.consistency,
         monitor=monitor,
         snapshots=snapshots,
+        drift_state=drift_state,
     )
     from rastro.application.repair_storage import retain_successes
 
     held_urls = {
         s.source_url
         for s in loaded.sources
-        if s.consistency is not None and s.consistency.verdict == "inconsistent"
+        if s.inconsistent or any(i.code == "storage_error" for i in s.issues)
     }
     for result in report.results:
         if result.source_url in held_urls:
@@ -106,7 +121,7 @@ def load_job_file(
             "sources": tuple(
                 source.model_copy(
                     update={
-                        "issues": issues.get(source.source_url, ()),
+                        "issues": (*source.issues, *issues.get(source.source_url, ())),
                         "recipe_origin": origins[index].recipe_origin,
                         "recipe_version": origins[index].recipe_version,
                     }
