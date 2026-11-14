@@ -4,9 +4,9 @@ Relocation, fallbacks and discovery run first. Only when none of their candidate
 pass every gate does the model propose recipes, within the policy's call budget; each
 proposal is gated by the same evaluator as a deterministic one plus the deterministic
 value checks (types, shape, values borrowed from another field's history), and a
-rejected proposal triggers a retry carrying only a failure category. Only a model
-candidate that passed all of that meets the semantic judge, which can veto but never
-promote on its own. Deterministic candidates keep their gates and never call the model.
+rejected proposal triggers a retry carrying only a failure category. Every candidate
+that would still promote, relocated or proposed, then meets the semantic judge, which can
+veto but never promote on its own. Without a model nothing here runs.
 """
 
 from __future__ import annotations
@@ -65,7 +65,7 @@ async def assist_repair(
     rows: Callable[[Recipe], Rows],
     history: Sequence[Mapping[str, JsonValue]],
 ) -> AssistedRepair:
-    """Add gated model proposals when needed, then judge model would-be promotions."""
+    """Add gated model proposals when needed, then judge every would-be promotion."""
     origin: Literal["relocation", "model"] | None = "relocation" if evaluated else None
     if assist is None:
         return AssistedRepair(evaluated, origin, 0, ())
@@ -91,7 +91,7 @@ async def assist_repair(
             evaluated.extend(proposed)
     judged: Evaluated = []
     for candidate, evaluation in evaluated:
-        if evaluation.decision == "promote" and candidate.origin == "model":
+        if evaluation.decision == "promote":  # any origin: the judge can only veto
             calls += 1
             evaluation = await _judge(
                 assist, schema, previous, candidate, rows, history, evaluation

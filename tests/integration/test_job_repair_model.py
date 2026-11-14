@@ -221,14 +221,25 @@ def test_honest_model_still_repairs_with_known_good_values(tmp_path):
     assert source.promoted_version is not None and source.origin == "model"
 
 
-def test_deterministic_repair_makes_no_judge_calls(tmp_path):
-    """QUAL-005: relocated candidates keep their own gates; the model is never consulted."""
-    renamed = '<article class="job" data-id="job-{n}"><h2 class="title">Role {n}</h2></article>'
-    model = FakeModel()
-    job = make_drift_job(tmp_path, OLD, renamed)
+RENAMED = '<article class="job" data-id="job-{n}"><h2 class="title">Role {n}</h2></article>'
+
+
+@pytest.mark.parametrize(("verdict", "promoted"), [("match", True), ("mismatch", False)])
+def test_deterministic_repair_is_judged_once_and_can_be_vetoed(tmp_path, verdict, promoted):
+    """QUAL-005: a relocated candidate makes no proposal call, one judge call; the judge
+    can veto it but never force it."""
+    model = FakeModel(verdict)
+    job = make_drift_job(tmp_path, OLD, RENAMED)
     (source,) = rastro.repair_job_source(job, 1, model=model).sources
-    assert source.promoted_version is not None and source.origin == "relocation"
-    assert model.requests == [] and source.inference_calls == 0
+    assert (source.promoted_version is not None) is promoted
+    assert source.origin == "relocation" and source.inference_calls == 1
+    assert [r.response_schema is not None for r in model.requests] == [True]
+
+
+def test_deterministic_repair_without_a_model_makes_no_calls(tmp_path):
+    """QUAL-005: no model configured, deterministic gates only."""
+    (source,) = rastro.repair_job_source(make_drift_job(tmp_path, OLD, RENAMED), 1).sources
+    assert source.promoted_version is not None and not source.inference_calls
 
 
 def test_an_agent_proposal_with_swapped_values_is_rejected(tmp_path):

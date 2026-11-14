@@ -120,16 +120,31 @@ def test_without_a_model_shape_gates_promote_a_wrong_title(tmp_path, monkeypatch
     assert [o.title for o in wrong.items] == ["Centro", "Norte"]
 
 
-def test_relocated_candidates_keep_their_gates_and_never_call_the_judge(tmp_path, monkeypatch):
-    """QUAL-005: the semantic judge only sees model-origin candidates."""
+def test_semantic_judge_blocks_a_wrong_title_that_passes_shape_gates(tmp_path, monkeypatch):
+    """QUAL-005: a relocated candidate is judged too; a mismatch vetoes it."""
     memory = tmp_path / "recipes.db"
     _scrape(V1, memory)
     _misplace_title(monkeypatch)
     model = FakeModel(verdict="mismatch")
-    result = _scrape(V2_AREA, memory, model)
-    assert result.repair.origin == "relocation" and result.repair.model_calls == 0
-    assert model.requests == []
-    assert result.repair.promoted  # exactly what the deterministic gates decide alone
+    blocked = _scrape(V2_AREA, memory, model)
+    assert blocked.items == [] and not blocked.repair.promoted
+    (candidate,) = blocked.repair.candidates
+    assert candidate.decision == "quarantine" and "semantic_mismatch" in candidate.reasons
+    assert blocked.repair.origin == "relocation" and blocked.repair.model_calls == 1
+    (request,) = model.judged
+    (field,) = json.loads(request.content)["fields"]
+    assert field["name"] == "title" and field["reference_values"] == ["Engineer", "Designer"]
+    assert field["untrusted_candidate_values"] == ["Centro", "Norte"]
+    assert SQLiteRecipeRepository(memory).get(_key(memory)).recipe.version == 1
+
+
+def test_a_recipe_that_still_serves_never_calls_the_judge(tmp_path):
+    """QUAL-005: no repair, no judgement."""
+    memory = tmp_path / "recipes.db"
+    _scrape(V1, memory)
+    model = FakeModel()
+    again = _scrape(V1, memory, model)
+    assert again.status == Outcome.SUCCESS and again.repair is None and model.requests == []
 
 
 def test_semantic_judge_blocks_a_model_candidate_that_passes_value_checks(tmp_path):

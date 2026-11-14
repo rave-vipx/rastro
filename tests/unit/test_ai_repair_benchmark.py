@@ -123,8 +123,8 @@ def test_a_wrong_meaning_proposal_is_rejected_before_any_judge(mode: str) -> Non
 
 def test_rastro_proposes_with_the_model_only_after_deterministic_repair_fails() -> None:
     run = executor("oracle_correct")
-    renamed = run(CASE["cards-class_rename"])  # deterministic candidate: never judged
-    assert (renamed.verdict, renamed.model_calls) == ("correct", 0)
+    renamed = run(CASE["cards-class_rename"])  # deterministic candidate, judged once
+    assert (renamed.verdict, renamed.model_calls) == ("correct", 1)
     restructured = run(CASE["cards-container_restructured"])  # proposal, then judge
     assert (restructured.verdict, restructured.model_calls) == ("correct", 2)
 
