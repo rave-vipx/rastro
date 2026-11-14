@@ -2,9 +2,11 @@
 
 Relocation, fallbacks and discovery run first. Only when none of their candidates would
 pass every gate does the model propose recipes, within the policy's call budget; each
-proposal is gated by the same evaluator as a deterministic one, and a rejected proposal
-triggers a retry carrying only a failure category. Before any automatic promotion, the
-semantic judge checks that the changed fields still carry their meaning.
+proposal is gated by the same evaluator as a deterministic one plus the deterministic
+value checks (types, shape, values borrowed from another field's history), and a
+rejected proposal triggers a retry carrying only a failure category. Only a model
+candidate that passed all of that meets the semantic judge, which can veto but never
+promote on its own. Deterministic candidates keep their gates and never call the model.
 """
 
 from __future__ import annotations
@@ -23,6 +25,7 @@ from rastro.domain.intelligence import InferencePolicy
 from rastro.domain.models import ConfigurationError, CssRecipe, Issue, Recipe, RecipeAttempt
 from rastro.domain.recipe_compare import CandidateEvaluation, RecipeComparison
 from rastro.domain.repair import RepairCandidate
+from rastro.domain.value_consistency import value_consistency
 from rastro.ports.model import ModelPort
 
 type Evaluated = list[tuple[RepairCandidate, CandidateEvaluation]]
@@ -62,7 +65,7 @@ async def assist_repair(
     rows: Callable[[Recipe], Rows],
     history: Sequence[Mapping[str, JsonValue]],
 ) -> AssistedRepair:
-    """Add gated model proposals when needed, then judge every would-be promotion."""
+    """Add gated model proposals when needed, then judge model would-be promotions."""
     origin: Literal["relocation", "model"] | None = "relocation" if evaluated else None
     if assist is None:
         return AssistedRepair(evaluated, origin, 0, ())
@@ -75,21 +78,51 @@ async def assist_repair(
             if not await asyncio.to_thread(rows, previous)
             else "serving_recipe_fails_gates"
         )
+
+        def model_gate(candidate: RepairCandidate) -> CandidateEvaluation:
+            evaluation = gate(candidate)
+            return check_values(evaluation, candidate.recipe, schema, previous, rows, history)
+
         proposed, calls, issues = await _propose(
-            assist, html, schema, previous, gate, samples=history, failure=failure
+            assist, html, schema, previous, model_gate, samples=history, failure=failure
         )
         if proposed:
             origin = "model"
             evaluated.extend(proposed)
     judged: Evaluated = []
     for candidate, evaluation in evaluated:
-        if evaluation.decision == "promote":
+        if evaluation.decision == "promote" and candidate.origin == "model":
             calls += 1
             evaluation = await _judge(
                 assist, schema, previous, candidate, rows, history, evaluation
             )
         judged.append((candidate, evaluation))
     return AssistedRepair(judged, origin, calls, issues)
+
+
+def check_values(
+    evaluation: CandidateEvaluation,
+    recipe: Recipe,
+    schema: type[BaseModel],
+    previous: Recipe,
+    rows: Callable[[Recipe], Rows],
+    history: Sequence[Mapping[str, JsonValue]],
+) -> CandidateEvaluation:
+    """Reject a model candidate whose values do not look like the known-good ones.
+
+    Checks the changed fields (every field when only the record container moved) against
+    the retained samples with the deterministic value gate. A failure is a rejection, not
+    a quarantine: model output is untrusted and the judge must never be its only gate.
+    """
+    if evaluation.decision == "reject":
+        return evaluation
+    changed = RecipeComparison.between(previous, recipe).changed_fields
+    failed = value_consistency(rows(recipe), history, changed or tuple(schema.model_fields))
+    if not failed:
+        return evaluation
+    kept = tuple(r for r in evaluation.reasons if r not in _PASSING_REASONS)
+    reasons = tuple(dict.fromkeys((*kept, *failed)))
+    return evaluation.model_copy(update={"decision": "reject", "reasons": reasons})
 
 
 async def _propose(
