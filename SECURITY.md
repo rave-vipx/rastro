@@ -16,13 +16,21 @@ explicit opt-in and HTTPS never redirects to HTTP. Cookies, ambient proxies, net
 browser impersonation, and transport-level redirects/retries are disabled.
 
 401/403/451 stop further requests to that host in the client. 429 and Retry-After
-produce explicit restrictions/deferred results and host cooldowns. There is no
-identity rotation, CAPTCHA solving, or source-restriction bypass. Source allowlisting
+produce explicit restrictions/deferred results and host cooldowns. Browser stealth mode is an operator opt-in using Scrapling/Patchright browser
+fingerprints; Cloudflare solving additionally requires `solve_challenges = true`.
+Automatic proxy or identity rotation, third-party CAPTCHA services and credentials
+in job files remain forbidden. Robots checks and exact host/public-IP restrictions
+remain mandatory; browser modes refuse egress profiles. Source allowlisting
 is the caller's permission assertion; it does not confer permission to access a site.
 A `Source` URL by itself never authorizes network access.
 
-Rastro executes no JavaScript, resolves no remote JSON-LD contexts, and exposes no
-management server. See the [HTTP guide](docs/acquisition.md) for exact behavior.
+HTTP mode executes no JavaScript. Opt-in browser modes execute page JavaScript;
+recipes cannot supply executable scripts. Browser contexts are fresh per page, with
+no downloads, permissions or service workers. Both adapters install DNS pinning,
+request routing and Chromium request-stage redirect checks, and check the final URL.
+DOM bounds apply after serialization, not to browser process memory. Known challenge
+markers are restricted; this heuristic is not exhaustive. See [ADR 0024](docs/decisions/0024-browser-rendering-and-stealth-opt-in.md).
+Rastro resolves no remote JSON-LD contexts. See the [HTTP guide](docs/acquisition.md) for exact behavior.
 Recipes accept CSS selectors or JSON pointers. They cannot contain executable code. Caller-provided Pydantic models and custom parser adapters are trusted Python code and can execute within the caller's process. Do not load untrusted schema modules.
 
 Input size, candidate count, and JSON-LD block count have configurable limits. These limits are not a CPU-time or process-memory sandbox. Host untrusted workloads in an appropriately isolated process with external resource limits.

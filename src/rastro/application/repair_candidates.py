@@ -126,9 +126,16 @@ class RepairCandidateGenerator:
             raise ResourceLimitError("Repair provider returned too many candidates")
         baseline = original.model_copy(update={"require_evidence": True, "fallbacks": ()})
         for item in incoming:
+            if original.pagination is not None and item.recipe.strategy != original.strategy:
+                continue
             try:
                 data = item.recipe.model_dump()
-                data.update(require_evidence=True, fallbacks=(), version=original.version)
+                data.update(
+                    require_evidence=True,
+                    fallbacks=(),
+                    version=original.version,
+                    pagination=original.pagination,
+                )
                 recipe = validate_recipe(
                     schema, Recipe.model_validate(data), original.representation
                 )

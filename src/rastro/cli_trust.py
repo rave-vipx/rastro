@@ -14,7 +14,7 @@ from typing import Any
 from rastro.application.operator_trust import env_names, set_process_trust
 from rastro.domain.model_trust import OperatorTrust
 
-_FLAGS = frozenset({"--allow-remote", "--allow-egress"})
+_FLAGS = frozenset({"--allow-remote", "--allow-egress", "--allow-stealth"})
 _VALUED = "--allow-env"
 
 
@@ -32,6 +32,12 @@ def add_trust_arguments(parser: argparse.ArgumentParser, *, root: bool = False) 
             action="store_true",
             help="Let job-declared models use non-loopback endpoints (page content leaves)",
         )
+    group.add_argument(
+        "--allow-stealth",
+        action="store_true",
+        help="Allow stealth browser rendering (also RASTRO_ALLOW_STEALTH=1)",
+        **default,
+    )
     group.add_argument(
         "--allow-egress",
         action="store_true",
@@ -81,6 +87,7 @@ def apply_trust(args: argparse.Namespace, argv: list[str]) -> OperatorTrust:
     return set_process_trust(
         OperatorTrust(
             allow_remote=bool(getattr(args, "allow_remote", False)),
+            allow_stealth=bool(getattr(args, "allow_stealth", False)),
             allowed_env=env_names(getattr(args, "allow_env", None) or ()),
         )
     )

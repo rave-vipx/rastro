@@ -5,7 +5,7 @@ from __future__ import annotations
 import ipaddress
 import re
 from dataclasses import dataclass, field
-from typing import Any, Self
+from typing import Any, Literal, Self
 from urllib.parse import urlsplit
 
 from pydantic import (
@@ -110,6 +110,8 @@ class AcquisitionPolicy(_RedactedErrors):
     """An exact host allowlist asserts the caller's permission to acquire a source."""
 
     allowed_hosts: tuple[str, ...] = Field(min_length=1, max_length=64)
+    render: Literal["http", "browser", "stealth"] = "http"
+    solve_challenges: bool = False
     allow_http: bool = False
     max_concurrency: int = Field(default=4, ge=1, le=32)
     max_requests: int = Field(default=30, ge=1, le=100)
@@ -197,6 +199,7 @@ class AcquisitionResult:
     acquisition_seconds: float = 0
     retry_after_seconds: float | None = None
     egress: str = "direct"
+    render_seconds: float = 0
 
 
 class AcquisitionError(Exception):

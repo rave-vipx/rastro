@@ -490,3 +490,129 @@ for uncertain cross-source comparisons. Without it, records are matched on `iden
 only and no uncertain match is flagged. A misspelled name is reported with
 `"location": "dataset.match_fields"`.
 See [dataset usage and the executed offline sequence](dataset.md#load-inspect-and-export-a-job).
+
+## Pagination
+
+For URL sources, a recipe can declare a next-page link (SYNC-002, SEC-008;
+[ADR 0026](decisions/0026-bounded-recipe-pagination.md)):
+
+```toml
+[recipe.pagination]
+next = "a[rel=next]::attr(href)"
+max_pages = 5
+```
+
+The block belongs to the effective recipe, including `[sources.recipe.pagination]`
+when a source has its own recipe. `max_pages` includes the first page, defaults to
+5 and accepts integers from 1 through 50. CSS next expressions follow the selector
+cost policy. With `json` or `jsonld`, `next` is an absolute JSON pointer, for example
+`"/links/next"`; JSON-LD pointers are evaluated on the document's JSON-LD objects.
+The TOML writer preserves this block when replacing a recipe.
+
+Rastro resolves relative links against the acquired page URL. Every page uses the
+same acquisition port, permission allowlist, robots rules, pacing, DNS checks and
+egress policy. One `max_requests` budget covers the whole source, including robots,
+redirects, retries and address fallbacks when using `WebAcquirer`. Redirects cannot
+escape the exact source hostname or downgrade HTTPS. There are no JavaScript clicks,
+infinite scroll, URL templates, guessed page numbers or cross-host traversal.
+
+The source result combines records in page order and reports `pagination_stop`:
+`no_next`, `repeat`, `empty_page`, `max_pages`, `off_host`, `https_downgrade`,
+`budget`, `page_failure`, `invalid_next`, or `record_limit`. A normal end of the list
+is a complete snapshot (`complete=True`, exit 0): `no_next` (no next link), `repeat`
+(the next link points at a page already read) and `empty_page` (an HTTP 200 page
+after the first yielding no records). Every other stop preserves earlier records as
+`partial_success`, so dataset loading uses `complete=False` (exit 3) and cannot mark
+unseen records missing. A failed first page retains its original failure outcome.
+`limits.max_records` also bounds the combined result.
+
+The next link's host is compared with the source host case-insensitively and
+ignoring one trailing dot, so `https://AGENDA.test./two` is the same host as
+`agenda.test`; any other host is refused as `off_host`. A fallback recipe cannot
+declare `pagination`: only the primary recipe does, and a fallback with the block
+is rejected as a configuration error.
+
+With a job dataset, repeated identities across pages keep the first occurrence.
+`pagination_duplicates_conflicting` counts later occurrences whose field values
+differ; zero is omitted from the source result. Duplicate identities within one
+page still fail dataset storage, just as without pagination. Without a dataset,
+the extraction result retains every record because no record identity is declared.
+Each paginated record has a 1-based `page_index`. Field provenance keeps the logical
+source in `source_url`; `page_url` records a different contributing page, with queries
+and fragments removed. Drift measurement and repair evidence remain focused on
+page 1. Repair candidates keep the declared pagination block and strategy.
+Supplied-file extraction does not follow links.
+
+## Your own PostgreSQL
+
+Install `pip install 'rastro-engine[postgres]'` and put your connection string in
+`RASTRO_PG_DSN` in the process environment. Never put the connection string in a job.
+The variable name must be `RASTRO_*` or allowed by the operator with `--allow-env`.
+
+```toml
+[dataset]
+name = "events"
+backend = "postgres"
+dsn_env = "RASTRO_PG_DSN"
+schema = "rastro" # optional
+identity = ["title", "venue"]
+```
+
+The DSN must specify a host (a loopback IP, `localhost`, a Unix socket directory,
+or a remote host); libpq service references are not supported. A host outside
+loopback requires the operator's `--allow-remote` flag, `allow_remote=True` in
+`load_job_file`, or `RASTRO_ALLOW_REMOTE=1`. Configure TLS in the DSN for a remote
+server. Rastro does not print the DSN in errors or object representations.
+
+`rastro job load job.toml` fills the database. Each source snapshot commits in one
+transaction, preserving identity, provenance and records from unavailable sources.
+A failed transaction rolls back and reports `storage_error` (exit 5). One connection
+is reused for the load and closed afterward. Schema migrations run transactionally,
+only forward; a newer schema version is refused without resetting any data.
+
+Only records and source status live in PostgreSQL. Drift and relocation state stay
+in `rastro-state.sqlite` beside the job; recipe memory stays at its configured local
+path. Do not set `dataset.path` with this backend. Existing SQLite jobs still require
+`path` and default to `backend = "sqlite"`. There is no automatic transfer of existing
+SQLite records. Re-running the job populates the configured PostgreSQL dataset.
+`health`, repair history and `job forget-source` use the configured backend.
+Forgetting a source preserves its records and provenance. Local operational cleanup
+and PostgreSQL status cleanup are separate transactions; retry if either fails.
+
+The path-only `rastro dataset` CLI continues to address SQLite files. Query PostgreSQL
+with your application or SQL client, or use `PostgresDatasetStore.export_jsonl` in
+Python and call `close()` afterward. Its JSONL is identical to SQLite for identical
+observations. The application tables, under the chosen schema, are:
+
+| Table | Columns | Primary key |
+| --- | --- | --- |
+| `rastro_schema` | `version INTEGER` (currently 1) | `version` |
+| `dataset_records` | `dataset TEXT`, `key TEXT` (canonical identity JSON), `payload TEXT` (StoredRecord JSON), `identity_hash TEXT` (SHA-256 of key) | `(dataset, identity_hash)` |
+| `dataset_sources` | `dataset TEXT`, `source TEXT` (canonical evidence URL), `payload TEXT` (SourceStatus JSON), `identity_hash TEXT` (SHA-256 of source) | `(dataset, identity_hash)` |
+
+Record JSON includes `fields`, `provenance`, `origins`, `first_observed_at`,
+`last_observed_at`, and `uncertain_match`. Status JSON includes `last_success`,
+`last_attempt`, `stale`, `reason`, and optional `detail`. Text JSON preserves export
+bytes; cast it when querying:
+
+```sql
+SELECT payload::jsonb -> 'fields' AS fields,
+       payload::jsonb ->> 'last_observed_at' AS last_observed
+FROM rastro.dataset_records
+WHERE dataset = 'events'
+ORDER BY key;
+```
+
+Use a dedicated schema owned by the database role Rastro connects as; that role needs
+permission to create the schema and tables. Writers serialize within that schema to
+preserve atomic identity updates. Reads do not create missing schemas.
+
+Unset `PGSERVICE` and `PGHOSTADDR` when using this adapter; use explicit DSN options
+instead, so libpq environment defaults cannot override the checked destination.
+The architecture and cleanup tradeoff are recorded in
+[ADR 0025](decisions/0025-postgres-datasets.md).
+
+This backend is supported by job loading and the job-aware CLI health, maintenance,
+and repair flows. Studio dataset views and MCP `drift_status` support SQLite only and refuse a
+PostgreSQL job with an explicit error rather than showing empty data;
+use SQL for PostgreSQL dataset queries in this release.

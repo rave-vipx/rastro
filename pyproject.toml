@@ -32,6 +32,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+browser = ["scrapling[fetchers]>=0.5,<0.6"]
+postgres = ["psycopg[binary]>=3.2,<4"]
 http = ["curl-cffi>=0.16.1,<0.18", "protego>=0.6.2,<0.8"]
 ollama = ["httpx>=0.28.1,<0.29"]
 openai = ["httpx>=0.28.1,<0.29"]
@@ -50,6 +52,7 @@ rastro = "rastro.cli:main"
 
 [dependency-groups]
 dev = [
+  "psycopg[binary]>=3.2,<4",
   "httpx>=0.28.1,<0.29",
   "starlette>=1.10,<2",
   "uvicorn>=0.30,<1",

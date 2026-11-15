@@ -164,6 +164,9 @@ def prepare_job(
     acquisition: AcquisitionPort | None,
     model: ModelPort | None,
 ) -> PreparedJob:
+    from rastro.browser import job_acquisition
+
+    acquisition = job_acquisition(job, acquisition)
     file_paths, memory_path = validate_job_paths(
         job, base_dir=base_dir, allow_absolute_paths=allow_absolute_paths
     )
