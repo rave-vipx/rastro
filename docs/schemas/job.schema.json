@@ -316,6 +316,17 @@
           "title": "Fields",
           "type": "object"
         },
+        "pagination": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Pagination"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "record_selector": {
           "maxLength": 1024,
           "minLength": 1,
@@ -1075,6 +1086,17 @@
           "default": null,
           "title": "Item Type"
         },
+        "pagination": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Pagination"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "require_evidence": {
           "default": false,
           "title": "Require Evidence",
@@ -1121,6 +1143,17 @@
           "minProperties": 1,
           "title": "Fields",
           "type": "object"
+        },
+        "pagination": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Pagination"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "record_path": {
           "maxLength": 1024,
@@ -1389,6 +1422,30 @@
         "model"
       ],
       "title": "OpenAICompatibleProvider",
+      "type": "object"
+    },
+    "Pagination": {
+      "additionalProperties": false,
+      "description": "A bounded next-page expression, interpreted by the recipe strategy.",
+      "properties": {
+        "max_pages": {
+          "default": 5,
+          "maximum": 50,
+          "minimum": 1,
+          "title": "Max Pages",
+          "type": "integer"
+        },
+        "next": {
+          "maxLength": 1024,
+          "minLength": 1,
+          "title": "Next",
+          "type": "string"
+        }
+      },
+      "required": [
+        "next"
+      ],
+      "title": "Pagination",
       "type": "object"
     },
     "RecipeContext": {
