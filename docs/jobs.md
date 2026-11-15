@@ -452,3 +452,76 @@ for uncertain cross-source comparisons. Without it, records are matched on `iden
 only and no uncertain match is flagged. A misspelled name is reported with
 `"location": "dataset.match_fields"`.
 See [dataset usage and the executed offline sequence](dataset.md#load-inspect-and-export-a-job).
+
+## Your own PostgreSQL
+
+Install `pip install 'rastro-engine[postgres]'` and put your connection string in
+`RASTRO_PG_DSN` in the process environment. Never put the connection string in a job.
+The variable name must be `RASTRO_*` or allowed by the operator with `--allow-env`.
+
+```toml
+[dataset]
+name = "events"
+backend = "postgres"
+dsn_env = "RASTRO_PG_DSN"
+schema = "rastro" # optional
+identity = ["title", "venue"]
+```
+
+The DSN must specify a host (a loopback IP, `localhost`, a Unix socket directory,
+or a remote host); libpq service references are not supported. A host outside
+loopback requires the operator's `--allow-remote` flag, `allow_remote=True` in
+`load_job_file`, or `RASTRO_ALLOW_REMOTE=1`. Configure TLS in the DSN for a remote
+server. Rastro does not print the DSN in errors or object representations.
+
+`rastro job load job.toml` fills the database. Each source snapshot commits in one
+transaction, preserving identity, provenance and records from unavailable sources.
+A failed transaction rolls back and reports `storage_error` (exit 5). One connection
+is reused for the load and closed afterward. Schema migrations run transactionally,
+only forward; a newer schema version is refused without resetting any data.
+
+Only records and source status live in PostgreSQL. Drift and relocation state stay
+in `rastro-state.sqlite` beside the job; recipe memory stays at its configured local
+path. Do not set `dataset.path` with this backend. Existing SQLite jobs still require
+`path` and default to `backend = "sqlite"`. There is no automatic transfer of existing
+SQLite records. Re-running the job populates the configured PostgreSQL dataset.
+`health`, repair history and `job forget-source` use the configured backend.
+Forgetting a source preserves its records and provenance. Local operational cleanup
+and PostgreSQL status cleanup are separate transactions; retry if either fails.
+
+The path-only `rastro dataset` CLI continues to address SQLite files. Query PostgreSQL
+with your application or SQL client, or use `PostgresDatasetStore.export_jsonl` in
+Python and call `close()` afterward. Its JSONL is identical to SQLite for identical
+observations. The application tables, under the chosen schema, are:
+
+| Table | Columns | Primary key |
+| --- | --- | --- |
+| `rastro_schema` | `version INTEGER` (currently 1) | `version` |
+| `dataset_records` | `dataset TEXT`, `key TEXT` (canonical identity JSON), `payload TEXT` (StoredRecord JSON), `identity_hash TEXT` (SHA-256 of key) | `(dataset, identity_hash)` |
+| `dataset_sources` | `dataset TEXT`, `source TEXT` (canonical evidence URL), `payload TEXT` (SourceStatus JSON), `identity_hash TEXT` (SHA-256 of source) | `(dataset, identity_hash)` |
+
+Record JSON includes `fields`, `provenance`, `origins`, `first_observed_at`,
+`last_observed_at`, and `uncertain_match`. Status JSON includes `last_success`,
+`last_attempt`, `stale`, `reason`, and optional `detail`. Text JSON preserves export
+bytes; cast it when querying:
+
+```sql
+SELECT payload::jsonb -> 'fields' AS fields,
+       payload::jsonb ->> 'last_observed_at' AS last_observed
+FROM rastro.dataset_records
+WHERE dataset = 'events'
+ORDER BY key;
+```
+
+Use a dedicated schema owned by the database role Rastro connects as; that role needs
+permission to create the schema and tables. Writers serialize within that schema to
+preserve atomic identity updates. Reads do not create missing schemas.
+
+Unset `PGSERVICE` and `PGHOSTADDR` when using this adapter; use explicit DSN options
+instead, so libpq environment defaults cannot override the checked destination.
+The architecture and cleanup tradeoff are recorded in
+[ADR 0024](decisions/0024-postgres-datasets.md).
+
+This backend is supported by job loading and the job-aware CLI health, maintenance,
+and repair flows. Studio dataset views and MCP dataset/history reads still use SQLite;
+use SQL for PostgreSQL dataset queries in this release.

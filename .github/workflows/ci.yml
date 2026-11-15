@@ -162,6 +162,34 @@ jobs:
           "$RUNNER_TEMP/extras/bin/rastro" demo
           "$RUNNER_TEMP/extras/bin/python" -c 'import curl_cffi, mcp, starlette, uvicorn, rastro'
 
+  postgres:
+    name: PostgreSQL dataset contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: rastro
+          POSTGRES_PASSWORD: synthetic-test-password
+          POSTGRES_DB: rastro_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U rastro -d rastro_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      RASTRO_TEST_POSTGRES_DSN: postgresql://rastro:synthetic-test-password@127.0.0.1:5432/rastro_test
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: '0.13.1'
+          python-version: '3.12'
+      - run: uv sync --locked
+      - run: uv run --no-sync pytest --no-cov tests/contracts/test_dataset_store_contract.py
+
   gate:
     name: CI required
     if: always()
