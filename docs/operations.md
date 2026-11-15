@@ -1,9 +1,50 @@
 # Monitoring and alerts
 
-**Requirements:** DRIFT-004, OBS-002, OBS-007, DATA-004, REPAIR-005, SEC-009.
+**Requirements:** DRIFT-004, OBS-002, OBS-007, DATA-004, REPAIR-005, SEC-009, SCHED-001, SCHED-002, SCHED-003, SCHED-004, SCHED-006, SCHED-007, SYNC-001.
 
-Rastro runs from cron, CI or any scheduler (SCHED-002). Everything an operator needs to
-alert on is in the exit code; the JSON on stdout says why.
+Rastro runs from cron, CI or any scheduler, or with its built-in foreground watcher
+(`rastro job watch`, SCHED-002). Everything an operator needs to alert on is in the exit
+code; the JSON on stdout says why.
+
+## Scheduler
+
+Recurring runs use the **same job file** (SCHED-007); add an optional `[schedule]` block
+and optional per-source `every` overrides (SCHED-001, SCHED-006, SYNC-001):
+
+```toml
+[schedule]
+every = "6h"    # units: s, m, h, d; min 1m, max 30d
+jitter = "5m"   # optional; bounded <= every / 4
+
+[[sources]]
+url = "https://fast.example/events"
+every = "1h"    # optional per-source override
+```
+
+Run in the foreground or trigger one tick from cron or CI:
+
+```sh
+rastro job watch job.toml --drift
+rastro job watch job.toml --once --on-failure 'notify-send "Rastro needs attention"'
+```
+
+- Each tick checks `last_attempt` in `[dataset]` (never attempted = due), runs one load
+  restricted to the due sources, and sleeps until the next due time plus deterministic
+  jitter seeded from the job path and source URL hash.
+- `--once` runs a single tick and exits with that load's exit code (`0` when no source is
+  due), so cron or CI (`0 * * * * rastro job watch /path/to/job.toml --once`) can trigger
+  due sources without a separate config file (see also [Daily dataset and agenda](scheduling.md)).
+- `SIGINT` and `SIGTERM` finish the current source, release the lock, and exit `0`.
+- **Overlap protection (SCHED-003):** every `rastro job load` and each `watch` tick creates
+  an owner-only lock `<dataset file>.lock` (`O_CREAT|O_EXCL`, mode `0600`) holding the PID
+  and start time. If another live process holds the lock, the command does no work, prints
+  `{"error": "run_in_progress", ...}` on stderr, and exits `4`. A stale lock (dead PID or
+  older than `operation_timeout_seconds × sources + 1h`) is replaced with a `WARNING` log.
+- **Checkpoint and recovery (SCHED-004):** during a load Rastro atomically writes
+  `<dataset file>.run.json` (`0600`) with the completed source URLs for the current run. If
+  a load is interrupted, the next load of the same job resumes with the remaining sources
+  first and then clears the checkpoint; already-completed sources keep their records and
+  status.
 
 ## Exit codes
 

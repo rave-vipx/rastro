@@ -19,6 +19,7 @@ from pydantic import (
 
 from rastro.domain.job_contract import RedactedContract
 from rastro.domain.models import EGRESS_NAME, Recipe, Representation, Source
+from rastro.domain.schedule import parse_duration
 
 
 def validate_job_path_syntax(value: str) -> str:
@@ -72,18 +73,29 @@ class UrlJobSource(RedactedContract):
     representation: Representation = "html"
     region: RegionalContext | None = None
     recipe: Recipe | None = None
+    every: str | None = Field(default=None, min_length=2, max_length=16)
 
     @model_serializer(mode="wrap")
     def serialize_render(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
         data: dict[str, Any] = handler(self)
         if "render" not in self.model_fields_set:
             data.pop("render", None)
+        if self.every is None:
+            data.pop("every", None)
         return data
 
     @field_validator("url")
     @classmethod
     def check_url(cls, value: str) -> str:
         return Source(url=value).url
+
+    @field_validator("every", mode="before")
+    @classmethod
+    def check_every(cls, value: object) -> str | None:
+        if value is not None:
+            parse_duration(value)
+            return str(value)
+        return None
 
 
 class FileJobSource(RedactedContract):
@@ -95,13 +107,29 @@ class FileJobSource(RedactedContract):
     representation: Representation = "html"
     region: RegionalContext | None = None
     recipe: Recipe | None = None
+    every: str | None = Field(default=None, min_length=2, max_length=16)
 
     _check_path = field_validator("path")(validate_job_path_syntax)
+
+    @model_serializer(mode="wrap")
+    def serialize_optional(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        data: dict[str, Any] = handler(self)
+        if self.every is None:
+            data.pop("every", None)
+        return data
 
     @field_validator("url")
     @classmethod
     def check_url(cls, value: str | None) -> str | None:
         return None if value is None else Source(url=value).url
+
+    @field_validator("every", mode="before")
+    @classmethod
+    def check_every(cls, value: object) -> str | None:
+        if value is not None:
+            parse_duration(value)
+            return str(value)
+        return None
 
     def resolved_source_url(self) -> str:
         if self.url is not None:

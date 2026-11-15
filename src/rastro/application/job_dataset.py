@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from collections.abc import Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from contextlib import AbstractContextManager, contextmanager, nullcontext
 from datetime import timedelta
 from pathlib import Path
@@ -11,12 +11,12 @@ from typing import TYPE_CHECKING
 
 from rastro.adapters.sqlite_dataset import SQLiteDatasetStore
 from rastro.adapters.sqlite_drift import SQLiteDriftMonitor
-from rastro.application.dataset_load import load_results
 from rastro.application.drift import collect_snapshots
 from rastro.application.egress_trust import allowed_env_names, check_job_egress
 from rastro.application.job_loader import load_job, resolve_job_path
 from rastro.application.jobs import run_job
 from rastro.application.operator_trust import current_trust
+from rastro.application.run_lock import dataset_lock, run_checkpointed_load
 from rastro.application.success_samples import collect_successes
 from rastro.domain.job_load import JobLoadResult
 from rastro.domain.models import ConfigurationError
@@ -25,6 +25,7 @@ from rastro.ports.dataset import DatasetStore
 
 if TYPE_CHECKING:
     from rastro.domain.drift import StructuralSnapshot
+    from rastro.domain.job_sources import JobSource
     from rastro.domain.jobs import Job
 
 
@@ -59,6 +60,9 @@ def load_job_file(
     allow_egress: bool = False,
     allow_stealth: bool = False,
     allow_env: Iterable[str] = (),
+    sources: Sequence[JobSource] | None = None,
+    should_stop: Callable[[], bool] | None = None,
+    _lock_held: bool = False,
 ) -> JobLoadResult:
     """Run a job file and load its approved fields into the job's ``[dataset]``.
 
@@ -69,12 +73,15 @@ def load_job_file(
     """
     file = Path(path)
     job = load_job(file, allow_absolute_paths=allow_absolute_paths)
+    if sources is not None:
+        job = job.model_copy(update={"sources": tuple(sources)})
     allow_env = tuple(allow_env)
     check_job_egress(job, allow_egress=allow_egress, allow_env=allow_env)
     spec = job.dataset
     if spec is None:
         raise ConfigurationError("job load requires a [dataset] block in the job file")
     raw_path = dataset_location(file, job, allow_absolute_paths=allow_absolute_paths)
+    timeout = job.acquisition.operation_timeout_seconds if job.acquisition is not None else 60.0
     drift_state = SQLiteDriftMonitor(raw_path, limits=job.limits)
     monitor = drift_state if drift else None
     capture: AbstractContextManager[dict[str, StructuralSnapshot]]
@@ -84,26 +91,31 @@ def load_job_file(
         capture = collect_snapshots(ScraplingDriftProbe())
     else:
         capture = nullcontext({})
-    with open_dataset(job, raw_path, allow_remote=allow_remote, allow_env=allow_env) as store:
-        with capture as snapshots, collect_successes() as successes:
-            report = run_job(
-                job,
+    with (
+        dataset_lock(
+            raw_path, timeout_seconds=timeout, source_count=len(job.sources), held=_lock_held
+        ),
+        open_dataset(job, raw_path, allow_remote=allow_remote, allow_env=allow_env) as store,
+        capture as snapshots,
+        collect_successes() as successes,
+    ):
+        report, loaded = run_checkpointed_load(
+            raw_path,
+            job,
+            store,
+            extract_fn=lambda sub_job: run_job(
+                sub_job,
                 base_dir=file.parent,
                 allow_absolute_paths=allow_absolute_paths,
                 allow_remote=allow_remote,
                 allow_egress=allow_egress,
                 allow_stealth=allow_stealth,
                 allow_env=allow_env,
-            )
-        loaded = load_results(
-            spec,
-            [f.name for f in job.fields],
-            report,
-            store,
-            rules=job.consistency,
+            ),
             monitor=monitor,
             snapshots=snapshots,
             drift_state=drift_state,
+            should_stop=should_stop,
         )
     from rastro.application.repair_storage import retain_successes
 

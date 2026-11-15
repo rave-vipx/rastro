@@ -691,6 +691,20 @@
       "additionalProperties": false,
       "description": "Local HTML or JSON file source resolved within the job file's directory by default.",
       "properties": {
+        "every": {
+          "anyOf": [
+            {
+              "maxLength": 16,
+              "minLength": 2,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Every"
+        },
         "kind": {
           "const": "file",
           "default": "file",
@@ -1593,6 +1607,33 @@
       ],
       "type": "string"
     },
+    "ScheduleSpec": {
+      "additionalProperties": false,
+      "description": "Optional `[schedule]` block in a job file (`every` and bounded `jitter`).",
+      "properties": {
+        "every": {
+          "title": "Every",
+          "type": "string"
+        },
+        "jitter": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Jitter"
+        }
+      },
+      "required": [
+        "every"
+      ],
+      "title": "ScheduleSpec",
+      "type": "object"
+    },
     "StringField": {
       "additionalProperties": false,
       "properties": {
@@ -1695,6 +1736,20 @@
       "additionalProperties": false,
       "description": "Permitted HTTP(S) job source; its host must appear in acquisition.allowed_hosts.",
       "properties": {
+        "every": {
+          "anyOf": [
+            {
+              "maxLength": 16,
+              "minLength": 2,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Every"
+        },
         "kind": {
           "const": "url",
           "default": "url",
@@ -1952,6 +2007,17 @@
       "anyOf": [
         {
           "$ref": "#/$defs/RepairPolicy"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "schedule": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ScheduleSpec"
         },
         {
           "type": "null"

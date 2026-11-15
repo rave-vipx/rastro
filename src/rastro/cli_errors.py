@@ -17,11 +17,11 @@ from typing import Any
 from pydantic import ValidationError
 from pydantic_core import SchemaError
 
-from rastro.application.errors import missing_extra_error
+from rastro.application.errors import RunInProgressError, missing_extra_error
 from rastro.domain.dataset import DatasetNotFoundError, DatasetStorageError
 from rastro.domain.models import RastroError, ResourceLimitError
 
-__all__ = ["UsageError", "classify", "missing_extra_error"]
+__all__ = ["RunInProgressError", "UsageError", "classify", "missing_extra_error"]
 
 MAX_MESSAGE = 300
 _TOML_POSITION = re.compile(r"\((at (?:line \d+, column \d+|end of document))\)$")
@@ -75,6 +75,10 @@ def classify(error: BaseException) -> dict[str, Any]:
         code, message = "resource_limit", str(error)
     elif isinstance(error, DatasetStorageError) and not isinstance(error, DatasetNotFoundError):
         code, message = "storage_error", str(error) or "Dataset operation failed"
+        location = error.location
+    elif isinstance(error, RunInProgressError):
+        code = "run_in_progress"
+        message = str(error) or "Another load is already in progress for this dataset"
         location = error.location
     elif isinstance(error, RastroError):
         message, location = str(error) or message, error.location
