@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import os
 import secrets
+from contextlib import suppress
 from pathlib import Path
 
 from pydantic import TypeAdapter, ValidationError
@@ -60,6 +61,7 @@ def write_index_atomic(path: Path, data: bytes) -> None:
             handle.flush()
             os.fsync(handle.fileno())
         os.replace(temp, path)
-        fsync_directory(path.parent)
+        with suppress(OSError):  # the index is already replaced; only durability is best-effort
+            fsync_directory(path.parent)
     finally:
         temp.unlink(missing_ok=True)

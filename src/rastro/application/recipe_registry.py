@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import json
+import shlex
+import shutil
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
 
 from rastro.application.bundle_files import read_bounded, write_all
+from rastro.application.engine_version import running_version
 from rastro.application.recipe_hub import (
     GITATTRIBUTES,
     ImportedRecipe,
@@ -22,7 +25,7 @@ from rastro.application.registry_store import (
     package_path,
     write_index_atomic,
 )
-from rastro.domain.models import Limits
+from rastro.domain.models import ConfigurationError, Limits
 from rastro.domain.recipe_bundle import (
     MANIFEST_FILE,
     MAX_METADATA_BYTES,
@@ -38,6 +41,7 @@ from rastro.domain.registry import (
     RegistryEntry,
     RegistryError,
     TrustIndicators,
+    check_compatibility,
     compute_trust,
     matches_query,
     parse_package_spec,
@@ -87,19 +91,38 @@ def publish_to_registry(
     if package_dir.exists() or package_dir.is_symlink():
         raise RegistryError(f"Package directory for {entry.id}@{entry.version} already exists")
     raw_manifest = read_bounded(bundle_dir / MANIFEST_FILE, MAX_METADATA_BYTES, bundle=True)
-    write_all(package_dir, {**files, MANIFEST_FILE: raw_manifest, GITATTRIBUTES: b"* -text\n"})
     updated = sorted((*existing, entry), key=lambda item: (item.id, semver_key(item.version)))
-    write_index_atomic(
-        registry_dir / INDEX_FILE,
-        canonical_json([item.model_dump(mode="json") for item in updated]),
-    )
-    rel_pkg = f"{RECIPES_DIR}/{entry.id}/{entry.version}"
-    commands = (
-        f"git -C {registry_dir} add {INDEX_FILE} {rel_pkg}",
-        f'git -C {registry_dir} commit -m "Publish {entry.id} {entry.version}"',
-        f"git -C {registry_dir} push",
-    )
+    contents = {**files, MANIFEST_FILE: raw_manifest, GITATTRIBUTES: b"* -text\n"}
+    index = canonical_json([item.model_dump(mode="json") for item in updated])
+    _write_package(registry_dir, package_dir, contents, index)
+    commands = _git_commands(registry_dir, entry)
     return PublishedPackage(entry=entry, package_dir=package_dir, git_commands=commands)
+
+
+def _write_package(
+    registry_dir: Path, package_dir: Path, contents: Mapping[str, bytes], index: bytes
+) -> None:
+    try:
+        write_all(package_dir, dict(contents))
+        write_index_atomic(registry_dir / INDEX_FILE, index)
+    except (OSError, ConfigurationError) as error:
+        # Only this publish created package_dir (the caller checked it was absent); remove it
+        # so a retry is not blocked. The index is replaced atomically, so it never lists it.
+        shutil.rmtree(package_dir, ignore_errors=True)
+        if isinstance(error, ConfigurationError):
+            raise
+        raise RegistryError("Registry could not be updated; nothing was published") from error
+
+
+def _git_commands(registry_dir: Path, entry: RegistryEntry) -> tuple[str, ...]:
+    root = shlex.quote(str(registry_dir))
+    package = shlex.quote(f"{RECIPES_DIR}/{entry.id}/{entry.version}")
+    message = shlex.quote(f"Publish {entry.id} {entry.version}")
+    return (
+        f"git -C {root} add {INDEX_FILE} {package}",
+        f"git -C {root} commit -m {message}",
+        f"git -C {root} push",
+    )
 
 
 def search_registry(registry_dir: Path, query: str) -> tuple[RegistryEntry, ...]:
@@ -117,8 +140,13 @@ def install_from_registry(
     *,
     at: datetime,
     limits: Limits | None = None,
+    engine_version: str | None = None,
 ) -> InstalledPackage:
-    """Resolve ``ID[@VERSION]``, recompute trust, verify and import into ``repository``."""
+    """Resolve ``ID[@VERSION]``, check compatibility, recompute trust, verify and import.
+
+    The package must fit the running engine (``min_rastro``) and its own source patterns;
+    ``engine_version`` overrides the installed version for tests.
+    """
     pkg_id, pinned = parse_package_spec(spec)
     check_registry_root(registry_dir, create=False)
     candidates = [item for item in load_index(registry_dir) if item.id == pkg_id]
@@ -135,6 +163,7 @@ def install_from_registry(
     manifest, files, _, _ = verify_bundle(package_dir, parser_for, limits)
     if manifest.id != selected.id or manifest.version != selected.version:
         raise BundleIntegrityError("Package manifest does not match its registry index entry")
+    check_compatibility(manifest, engine_version=engine_version or running_version())
     recomputed = compute_trust(
         replay_verified=True,
         last_verified=manifest.last_verified,

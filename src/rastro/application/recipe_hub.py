@@ -7,11 +7,9 @@ must reproduce the bundled records offline before it enters the store.
 from __future__ import annotations
 
 import json
-import re
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import date, datetime
-from importlib.metadata import version as pkg_version
 from pathlib import Path
 
 from pydantic import BaseModel, TypeAdapter, ValidationError
@@ -23,6 +21,7 @@ from rastro.application.bundle_files import (
     read_bundle,
     write_all,
 )
+from rastro.application.engine_version import running_version
 from rastro.application.extraction import extract_document, validate_recipe
 from rastro.domain.job_fields import JobField, build_job_schema
 from rastro.domain.lifecycle import RecipeState
@@ -35,7 +34,6 @@ from rastro.domain.recipe_bundle import (
     RECIPE_FILE,
     SAMPLE_FILES,
     SCHEMA_FILE,
-    SEMVER_PATTERN,
     BundleAuthor,
     BundleCompatibility,
     BundleIntegrityError,
@@ -55,11 +53,6 @@ _FIELDS = TypeAdapter(tuple[JobField, ...])
 # (core.autocrlf on Windows) from rewriting line endings after a clone.
 GITATTRIBUTES = ".gitattributes"
 _REUSABLE = frozenset({RecipeState.CANDIDATE, RecipeState.ACTIVE, RecipeState.DEGRADED})
-
-
-def _min_rastro() -> str:
-    match = re.match(r"^\d+\.\d+\.\d+", pkg_version("rastro-engine"))
-    return match.group(0) if match and re.fullmatch(SEMVER_PATTERN, match.group(0)) else "0.7.0"
 
 
 def export_bundle(
@@ -87,7 +80,7 @@ def export_bundle(
     contents = _bundle_contents(recipe, source, fields, sample, parser, limits)
     if compatibility is None and any(v is not None for v in (bundle_id, version, author, license)):
         compatibility = BundleCompatibility(
-            min_rastro=_min_rastro(), source_patterns=(default_source_pattern(source.url),)
+            min_rastro=running_version(), source_patterns=(default_source_pattern(source.url),)
         )
     try:
         manifest = BundleManifest(
