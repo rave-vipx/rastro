@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from rastro.application.job_dataset import dataset_location
+from rastro.application.job_dataset import dataset_location, open_dataset
 from rastro.application.job_loader import load_job
 from rastro.domain.jobs import FileJobSource, Job
 from rastro.domain.models import ConfigurationError, Source
@@ -86,4 +86,10 @@ def forget_job_source(
         },
         limits=job.limits,
     )
+    if job.dataset.backend == "postgres":
+        from rastro.adapters.postgres_dataset import PostgresDatasetStore
+
+        with open_dataset(job, location) as store:
+            assert isinstance(store, PostgresDatasetStore)
+            removed["dataset_sources"] = store.forget_source(job.dataset.name, source_url)
     return {"schema_version": 1, "source_url": source_url, "removed": removed}
