@@ -156,6 +156,7 @@ def drift_status(root: Path, path: str) -> dict[str, Any]:
     job = load_job(job_path)
     if job.dataset is None:
         raise ConfigurationError("drift_status requires a [dataset] block in the job file")
+    job.dataset.require_sqlite_views()
     name = job.dataset.name
     payload: dict[str, Any] = {"schema_version": 1, "dataset": name}
     dataset = _inside(job_path.parent, job.dataset.path)

@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
-from contextlib import AbstractContextManager, nullcontext
+import os
+from collections.abc import Iterable, Iterator
+from contextlib import AbstractContextManager, contextmanager, nullcontext
 from datetime import timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -12,12 +13,15 @@ from rastro.adapters.sqlite_dataset import SQLiteDatasetStore
 from rastro.adapters.sqlite_drift import SQLiteDriftMonitor
 from rastro.application.dataset_load import load_results
 from rastro.application.drift import collect_snapshots
-from rastro.application.egress_trust import check_job_egress
+from rastro.application.egress_trust import allowed_env_names, check_job_egress
 from rastro.application.job_loader import load_job, resolve_job_path
 from rastro.application.jobs import run_job
+from rastro.application.operator_trust import current_trust
 from rastro.application.success_samples import collect_successes
 from rastro.domain.job_load import JobLoadResult
 from rastro.domain.models import ConfigurationError
+from rastro.domain.secret_env import check_secret_env_name
+from rastro.ports.dataset import DatasetStore
 
 if TYPE_CHECKING:
     from rastro.domain.drift import StructuralSnapshot
@@ -70,12 +74,6 @@ def load_job_file(
     if spec is None:
         raise ConfigurationError("job load requires a [dataset] block in the job file")
     raw_path = dataset_location(file, job, allow_absolute_paths=allow_absolute_paths)
-    store = SQLiteDatasetStore(
-        raw_path,
-        limits=job.limits,
-        near_match_fields=spec.match_fields,
-        near_match_tolerance=timedelta(minutes=spec.match_tolerance_minutes or 30),
-    )
     drift_state = SQLiteDriftMonitor(raw_path, limits=job.limits)
     monitor = drift_state if drift else None
     capture: AbstractContextManager[dict[str, StructuralSnapshot]]
@@ -85,25 +83,26 @@ def load_job_file(
         capture = collect_snapshots(ScraplingDriftProbe())
     else:
         capture = nullcontext({})
-    with capture as snapshots, collect_successes() as successes:
-        report = run_job(
-            job,
-            base_dir=file.parent,
-            allow_absolute_paths=allow_absolute_paths,
-            allow_remote=allow_remote,
-            allow_egress=allow_egress,
-            allow_env=allow_env,
+    with open_dataset(job, raw_path, allow_remote=allow_remote, allow_env=allow_env) as store:
+        with capture as snapshots, collect_successes() as successes:
+            report = run_job(
+                job,
+                base_dir=file.parent,
+                allow_absolute_paths=allow_absolute_paths,
+                allow_remote=allow_remote,
+                allow_egress=allow_egress,
+                allow_env=allow_env,
+            )
+        loaded = load_results(
+            spec,
+            [f.name for f in job.fields],
+            report,
+            store,
+            rules=job.consistency,
+            monitor=monitor,
+            snapshots=snapshots,
+            drift_state=drift_state,
         )
-    loaded = load_results(
-        spec,
-        [f.name for f in job.fields],
-        report,
-        store,
-        rules=job.consistency,
-        monitor=monitor,
-        snapshots=snapshots,
-        drift_state=drift_state,
-    )
     from rastro.application.repair_storage import retain_successes
 
     held_urls = {
@@ -130,3 +129,41 @@ def load_job_file(
             )
         }
     )
+
+
+@contextmanager
+def open_dataset(
+    job: Job, local_path: Path, *, allow_remote: bool = False, allow_env: Iterable[str] = ()
+) -> Iterator[DatasetStore]:
+    """Open the configured dataset; operational state always uses local_path."""
+    spec = job.dataset
+    if spec is None:
+        raise ConfigurationError("This command requires a [dataset] block")
+    tolerance = timedelta(minutes=spec.match_tolerance_minutes or 30)
+    if spec.backend == "sqlite":
+        yield SQLiteDatasetStore(
+            local_path,
+            limits=job.limits,
+            near_match_fields=spec.match_fields,
+            near_match_tolerance=tolerance,
+        )
+        return
+    from rastro.adapters.postgres_dataset import PostgresDatasetStore
+
+    assert spec.dsn_env is not None
+    name = check_secret_env_name(spec.dsn_env, allowed_env_names(allow_env))
+    dsn = os.environ.get(name)
+    if not dsn:
+        raise ConfigurationError("PostgreSQL connection environment variable is missing or empty")
+    store = PostgresDatasetStore(
+        dsn,
+        schema=spec.db_schema,
+        allow_remote=allow_remote or current_trust().allow_remote,
+        limits=job.limits,
+        near_match_fields=spec.match_fields,
+        near_match_tolerance=tolerance,
+    )
+    try:
+        yield store
+    finally:
+        store.close()
