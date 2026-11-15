@@ -1,4 +1,4 @@
-"""Dataset schema 1, deliberately separate from recipe memory (ADR 0017)."""
+"""Dataset schema 2, deliberately separate from recipe memory (ADR 0017)."""
 
 import os
 import sqlite3
@@ -39,7 +39,7 @@ def safe[**P, T](operation: Callable[P, T]) -> Callable[P, T]:
 
 
 APPLICATION_ID = 0x52534453  # RSDS
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 class ConcurrentDatasetCreation(Exception):
@@ -63,14 +63,20 @@ def migrate(db: sqlite3.Connection) -> None:
     version, app = _markers(db)
     if (version, app) == (SCHEMA_VERSION, APPLICATION_ID):
         return
-    if version or app or db.execute("SELECT 1 FROM sqlite_master LIMIT 1").fetchone():
-        raise DatasetStorageError("Foreign or newer database; dataset migration refused")
+    if (version, app) != (1, APPLICATION_ID):
+        if version or app or db.execute("SELECT 1 FROM sqlite_master LIMIT 1").fetchone():
+            raise DatasetStorageError("Foreign or newer database; dataset migration refused")
+        db.execute(
+            "CREATE TABLE dataset_records (dataset TEXT, key TEXT, payload TEXT NOT NULL, "
+            "PRIMARY KEY(dataset, key)) WITHOUT ROWID"
+        )
+        db.execute(
+            "CREATE TABLE dataset_sources (dataset TEXT, source TEXT, payload TEXT NOT NULL, "
+            "PRIMARY KEY(dataset, source)) WITHOUT ROWID"
+        )
     db.execute(
-        "CREATE TABLE dataset_records (dataset TEXT, key TEXT, payload TEXT NOT NULL, "
-        "PRIMARY KEY(dataset, key)) WITHOUT ROWID"
-    )
-    db.execute(
-        "CREATE TABLE dataset_sources (dataset TEXT, source TEXT, payload TEXT NOT NULL, "
+        "CREATE TABLE dataset_validators (dataset TEXT, source TEXT, origin TEXT NOT NULL, "
+        "observed_at TEXT NOT NULL, payload TEXT NOT NULL, "
         "PRIMARY KEY(dataset, source)) WITHOUT ROWID"
     )
     db.execute(f"PRAGMA application_id = {APPLICATION_ID}")
@@ -79,15 +85,16 @@ def migrate(db: sqlite3.Connection) -> None:
 
 @contextmanager
 def _transaction(path: Path, limits: Limits, *, write: bool) -> Iterator[sqlite3.Connection]:
-    mode = "rwc" if write else "ro"
+    mode = "rwc" if write else "rw"
     with closing(
         sqlite3.connect(f"{path.as_uri()}?mode={mode}", uri=True, timeout=5, isolation_level=None)
     ) as db:
         db.setlimit(sqlite3.SQLITE_LIMIT_LENGTH, limits.max_json_bytes)
         db.execute("PRAGMA trusted_schema = OFF")
-        db.execute("BEGIN IMMEDIATE" if write else "BEGIN")
+        upgrade = _markers(db) == (1, APPLICATION_ID)
+        db.execute("BEGIN IMMEDIATE" if write or upgrade else "BEGIN")
         try:
-            if write:
+            if write or upgrade:
                 db.execute("PRAGMA secure_delete = ON")
                 migrate(db)
             else:

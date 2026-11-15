@@ -243,8 +243,8 @@ Every hop is allowlisted and re-resolved. Mixed public/private DNS answers are
 rejected; the connection is pinned to one validated IP while preserving the
 hostname for TLS verification. IPv4/IPv6 private, loopback, metadata, reserved,
 multicast, mapped, and known transition addresses are rejected. Standard ports
-only. Ambient (environment) proxies, cookies, netrc, impersonation, and automatic
-redirects or transport retries are disabled; only an explicitly selected egress
+only. Ambient (environment) proxies, ambient cookies, netrc, impersonation, and
+automatic redirects or transport retries are disabled; only an explicitly selected egress
 profile uses a proxy. There is no identity rotation or restriction bypass.
 
 For direct egress, connection failures can fall back sequentially to up to three
@@ -280,3 +280,43 @@ proxies and discovered-link crawling are not implemented. Optional [recipe memor
 [recipe learning](intelligence.md) integrate with the async SDK. See the
 [transport ADR](decisions/0002-policy-aware-acquisition.md) for the documented use of
 curl_cffi, Scrapling's HTTP engine, to expose public DNS-pinning controls.
+
+## Sessions
+
+`[acquisition] session = true` enables a bounded, in-memory cookie jar for one job
+run (SCHED-005, SEC-005). The default is `false`. In the SDK, the jar belongs to
+the `WebAcquirer` client: create a fresh client for each run. Cookies never enter
+jobs, recipes, datasets, results, logs or object representations; they are discarded
+with the client. There are no login flows or cookie credential fields.
+
+Only the exact host that set a cookie receives it; `Domain` cannot widen its scope.
+Path and expiry rules apply, and `Secure` cookies travel only over HTTPS. Cookies
+are withheld after a cross-host document redirect and from another host's robots
+lookup. Each host holds at most 50 cookies, each bounded to 4,096 UTF-8 bytes
+including attributes. Oversized, malformed and excess cookies are dropped; the jar
+counts drops without echoing their contents. curl's own cookie handling remains
+disabled, and separate `Set-Cookie` response headers are preserved.
+
+## Conditional requests
+
+`rastro job load` automatically revalidates HTTP sources when the job declares a
+`[dataset]` (SYNC-004, ALERT-006). After a successful HTTP 200 extraction and approved
+load, it stores `ETag` and `Last-Modified` in the dataset database. The next load
+sends `If-None-Match` and `If-Modified-Since` when available. Robots lookups are
+unconditional. Validators follow only their exact document URL, including across
+redirects; URL queries are hashed in validator keys and are never persisted there.
+
+A solicited HTTP 304 produces `unchanged`, counts as a successful source and skips
+extraction. Existing records and their field provenance stay intact, while
+`last_success` and `last_attempt` advance. No missing records, failure alert or new
+drift assessment is produced; existing open drift remains open. An unsolicited 304
+is rejected. A subsequent successful 200 replaces both validators, including
+removing validators the server no longer supplies. Failed, partial or inconsistent
+loads do not replace validators. Supplied HTML and jobs without a dataset do not
+use conditional requests.
+
+Dataset schema 1 upgrades transactionally and idempotently to schema 2 on first
+access, adding only `dataset_validators`; records and source status survive.
+Owner-only permissions are retained. Unknown newer or foreign schemas are refused
+without resetting the database. This is a forward-only migration: use the updated
+Rastro version to open upgraded files.

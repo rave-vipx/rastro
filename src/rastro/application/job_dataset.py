@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 from rastro.adapters.sqlite_dataset import SQLiteDatasetStore
 from rastro.adapters.sqlite_drift import SQLiteDriftMonitor
+from rastro.application.conditional import ConditionalRequests
 from rastro.application.dataset_load import load_results
 from rastro.application.drift import collect_snapshots
 from rastro.application.egress_trust import check_job_egress
@@ -17,7 +18,8 @@ from rastro.application.job_loader import load_job, resolve_job_path
 from rastro.application.jobs import run_job
 from rastro.application.success_samples import collect_successes
 from rastro.domain.job_load import JobLoadResult
-from rastro.domain.models import ConfigurationError
+from rastro.domain.jobs import UrlJobSource
+from rastro.domain.models import ConfigurationError, Outcome
 
 if TYPE_CHECKING:
     from rastro.domain.drift import StructuralSnapshot
@@ -85,6 +87,19 @@ def load_job_file(
         capture = collect_snapshots(ScraplingDriftProbe())
     else:
         capture = nullcontext({})
+    conditional = ConditionalRequests(store, spec.name)
+    acquisition = None
+    if job.acquisition is not None:
+        from rastro.adapters.dns import SystemResolver
+        from rastro.adapters.http import CurlTransport
+        from rastro.application.acquisition import WebAcquirer
+
+        acquisition = WebAcquirer(
+            job.acquisition,
+            transport=CurlTransport(),
+            resolver=SystemResolver(),
+            conditional=conditional,
+        )
     with capture as snapshots, collect_successes() as successes:
         report = run_job(
             job,
@@ -93,6 +108,7 @@ def load_job_file(
             allow_remote=allow_remote,
             allow_egress=allow_egress,
             allow_env=allow_env,
+            acquisition=acquisition,
         )
     loaded = load_results(
         spec,
@@ -104,6 +120,21 @@ def load_job_file(
         snapshots=snapshots,
         drift_state=drift_state,
     )
+    from rastro.domain.dataset import DatasetStorageError
+
+    try:
+        for item, result, source in zip(job.sources, report.results, loaded.sources, strict=True):
+            if (
+                isinstance(item, UrlJobSource)
+                and source.status == Outcome.SUCCESS
+                and not source.inconsistent
+                and not source.issues
+            ):
+                conditional.save(item.url, result.completed_at)
+    except DatasetStorageError:
+        conditional.failed = True
+    if conditional.failed:
+        loaded = loaded.model_copy(update={"status": "storage_error"})
     from rastro.application.repair_storage import retain_successes
 
     held_urls = {

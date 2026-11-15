@@ -24,6 +24,7 @@ class _Host:
 @dataclass
 class _Operation:
     url: str
+    cookie_host: str | None = None
     headers: dict[str, str] = field(default_factory=dict)
     requests: int = 0
     retries: int = 0
