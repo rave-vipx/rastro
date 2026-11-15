@@ -6,6 +6,7 @@ from typing import Any, Literal
 
 from rastro.application.consistency import History, evaluate_consistency, history_from_store
 from rastro.application.drift import snapshot_result
+from rastro.application.pagination_records import is_complete_snapshot
 from rastro.domain.consistency import ConsistencyRule
 from rastro.domain.dataset import ChangeKind, DatasetRecordKey, DatasetStorageError, ObservedRecord
 from rastro.domain.drift import StructuralSnapshot
@@ -143,7 +144,7 @@ def _load_source(
                     spec.name,
                     result.source_url,
                     observations,
-                    complete=result.status == Outcome.SUCCESS,
+                    complete=is_complete_snapshot(result),
                     observed_at=result.completed_at,
                 ).counts
     else:

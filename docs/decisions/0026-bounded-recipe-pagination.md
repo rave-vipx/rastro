@@ -19,8 +19,10 @@ The scope is reset on completion, failure or cancellation.
 ## Consequences
 
 A normal end of the list is a complete snapshot: no next link (`no_next`), a next
-link to an already read page (`repeat`) and an HTTP 200 page after the first with no
-records (`empty_page`). Policy stops (`max_pages`, `budget`, `off_host`,
+link to an already read page (`repeat`). An HTTP 200 page after the first with no
+records (`empty_page`) is `success` with exit 0 but loads with `complete=False`,
+because drift is checked on page one only and a drifted page two must not mark its
+records missing. Policy stops (`max_pages`, `budget`, `off_host`,
 `https_downgrade`, `invalid_next`), limits and any page failure keep earlier records
 as partial, preventing dataset deletions. A cursor loop is how some sites mark the
 last page, so treating `repeat` as partial would make such sources never complete.
