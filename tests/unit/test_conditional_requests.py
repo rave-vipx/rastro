@@ -1,6 +1,7 @@
 """SYNC-004, ALERT-006: successful loads retain records on a conditional 304."""
 
 import sqlite3
+from contextlib import closing
 
 import pytest
 
@@ -86,7 +87,7 @@ def test_200_then_304_keeps_records_and_updates_status(
     assert load_job_file(path).exit_code == 0
     assert store.get_validators("d", "https://a.example/list?private=query") == {"etag": '"third"'}
     assert store.get_validators("d", "https://a.example/list?private=other") == {}
-    with sqlite3.connect(tmp_path / "d.sqlite") as db:
+    with closing(sqlite3.connect(tmp_path / "d.sqlite")) as db:
         assert "private=query" not in str(db.execute("SELECT * FROM dataset_validators").fetchall())
 
 

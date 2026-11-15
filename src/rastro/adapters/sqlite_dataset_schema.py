@@ -54,8 +54,17 @@ def _markers(db: sqlite3.Connection) -> tuple[int, int]:
 
 
 def check_schema(db: sqlite3.Connection) -> None:
-    if _markers(db) != (SCHEMA_VERSION, APPLICATION_ID):
+    """Reads accept schema 1 or 2 as they are; only the write path migrates 1 to 2."""
+    if _markers(db) not in {(1, APPLICATION_ID), (SCHEMA_VERSION, APPLICATION_ID)}:
         raise DatasetStorageError("Foreign or newer database; dataset read refused")
+
+
+def has_validators(db: sqlite3.Connection) -> bool:
+    """Whether the validators table exists (schema 1 files have none until written)."""
+    return (
+        db.execute("SELECT 1 FROM sqlite_master WHERE name = 'dataset_validators'").fetchone()
+        is not None
+    )
 
 
 def migrate(db: sqlite3.Connection) -> None:
@@ -85,16 +94,16 @@ def migrate(db: sqlite3.Connection) -> None:
 
 @contextmanager
 def _transaction(path: Path, limits: Limits, *, write: bool) -> Iterator[sqlite3.Connection]:
-    mode = "rwc" if write else "rw"
+    """Reads open read-only and never migrate; writes create and migrate v1 -> v2."""
+    mode = "rwc" if write else "ro"
     with closing(
         sqlite3.connect(f"{path.as_uri()}?mode={mode}", uri=True, timeout=5, isolation_level=None)
     ) as db:
         db.setlimit(sqlite3.SQLITE_LIMIT_LENGTH, limits.max_json_bytes)
         db.execute("PRAGMA trusted_schema = OFF")
-        upgrade = _markers(db) == (1, APPLICATION_ID)
-        db.execute("BEGIN IMMEDIATE" if write or upgrade else "BEGIN")
+        db.execute("BEGIN IMMEDIATE" if write else "BEGIN")
         try:
-            if write or upgrade:
+            if write:
                 db.execute("PRAGMA secure_delete = ON")
                 migrate(db)
             else:

@@ -10,7 +10,13 @@ from pathlib import Path
 from typing import TextIO
 
 from rastro.adapters.dataset_snapshot import DatasetSnapshot
-from rastro.adapters.sqlite_dataset_schema import connection, last_attempt, safe, update_status
+from rastro.adapters.sqlite_dataset_schema import (
+    connection,
+    has_validators,
+    last_attempt,
+    safe,
+    update_status,
+)
 from rastro.adapters.structured import load_json
 from rastro.domain.dataset import (
     DatasetNotFoundError,
@@ -169,6 +175,8 @@ class SQLiteDatasetStore(DatasetSnapshot):
         ):
             return {}
         with connection(self._path, self._limits) as db:
+            if not has_validators(db):
+                return {}
             row = db.execute(
                 "SELECT payload, origin, observed_at FROM dataset_validators "
                 "WHERE dataset = ? AND source = ?",
