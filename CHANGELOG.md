@@ -53,6 +53,7 @@ Bring your own AI: any model or agent proposes recipes and repairs while Rastro 
 - MCP `recipe_promote(override_gates=true)` is refused unless the operator starts the server with `rastro mcp --allow-override-gates` (`build_server`/`serve(..., allow_override_gates=True)`): page content can prompt-inject the client agent, which could otherwise activate a quarantined candidate, including one the semantic judge vetoed. The error tells the user to run `rastro recipe promote --override-gates` themselves; the CLI is unchanged. `docs/mcp.md` documents what `recipe_apply` writes (REPAIR-005, AGENT-003, SEC-011).
 - Studio Ask AI reports the model's real remoteness: with `RASTRO_MODEL` naming a hosted endpoint and `RASTRO_ALLOW_REMOTE=1` but no `--allow-remote`, `/api/ai` said `remote: false` and the terminal said page content "stays on loopback models". The built-in transports now expose `remote` (`rastro.model_factory.is_remote`), and Studio uses it; the flag only speaks for a custom `ModelPort` (P-001, P-008).
 - Dataset and recipe-memory files and their SQLite sidecars are created 0600 on POSIX, and existing files the user owns are tightened when opened; datasets hold sanitized page samples (SEC-009, SEC-004).
+- `.gitignore` keeps local agent, editor and tool state (`.claude/`, `.codex/`, `.opencode/`, `opencode.json`, `.orca/`, `.cursor/`, `.mcp.json`, `*.local.json`, IDE folders) and credential files (`.envrc`, `.netrc`, `.pypirc`, private keys) out of the repository and the sdist; none were ever committed (SEC-004).
 
 ### Fixed
 
