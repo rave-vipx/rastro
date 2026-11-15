@@ -9,7 +9,7 @@ from time import perf_counter
 from urllib.parse import urlsplit
 
 from rastro.application.acquisition import WebAcquirer
-from rastro.application.acquisition_state import _Host, _Operation
+from rastro.application.acquisition_state import _Host, _Operation, check_page_request
 from rastro.application.destinations import permitted_url, pin_destination
 from rastro.application.operator_trust import current_trust
 from rastro.domain.acquisition import (
@@ -71,6 +71,7 @@ class BrowserAcquirer(WebAcquirer):
         self, url: str, host: _Host, operation: _Operation, *, max_bytes: int
     ) -> HttpResponse:
         async with self._slots:
+            check_page_request(url)
             operation.requests += 1
             try:
                 async with asyncio.timeout(self.policy.request_timeout_seconds):
