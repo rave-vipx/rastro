@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import asyncio
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
+from urllib.parse import urlsplit
 
-from rastro.domain.acquisition import ProxyRoute
+from rastro.domain.acquisition import AcquisitionError, ProxyRoute
+from rastro.domain.models import Outcome
 
 if TYPE_CHECKING:
     from protego import Protego
@@ -34,3 +37,41 @@ class _Operation:
     retry_after_seconds: float | None = None
     robots: dict[str, Protego | None] = field(default_factory=dict)
     proxy: ProxyRoute | None = None
+
+
+@dataclass
+class PaginationScope:
+    host: str | None
+    secure: bool
+    remaining: int
+
+
+PAGINATION_SCOPE: ContextVar[PaginationScope | None] = ContextVar("pagination_scope", default=None)
+
+
+def check_page_request(url: str) -> None:
+    """Enforce the traversal's host and transfer budget, including redirects and robots."""
+    scope = PAGINATION_SCOPE.get()
+    if scope is None:
+        return
+    reason = pagination_boundary(url, scope.host, scope.secure)
+    if reason:
+        raise AcquisitionError(reason, Outcome.PERMANENT_FAILURE)
+    if scope.remaining <= 0:
+        raise AcquisitionError("request_limit", Outcome.PERMANENT_FAILURE)
+    scope.remaining -= 1
+    scope.secure |= urlsplit(url).scheme == "https"
+
+
+def pagination_boundary(url: str, host: str | None, secure: bool) -> str | None:
+    try:
+        parts = urlsplit(url)
+        if parts.scheme not in {"http", "https"} or parts.username or parts.password:
+            return "invalid_next"
+        if parts.hostname != host:
+            return "off_host"
+        if secure and parts.scheme == "http":
+            return "https_downgrade"
+    except ValueError:
+        return "invalid_next"
+    return None

@@ -9,6 +9,7 @@ from pydantic import (
     BaseModel,
     Field,
     GetCoreSchemaHandler,
+    StrictInt,
     field_validator,
     model_validator,
 )
@@ -76,6 +77,13 @@ def seal_union(base: type[StrategyUnion], *variants: type[StrategyUnion]) -> Non
     base.model_rebuild(force=True)
 
 
+class Pagination(Contract):
+    """A bounded next-page expression, interpreted by the recipe strategy."""
+
+    next: str = Field(min_length=1, max_length=1024)
+    max_pages: StrictInt = Field(default=5, ge=1, le=50)
+
+
 class Recipe(StrategyUnion):
     """A declarative definition of scalar field mappings: what to extract, never history.
 
@@ -88,6 +96,7 @@ class Recipe(StrategyUnion):
     version: int = Field(default=1, ge=1, le=2_147_483_647)
     require_evidence: bool = False
     fallbacks: tuple[Recipe, ...] = Field(default=(), max_length=3)
+    pagination: Pagination | None = Field(default=None, exclude_if=lambda value: value is None)
     # The document kind this recipe reads: JSON responses or HTML pages.
     representation: ClassVar[Representation]
 
@@ -96,6 +105,11 @@ class Recipe(StrategyUnion):
         # Fallback variants are typed per representation; only flatness needs checking.
         if any(item.fallbacks or item.version != self.version for item in self.fallbacks):
             raise ValueError("Fallbacks must be flat and share the recipe version")
+        if self.pagination is not None:
+            expression = self.pagination.next
+            if expression.startswith((DOCUMENT_PREFIX, EXPAND_PREFIX)):
+                raise ValueError("Pagination requires a scalar page expression")
+            self.check_expression(expression)
         for name, mapping in self.fields.items():
             expressions = (mapping,) if isinstance(mapping, str) else mapping
             if not name or len(name) > 256 or not 1 <= len(expressions) <= MAX_POINTERS:

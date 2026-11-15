@@ -46,7 +46,7 @@ class RecipeProposal(StrategyUnion):
         return Recipe.model_validate(self.model_dump())
 
 
-_DEFINITION_ONLY = frozenset({"version", "require_evidence", "fallbacks"})
+_DEFINITION_ONLY = frozenset({"version", "require_evidence", "fallbacks", "pagination"})
 
 
 def _proposal(variant: type[Recipe]) -> type[RecipeProposal]:

@@ -452,3 +452,47 @@ for uncertain cross-source comparisons. Without it, records are matched on `iden
 only and no uncertain match is flagged. A misspelled name is reported with
 `"location": "dataset.match_fields"`.
 See [dataset usage and the executed offline sequence](dataset.md#load-inspect-and-export-a-job).
+
+## Pagination
+
+For URL sources, a recipe can declare a next-page link (SYNC-002, SEC-008;
+[ADR 0024](decisions/0024-bounded-recipe-pagination.md)):
+
+```toml
+[recipe.pagination]
+next = "a[rel=next]::attr(href)"
+max_pages = 5
+```
+
+The block belongs to the effective recipe, including `[sources.recipe.pagination]`
+when a source has its own recipe. `max_pages` includes the first page, defaults to
+5 and accepts integers from 1 through 50. CSS next expressions follow the selector
+cost policy. With `json` or `jsonld`, `next` is an absolute JSON pointer, for example
+`"/links/next"`; JSON-LD pointers are evaluated on the document's JSON-LD objects.
+The TOML writer preserves this block when replacing a recipe.
+
+Rastro resolves relative links against the acquired page URL. Every page uses the
+same acquisition port, permission allowlist, robots rules, pacing, DNS checks and
+egress policy. One `max_requests` budget covers the whole source, including robots,
+redirects, retries and address fallbacks when using `WebAcquirer`. Redirects cannot
+escape the exact source hostname or downgrade HTTPS. There are no JavaScript clicks,
+infinite scroll, URL templates, guessed page numbers or cross-host traversal.
+
+The source result combines records in page order and reports `pagination_stop`:
+`no_next`, `repeat`, `max_pages`, `off_host`, `https_downgrade`, `budget`,
+`page_failure`, `invalid_next`, or `record_limit`. Only `no_next` with successful
+extraction is complete. Other stops preserve earlier records as `partial_success`,
+so dataset loading uses `complete=False` and cannot mark unseen records missing.
+A failed first page retains its original failure outcome. `limits.max_records`
+also bounds the combined result.
+
+With a job dataset, repeated identities across pages keep the first occurrence.
+`pagination_duplicates_conflicting` counts later occurrences whose field values
+differ; zero is omitted from the source result. Duplicate identities within one
+page still fail dataset storage, just as without pagination. Without a dataset,
+the extraction result retains every record because no record identity is declared.
+Each paginated record has a 1-based `page_index`. Field provenance keeps the logical
+source in `source_url`; `page_url` records a different contributing page, with queries
+and fragments removed. Drift measurement and repair evidence remain focused on
+page 1. Repair candidates keep the declared pagination block and strategy.
+Supplied-file extraction does not follow links.

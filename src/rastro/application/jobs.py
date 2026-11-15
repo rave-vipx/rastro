@@ -17,6 +17,7 @@ from rastro.application.job_loader import (
     validate_job_paths,
 )
 from rastro.application.operator_trust import operator_trust
+from rastro.application.pagination_records import deduplicate_pages
 from rastro.application.run_log import log_failures
 from rastro.domain.job_results import JobRunResult
 from rastro.domain.jobs import FileJobSource, Job, UrlJobSource
@@ -124,11 +125,17 @@ async def _run_active_async(
             recipe_version=job.recipe_version,
             representation=job.sources[0].representation,
         )
-        return JobRunResult.from_results(schema_fingerprint=prepared.fingerprint, results=results)
+        return JobRunResult.from_results(
+            schema_fingerprint=prepared.fingerprint,
+            results=[deduplicate_pages(result, job.dataset) for result in results],
+        )
     collected = [
         await _extract_one_async(job, prepared, idx, item) for idx, item in enumerate(job.sources)
     ]
-    return JobRunResult.from_results(schema_fingerprint=prepared.fingerprint, results=collected)
+    return JobRunResult.from_results(
+        schema_fingerprint=prepared.fingerprint,
+        results=[deduplicate_pages(result, job.dataset) for result in collected],
+    )
 
 
 def run_job(
@@ -216,7 +223,10 @@ def _run_active(
                 recipe_version=job.recipe_version,
             )
         )
-    return JobRunResult.from_results(schema_fingerprint=prepared.fingerprint, results=collected)
+    return JobRunResult.from_results(
+        schema_fingerprint=prepared.fingerprint,
+        results=[deduplicate_pages(result, job.dataset) for result in collected],
+    )
 
 
 def run_job_file(

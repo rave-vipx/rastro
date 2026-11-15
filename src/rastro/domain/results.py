@@ -43,6 +43,7 @@ class Issue(Contract):
 
 
 class Evidence(Contract):
+    page_url: str | None = Field(default=None, exclude_if=_absent)
     source_url: str
     observed_at: datetime
     method: Literal["jsonld", "css", "json"]
@@ -51,6 +52,7 @@ class Evidence(Contract):
 
 
 class ExtractionRecord[T: BaseModel](Contract):
+    page_index: int | None = Field(default=None, ge=1, le=50, exclude_if=_absent)
     data: T
     evidence: dict[str, Evidence]
 
@@ -112,6 +114,21 @@ class SelfRepair(Contract):
 
 
 class ExtractionResult[T: BaseModel](Contract):
+    pagination_duplicates_conflicting: int = Field(default=0, ge=0, exclude_if=lambda v: not v)
+    pagination_stop: (
+        Literal[
+            "no_next",
+            "repeat",
+            "max_pages",
+            "off_host",
+            "https_downgrade",
+            "budget",
+            "page_failure",
+            "invalid_next",
+            "record_limit",
+        ]
+        | None
+    ) = Field(default=None, exclude_if=_absent)
     learned_recipe: Recipe | None = None
     recipe_version: int | None = None
     recipe_reused: bool = False
