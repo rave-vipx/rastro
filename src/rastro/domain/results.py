@@ -119,6 +119,7 @@ class ExtractionResult[T: BaseModel](Contract):
         Literal[
             "no_next",
             "repeat",
+            "empty_page",
             "max_pages",
             "off_host",
             "https_downgrade",

@@ -127,12 +127,15 @@ async def _traverse[T: BaseModel](
                 schema=schema,
                 started_at=started_at,
             )
+        ended = bool(pages) and _is_empty_end(fetched, result)
+        if ended:  # An empty 200 page after real pages is the end of the list, not a failure.
+            result = result.model_copy(update={"status": Outcome.SUCCESS})
         pages.append(
             stamp_acquired(
                 result, source=current, fetched=fetched, started=started, started_at=started_at
             )
         )
-        stop = _page_stop(fetched, result)
+        stop = "empty_page" if ended else _page_stop(fetched, result)
         if sum(len(page.records) for page in pages) > limits.max_records:
             stop = "record_limit"
         if stop:
@@ -160,6 +163,15 @@ async def _traverse[T: BaseModel](
             stop = "invalid_next"
             break
     return combine_pages(pages, stop or "max_pages", limits)
+
+
+def _is_empty_end[T: BaseModel](fetched: AcquisitionResult, result: ExtractionResult[T]) -> bool:
+    return (
+        fetched.http_status == 200
+        and result.status == Outcome.MISSING_DATA
+        and not result.records
+        and not result.issues
+    )
 
 
 def _page_stop[T: BaseModel](fetched: AcquisitionResult, result: ExtractionResult[T]) -> str | None:

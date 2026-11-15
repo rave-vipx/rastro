@@ -63,12 +63,17 @@ def check_page_request(url: str) -> None:
     scope.secure |= urlsplit(url).scheme == "https"
 
 
+def _host(name: str | None) -> str | None:
+    """Compare hosts case-insensitively, treating one trailing root dot as the same name."""
+    return name.lower().removesuffix(".") if name else name
+
+
 def pagination_boundary(url: str, host: str | None, secure: bool) -> str | None:
     try:
         parts = urlsplit(url)
         if parts.scheme not in {"http", "https"} or parts.username or parts.password:
             return "invalid_next"
-        if parts.hostname != host:
+        if _host(parts.hostname) != _host(host):
             return "off_host"
         if secure and parts.scheme == "http":
             return "https_downgrade"

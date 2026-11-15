@@ -6,6 +6,9 @@ from rastro.domain.dataset import DatasetRecordKey, DatasetStorageError
 from rastro.domain.job_dataset import DatasetSpec
 from rastro.domain.models import ExtractionRecord, ExtractionResult, Issue, Limits, Metrics, Outcome
 
+# A normal end of the list is a complete snapshot; every other stop is partial.
+COMPLETE_STOPS = frozenset({"no_next", "repeat", "empty_page"})
+
 
 def deduplicate_pages[T: BaseModel](
     result: ExtractionResult[T],
@@ -82,13 +85,10 @@ def combine_pages[T: BaseModel](
             for issue in page.issues
         )
         offset += len(page.records) + page.metrics.rejected
-    if stop != "no_next":
+    complete = stop in COMPLETE_STOPS
+    if not complete:
         issues.append(Issue(code=f"pagination_{stop}"))
-    status = (
-        Outcome.SUCCESS
-        if stop == "no_next"
-        else (Outcome.PARTIAL_SUCCESS if records else first.status)
-    )
+    status = Outcome.SUCCESS if complete else (Outcome.PARTIAL_SUCCESS if records else first.status)
     # Keep page one's identity: drift/repair snapshots belong to that document only.
     totals = {
         name: sum(getattr(page.metrics, name) for page in pages)

@@ -479,12 +479,20 @@ escape the exact source hostname or downgrade HTTPS. There are no JavaScript cli
 infinite scroll, URL templates, guessed page numbers or cross-host traversal.
 
 The source result combines records in page order and reports `pagination_stop`:
-`no_next`, `repeat`, `max_pages`, `off_host`, `https_downgrade`, `budget`,
-`page_failure`, `invalid_next`, or `record_limit`. Only `no_next` with successful
-extraction is complete. Other stops preserve earlier records as `partial_success`,
-so dataset loading uses `complete=False` and cannot mark unseen records missing.
-A failed first page retains its original failure outcome. `limits.max_records`
-also bounds the combined result.
+`no_next`, `repeat`, `empty_page`, `max_pages`, `off_host`, `https_downgrade`,
+`budget`, `page_failure`, `invalid_next`, or `record_limit`. A normal end of the list
+is a complete snapshot (`complete=True`, exit 0): `no_next` (no next link), `repeat`
+(the next link points at a page already read) and `empty_page` (an HTTP 200 page
+after the first yielding no records). Every other stop preserves earlier records as
+`partial_success`, so dataset loading uses `complete=False` (exit 3) and cannot mark
+unseen records missing. A failed first page retains its original failure outcome.
+`limits.max_records` also bounds the combined result.
+
+The next link's host is compared with the source host case-insensitively and
+ignoring one trailing dot, so `https://AGENDA.test./two` is the same host as
+`agenda.test`; any other host is refused as `off_host`. A fallback recipe cannot
+declare `pagination`: only the primary recipe does, and a fallback with the block
+is rejected as a configuration error.
 
 With a job dataset, repeated identities across pages keep the first occurrence.
 `pagination_duplicates_conflicting` counts later occurrences whose field values

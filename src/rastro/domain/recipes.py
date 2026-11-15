@@ -16,7 +16,7 @@ from pydantic import (
 from pydantic_core import CoreSchema, core_schema
 
 from rastro.domain.json import POINTER
-from rastro.domain.sources import Contract, Representation
+from rastro.domain.sources import ConfigurationError, Contract, Representation
 
 DOCUMENT_PREFIX = "document:"  # CSS field evaluated against the page root, not the record
 EXPAND_PREFIX = "expand:"  # CSS field whose every match becomes its own record
@@ -105,6 +105,8 @@ class Recipe(StrategyUnion):
         # Fallback variants are typed per representation; only flatness needs checking.
         if any(item.fallbacks or item.version != self.version for item in self.fallbacks):
             raise ValueError("Fallbacks must be flat and share the recipe version")
+        if any(item.pagination is not None for item in self.fallbacks):
+            raise ConfigurationError("Fallback recipes cannot declare pagination")
         if self.pagination is not None:
             expression = self.pagination.next
             if expression.startswith((DOCUMENT_PREFIX, EXPAND_PREFIX)):

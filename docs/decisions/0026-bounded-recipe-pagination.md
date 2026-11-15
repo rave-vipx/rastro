@@ -18,8 +18,15 @@ The scope is reset on completion, failure or cancellation.
 
 ## Consequences
 
-Only natural exhaustion is a complete snapshot. Repeats, policy stops, limits and
-later-page failures keep earlier records as partial, preventing dataset deletions.
+A normal end of the list is a complete snapshot: no next link (`no_next`), a next
+link to an already read page (`repeat`) and an HTTP 200 page after the first with no
+records (`empty_page`). Policy stops (`max_pages`, `budget`, `off_host`,
+`https_downgrade`, `invalid_next`), limits and any page failure keep earlier records
+as partial, preventing dataset deletions. A cursor loop is how some sites mark the
+last page, so treating `repeat` as partial would make such sources never complete.
+Host comparison lowercases and strips one trailing dot, since both spell the same
+host. Fallback recipes cannot declare pagination; the validator rejects it instead
+of silently ignoring it.
 The result keeps page one's identity so its existing drift and repair captures
 remain usable. Additional pages retain an ordinal and redacted page provenance.
 

@@ -89,7 +89,6 @@ def test_two_pages_deduplicate_and_update_table(tmp_path):
 @pytest.mark.parametrize(
     ("next", "max_pages", "stop", "count"),
     [
-        ("/one#again", 5, "repeat", 1),
         ("/two", 1, "max_pages", 1),
         ("https://other.test/two", 5, "off_host", 1),
         ("http://agenda.test/two", 5, "https_downgrade", 1),
@@ -102,6 +101,7 @@ def test_stops_without_acquiring_next(next, max_pages, stop, count):
     assert result.pagination_stop == stop
     assert result.status == Outcome.PARTIAL_SUCCESS
     assert len(result.records) == count
+    assert int(report.exit_code) == 3
     assert len(transport.urls) == 2  # robots + page one
 
 
@@ -110,6 +110,7 @@ def test_repeat_after_second_page():
         job(), {"/one": (200, page("A", next="/two")), "/two": (200, page("B", next="/one"))}
     )
     assert report.results[0].pagination_stop == "repeat"
+    assert report.results[0].status == Outcome.SUCCESS
     assert len(report.results[0].records) == 2
 
 
@@ -271,3 +272,55 @@ def test_next_cursor_is_normalized_before_repeat_check():
     report, transport = run(job(), {"/one": (200, page("A", next="https://AGENDA.TEST:443/one"))})
     assert report.results[0].pagination_stop == "repeat"
     assert len(transport.urls) == 2
+
+
+@pytest.mark.parametrize(
+    ("pages", "stop"),
+    [
+        ({"/one": (200, page("A", next="/two")), "/two": (200, page("B"))}, "no_next"),
+        ({"/one": (200, page("A", next="/one#again"))}, "repeat"),
+        ({"/one": (200, page("A", next="/two")), "/two": (200, page())}, "empty_page"),
+    ],
+)
+def test_normal_end_of_list_is_complete_snapshot(pages, stop):
+    report, _ = run(job(), pages)
+    result = report.results[0]
+    assert result.pagination_stop == stop
+    assert result.status == Outcome.SUCCESS
+    assert [r.name for r in result.items][:1] == ["A"]
+    assert int(report.exit_code) == 0
+    assert not any(issue.code.startswith("pagination_") for issue in result.issues)
+    assert all(issue.code != "no_records" for issue in result.issues)
+
+
+def test_end_of_list_loads_as_complete_and_marks_missing(tmp_path):
+    spec = job()
+    store = SQLiteDatasetStore(tmp_path / "agenda.sqlite")
+    pages = {"/one": (200, page("A", next="/two")), "/two": (200, page("B"))}
+    load_results(spec.dataset, ["name"], run(spec, pages)[0], store)
+    pages["/two"] = (200, page())  # B vanished from the list: an honest complete snapshot
+    loaded = load_results(spec.dataset, ["name"], run(spec, pages)[0], store)
+    assert loaded.sources[0].counts["missing"] == 1
+
+
+def test_empty_first_page_is_not_end_of_list():
+    report, _ = run(job(), {"/one": (200, page())})
+    assert report.results[0].status != Outcome.SUCCESS
+
+
+def test_failed_page_two_is_not_end_of_list():
+    report, _ = run(job(), {"/one": (200, page("A", next="/two")), "/two": (500, "")})
+    assert report.results[0].status == Outcome.PARTIAL_SUCCESS
+    assert report.results[0].pagination_stop == "page_failure"
+
+
+@pytest.mark.parametrize("next", ["https://AGENDA.test./two", "https://agenda.test./two"])
+def test_trailing_dot_next_host_is_the_same_host(next):
+    report, _ = run(job(), {"/one": (200, page("A", next=next)), "/two": (200, page("B"))})
+    assert report.results[0].pagination_stop == "no_next"
+    assert [r.name for r in report.results[0].items] == ["A", "B"]
+
+
+def test_other_host_with_trailing_dot_is_still_refused():
+    report, _ = run(job(), {"/one": (200, page("A", next="https://other.test./two"))})
+    assert report.results[0].pagination_stop == "off_host"

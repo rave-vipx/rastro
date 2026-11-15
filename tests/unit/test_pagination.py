@@ -137,3 +137,10 @@ def test_model_repair_preserves_pagination_and_strategy(schema, strategy):
         assert candidate.recipe.pagination == original.pagination
     else:
         assert candidate is None
+
+
+def test_fallback_recipe_cannot_declare_pagination():
+    base = {"strategy": "css", "record_selector": "article", "fields": {"name": "h2::text"}}
+    fallback = {**base, "pagination": {"next": "a[rel=next]::attr(href)"}}
+    with pytest.raises(ConfigurationError, match="Fallback recipes cannot declare pagination"):
+        Recipe.model_validate({**base, "fallbacks": [fallback]})
