@@ -12,7 +12,7 @@ from pathlib import Path
 
 from rastro.application.job_loader import recipe_memory_path, validate_job_paths
 from rastro.domain.job_results import RecipeSelection
-from rastro.domain.jobs import FileJobSource, Job, JobSource
+from rastro.domain.jobs import FileJobSource, Job, JobSource, UrlJobSource
 from rastro.domain.memory import RecipeKey, RecipeStorageError
 from rastro.domain.repair import recipe_digest
 from rastro.ports.recipes import RecipeRepository
@@ -139,4 +139,33 @@ def serving_recipe_digests(
 
     return _with_repository(
         job, base_dir=base_dir, allow_absolute_paths=allow_absolute_paths, use=digests
+    )
+
+
+def paginated_urls(
+    job: Job, *, base_dir: Path | None, allow_absolute_paths: bool
+) -> frozenset[str]:
+    """URLs of sources whose effective recipe (job file or serving memory) paginates."""
+
+    def find(repository: RecipeRepository | None) -> frozenset[str]:
+        _, selections = select_recipes(job, repository)
+        urls: set[str] = set()
+        for item, selection in zip(job.sources, selections, strict=True):
+            if not isinstance(item, UrlJobSource):
+                continue
+            if selection.recipe_origin == "memory":
+                stored = (
+                    repository.get(source_key(job, item), version=job.recipe_version)
+                    if repository is not None
+                    else None
+                )
+                recipe = stored.recipe if stored is not None else None
+            else:
+                recipe = item.recipe or job.recipe
+            if recipe is not None and recipe.pagination is not None:
+                urls.add(item.url)
+        return frozenset(urls)
+
+    return _with_repository(
+        job, base_dir=base_dir, allow_absolute_paths=allow_absolute_paths, use=find
     )

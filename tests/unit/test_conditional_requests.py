@@ -437,3 +437,52 @@ def test_engine_version_change_forces_a_fresh_fetch(tmp_path, monkeypatch, offli
     assert "If-None-Match" not in requests[1]
     load_job_file(path)
     assert "If-None-Match" in requests[2]
+
+
+def test_paginated_source_never_sends_validators_so_later_pages_are_seen(
+    tmp_path, monkeypatch, offline_cli_loop
+):
+    """SYNC-004, SYNC-002: a 304 on page 1 must not hide changes on later pages."""
+    path = tmp_path / "job.toml"
+    path.write_text(JOB + '[recipe.pagination]\nnext = "a[rel=next]::attr(href)"\n')
+    pages = {
+        "/list": b'<article><h1>one</h1></article><a rel="next" href="/list?p=2">n</a>',
+        "/list?p=2": b"<article><h1>two</h1></article>",
+    }
+    seen: list[dict[str, str]] = []
+
+    async def resolve(self, host, port):
+        return ("8.8.8.8",)
+
+    async def get(self, target, *, headers, **kwargs):
+        if target.url.endswith("robots.txt"):
+            return HttpResponse(404, {}, b"", 0)
+        seen.append(dict(headers))
+        if "If-None-Match" in headers:
+            return HttpResponse(304, {}, b"", 0)
+        key = "/list?p=2" if "p=2" in target.url else "/list"
+        return HttpResponse(
+            200, {"content-type": "text/html", "etag": '"e"'}, pages[key], len(pages[key])
+        )
+
+    monkeypatch.setattr(SystemResolver, "resolve", resolve)
+    monkeypatch.setattr(CurlTransport, "get", get)
+    assert load_job_file(path).exit_code == 0
+    assert _titles(tmp_path) == {"one", "two"}
+    pages["/list?p=2"] = b"<article><h1>two</h1></article><article><h1>three-new</h1></article>"
+    assert load_job_file(path).exit_code == 0
+    assert _titles(tmp_path) == {"one", "two", "three-new"}
+    assert not any(h.get("If-None-Match") or h.get("If-Modified-Since") for h in seen)
+
+
+def test_engine_version_falls_back_to_package_version(monkeypatch):
+    from importlib.metadata import PackageNotFoundError
+
+    import rastro
+    from rastro.application import conditional_inputs
+
+    def missing(name):
+        raise PackageNotFoundError(name)
+
+    monkeypatch.setattr(conditional_inputs, "version", missing)
+    assert conditional_inputs.engine_version() == rastro.__version__

@@ -19,6 +19,8 @@ class ConditionalRequests:
         self._pending: dict[str, dict[str, str]] = {}
 
     async def headers(self, source_url: str, url: str) -> dict[str, str]:
+        if source_url not in self._inputs:
+            return {}  # revalidation is off for this source (for example, it paginates)
         try:
             values = await asyncio.to_thread(self._store.get_validators, self._dataset, source_url)
         except DatasetStorageError:
@@ -36,6 +38,8 @@ class ConditionalRequests:
         }
 
     def remember(self, source_url: str, url: str, response: HttpResponse) -> None:
+        if source_url not in self._inputs:
+            return
         self._pending[source_url] = {
             key: value
             for key in ("etag", "last-modified")
@@ -43,8 +47,7 @@ class ConditionalRequests:
             and len(value.encode("utf-8", errors="replace")) <= 4096
             and all(32 <= ord(c) < 127 for c in value)
         }
-        if source_url in self._inputs:
-            self._pending[source_url]["_inputs"] = self._inputs[source_url]
+        self._pending[source_url]["_inputs"] = self._inputs[source_url]
         if source_url != url:
             self._pending[source_url]["_target"] = sha256(url.encode()).hexdigest()
             self._pending[source_url]["_source"] = Source(url=url).evidence_url
