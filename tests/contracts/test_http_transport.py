@@ -39,7 +39,7 @@ async def test_transport_pins_destination_and_disables_ambient_behavior(monkeypa
     monkeypatch.setattr(AsyncSession, "get", get)
     result = await CurlTransport().get(TARGET, headers={}, timeout=1, max_bytes=10)
     assert result.body == b"helloworld"
-    assert result.headers == {"content-type": "text/html"}
+    assert result.headers == {"content-type": "text/html", "set-cookie": "secret"}
     assert result.bytes_received == 10
 
 
@@ -234,3 +234,31 @@ async def test_invalid_proxy_routes_fail_before_any_session(monkeypatch, route):
     with pytest.raises(AcquisitionError, match=r"^invalid_proxy_route$") as failure:
         await CurlTransport().get(TARGET, headers={}, timeout=1, max_bytes=1, proxy=route)
     assert "orphan-password" not in str(failure.value)
+
+
+async def test_transport_preserves_separate_cookie_and_conditional_headers(monkeypatch):
+    """SCHED-005, SYNC-004, SEC-005: no comma folding of Set-Cookie (Expires has commas)."""
+    from curl_cffi.requests.headers import Headers
+
+    async def get(session, url, **kwargs):
+        result = Response()
+        result.status_code = 200
+        result.headers = Headers(
+            [
+                ("Set-Cookie", "one=secret-one; Expires=Wed, 01 Jan 2030 00:00:00 GMT"),
+                ("Set-Cookie", "two=secret-two; Secure"),
+                ("ETag", '"version"'),
+                ("Last-Modified", "Wed, 01 Jan 2025 00:00:00 GMT"),
+            ]
+        )
+        return result
+
+    monkeypatch.setattr(AsyncSession, "get", get)
+    response = await CurlTransport().get(TARGET, headers={}, timeout=1, max_bytes=100)
+    assert response.headers["set-cookie"].split("\n") == [
+        "one=secret-one; Expires=Wed, 01 Jan 2030 00:00:00 GMT",
+        "two=secret-two; Secure",
+    ]
+    assert response.headers["etag"] == '"version"'
+    assert response.headers["last-modified"] == "Wed, 01 Jan 2025 00:00:00 GMT"
+    assert "secret-one" not in repr(response)

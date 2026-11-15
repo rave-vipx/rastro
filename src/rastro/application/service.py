@@ -198,6 +198,16 @@ class ExtractionService:
                 )
             except ResourceLimitError:
                 issue = "extraction_limit"
+        if fetched.status == Outcome.UNCHANGED:
+            return failure_result(
+                status=Outcome.UNCHANGED,
+                issue_code="not_modified",
+                source=source,
+                schema=schema,
+                started_at=started_at,
+                source_url=final_source.evidence_url,
+                storage_seconds=prepared.storage_seconds,
+            ).model_copy(update={"issues": ()})
         status = Outcome.PERMANENT_FAILURE if fetched.status == Outcome.SUCCESS else fetched.status
         return failure_result(
             status=status,

@@ -1,0 +1,38 @@
+{
+  "author": {
+    "name": "Rastro Contributors",
+    "url": null
+  },
+  "compatibility": {
+    "min_rastro": "0.7.0",
+    "source_patterns": [
+      "sodre.gub.uy/espectaculos"
+    ]
+  },
+  "context": {
+    "region": "default",
+    "schema_revision": "1",
+    "template": "page"
+  },
+  "files": {
+    "expected.json": "7c1038befb4f2683e0aa951f907e4f73496964b0ad86d5dea31be08d3b8c5bb8",
+    "recipe.json": "dfaa039fcff7eb623b86b6ab02b42bedcbf16f5065a54f612663b52440b8b064",
+    "sample.html": "ebdd9f81382530b7d49ca9b45c5055b3b646c9b3576210face3fdf83064da3f5",
+    "schema.json": "fcfcc3b4dd9b3d2fef9161e37a06eebbcdf1b8e0b0fb0e2eb4bf3e2241efb450"
+  },
+  "format_version": 2,
+  "id": "uy-sodre-agenda",
+  "last_verified": "2026-11-15",
+  "license": "Apache-2.0",
+  "representation": "html",
+  "source": {
+    "currency": null,
+    "egress": "direct",
+    "languages": [],
+    "locale": "es-UY",
+    "timezone": "America/Montevideo",
+    "url": "https://sodre.gub.uy/espectaculos/"
+  },
+  "version": "1.0.0",
+  "visibility": "public"
+}

@@ -57,12 +57,21 @@ def test_load_job_file_forwards_allow_stealth(tmp_path, monkeypatch):
         raise _Stop
 
     monkeypatch.setattr(module, "run_job", fake_run_job)
-    for flag in (False, True):
-        with pytest.raises(_Stop):
-            module.load_job_file(_job(tmp_path), allow_stealth=flag)
+    import rastro.adapters.playwright_browser as playwright
+    import rastro.adapters.scrapling_stealth as stealth
+
+    monkeypatch.setattr(stealth, "ScraplingStealth", lambda: AsyncMock())
+    monkeypatch.setattr(playwright, "PlaywrightBrowser", lambda: AsyncMock())
     with pytest.raises(_Stop):
-        module.load_job_file(_job(tmp_path))
-    assert seen == [False, True, False]
+        module.load_job_file(_job(tmp_path), allow_stealth=True)
+    # Without consent the acquirer is refused before run_job, with the same error.
+    for flag in (False, None):
+        with pytest.raises(ConfigurationError, match="--allow-stealth"):
+            if flag is None:
+                module.load_job_file(_job(tmp_path))
+            else:
+                module.load_job_file(_job(tmp_path), allow_stealth=flag)
+    assert seen == [True]
 
 
 @pytest.mark.parametrize("entry", ["repair_job_source", "repair_job_sources", "promote_job_recipe"])
