@@ -3,24 +3,24 @@
 from __future__ import annotations
 
 import json
-import os
-import secrets
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
 
-from pydantic import TypeAdapter, ValidationError
-
-from rastro.application.atomic_files import fsync_directory
+from rastro.application.bundle_files import read_bounded, write_all
 from rastro.application.recipe_hub import (
     GITATTRIBUTES,
     ImportedRecipe,
     ParserFor,
     import_bundle,
-    read_bounded,
     verify_bundle,
-    write_all,
+)
+from rastro.application.registry_store import (
+    check_registry_root,
+    load_index,
+    package_path,
+    write_index_atomic,
 )
 from rastro.domain.models import Limits
 from rastro.domain.recipe_bundle import (
@@ -45,8 +45,6 @@ from rastro.domain.registry import (
 )
 from rastro.mocklab.detectors import secret_categories
 from rastro.ports.recipes import RecipeRepository
-
-_INDEX_ADAPTER = TypeAdapter(tuple[RegistryEntry, ...])
 
 
 @dataclass(frozen=True)
@@ -81,17 +79,17 @@ def publish_to_registry(
     manifest, files, _, _ = verify_bundle(bundle_dir, parser_for, limits)
     entry = _build_entry(manifest, files, today=today)
     _scan_for_secrets(manifest, files)
-    _check_registry_root(registry_dir, create=True)
-    existing = _load_index(registry_dir)
+    check_registry_root(registry_dir, create=True)
+    existing = load_index(registry_dir)
     if any(item.id == entry.id and item.version == entry.version for item in existing):
         raise RegistryError(f"Package {entry.id}@{entry.version} already exists in the registry")
-    package_dir = _package_path(registry_dir, entry.id, entry.version)
+    package_dir = package_path(registry_dir, entry.id, entry.version)
     if package_dir.exists() or package_dir.is_symlink():
         raise RegistryError(f"Package directory for {entry.id}@{entry.version} already exists")
     raw_manifest = read_bounded(bundle_dir / MANIFEST_FILE, MAX_METADATA_BYTES, bundle=True)
     write_all(package_dir, {**files, MANIFEST_FILE: raw_manifest, GITATTRIBUTES: b"* -text\n"})
     updated = sorted((*existing, entry), key=lambda item: (item.id, semver_key(item.version)))
-    _write_index_atomic(
+    write_index_atomic(
         registry_dir / INDEX_FILE,
         canonical_json([item.model_dump(mode="json") for item in updated]),
     )
@@ -106,8 +104,8 @@ def publish_to_registry(
 
 def search_registry(registry_dir: Path, query: str) -> tuple[RegistryEntry, ...]:
     """Return registry entries matching ``query`` on ``id`` or ``source_patterns``."""
-    _check_registry_root(registry_dir, create=False)
-    matched = [entry for entry in _load_index(registry_dir) if matches_query(entry, query)]
+    check_registry_root(registry_dir, create=False)
+    matched = [entry for entry in load_index(registry_dir) if matches_query(entry, query)]
     return tuple(sorted(matched, key=lambda item: (item.id, semver_key(item.version))))
 
 
@@ -122,8 +120,8 @@ def install_from_registry(
 ) -> InstalledPackage:
     """Resolve ``ID[@VERSION]``, recompute trust, verify and import into ``repository``."""
     pkg_id, pinned = parse_package_spec(spec)
-    _check_registry_root(registry_dir, create=False)
-    candidates = [item for item in _load_index(registry_dir) if item.id == pkg_id]
+    check_registry_root(registry_dir, create=False)
+    candidates = [item for item in load_index(registry_dir) if item.id == pkg_id]
     if not candidates:
         raise RegistryError(f"Package {pkg_id!r} was not found in the registry")
     selected = (
@@ -133,7 +131,7 @@ def install_from_registry(
     )
     if selected is None:
         raise RegistryError(f"Package {pkg_id}@{pinned} was not found in the registry")
-    package_dir = _package_path(registry_dir, selected.id, selected.version)
+    package_dir = package_path(registry_dir, selected.id, selected.version)
     manifest, files, _, _ = verify_bundle(package_dir, parser_for, limits)
     if manifest.id != selected.id or manifest.version != selected.version:
         raise BundleIntegrityError("Package manifest does not match its registry index entry")
@@ -202,48 +200,3 @@ def _scan_for_secrets(manifest: BundleManifest, files: Mapping[str, bytes]) -> N
             raise RegistryError(
                 f"Bundle file {name} matches secret or personal-data patterns: {', '.join(found)}"
             )
-
-
-def _check_registry_root(registry_dir: Path, *, create: bool) -> None:
-    if registry_dir.is_symlink():
-        raise RegistryError("Registry path must not be a symlink")
-    if not registry_dir.exists():
-        if not create:
-            raise RegistryError("Registry directory does not exist")
-        registry_dir.mkdir(parents=True, exist_ok=True)
-    if not registry_dir.is_dir() or (registry_dir / RECIPES_DIR).is_symlink():
-        raise RegistryError("Registry path must be a real directory without symlinks")
-
-
-def _package_path(registry_dir: Path, pkg_id: str, version: str) -> Path:
-    pkg_dir = registry_dir / RECIPES_DIR / pkg_id / version
-    if pkg_dir.parent.is_symlink() or pkg_dir.is_symlink():
-        raise RegistryError("Registry package directory must not be a symlink")
-    return pkg_dir
-
-
-def _load_index(registry_dir: Path) -> tuple[RegistryEntry, ...]:
-    index_path = registry_dir / INDEX_FILE
-    if not index_path.exists() and not index_path.is_symlink():
-        return ()
-    raw_bytes = read_bounded(index_path, MAX_METADATA_BYTES, bundle=True)
-    try:
-        return _INDEX_ADAPTER.validate_python(json.loads(raw_bytes))
-    except (ValueError, RecursionError, ValidationError) as error:
-        raise RegistryError("Registry index.json is invalid") from error
-
-
-def _write_index_atomic(path: Path, data: bytes) -> None:
-    if path.is_symlink():
-        raise RegistryError("Registry index.json must not be a symlink")
-    temp = path.with_name(f".{path.name}.{secrets.token_hex(6)}.tmp")
-    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
-    try:
-        with os.fdopen(os.open(temp, flags, 0o644), "wb") as handle:
-            handle.write(data)
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.replace(temp, path)
-        fsync_directory(path.parent)
-    finally:
-        temp.unlink(missing_ok=True)
