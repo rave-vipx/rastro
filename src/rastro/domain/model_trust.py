@@ -26,10 +26,12 @@ _REMOTE_ENV = "RASTRO_ALLOW_REMOTE=1"
 class OperatorTrust:
     allow_remote: bool = False
     allowed_env: frozenset[str] = frozenset()
+    allow_stealth: bool = False
 
     def merged(self, other: OperatorTrust) -> OperatorTrust:
         return OperatorTrust(
             allow_remote=self.allow_remote or other.allow_remote,
+            allow_stealth=self.allow_stealth or other.allow_stealth,
             allowed_env=self.allowed_env | other.allowed_env,
         )
 
