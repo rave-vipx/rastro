@@ -8,7 +8,14 @@ from pathlib import PurePosixPath, PureWindowsPath
 from typing import Annotated, Any, Literal, Self
 from urllib.parse import quote
 
-from pydantic import BeforeValidator, Field, field_validator, model_validator
+from pydantic import (
+    BeforeValidator,
+    Field,
+    SerializerFunctionWrapHandler,
+    field_validator,
+    model_serializer,
+    model_validator,
+)
 
 from rastro.domain.job_contract import RedactedContract
 from rastro.domain.models import EGRESS_NAME, Recipe, Representation, Source
@@ -60,10 +67,18 @@ class UrlJobSource(RedactedContract):
     """Permitted HTTP(S) job source; its host must appear in acquisition.allowed_hosts."""
 
     kind: Literal["url"] = "url"
+    render: Literal["http", "browser", "stealth"] = "http"
     url: str = Field(min_length=1, max_length=8192)
     representation: Representation = "html"
     region: RegionalContext | None = None
     recipe: Recipe | None = None
+
+    @model_serializer(mode="wrap")
+    def serialize_render(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        data: dict[str, Any] = handler(self)
+        if "render" not in self.model_fields_set:
+            data.pop("render", None)
+        return data
 
     @field_validator("url")
     @classmethod

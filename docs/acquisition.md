@@ -280,3 +280,53 @@ proxies and discovered-link crawling are not implemented. Optional [recipe memor
 [recipe learning](intelligence.md) integrate with the async SDK. See the
 [transport ADR](decisions/0002-policy-aware-acquisition.md) for the documented use of
 curl_cffi, Scrapling's HTTP engine, to expose public DNS-pinning controls.
+
+## JavaScript pages
+
+Install the optional browser runtime:
+
+```sh
+pip install 'rastro-engine[browser]'
+playwright install chromium
+# For stealth mode as well:
+scrapling install
+```
+
+Set `[acquisition] render = "browser"` for a job default, or set `render` on an
+individual URL source. An explicit source value overrides the default. Values are
+`"http"` (the normal default), `"browser"` (plain Chromium, honest Rastro User-Agent)
+and `"stealth"` (Scrapling's browser fingerprints). Browser modes require HTML and
+direct egress; they reject egress profiles.
+
+```toml
+[acquisition]
+allowed_hosts = ["example.com"]
+render = "browser"
+
+[[sources]]
+url = "https://example.com/events"
+render = "stealth"
+```
+
+Stealth additionally needs operator consent: `rastro --allow-stealth job run job.toml`,
+`run_job_file("job.toml", allow_stealth=True)` (`load_job_file` and the `repair_job_*`
+functions take the same keyword), or `RASTRO_ALLOW_STEALTH=1` (also `true`
+or `yes`). A job file cannot grant consent. Cloudflare solving is off unless
+`[acquisition] solve_challenges = true` and consent is present. Challenge domains must
+also be explicitly allowlisted; there is no third-party solver or rotation.
+
+A URL the job does not declare (for example a next page) uses the render mode shared by
+the declared sources on the same exact host, else the `[acquisition]` default; a stealth
+default therefore needs consent whenever the job renders at all.
+
+Robots, pacing, public DNS checks and request budgets still apply. Robots are checked
+again for the final URL when the browser was redirected to another path. A spent
+request budget fails as `request_limit` (permanent failure), as in HTTP mode. Each page uses a
+fresh context; images, media, fonts, WebSockets, downloads, permissions and service
+workers are blocked. Navigation uses `request_timeout_seconds`; the entire operation
+uses `operation_timeout_seconds`. Oversized rendered HTML fails explicitly.
+`AcquisitionResult.render_seconds` includes browser startup and rendering. Known
+unsolved challenge pages and HTTP 401/403/429/451 remain restrictions.
+
+See [ADR 0024](decisions/0024-browser-rendering-and-stealth-opt-in.md) for security
+boundaries and limitations. Live browser tests require `RASTRO_LIVE_BROWSER=1`.

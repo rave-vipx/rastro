@@ -42,10 +42,17 @@ class RepairContext:
     allow: bool
     allow_egress: bool = False
     allow_env: tuple[str, ...] = ()
+    allow_stealth: bool = False
 
     @classmethod
     def load(
-        cls, path: Path, allow: bool, *, allow_egress: bool = False, allow_env: Iterable[str] = ()
+        cls,
+        path: Path,
+        allow: bool,
+        *,
+        allow_egress: bool = False,
+        allow_env: Iterable[str] = (),
+        allow_stealth: bool = False,
     ) -> "RepairContext":
         if path.is_symlink():
             raise ConfigurationError("Recipe command paths must not contain symlinks")
@@ -65,6 +72,7 @@ class RepairContext:
             allow,
             allow_egress,
             tuple(allow_env),
+            allow_stealth,
         )
 
     def source(self, index: int) -> tuple[Source, RecipeKey, Recipe]:
@@ -162,9 +170,15 @@ class RepairContext:
 
         assert self.job.acquisition is not None
         check_job_egress(self.job, allow_egress=self.allow_egress, allow_env=self.allow_env)
-        result = await WebAcquirer(
+        from rastro.application.operator_trust import operator_trust
+        from rastro.browser import job_acquisition
+
+        with operator_trust(allow_stealth=self.allow_stealth):
+            rendering = job_acquisition(self.job, None)
+        client = rendering or WebAcquirer(
             self.job.acquisition, transport=CurlTransport(), resolver=SystemResolver()
-        ).acquire(
+        )
+        result = await client.acquire(
             source,
             max_bytes=limits.max_input_bytes(item.representation),
             representation=item.representation,

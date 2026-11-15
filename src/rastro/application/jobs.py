@@ -66,6 +66,7 @@ async def run_job_async(
     model: ModelPort | None = None,
     allow_remote: bool = False,
     allow_egress: bool = False,
+    allow_stealth: bool = False,
     allow_env: Iterable[str] = (),
 ) -> JobRunResult[Any]:
     """Execute a validated job asynchronously through the public Rastro SDK.
@@ -77,7 +78,9 @@ async def run_job_async(
     can never make Rastro start a model command.
     """
     allow_env = tuple(allow_env)
-    with operator_trust(allow_remote=allow_remote, allow_env=allow_env):
+    with operator_trust(
+        allow_remote=allow_remote, allow_stealth=allow_stealth, allow_env=allow_env
+    ):
         check_job_egress(job, allow_egress=allow_egress, allow_env=allow_env)
         active, selections = active_job(
             job, base_dir=base_dir, allow_absolute_paths=allow_absolute_paths
@@ -147,6 +150,7 @@ def run_job(
     model: ModelPort | None = None,
     allow_remote: bool = False,
     allow_egress: bool = False,
+    allow_stealth: bool = False,
     allow_env: Iterable[str] = (),
 ) -> JobRunResult[Any]:
     """Run a validated job; uses synchronous extraction when offline and model-free.
@@ -158,7 +162,9 @@ def run_job(
     can never make Rastro start a model command.
     """
     allow_env = tuple(allow_env)
-    with operator_trust(allow_remote=allow_remote, allow_env=allow_env):
+    with operator_trust(
+        allow_remote=allow_remote, allow_stealth=allow_stealth, allow_env=allow_env
+    ):
         check_job_egress(job, allow_egress=allow_egress, allow_env=allow_env)
         active, selections = active_job(
             job, base_dir=base_dir, allow_absolute_paths=allow_absolute_paths
@@ -237,6 +243,7 @@ def run_job_file(
     model: ModelPort | None = None,
     allow_remote: bool = False,
     allow_egress: bool = False,
+    allow_stealth: bool = False,
     allow_env: Iterable[str] = (),
 ) -> JobRunResult[Any]:
     """Load and execute a declarative job file; see ``run_job`` for the ``allow_*`` options."""
@@ -250,6 +257,7 @@ def run_job_file(
         model=model,
         allow_remote=allow_remote,
         allow_egress=allow_egress,
+        allow_stealth=allow_stealth,
         allow_env=allow_env,
     )
 
