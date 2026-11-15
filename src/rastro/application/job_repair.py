@@ -41,6 +41,7 @@ def repair_job_source(
     model: ModelChoice = None,
     allow_remote: bool = False,
     allow_egress: bool = False,
+    allow_stealth: bool = False,
     allow_env: Iterable[str] = (),
 ) -> RepairReport:
     """Propose, evaluate and store repair candidates for one source (1-based index).
@@ -50,7 +51,8 @@ def repair_job_source(
     ``model`` (a ``ModelPort`` or a spec for ``rastro.model``) overrides the job's model:
     it proposes candidates when relocation finds none that passes and judges every
     would-be promotion. Remote specs need ``allow_remote=True``. Re-fetching through a
-    job-declared egress proxy needs ``allow_egress=True``.
+    job-declared egress proxy needs ``allow_egress=True`` and a stealth render mode
+    needs ``allow_stealth=True``.
     """
     overrides = {
         name: value
@@ -68,6 +70,7 @@ def repair_job_source(
         model=model,
         allow_remote=allow_remote,
         allow_egress=allow_egress,
+        allow_stealth=allow_stealth,
         allow_env=allow_env,
         **overrides,
     )
@@ -81,13 +84,18 @@ def repair_job_sources(
     model: ModelChoice = None,
     allow_remote: bool = False,
     allow_egress: bool = False,
+    allow_stealth: bool = False,
     allow_env: Iterable[str] = (),
     **overrides: Any,
 ) -> RepairReport:
     """Repair several sources, or all of them when ``sources`` is ``None``."""
     allow_env = tuple(allow_env)
     context = RepairContext.load(
-        Path(path), allow_absolute_paths, allow_egress=allow_egress, allow_env=allow_env
+        Path(path),
+        allow_absolute_paths,
+        allow_egress=allow_egress,
+        allow_stealth=allow_stealth,
+        allow_env=allow_env,
     )
     policy = job_policy(context, overrides)
     indexes = sources if sources is not None else range(1, len(context.job.sources) + 1)
@@ -109,6 +117,7 @@ def promote_job_recipe(
     override_gates: bool = False,
     allow_absolute_paths: bool = False,
     allow_egress: bool = False,
+    allow_stealth: bool = False,
     allow_env: Iterable[str] = (),
 ) -> RepairReport:
     """Re-evaluate a stored candidate and activate it when every gate passes.
@@ -120,7 +129,11 @@ def promote_job_recipe(
     if not isinstance(reason, str) or not reason.strip():
         raise ConfigurationError("Promotion requires a non-empty reason")
     context = RepairContext.load(
-        Path(path), allow_absolute_paths, allow_egress=allow_egress, allow_env=allow_env
+        Path(path),
+        allow_absolute_paths,
+        allow_egress=allow_egress,
+        allow_stealth=allow_stealth,
+        allow_env=allow_env,
     )
     # Explicit approval enables promotion, but cannot bypass the CI gates on its own.
     policy = job_policy(context, {"auto_promote": True})

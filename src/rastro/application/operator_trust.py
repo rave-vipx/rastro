@@ -45,6 +45,7 @@ def env_flag(name: str, environ: Mapping[str, str] | None = None) -> bool:
 def current_trust() -> OperatorTrust:
     from_env = OperatorTrust(
         allow_remote=env_flag(REMOTE_ENV),
+        allow_stealth=env_flag("RASTRO_ALLOW_STEALTH"),
         allowed_env=env_names(os.environ.get("RASTRO_ALLOWED_ENV", "").split(",")),
     )
     return from_env.merged(_process).merged(_SCOPED.get() or OperatorTrust())
@@ -63,10 +64,13 @@ def set_process_trust(trust: OperatorTrust) -> OperatorTrust:
 
 
 @contextmanager
-def operator_trust(*, allow_remote: bool = False, allow_env: Iterable[str] = ()) -> Iterator[None]:
+def operator_trust(
+    *, allow_remote: bool = False, allow_stealth: bool = False, allow_env: Iterable[str] = ()
+) -> Iterator[None]:
     """Scope an SDK caller's opt-in to the job functions called inside this block."""
     added = OperatorTrust(
         allow_remote=allow_remote is True,
+        allow_stealth=allow_stealth is True,
         allowed_env=env_names(allow_env),
     )
     token = _SCOPED.set((_SCOPED.get() or OperatorTrust()).merged(added))

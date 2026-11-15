@@ -89,6 +89,16 @@
           "title": "Operation Timeout Seconds",
           "type": "number"
         },
+        "render": {
+          "default": "http",
+          "enum": [
+            "http",
+            "browser",
+            "stealth"
+          ],
+          "title": "Render",
+          "type": "string"
+        },
         "request_timeout_seconds": {
           "default": 15,
           "exclusiveMinimum": 0,
@@ -99,6 +109,11 @@
         "session": {
           "default": false,
           "title": "Session",
+          "type": "boolean"
+        },
+        "solve_challenges": {
+          "default": false,
+          "title": "Solve Challenges",
           "type": "boolean"
         }
       },
@@ -1674,6 +1689,16 @@
             }
           ],
           "default": null
+        },
+        "render": {
+          "default": "http",
+          "enum": [
+            "http",
+            "browser",
+            "stealth"
+          ],
+          "title": "Render",
+          "type": "string"
         },
         "representation": {
           "$ref": "#/$defs/Representation",

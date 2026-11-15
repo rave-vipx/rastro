@@ -56,6 +56,7 @@ Release priorities take precedence over speculative features.
 
 | Date | Version | Change | Decision record |
 |---|---|---|---|
+| 2026-11-15 | 1.2 | SCR-003 removed by owner decision; stealth browsing is an operator opt-in; robots, destination checks and rotation restrictions remain | [ADR 0024](docs/decisions/0024-browser-rendering-and-stealth-opt-in.md) |
 | 2026-11-06 | 1.2 | Product outcome rewritten around "describe the data, name the sources you know, get an updatable database"; first public case: a dance-event agenda for Uruguay (example only). v0.2 becomes "from known sources to a usable database" (dataset store, record identity and update semantics brought forward from v0.3, then drift and repair on that path); v0.3 becomes "from an intent to reusable sources and recipes"; MCP (AGENT-002) moves to v0.4 behind a concrete consumer; Hub starts with Git export/import; DATA-*, COST-*, DISC-003 and DIFF-002 added; work assignment decided per slice | [ADR 0016](docs/decisions/0016-dataset-outcome.md) |
 | 2026-10-30 | 1.1 | Owner decisions after the 0.1.0 release candidate: AI-005 becomes a pre-v0.2 MUST with a documented provider strategy (AI-007); declarative jobs (JOB-*), agent interface (AGENT-*), term-based source discovery (DISC-*) and Scrapling capability parity (SCR-*) are added; v0.2 scope gains the agent interface | [ADR 0012](docs/decisions/0012-product-direction.md) |
 
@@ -287,7 +288,7 @@ Use Scrapling's adaptive element relocation as a deterministic source of repair 
 
 ### SCR-003 — MUST
 
-Scrapling features whose purpose is to evade access restrictions or bot defenses must not be exposed or enabled by Rastro (SEC-003, GEO-005). Browser fetchers may be adopted as a future browser adapter under the same acquisition policies.
+Removed 2026-11-15 by owner decision; stealth browsing is an operator opt-in, see ADR 0024
 
 ## Differentiation Requirement
 

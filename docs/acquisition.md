@@ -306,6 +306,13 @@ sends `If-None-Match` and `If-Modified-Since` when available. Robots lookups are
 unconditional. Validators follow only their exact document URL, including across
 redirects; URL queries are hashed in validator keys and are never persisted there.
 
+Validators are stored with a digest of the effective extraction inputs: the job, the
+schema and the stored serving recipe. A load sends conditional headers only when the
+current digest equals the stored one, so editing a recipe, a field or the job always
+triggers a normal GET and replaces the validators; a 304 never hides such a change.
+Stores without validator support (PostgreSQL) never send conditional requests, and
+rendered (`browser`, `stealth`) sources are never conditional.
+
 A solicited HTTP 304 produces `unchanged`, counts as a successful source and skips
 extraction. Existing records and their field provenance stay intact, while
 `last_success` and `last_attempt` advance. No missing records, failure alert or new
@@ -315,8 +322,58 @@ removing validators the server no longer supplies. Failed, partial or inconsiste
 loads do not replace validators. Supplied HTML and jobs without a dataset do not
 use conditional requests.
 
-Dataset schema 1 upgrades transactionally and idempotently to schema 2 on first
-access, adding only `dataset_validators`; records and source status survive.
+Dataset schema 1 upgrades transactionally and idempotently to schema 2 on the first
+write (`job load`), adding only `dataset_validators`; records and source status survive.
 Owner-only permissions are retained. Unknown newer or foreign schemas are refused
 without resetting the database. This is a forward-only migration: use the updated
 Rastro version to open upgraded files.
+
+## JavaScript pages
+
+Install the optional browser runtime:
+
+```sh
+pip install 'rastro-engine[browser]'
+playwright install chromium
+# For stealth mode as well:
+scrapling install
+```
+
+Set `[acquisition] render = "browser"` for a job default, or set `render` on an
+individual URL source. An explicit source value overrides the default. Values are
+`"http"` (the normal default), `"browser"` (plain Chromium, honest Rastro User-Agent)
+and `"stealth"` (Scrapling's browser fingerprints). Browser modes require HTML and
+direct egress; they reject egress profiles.
+
+```toml
+[acquisition]
+allowed_hosts = ["example.com"]
+render = "browser"
+
+[[sources]]
+url = "https://example.com/events"
+render = "stealth"
+```
+
+Stealth additionally needs operator consent: `rastro --allow-stealth job run job.toml`,
+`run_job_file("job.toml", allow_stealth=True)` (`load_job_file` and the `repair_job_*`
+functions take the same keyword), or `RASTRO_ALLOW_STEALTH=1` (also `true`
+or `yes`). A job file cannot grant consent. Cloudflare solving is off unless
+`[acquisition] solve_challenges = true` and consent is present. Challenge domains must
+also be explicitly allowlisted; there is no third-party solver or rotation.
+
+A URL the job does not declare (for example a next page) uses the render mode shared by
+the declared sources on the same exact host, else the `[acquisition]` default; a stealth
+default therefore needs consent whenever the job renders at all.
+
+Robots, pacing, public DNS checks and request budgets still apply. Robots are checked
+again for the final URL when the browser was redirected to another path. A spent
+request budget fails as `request_limit` (permanent failure), as in HTTP mode. Each page uses a
+fresh context; images, media, fonts, WebSockets, downloads, permissions and service
+workers are blocked. Navigation uses `request_timeout_seconds`; the entire operation
+uses `operation_timeout_seconds`. Oversized rendered HTML fails explicitly.
+`AcquisitionResult.render_seconds` includes browser startup and rendering. Known
+unsolved challenge pages and HTTP 401/403/429/451 remain restrictions.
+
+See [ADR 0024](decisions/0024-browser-rendering-and-stealth-opt-in.md) for security
+boundaries and limitations. Live browser tests require `RASTRO_LIVE_BROWSER=1`.

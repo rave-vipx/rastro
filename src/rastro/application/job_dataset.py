@@ -18,7 +18,7 @@ from rastro.application.drift import collect_snapshots
 from rastro.application.egress_trust import allowed_env_names, check_job_egress
 from rastro.application.job_loader import load_job, resolve_job_path
 from rastro.application.jobs import run_job
-from rastro.application.operator_trust import current_trust
+from rastro.application.operator_trust import current_trust, operator_trust
 from rastro.application.success_samples import collect_successes
 from rastro.domain.dataset import DatasetStorageError
 from rastro.domain.job_load import JobLoadResult
@@ -29,9 +29,9 @@ from rastro.domain.secret_env import check_secret_env_name
 from rastro.ports.dataset import DatasetStore, DatasetValidators
 
 if TYPE_CHECKING:
-    from rastro.application.acquisition import WebAcquirer
     from rastro.domain.drift import StructuralSnapshot
     from rastro.domain.jobs import Job
+    from rastro.ports.acquisition import AcquisitionPort
 
 
 def dataset_location(file: Path, job: Job, *, allow_absolute_paths: bool) -> Path:
@@ -63,6 +63,7 @@ def load_job_file(
     allow_absolute_paths: bool = False,
     allow_remote: bool = False,
     allow_egress: bool = False,
+    allow_stealth: bool = False,
     allow_env: Iterable[str] = (),
 ) -> JobLoadResult:
     """Run a job file and load its approved fields into the job's ``[dataset]``.
@@ -101,7 +102,10 @@ def load_job_file(
             if isinstance(store, DatasetValidators) and job.acquisition is not None
             else None
         )
-        acquisition = _web_acquirer(job, conditional) if job.acquisition is not None else None
+        with operator_trust(
+            allow_remote=allow_remote, allow_stealth=allow_stealth, allow_env=allow_env
+        ):  # the render-mode consent check runs here, as it would inside run_job
+            acquisition = _web_acquirer(job, conditional) if job.acquisition is not None else None
         with capture as snapshots, collect_successes() as successes:
             report = run_job(
                 job,
@@ -109,6 +113,7 @@ def load_job_file(
                 allow_absolute_paths=allow_absolute_paths,
                 allow_remote=allow_remote,
                 allow_egress=allow_egress,
+                allow_stealth=allow_stealth,
                 allow_env=allow_env,
                 acquisition=acquisition,
             )
@@ -152,22 +157,25 @@ def load_job_file(
     )
 
 
-def _web_acquirer(job: Job, conditional: ConditionalRequests | None) -> WebAcquirer:
+def _web_acquirer(job: Job, conditional: ConditionalRequests | None) -> AcquisitionPort:
+    """HTTP acquisition, or the browser composition when a source renders (SCR-003)."""
     try:
         from rastro.adapters.dns import SystemResolver
         from rastro.adapters.http import CurlTransport
         from rastro.application.acquisition import WebAcquirer
+        from rastro.browser import job_acquisition
+
+        assert job.acquisition is not None
+        return job_acquisition(job, None, conditional=conditional) or WebAcquirer(
+            job.acquisition,
+            transport=CurlTransport(),
+            resolver=SystemResolver(),
+            conditional=conditional,
+        )
     except ModuleNotFoundError as error:
         if error.name not in {"curl_cffi", "protego"}:
             raise
         raise ConfigurationError("Install rastro-engine[http] for HTTP acquisition") from None
-    assert job.acquisition is not None
-    return WebAcquirer(
-        job.acquisition,
-        transport=CurlTransport(),
-        resolver=SystemResolver(),
-        conditional=conditional,
-    )
 
 
 def _commit_validators(

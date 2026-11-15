@@ -351,3 +351,74 @@ def test_store_without_validators_loads_without_conditional_requests(
     assert load_job_file(path).exit_code == 0
     assert load_job_file(path).exit_code == 0
     assert len(requests) == 2 and all("If-None-Match" not in r for r in requests)
+
+
+BROWSER_JOB = JOB.replace(
+    'allowed_hosts = ["a.example", "b.example"]',
+    'allowed_hosts = ["a.example", "b.example"]\nrender = "browser"\nsession = true',
+)
+
+
+def test_browser_render_still_uses_the_browser_with_session_and_conditional_settings(
+    tmp_path, monkeypatch, offline_cli_loop
+):
+    """SCR-003, SYNC-004: job load keeps browser rendering; a rendered page is never conditional."""
+    from unittest.mock import AsyncMock
+
+    import rastro.adapters.playwright_browser as playwright
+    from rastro.domain.acquisition import AcquisitionResult
+    from rastro.domain.models import Outcome
+
+    renderer = AsyncMock()
+    renderer.render.return_value = AcquisitionResult(
+        "https://a.example/list",
+        "<article><h1>rendered</h1></article>",
+        Outcome.SUCCESS,
+        None,
+        http_status=200,
+    )
+    monkeypatch.setattr(playwright, "PlaywrightBrowser", lambda: renderer)
+    requests = _server(monkeypatch)  # robots.txt only; pages must not use the HTTP path
+    path = tmp_path / "job.toml"
+    path.write_text(BROWSER_JOB)
+    for _ in range(2):
+        loaded = load_job_file(path)
+        assert loaded.exit_code == 0 and loaded.sources[0].status != "unchanged"
+    assert renderer.render.await_count == 2
+    assert requests == []
+    assert _titles(tmp_path) == {"rendered"}
+
+
+def test_mixed_render_modes_keep_conditional_requests_for_http_sources(
+    tmp_path, monkeypatch, offline_cli_loop
+):
+    from unittest.mock import AsyncMock
+
+    import rastro.adapters.playwright_browser as playwright
+    from rastro.domain.acquisition import AcquisitionResult
+    from rastro.domain.models import Outcome
+
+    renderer = AsyncMock()
+    renderer.render.return_value = AcquisitionResult(
+        "https://b.example/page",
+        "<article><h1>rendered</h1></article>",
+        Outcome.SUCCESS,
+        None,
+        http_status=200,
+    )
+    monkeypatch.setattr(playwright, "PlaywrightBrowser", lambda: renderer)
+    requests = _server(monkeypatch)
+    path = tmp_path / "job.toml"
+    path.write_text(
+        JOB.replace(
+            "[recipe]",
+            '[[sources]]\nkind = "url"\nurl = "https://b.example/page"\nrender = "browser"\n'
+            "\n[recipe]",
+        )
+    )
+    assert load_job_file(path).exit_code == 0
+    second = load_job_file(path)
+    assert second.exit_code == 0
+    assert "If-None-Match" in requests[1]
+    assert renderer.render.await_count == 2
+    assert {s.status for s in second.sources} == {"unchanged", "success"}
