@@ -354,6 +354,28 @@
           "default": null,
           "title": "Approve"
         },
+        "backend": {
+          "default": "sqlite",
+          "enum": [
+            "sqlite",
+            "postgres"
+          ],
+          "title": "Backend",
+          "type": "string"
+        },
+        "dsn_env": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Z_][A-Z0-9_]{0,127}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Dsn Env"
+        },
         "identity": {
           "items": {
             "type": "string"
@@ -408,15 +430,21 @@
           "type": "string"
         },
         "path": {
+          "default": "rastro-state.sqlite",
           "maxLength": 1024,
           "minLength": 1,
           "title": "Path",
+          "type": "string"
+        },
+        "schema": {
+          "default": "rastro",
+          "pattern": "^[a-z_][a-z0-9_]{0,62}$",
+          "title": "Schema",
           "type": "string"
         }
       },
       "required": [
         "name",
-        "path",
         "identity"
       ],
       "title": "DatasetSpec",

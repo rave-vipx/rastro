@@ -60,6 +60,7 @@ nav:
   - Development work log: development/work-log.md
   - Engineering decisions:
       - Open drift and attention exit codes: decisions/0023-open-drift-and-attention-exit-codes.md
+      - PostgreSQL datasets: decisions/0025-postgres-datasets.md
       - Bring your own AI: decisions/0022-bring-your-own-ai.md
       - Newer serving recipe wins: decisions/0021-serving-recipe-over-job-file.md
       - Minimal Studio, MCP and Hub: decisions/0020-studio-mcp-hub-minimal.md
