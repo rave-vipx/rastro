@@ -51,6 +51,44 @@ uv run rastro job validate job.toml
 uv run rastro job run job.toml --output json
 ```
 
+## Start from a goal
+
+A job can start from three entry points:
+
+1. **Known sites and fields** from a saved HTML page and example values (`rastro new job.toml --from page.html --example title="Field notebook"`).
+2. **Known sites only** (`rastro new --site URL [--site URL ...] -o job.toml`), where your URLs are the host approval.
+3. **Only a goal** (`rastro new --goal "TEXT" [--fields a,b] [--search searxng|model] [--approve HOST ...] -o job.toml`).
+
+### 1. Propose candidate sources (`DISC-001`, `DISC-002`)
+
+Without `--approve`, `rastro new --goal` runs in **proposals-only** mode: it queries the search provider or model, prints candidate sources as JSON (`url`, `host`, `title`, `origin = "search" | "model"`), writes no file, and never fetches any candidate host:
+
+```bash
+export RASTRO_SEARXNG_URL="http://127.0.0.1:8080"
+uv run rastro new --goal "cultural events in Montevideo"
+```
+
+- **Search providers (`--search searxng|model`).** `SearXNGSearchProvider` queries a free self-hosted SearXNG JSON endpoint (`RASTRO_SEARXNG_URL`); non-loopback endpoints require HTTPS and `--allow-remote` (`SEC-004`). Passing `--search model` asks the configured model (`--model` or `RASTRO_MODEL`) for candidate URLs (`origin = "model"`), parses the response strictly, keeps only public `http(s)` URLs on standard ports, and caps proposals at 10 (`SEC-005`). If neither a search provider nor a model is configured, Rastro raises `ConfigurationError` explaining both options (`P-002`).
+
+### 2. Approve hosts, propose fields and preview real records (`DISC-002`, `DISC-003`)
+
+Discovered hosts never enter an allowlist without explicit approval. Pass `--approve HOST ...` (or `--site URL ...` when you already know the URLs) with `-o job.toml`:
+
+```bash
+uv run rastro new --goal "cultural events in Montevideo" \
+  --approve agenda.example \
+  --fields title,starts_on,url \
+  -o job.toml
+
+# Or start directly from known site URLs (your URLs are the approval):
+uv run rastro new --site https://agenda.example/events -o job.toml
+```
+
+- Only exact approved hosts enter `[acquisition] allowed_hosts`.
+- Rastro fetches at most **3 pages per approved host** through `WebAcquirer` (enforcing `robots.txt`, host pacing, and public-IP checks) and never follows links off approved hosts.
+- When `--fields` is omitted, Rastro proposes fields from observed repeated structures on the page (`page_outline` and `suggest_fields`), reporting each field's inferred type, selector, and observed example value with zero model calls unless a model fallback is needed.
+- Rastro writes `job.toml` and prints a preview of real extracted records. If no valid records can be observed, the command exits non-zero with an explicit outcome (`insufficient_evidence`) and writes no job file.
+
 ## Complete TOML example
 
 The example below exercises HTTP and local JSON sources, field constraints, host allowlists,

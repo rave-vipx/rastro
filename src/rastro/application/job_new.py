@@ -1,8 +1,4 @@
-"""Create a declarative job file from a saved page and example values (JOB-001, DISC-003).
-
-The written job holds a verified CSS recipe, a local file source and conservatively typed
-fields: a field keeps a non-string type only when every previewed value validates with it.
-"""
+"""Create a declarative job file from a saved page, sites, or a goal (JOB-001, DISC-001..003)."""
 
 from __future__ import annotations
 
@@ -14,75 +10,93 @@ from typing import Any
 
 from pydantic import ValidationError
 
+import rastro.application.source_proposals as sp
 from rastro.application.engine import Rastro
+from rastro.application.field_proposals import _TYPED, FieldProposal, ProposedFields, propose_fields
 from rastro.application.job_loader import _read_local_source
-from rastro.application.model_choice import ModelChoice
 from rastro.application.suggest import suggest
-from rastro.domain.job_fields import (
-    DateField,
-    DecimalField,
-    IntegerField,
-    JobField,
-    StringField,
-    UrlField,
-    build_job_schema,
-)
-from rastro.domain.job_sources import FileJobSource, validate_job_path_syntax
+from rastro.domain.acquisition import AcquisitionPolicy
+from rastro.domain.job_fields import JobField, StringField, build_job_schema
+from rastro.domain.job_sources import FileJobSource, UrlJobSource, validate_job_path_syntax
 from rastro.domain.jobs import parse_job
-from rastro.domain.models import ConfigurationError, CssRecipe, Limits, Outcome, Source
-from rastro.domain.suggest import Example, Suggestion, check_examples, infer_field_type
+from rastro.domain.models import ConfigurationError, Contract, CssRecipe, Limits, Outcome, Source
+from rastro.domain.suggest import Example, check_examples, infer_field_type
 
-_TYPED = {"integer": IntegerField, "decimal": DecimalField, "date": DateField, "url": UrlField}
+
+class GoalJobResult(Contract):
+    """Outcome of starting a job from a goal or known sites."""
+
+    created: Path | None = None
+    allowed_hosts: tuple[str, ...] = ()
+    proposals: tuple[sp.SourceProposal, ...] = ()
+    fields: tuple[FieldProposal, ...] = ()
+    preview: tuple[dict[str, Any], ...] = ()
+    status: Outcome = Outcome.SUCCESS
+
+
+def _validate_target(job: Path, page: Path | None, opts: dict[str, Any]) -> None:
+    ds, ident, mem = (opts.get(k) for k in ("dataset", "identity", "recipe_memory"))
+    if job.suffix != ".toml":
+        raise ConfigurationError("The new job file must end in .toml")
+    if job.exists() or job.is_symlink():
+        raise ConfigurationError("Job file already exists; refusing to overwrite it")
+    if ds is not None and not ident:
+        raise ConfigurationError("--dataset requires --identity naming the record key fields")
+    if mem is not None:
+        msg = "recipe_memory must be a file name relative to the job"
+        try:
+            validate_job_path_syntax(mem)
+        except ValueError:
+            raise ConfigurationError(msg) from None
+        if PurePosixPath(mem).is_absolute() or PureWindowsPath(mem).anchor:
+            raise ConfigurationError(msg)
+        if not (job.parent / mem).parent.is_dir():
+            raise ConfigurationError("The recipe_memory folder must already exist")
+    base = job.parent.resolve()
+    taken = {str((base / job.name).resolve()).casefold(): "the job file"}
+    if page is not None:
+        taken[str(page.resolve()).casefold()] = "the page"
+    for label, name in (("dataset", ds), ("recipe_memory", mem)):
+        if name is not None:
+            resolved = str((base / name).resolve()).casefold()
+            if resolved in taken:
+                raise ConfigurationError(f"{label} is the same file as {taken[resolved]}")
+            taken[resolved] = f"the {label}"
+
+
+def _write_validated_job(path: Path, text: str) -> Path:
+    parse_job(text, format="toml")
+    with path.open("x", encoding="utf-8") as handle:
+        handle.write(text)
+    return path
 
 
 def new_job(
-    path: Path,
-    *,
-    page: Path,
-    examples: Sequence[Example] = (),
-    url: str | None = None,
-    records_min: int = 2,
-    dataset: str | None = None,
-    identity: Sequence[str] = (),
-    allow_partial: bool = False,
-    recipe_memory: str | None = None,
-    fields: Sequence[str] = (),
-    model: ModelChoice = None,
+    path: Path, *, page: Path, examples: Sequence[Example] = (), url: str | None = None, **opts: Any
 ) -> Path:
-    """Write a new TOML job at ``path``; never overwrite an existing file.
-
-    The suggested recipe's preview must succeed; ``allow_partial=True`` writes a job whose
-    preview is only a partial success. ``recipe_memory`` names a recipe store relative to
-    the job file, in a folder that already exists; it enables repair and promotion.
-    With ``model``, examples are optional: ``fields`` names the fields to extract and
-    the model proposes the recipe, verified like an example-built one.
-    """
-    if path.suffix != ".toml":
-        raise ConfigurationError("The new job file must end in .toml")
-    if path.exists() or path.is_symlink():
-        raise ConfigurationError("Job file already exists; refusing to overwrite it")
-    if dataset is not None and not identity:
-        raise ConfigurationError("--dataset requires --identity naming the record key fields")
-    if recipe_memory is not None:
-        _check_memory(recipe_memory, path.parent)
-    page_path = _relative(page, path.parent)
-    _check_distinct(path, page, dataset, recipe_memory)
+    """Write a new TOML job at ``path``; never overwrite an existing file."""
+    try:
+        rel = page.resolve().relative_to(path.parent.resolve()).as_posix()
+        rel_page = validate_job_path_syntax(rel)
+    except ValueError:
+        if not path.name.endswith(".toml") or path.exists() or path.is_symlink():
+            _validate_target(path, None, opts)
+        raise ConfigurationError("The page must be inside the new job file's directory") from None
+    _validate_target(path, page, opts)
     html = _read_local_source(page, Limits().max_html_bytes, "html")
+    model, rmin = opts.get("model"), int(opts.get("records_min", 2))
     checked = check_examples(examples) if examples or model is None else ()
-    names = dict.fromkeys([*(k for e in checked for k in e), *fields])
+    names = dict.fromkeys([*(k for e in checked for k in e), *opts.get("fields", ())])
     if not names:
         raise ConfigurationError("Name the fields with examples or --field")
     try:
         job_fields: list[JobField] = [StringField(name=name) for name in names]
     except ValidationError:
-        raise ConfigurationError(
-            "Example field names must start with a letter and use letters, digits or _"
-        ) from None
-    source = FileJobSource(path=page_path, url=url)
-    found = suggest(
-        html, job_fields, examples=checked, url=url, records_min=records_min, model=model
-    )
-    if found.status != Outcome.SUCCESS and not allow_partial:
+        msg = "Example field names must start with a letter and use letters, digits or _"
+        raise ConfigurationError(msg) from None
+    source = FileJobSource(path=rel_page, url=url)
+    found = suggest(html, job_fields, examples=checked, url=url, records_min=rmin, model=model)
+    if found.status != Outcome.SUCCESS and not opts.get("allow_partial", False):
         issues = ", ".join(
             sorted({f"{i.code}:{i.field}" if i.field else i.code for i in found.preview.issues})
         )
@@ -91,113 +105,120 @@ def new_job(
             + (f" ({issues})" if issues else "")
             + "; add examples, or pass --allow-partial to write the job anyway"
         )
-    typed = _typed_fields(
-        html, job_fields, checked, found, Source(url=source.resolved_source_url())
+    src_obj = Source(url=source.resolved_source_url())
+    typed = _typed_fields(html, job_fields, checked, found, src_obj)
+    return _write_validated_job(path, render_job(typed, found.recipe, source, **opts))
+
+
+def new_job_from_goal(
+    path: Path | None = None, *, goal: str, approve: Sequence[str] = (), **opts: Any
+) -> GoalJobResult:
+    search, provider, model = opts.get("search"), opts.get("provider"), opts.get("model")
+    s_model = model if search == "model" or (search is None and provider is None) else None
+    rem = bool(opts.get("allow_remote"))
+    proposals = sp.propose_sources(
+        goal, search=search, provider=provider, model=s_model, allow_remote=rem
     )
-    text = render_job(
-        typed,
-        found.recipe,
-        source,
-        dataset=dataset,
-        identity=identity,
-        recipe_memory=recipe_memory,
+    if not approve:
+        return GoalJobResult(created=None, proposals=proposals)
+    if path is None:
+        raise ConfigurationError("Pass -o FILE.toml to write the approved job")
+    acq = sp.acquire_approved_pages(
+        [p.url for p in proposals], approve, acquisition=opts.get("acquisition")
     )
-    parse_job(text, format="toml")
-    with path.open("x", encoding="utf-8") as handle:
-        handle.write(text)
-    return path
+    return _build_approved_job(path, acq, proposals, **opts)
 
 
-def _check_memory(memory: str, base: Path) -> None:
-    try:
-        validate_job_path_syntax(memory)
-    except ValueError:
-        raise ConfigurationError("recipe_memory must be a file name relative to the job") from None
-    if PurePosixPath(memory).is_absolute() or PureWindowsPath(memory).anchor:
-        raise ConfigurationError("recipe_memory must be a file name relative to the job")
-    if not (base / memory).parent.is_dir():
-        raise ConfigurationError("The recipe_memory folder must already exist")
+def new_job_from_sites(path: Path, *, sites: Sequence[str], **opts: Any) -> GoalJobResult:
+    cleaned = [sp.clean_proposal(u.strip(), "", "search") for u in sites if u.strip()]
+    if not cleaned or any(p is None for p in cleaned):
+        raise ConfigurationError("Every --site must be a valid public HTTP(S) URL")
+    valid = [p for p in cleaned if p is not None]
+    acq = sp.acquire_approved_pages(
+        [p.url for p in valid], [p.host for p in valid], acquisition=opts.get("acquisition")
+    )
+    return _build_approved_job(path, acq, tuple(valid), **opts)
 
 
-def _check_distinct(job: Path, page: Path, dataset: str | None, memory: str | None) -> None:
-    """Refuse a dataset or recipe store that is the job file, the page or each other.
-
-    Paths are resolved against the job folder and compared case-insensitively, so
-    ``./data.sqlite`` and ``data.sqlite`` (or ``Job.toml`` on macOS) count as one file.
-    """
-    base = job.parent.resolve()
-
-    def key(target: Path) -> str:
-        return str(target.resolve()).casefold()
-
-    taken = {key(base / job.name): "the job file", key(page): "the page"}
-    for label, name in (("dataset", dataset), ("recipe_memory", memory)):
-        if name is None:
+def _build_approved_job(
+    path: Path, acq: tuple[Any, ...], proposals: tuple[sp.SourceProposal, ...], **opts: Any
+) -> GoalJobResult:
+    hosts, policy, results = acq
+    _validate_target(path, None, opts)
+    pages = [(r.url, r.body) for r in results if r.status is Outcome.SUCCESS and r.body]
+    if not pages:
+        outcome = results[-1].status if results else Outcome.INSUFFICIENT_EVIDENCE
+        raise ConfigurationError(f"No approved source could be acquired (outcome: {outcome})")
+    proposed: ProposedFields | None = None
+    f_opts = {k: opts[k] for k in ("fields", "records_min", "model", "allow_remote") if k in opts}
+    for page_url, html in pages:
+        try:
+            proposed = propose_fields(html, url=page_url, **f_opts)
+            break
+        except ConfigurationError:
             continue
-        resolved = key(base / name)
-        if resolved in taken:
-            raise ConfigurationError(f"{label} is the same file as {taken[resolved]}")
-        taken[resolved] = f"the {label}"
-
-
-def _relative(page: Path, base: Path) -> str:
-    try:
-        relative = page.resolve().relative_to(base.resolve())
-    except ValueError:
-        raise ConfigurationError("The page must be inside the new job file's directory") from None
-    return validate_job_path_syntax(relative.as_posix())
+    if proposed is None:
+        raise ConfigurationError(f"No records observed (outcome: {Outcome.INSUFFICIENT_EVIDENCE})")
+    job_fields: list[JobField] = [_TYPED.get(f.type, StringField)(name=f.name) for f in proposed]
+    schema, client = build_job_schema(job_fields), Rastro()
+    preview_rows, kept = list[dict[str, Any]](), list[UrlJobSource]()
+    for page_url, html in pages:
+        res = client.extract_html(
+            html, source=Source(url=page_url), schema=schema, recipe=proposed.recipe
+        )
+        if res.records and (res.status is Outcome.SUCCESS or opts.get("allow_partial", False)):
+            kept.append(UrlJobSource(url=page_url))
+            preview_rows.extend(rec.data.model_dump(mode="json") for rec in res.records)
+    if not preview_rows:
+        raise ConfigurationError(f"No valid records (outcome: {Outcome.INSUFFICIENT_EVIDENCE})")
+    _write_validated_job(path, render_job(job_fields, proposed.recipe, kept, policy=policy, **opts))
+    res_kw: dict[str, Any] = {
+        "allowed_hosts": hosts,
+        "proposals": proposals,
+        "fields": tuple(proposed),
+    }
+    return GoalJobResult(created=path, preview=tuple(preview_rows), **res_kw)
 
 
 def _typed_fields(
-    html: str,
-    fields: list[JobField],
-    examples: Sequence[dict[str, str]],
-    found: Suggestion[Any],
-    source: Source,
+    html: str, fields: list[JobField], ex: Any, found: Any, src: Source
 ) -> list[JobField]:
-    client = Rastro()
-    baseline = (found.preview.status, len(found.preview.records))
-    typed = list(fields)
-    for index, field in enumerate(fields):
-        kind = infer_field_type([e[field.name] for e in examples if field.name in e])
-        if kind == "string":
-            continue
-        trial = [*typed[:index], _TYPED[kind](name=field.name), *typed[index + 1 :]]
-        result = client.extract_html(
-            html, source=source, schema=build_job_schema(trial), recipe=found.recipe
-        )
-        if (result.status, len(result.records)) == baseline:
-            typed = trial
+    client, base, typed = Rastro(), (found.preview.status, len(found.preview.records)), list(fields)
+    for idx, f in enumerate(fields):
+        if (kind := infer_field_type([e[f.name] for e in ex if f.name in e])) != "string":
+            trial = [*typed[:idx], _TYPED[kind](name=f.name), *typed[idx + 1 :]]
+            res = client.extract_html(
+                html, source=src, schema=build_job_schema(trial), recipe=found.recipe
+            )
+            if (res.status, len(res.records)) == base:
+                typed = trial
     return typed
 
 
 def _quote(value: str) -> str:
-    # JSON string escapes are valid TOML basic-string escapes; TOML also forbids raw DEL.
     return json.dumps(value, ensure_ascii=False).replace("\x7f", "\\u007f")
 
 
-def _dataset_name(path: str) -> str:
-    stem = re.sub(r"[^a-z0-9_]", "_", Path(path).stem.lower())
-    return (stem if stem[:1].isalpha() else f"data_{stem}")[:64]
-
-
-def render_job(
-    fields: Sequence[JobField],
-    recipe: CssRecipe,
-    source: FileJobSource,
-    *,
-    dataset: str | None = None,
-    identity: Sequence[str] = (),
-    recipe_memory: str | None = None,
-) -> str:
-    """TOML text for a one-source job; field names are validated identifiers."""
+def render_job(job_fields: Sequence[JobField], recipe: CssRecipe, source: Any, **opts: Any) -> str:
+    """TOML text for a local or HTTP job; field names are validated identifiers."""
+    ds, ident, mem = opts.get("dataset"), opts.get("identity") or (), opts.get("recipe_memory")
+    policy: AcquisitionPolicy | None = opts.get("policy")
+    sources = (source,) if isinstance(source, FileJobSource) else tuple(source)
     lines = [
         "# Created by `rastro new`. Review the recipe, then preview it with",
         "# `rastro job run <this file>` (prints records, no writes)."
-        + (" Store approved records with `rastro job load <this file>`." if dataset else ""),
+        + (" Store approved records with `rastro job load <this file>`." if ds else ""),
         "format_version = 1",
-        *([f"recipe_memory = {_quote(recipe_memory)}"] if recipe_memory is not None else []),
+        *([f"recipe_memory = {_quote(mem)}"] if mem is not None else []),
         "",
+    ]
+    if policy is not None:
+        hosts_toml = ", ".join(_quote(h) for h in policy.allowed_hosts)
+        lines += ["[acquisition]", f"allowed_hosts = [{hosts_toml}]"]
+        if policy.allow_http:
+            lines.append("allow_http = true")
+        lines.append("")
+    lines += [
         "[recipe]",
         'strategy = "css"',
         f"record_selector = {_quote(recipe.record_selector)}",
@@ -206,17 +227,23 @@ def render_job(
         *(f"{name} = {_quote(selector)}" for name, selector in recipe.fields.items()),
         "",
     ]
-    if dataset is not None:
+    if ds is not None:
+        stem = re.sub(r"[^a-z0-9_]", "_", Path(ds).stem.lower())
+        ds_name = (stem if stem[:1].isalpha() else f"data_{stem}")[:64]
         lines += [
             "[dataset]",
-            f"name = {_quote(_dataset_name(dataset))}",
-            f"path = {_quote(dataset)}",
-            f"identity = [{', '.join(_quote(name) for name in identity)}]",
+            f"name = {_quote(ds_name)}",
+            f"path = {_quote(ds)}",
+            f"identity = [{', '.join(_quote(name) for name in ident)}]",
             "",
         ]
-    lines += ["[[sources]]", 'kind = "file"', f"path = {_quote(source.path)}"]
-    if source.url is not None:
-        lines.append(f"url = {_quote(source.url)}")
-    for field in fields:
+    for item in sources:
+        if isinstance(item, FileJobSource):
+            lines += ["[[sources]]", 'kind = "file"', f"path = {_quote(item.path)}"]
+            if item.url is not None:
+                lines.append(f"url = {_quote(item.url)}")
+        else:
+            lines += ["[[sources]]", 'kind = "url"', f"url = {_quote(item.url)}"]
+    for field in job_fields:
         lines += ["", "[[fields]]", f"name = {_quote(field.name)}", f"type = {_quote(field.type)}"]
     return "\n".join(lines) + "\n"
