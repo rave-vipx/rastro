@@ -30,9 +30,8 @@ def test_render_contract():
 def setup(mode="browser", **changes):
     from rastro.application.browser_acquisition import BrowserAcquirer
 
-    policy = AcquisitionPolicy(
-        allowed_hosts=("example.com",), render=mode, min_interval_seconds=0, **changes
-    )
+    changes.setdefault("allowed_hosts", ("example.com",))
+    policy = AcquisitionPolicy(render=mode, min_interval_seconds=0, **changes)
     renderer = AsyncMock()
     renderer.render.return_value = AcquisitionResult(
         "https://example.com/", "<p>Rendered</p>", Outcome.SUCCESS, None, http_status=200
@@ -247,6 +246,54 @@ async def test_request_budget_prevents_launch():
     result = await client.acquire(Source(url="https://example.com/"), max_bytes=100)
     assert result.issue_code == "request_limit"
     renderer.render.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_browser_request_outside_pagination_scope_is_never_rendered():
+    from rastro.application.acquisition_state import PAGINATION_SCOPE, PaginationScope
+
+    client, renderer, _, _ = setup(allowed_hosts=("example.com", "other.test"))
+    token = PAGINATION_SCOPE.set(PaginationScope("example.com", True, 5))
+    try:
+        result = await client.acquire(Source(url="https://other.test/page"), max_bytes=100)
+    finally:
+        PAGINATION_SCOPE.reset(token)
+    assert result.issue_code == "off_host"
+    assert result.body is None
+    renderer.render.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_browser_render_spends_the_shared_pagination_budget():
+    from rastro.application.acquisition_state import PAGINATION_SCOPE, PaginationScope
+
+    client, renderer, _, _ = setup()
+    token = PAGINATION_SCOPE.set(PaginationScope("example.com", True, 1))  # robots spends it
+    try:
+        result = await client.acquire(Source(url="https://example.com/"), max_bytes=100)
+    finally:
+        PAGINATION_SCOPE.reset(token)
+    assert result.issue_code == "request_limit"
+    renderer.render.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_browser_redirect_outside_pagination_scope_is_refused():
+    from dataclasses import replace
+
+    from rastro.application.acquisition_state import PAGINATION_SCOPE, PaginationScope
+
+    client, renderer, _, _ = setup(allowed_hosts=("example.com", "other.test"))
+    renderer.render.return_value = replace(
+        renderer.render.return_value, url="https://other.test/page"
+    )
+    token = PAGINATION_SCOPE.set(PaginationScope("example.com", True, 5))
+    try:
+        result = await client.acquire(Source(url="https://example.com/"), max_bytes=100)
+    finally:
+        PAGINATION_SCOPE.reset(token)
+    assert result.issue_code == "off_host"
+    assert result.body is None
 
 
 @pytest.mark.asyncio
