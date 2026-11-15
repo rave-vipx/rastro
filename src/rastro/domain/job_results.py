@@ -95,7 +95,7 @@ class JobRunResult[T: BaseModel](Contract):
         results: Sequence[ExtractionResult[T]],
     ) -> JobRunResult[T]:
         items = tuple(results)
-        succeeded = sum(1 for item in items if item.status == Outcome.SUCCESS)
+        succeeded = sum(1 for item in items if item.status in (Outcome.SUCCESS, Outcome.UNCHANGED))
         partial = sum(1 for item in items if item.status == Outcome.PARTIAL_SUCCESS)
         failed = len(items) - succeeded - partial
         status: JobRunStatus = (

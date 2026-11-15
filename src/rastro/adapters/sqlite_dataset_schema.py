@@ -1,4 +1,4 @@
-"""Dataset schema 1, deliberately separate from recipe memory (ADR 0017)."""
+"""Dataset schema 2, deliberately separate from recipe memory (ADR 0017)."""
 
 import os
 import sqlite3
@@ -39,7 +39,7 @@ def safe[**P, T](operation: Callable[P, T]) -> Callable[P, T]:
 
 
 APPLICATION_ID = 0x52534453  # RSDS
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 class ConcurrentDatasetCreation(Exception):
@@ -54,8 +54,17 @@ def _markers(db: sqlite3.Connection) -> tuple[int, int]:
 
 
 def check_schema(db: sqlite3.Connection) -> None:
-    if _markers(db) != (SCHEMA_VERSION, APPLICATION_ID):
+    """Reads accept schema 1 or 2 as they are; only the write path migrates 1 to 2."""
+    if _markers(db) not in {(1, APPLICATION_ID), (SCHEMA_VERSION, APPLICATION_ID)}:
         raise DatasetStorageError("Foreign or newer database; dataset read refused")
+
+
+def has_validators(db: sqlite3.Connection) -> bool:
+    """Whether the validators table exists (schema 1 files have none until written)."""
+    return (
+        db.execute("SELECT 1 FROM sqlite_master WHERE name = 'dataset_validators'").fetchone()
+        is not None
+    )
 
 
 def migrate(db: sqlite3.Connection) -> None:
@@ -63,14 +72,20 @@ def migrate(db: sqlite3.Connection) -> None:
     version, app = _markers(db)
     if (version, app) == (SCHEMA_VERSION, APPLICATION_ID):
         return
-    if version or app or db.execute("SELECT 1 FROM sqlite_master LIMIT 1").fetchone():
-        raise DatasetStorageError("Foreign or newer database; dataset migration refused")
+    if (version, app) != (1, APPLICATION_ID):
+        if version or app or db.execute("SELECT 1 FROM sqlite_master LIMIT 1").fetchone():
+            raise DatasetStorageError("Foreign or newer database; dataset migration refused")
+        db.execute(
+            "CREATE TABLE dataset_records (dataset TEXT, key TEXT, payload TEXT NOT NULL, "
+            "PRIMARY KEY(dataset, key)) WITHOUT ROWID"
+        )
+        db.execute(
+            "CREATE TABLE dataset_sources (dataset TEXT, source TEXT, payload TEXT NOT NULL, "
+            "PRIMARY KEY(dataset, source)) WITHOUT ROWID"
+        )
     db.execute(
-        "CREATE TABLE dataset_records (dataset TEXT, key TEXT, payload TEXT NOT NULL, "
-        "PRIMARY KEY(dataset, key)) WITHOUT ROWID"
-    )
-    db.execute(
-        "CREATE TABLE dataset_sources (dataset TEXT, source TEXT, payload TEXT NOT NULL, "
+        "CREATE TABLE dataset_validators (dataset TEXT, source TEXT, origin TEXT NOT NULL, "
+        "observed_at TEXT NOT NULL, payload TEXT NOT NULL, "
         "PRIMARY KEY(dataset, source)) WITHOUT ROWID"
     )
     db.execute(f"PRAGMA application_id = {APPLICATION_ID}")
@@ -79,6 +94,7 @@ def migrate(db: sqlite3.Connection) -> None:
 
 @contextmanager
 def _transaction(path: Path, limits: Limits, *, write: bool) -> Iterator[sqlite3.Connection]:
+    """Reads open read-only and never migrate; writes create and migrate v1 -> v2."""
     mode = "rwc" if write else "ro"
     with closing(
         sqlite3.connect(f"{path.as_uri()}?mode={mode}", uri=True, timeout=5, isolation_level=None)

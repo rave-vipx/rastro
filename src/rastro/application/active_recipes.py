@@ -7,12 +7,14 @@ and a hand-edited recipe with a bumped version is used again (ADR 0021).
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 
 from rastro.application.job_loader import recipe_memory_path, validate_job_paths
 from rastro.domain.job_results import RecipeSelection
-from rastro.domain.jobs import FileJobSource, Job, JobSource
+from rastro.domain.jobs import FileJobSource, Job, JobSource, UrlJobSource
 from rastro.domain.memory import RecipeKey, RecipeStorageError
+from rastro.domain.repair import recipe_digest
 from rastro.ports.recipes import RecipeRepository
 
 
@@ -82,10 +84,14 @@ def select_recipes(
     return job.model_copy(update={"sources": tuple(sources), "recipe": None}), tuple(selections)
 
 
-def active_job(
-    job: Job, *, base_dir: Path | None, allow_absolute_paths: bool
-) -> tuple[Job, tuple[RecipeSelection, ...]]:
-    """Select each source's recipe, reading ``recipe_memory`` when the file exists.
+def _with_repository[T](
+    job: Job,
+    *,
+    base_dir: Path | None,
+    allow_absolute_paths: bool,
+    use: Callable[[RecipeRepository | None], T],
+) -> T:
+    """Run ``use`` on the job's recipe memory, opened read-only when it is current.
 
     A current-schema store is opened read-only. An older store is opened writable,
     which migrates it, as the run that follows would do anyway. Symlinked
@@ -96,10 +102,70 @@ def active_job(
         job, base_dir=base_dir, allow_absolute_paths=allow_absolute_paths
     )
     if memory_path is None or not memory_path.is_file():
-        return select_recipes(job, None)
+        return use(None)
     from rastro.adapters.sqlite import SQLiteRecipeRepository
 
     try:
-        return select_recipes(job, SQLiteRecipeRepository(memory_path, read_only=True))
+        return use(SQLiteRecipeRepository(memory_path, read_only=True))
     except RecipeStorageError:
-        return select_recipes(job, SQLiteRecipeRepository(memory_path))
+        return use(SQLiteRecipeRepository(memory_path))
+
+
+def active_job(
+    job: Job, *, base_dir: Path | None, allow_absolute_paths: bool
+) -> tuple[Job, tuple[RecipeSelection, ...]]:
+    """Select each source's recipe, reading ``recipe_memory`` when the file exists."""
+    return _with_repository(
+        job,
+        base_dir=base_dir,
+        allow_absolute_paths=allow_absolute_paths,
+        use=lambda repository: select_recipes(job, repository),
+    )
+
+
+def serving_recipe_digests(
+    job: Job, *, base_dir: Path | None, allow_absolute_paths: bool
+) -> tuple[str | None, ...]:
+    """Per source: digest of the stored recipe a run would find (pinned or serving), if any."""
+
+    def digests(repository: RecipeRepository | None) -> tuple[str | None, ...]:
+        found = (
+            repository.get(source_key(job, item), version=job.recipe_version)
+            if repository is not None
+            else None
+            for item in job.sources
+        )
+        return tuple(None if stored is None else recipe_digest(stored.recipe) for stored in found)
+
+    return _with_repository(
+        job, base_dir=base_dir, allow_absolute_paths=allow_absolute_paths, use=digests
+    )
+
+
+def paginated_urls(
+    job: Job, *, base_dir: Path | None, allow_absolute_paths: bool
+) -> frozenset[str]:
+    """URLs of sources whose effective recipe (job file or serving memory) paginates."""
+
+    def find(repository: RecipeRepository | None) -> frozenset[str]:
+        _, selections = select_recipes(job, repository)
+        urls: set[str] = set()
+        for item, selection in zip(job.sources, selections, strict=True):
+            if not isinstance(item, UrlJobSource):
+                continue
+            if selection.recipe_origin == "memory":
+                stored = (
+                    repository.get(source_key(job, item), version=job.recipe_version)
+                    if repository is not None
+                    else None
+                )
+                recipe = stored.recipe if stored is not None else None
+            else:
+                recipe = item.recipe or job.recipe
+            if recipe is not None and recipe.pagination is not None:
+                urls.add(item.url)
+        return frozenset(urls)
+
+    return _with_repository(
+        job, base_dir=base_dir, allow_absolute_paths=allow_absolute_paths, use=find
+    )

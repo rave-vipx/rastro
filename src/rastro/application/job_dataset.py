@@ -7,25 +7,31 @@ from collections.abc import Iterable, Iterator
 from contextlib import AbstractContextManager, contextmanager, nullcontext
 from datetime import timedelta
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from rastro.adapters.sqlite_dataset import SQLiteDatasetStore
 from rastro.adapters.sqlite_drift import SQLiteDriftMonitor
+from rastro.application.conditional import ConditionalRequests
+from rastro.application.conditional_inputs import extraction_inputs
 from rastro.application.dataset_load import load_results
 from rastro.application.drift import collect_snapshots
 from rastro.application.egress_trust import allowed_env_names, check_job_egress
 from rastro.application.job_loader import load_job, resolve_job_path
 from rastro.application.jobs import run_job
-from rastro.application.operator_trust import current_trust
+from rastro.application.operator_trust import current_trust, operator_trust
 from rastro.application.success_samples import collect_successes
+from rastro.domain.dataset import DatasetStorageError
 from rastro.domain.job_load import JobLoadResult
-from rastro.domain.models import ConfigurationError
+from rastro.domain.job_results import JobRunResult
+from rastro.domain.jobs import UrlJobSource
+from rastro.domain.models import ConfigurationError, Outcome
 from rastro.domain.secret_env import check_secret_env_name
-from rastro.ports.dataset import DatasetStore
+from rastro.ports.dataset import DatasetStore, DatasetValidators
 
 if TYPE_CHECKING:
     from rastro.domain.drift import StructuralSnapshot
     from rastro.domain.jobs import Job
+    from rastro.ports.acquisition import AcquisitionPort
 
 
 def dataset_location(file: Path, job: Job, *, allow_absolute_paths: bool) -> Path:
@@ -85,6 +91,21 @@ def load_job_file(
     else:
         capture = nullcontext({})
     with open_dataset(job, raw_path, allow_remote=allow_remote, allow_env=allow_env) as store:
+        conditional = (
+            ConditionalRequests(
+                store,
+                spec.name,
+                extraction_inputs(
+                    job, base_dir=file.parent, allow_absolute_paths=allow_absolute_paths
+                ),
+            )
+            if isinstance(store, DatasetValidators) and job.acquisition is not None
+            else None
+        )
+        with operator_trust(
+            allow_remote=allow_remote, allow_stealth=allow_stealth, allow_env=allow_env
+        ):  # the render-mode consent check runs here, as it would inside run_job
+            acquisition = _web_acquirer(job, conditional) if job.acquisition is not None else None
         with capture as snapshots, collect_successes() as successes:
             report = run_job(
                 job,
@@ -94,6 +115,7 @@ def load_job_file(
                 allow_egress=allow_egress,
                 allow_stealth=allow_stealth,
                 allow_env=allow_env,
+                acquisition=acquisition,
             )
         loaded = load_results(
             spec,
@@ -105,6 +127,8 @@ def load_job_file(
             snapshots=snapshots,
             drift_state=drift_state,
         )
+        if conditional is not None:
+            loaded = _commit_validators(conditional, job, report, loaded)
     from rastro.application.repair_storage import retain_successes
 
     held_urls = {
@@ -131,6 +155,50 @@ def load_job_file(
             )
         }
     )
+
+
+def _web_acquirer(job: Job, conditional: ConditionalRequests | None) -> AcquisitionPort:
+    """HTTP acquisition, or the browser composition when a source renders (SCR-003)."""
+    try:
+        from rastro.adapters.dns import SystemResolver
+        from rastro.adapters.http import CurlTransport
+        from rastro.application.acquisition import WebAcquirer
+        from rastro.browser import job_acquisition
+
+        assert job.acquisition is not None
+        return job_acquisition(job, None, conditional=conditional) or WebAcquirer(
+            job.acquisition,
+            transport=CurlTransport(),
+            resolver=SystemResolver(),
+            conditional=conditional,
+        )
+    except ModuleNotFoundError as error:
+        if error.name not in {"curl_cffi", "protego"}:
+            raise
+        raise ConfigurationError("Install rastro-engine[http] for HTTP acquisition") from None
+
+
+def _commit_validators(
+    conditional: ConditionalRequests,
+    job: Job,
+    report: JobRunResult[Any],
+    loaded: JobLoadResult,
+) -> JobLoadResult:
+    """Save validators only for sources that loaded cleanly; storage failures are explicit."""
+    try:
+        for item, result, source in zip(job.sources, report.results, loaded.sources, strict=True):
+            if (
+                isinstance(item, UrlJobSource)
+                and source.status == Outcome.SUCCESS
+                and not source.inconsistent
+                and not source.issues
+            ):
+                conditional.save(item.url, result.completed_at)
+    except DatasetStorageError:
+        conditional.failed = True
+    if conditional.failed:
+        return loaded.model_copy(update={"status": "storage_error"})
+    return loaded
 
 
 @contextmanager

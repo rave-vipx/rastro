@@ -9,6 +9,8 @@ from time import perf_counter
 from urllib.parse import urlsplit, urlunsplit
 
 from rastro.application.acquisition_state import _Host, _Operation, check_page_request
+from rastro.application.conditional import ConditionalRequests
+from rastro.application.cookie_jar import CookieJar
 from rastro.application.destinations import permitted_url, pin_destination
 from rastro.application.http_policy import (
     REDIRECT_STATUSES,
@@ -43,11 +45,14 @@ class WebAcquirer:
         transport: HttpTransport,
         resolver: Resolver,
         environ: Mapping[str, str] | None = None,
+        conditional: ConditionalRequests | None = None,
     ):
         self.policy = policy
         self._transport = transport
         self._resolver = resolver
+        self._conditional = conditional
         self._environ = environ
+        self._cookies = CookieJar() if policy.session else None
         self._slots = asyncio.Semaphore(policy.max_concurrency)
         self._hosts = {
             host: _Host(interval=policy.min_interval_seconds) for host in policy.allowed_hosts
@@ -57,7 +62,7 @@ class WebAcquirer:
         self, source: Source, *, max_bytes: int, representation: Representation = "html"
     ) -> AcquisitionResult:
         started = perf_counter()
-        operation = _Operation(source.url)
+        operation = _Operation(source.url, cookie_host=urlsplit(source.url).hostname)
         body: str | None = None
         issue: str | None = None
         status = Outcome.SUCCESS
@@ -69,15 +74,29 @@ class WebAcquirer:
                 for hop in range(self.policy.max_redirects + 1):
                     url, _, _ = permitted_url(url, self.policy)
                     operation.url = url
+                    operation.headers = request_headers(source, representation)
                     await self._robots(url, operation)
+                    conditional = (
+                        await self._conditional.headers(source.url, url)
+                        if self._conditional is not None
+                        else {}
+                    )
+                    operation.headers.update(conditional)
                     response = await self._request(url, operation, max_bytes=max_bytes)
+                    if response.status == 304 and conditional:
+                        status = Outcome.UNCHANGED
+                        break
                     if response.status not in REDIRECT_STATUSES:
                         check_status(response.status)
                         body = decode_body(response, representation)
+                        if self._conditional is not None:
+                            self._conditional.remember(source.url, url, response)
                         break
                     if hop == self.policy.max_redirects:
                         raise AcquisitionError("redirect_limit", Outcome.PERMANENT_FAILURE)
                     url = redirect_target(url, response, self.policy)
+                    if urlsplit(url).hostname != operation.cookie_host:
+                        operation.cookie_host = None
                     operation.redirects += 1
         except TimeoutError:
             status, issue = Outcome.TRANSIENT_FAILURE, "operation_timeout"
@@ -215,13 +234,21 @@ class WebAcquirer:
                         )
                         network_start = perf_counter()
                         try:
-                            return await self._transport.get(
+                            headers = dict(operation.headers)
+                            if self._cookies is not None and target.host == operation.cookie_host:
+                                cookie = self._cookies.header(url)
+                                if cookie:
+                                    headers["Cookie"] = cookie
+                            response = await self._transport.get(
                                 replace(target, address=address, alternates=addresses[index + 1 :]),
-                                headers=operation.headers,
+                                headers=headers,
                                 timeout=timeout,
                                 max_bytes=max_bytes,
                                 proxy=operation.proxy,
                             )
+                            if self._cookies is not None:
+                                self._cookies.receive(url, response.headers.get("set-cookie", ""))
+                            return response
                         except AcquisitionError as error:
                             if (
                                 not error.connect_failure

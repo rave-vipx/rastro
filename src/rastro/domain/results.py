@@ -14,6 +14,7 @@ from rastro.domain.sources import EGRESS_NAME, Contract
 
 class Outcome(StrEnum):
     SUCCESS = "success"
+    UNCHANGED = "unchanged"
     PARTIAL_SUCCESS = "partial_success"
     MISSING_DATA = "missing_data"
     INVALID_DATA = "invalid_data"

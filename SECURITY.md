@@ -12,8 +12,9 @@ Rastro is in beta (0.7.0). Security fixes target `main` and the latest released 
 adds opt-in HTTP acquisition with an exact source allowlist, public-IP checks,
 validated DNS pinning, per-hop redirect checks, verified TLS, robots rules, host
 pacing, and request/body/deadline budgets. Standard HTTP(S) ports only; HTTP requires
-explicit opt-in and HTTPS never redirects to HTTP. Cookies, ambient proxies, netrc,
-browser impersonation, and transport-level redirects/retries are disabled.
+explicit opt-in and HTTPS never redirects to HTTP. Cookies are disabled by default; opt-in sessions keep bounded, exact-host cookies
+in memory for one run, while ambient proxies, netrc, browser impersonation and
+transport-level redirects/retries remain disabled.
 
 401/403/451 stop further requests to that host in the client. 429 and Retry-After
 produce explicit restrictions/deferred results and host cooldowns. Browser stealth mode is an operator opt-in using Scrapling/Patchright browser
