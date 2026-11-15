@@ -35,6 +35,7 @@ MAX_CHARS = 2_000
 def _store(studio: Studio, path: Path, job: Job) -> tuple[SQLiteDatasetStore, str]:
     if job.dataset is None:
         raise ConfigurationError("The job has no [dataset] block")
+    job.dataset.require_sqlite_views()
     file = resolve_job_path(job.dataset.path, base_dir=path.parent)
     if not file.is_relative_to(studio.root) or not file.is_file():
         raise ConfigurationError("The dataset does not exist yet; load the job first")

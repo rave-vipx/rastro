@@ -2,25 +2,30 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
-from contextlib import AbstractContextManager, nullcontext
+import os
+from collections.abc import Iterable, Iterator
+from contextlib import AbstractContextManager, contextmanager, nullcontext
 from datetime import timedelta
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from rastro.adapters.sqlite_dataset import SQLiteDatasetStore
 from rastro.adapters.sqlite_drift import SQLiteDriftMonitor
 from rastro.application.conditional import ConditionalRequests
 from rastro.application.dataset_load import load_results
 from rastro.application.drift import collect_snapshots
-from rastro.application.egress_trust import check_job_egress
+from rastro.application.egress_trust import allowed_env_names, check_job_egress
 from rastro.application.job_loader import load_job, resolve_job_path
 from rastro.application.jobs import run_job
+from rastro.application.operator_trust import current_trust
 from rastro.application.success_samples import collect_successes
 from rastro.domain.dataset import DatasetStorageError
 from rastro.domain.job_load import JobLoadResult
+from rastro.domain.job_results import JobRunResult
 from rastro.domain.jobs import UrlJobSource
 from rastro.domain.models import ConfigurationError, Outcome
+from rastro.domain.secret_env import check_secret_env_name
+from rastro.ports.dataset import DatasetStore, DatasetValidators
 
 if TYPE_CHECKING:
     from rastro.application.acquisition import WebAcquirer
@@ -74,12 +79,6 @@ def load_job_file(
     if spec is None:
         raise ConfigurationError("job load requires a [dataset] block in the job file")
     raw_path = dataset_location(file, job, allow_absolute_paths=allow_absolute_paths)
-    store = SQLiteDatasetStore(
-        raw_path,
-        limits=job.limits,
-        near_match_fields=spec.match_fields,
-        near_match_tolerance=timedelta(minutes=spec.match_tolerance_minutes or 30),
-    )
     drift_state = SQLiteDriftMonitor(raw_path, limits=job.limits)
     monitor = drift_state if drift else None
     capture: AbstractContextManager[dict[str, StructuralSnapshot]]
@@ -89,41 +88,33 @@ def load_job_file(
         capture = collect_snapshots(ScraplingDriftProbe())
     else:
         capture = nullcontext({})
-    conditional = ConditionalRequests(store, spec.name)
-    acquisition = _web_acquirer(job, conditional) if job.acquisition is not None else None
-    with capture as snapshots, collect_successes() as successes:
-        report = run_job(
-            job,
-            base_dir=file.parent,
-            allow_absolute_paths=allow_absolute_paths,
-            allow_remote=allow_remote,
-            allow_egress=allow_egress,
-            allow_env=allow_env,
-            acquisition=acquisition,
+    with open_dataset(job, raw_path, allow_remote=allow_remote, allow_env=allow_env) as store:
+        conditional = (
+            ConditionalRequests(store, spec.name) if isinstance(store, DatasetValidators) else None
         )
-    loaded = load_results(
-        spec,
-        [f.name for f in job.fields],
-        report,
-        store,
-        rules=job.consistency,
-        monitor=monitor,
-        snapshots=snapshots,
-        drift_state=drift_state,
-    )
-    try:
-        for item, result, source in zip(job.sources, report.results, loaded.sources, strict=True):
-            if (
-                isinstance(item, UrlJobSource)
-                and source.status == Outcome.SUCCESS
-                and not source.inconsistent
-                and not source.issues
-            ):
-                conditional.save(item.url, result.completed_at)
-    except DatasetStorageError:
-        conditional.failed = True
-    if conditional.failed:
-        loaded = loaded.model_copy(update={"status": "storage_error"})
+        acquisition = _web_acquirer(job, conditional) if job.acquisition is not None else None
+        with capture as snapshots, collect_successes() as successes:
+            report = run_job(
+                job,
+                base_dir=file.parent,
+                allow_absolute_paths=allow_absolute_paths,
+                allow_remote=allow_remote,
+                allow_egress=allow_egress,
+                allow_env=allow_env,
+                acquisition=acquisition,
+            )
+        loaded = load_results(
+            spec,
+            [f.name for f in job.fields],
+            report,
+            store,
+            rules=job.consistency,
+            monitor=monitor,
+            snapshots=snapshots,
+            drift_state=drift_state,
+        )
+        if conditional is not None:
+            loaded = _commit_validators(conditional, job, report, loaded)
     from rastro.application.repair_storage import retain_successes
 
     held_urls = {
@@ -152,7 +143,7 @@ def load_job_file(
     )
 
 
-def _web_acquirer(job: Job, conditional: ConditionalRequests) -> WebAcquirer:
+def _web_acquirer(job: Job, conditional: ConditionalRequests | None) -> WebAcquirer:
     try:
         from rastro.adapters.dns import SystemResolver
         from rastro.adapters.http import CurlTransport
@@ -168,3 +159,64 @@ def _web_acquirer(job: Job, conditional: ConditionalRequests) -> WebAcquirer:
         resolver=SystemResolver(),
         conditional=conditional,
     )
+
+
+def _commit_validators(
+    conditional: ConditionalRequests,
+    job: Job,
+    report: JobRunResult[Any],
+    loaded: JobLoadResult,
+) -> JobLoadResult:
+    """Save validators only for sources that loaded cleanly; storage failures are explicit."""
+    try:
+        for item, result, source in zip(job.sources, report.results, loaded.sources, strict=True):
+            if (
+                isinstance(item, UrlJobSource)
+                and source.status == Outcome.SUCCESS
+                and not source.inconsistent
+                and not source.issues
+            ):
+                conditional.save(item.url, result.completed_at)
+    except DatasetStorageError:
+        conditional.failed = True
+    if conditional.failed:
+        return loaded.model_copy(update={"status": "storage_error"})
+    return loaded
+
+
+@contextmanager
+def open_dataset(
+    job: Job, local_path: Path, *, allow_remote: bool = False, allow_env: Iterable[str] = ()
+) -> Iterator[DatasetStore]:
+    """Open the configured dataset; operational state always uses local_path."""
+    spec = job.dataset
+    if spec is None:
+        raise ConfigurationError("This command requires a [dataset] block")
+    tolerance = timedelta(minutes=spec.match_tolerance_minutes or 30)
+    if spec.backend == "sqlite":
+        yield SQLiteDatasetStore(
+            local_path,
+            limits=job.limits,
+            near_match_fields=spec.match_fields,
+            near_match_tolerance=tolerance,
+        )
+        return
+    from rastro.adapters.postgres_dataset import PostgresDatasetStore
+
+    assert spec.dsn_env is not None
+    name = check_secret_env_name(spec.dsn_env, allowed_env_names(allow_env))
+    dsn = os.environ.get(name)
+    if not dsn:
+        raise ConfigurationError("PostgreSQL connection environment variable is missing or empty")
+    store = PostgresDatasetStore(
+        dsn,
+        schema=spec.db_schema,
+        allow_remote=allow_remote or current_trust().allow_remote,
+        limits=job.limits,
+        near_match_fields=spec.match_fields,
+        near_match_tolerance=tolerance,
+    )
+    try:
+        yield store
+    finally:
+        store.close()

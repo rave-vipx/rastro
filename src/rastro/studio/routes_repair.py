@@ -42,6 +42,8 @@ def _existing(raw: str | None, base: Path) -> Path | None:
 
 def _statuses(job: Job, base: Path) -> tuple[dict[str, Any], dict[str, Any]]:
     """Source status and open drift by source URL (DRIFT-005)."""
+    if job.dataset is not None:
+        job.dataset.require_sqlite_views()
     file = _existing(job.dataset.path if job.dataset else None, base)
     if file is None or job.dataset is None:
         return {}, {}
