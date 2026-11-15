@@ -14,6 +14,7 @@ import rastro.application.source_proposals as sp
 from rastro.application.engine import Rastro
 from rastro.application.field_proposals import _TYPED, FieldProposal, ProposedFields, propose_fields
 from rastro.application.job_loader import _read_local_source
+from rastro.application.model_choice import ModelChoice
 from rastro.application.suggest import suggest
 from rastro.domain.acquisition import AcquisitionPolicy
 from rastro.domain.job_fields import JobField, StringField, build_job_schema
@@ -72,9 +73,28 @@ def _write_validated_job(path: Path, text: str) -> Path:
 
 
 def new_job(
-    path: Path, *, page: Path, examples: Sequence[Example] = (), url: str | None = None, **opts: Any
+    path: Path,
+    *,
+    page: Path,
+    examples: Sequence[Example] = (),
+    url: str | None = None,
+    records_min: int = 2,
+    dataset: str | None = None,
+    identity: Sequence[str] = (),
+    allow_partial: bool = False,
+    recipe_memory: str | None = None,
+    fields: Sequence[str] = (),
+    model: ModelChoice = None,
 ) -> Path:
-    """Write a new TOML job at ``path``; never overwrite an existing file."""
+    """Write a new TOML job at ``path``; never overwrite an existing file.
+
+    The suggested recipe's preview must succeed; ``allow_partial=True`` writes a job whose
+    preview is only a partial success. ``recipe_memory`` names a recipe store relative to
+    the job file, in a folder that already exists; it enables repair and promotion.
+    With ``model``, examples are optional: ``fields`` names the fields to extract and
+    the model proposes the recipe, verified like an example-built one.
+    """
+    opts = {"dataset": dataset, "identity": identity, "recipe_memory": recipe_memory}
     try:
         rel = page.resolve().relative_to(path.parent.resolve()).as_posix()
         rel_page = validate_job_path_syntax(rel)
@@ -84,9 +104,8 @@ def new_job(
         raise ConfigurationError("The page must be inside the new job file's directory") from None
     _validate_target(path, page, opts)
     html = _read_local_source(page, Limits().max_html_bytes, "html")
-    model, rmin = opts.get("model"), int(opts.get("records_min", 2))
     checked = check_examples(examples) if examples or model is None else ()
-    names = dict.fromkeys([*(k for e in checked for k in e), *opts.get("fields", ())])
+    names = dict.fromkeys([*(k for e in checked for k in e), *fields])
     if not names:
         raise ConfigurationError("Name the fields with examples or --field")
     try:
@@ -95,8 +114,10 @@ def new_job(
         msg = "Example field names must start with a letter and use letters, digits or _"
         raise ConfigurationError(msg) from None
     source = FileJobSource(path=rel_page, url=url)
-    found = suggest(html, job_fields, examples=checked, url=url, records_min=rmin, model=model)
-    if found.status != Outcome.SUCCESS and not opts.get("allow_partial", False):
+    found = suggest(
+        html, job_fields, examples=checked, url=url, records_min=records_min, model=model
+    )
+    if found.status != Outcome.SUCCESS and not allow_partial:
         issues = ", ".join(
             sorted({f"{i.code}:{i.field}" if i.field else i.code for i in found.preview.issues})
         )

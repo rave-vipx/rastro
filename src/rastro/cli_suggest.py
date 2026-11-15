@@ -7,6 +7,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from pydantic import ValidationError
+
 from rastro.application.job_loader import _read_local_source
 from rastro.application.job_new import GoalJobResult, new_job, new_job_from_goal, new_job_from_sites
 from rastro.application.job_preview import _cell
@@ -48,14 +50,34 @@ def add_commands(subcommands: argparse._SubParsersAction) -> None:  # type: igno
     _add_example_options(new)
     new.add_argument("--dataset", help="Dataset path for approved records, relative to the job")
     new.add_argument("--identity", action="append", default=[], help="Record key field")
-    new.add_argument("--recipe-memory", metavar="FILE", help="Recipe store relative to the job")
-    new.add_argument("--allow-partial", action="store_true", help="Allow partial preview")
+    new.add_argument(
+        "--recipe-memory",
+        metavar="FILE",
+        help="Recipe store relative to the job, enabling repair (folder must exist)",
+    )
+    new.add_argument(
+        "--allow-partial",
+        action="store_true",
+        help="Write the job even if the recipe preview is only a partial success",
+    )
 
 
 def _add_example_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--url", help="Address the page was saved from")
-    parser.add_argument("--example", action="append", default=[], metavar="FIELD=VALUE")
-    parser.add_argument("--field", action="append", default=[], metavar="NAME")
+    parser.add_argument(
+        "--example",
+        action="append",
+        default=[],
+        metavar="FIELD=VALUE",
+        help="Example value; repeating a field starts the next example record",
+    )
+    parser.add_argument(
+        "--field",
+        action="append",
+        default=[],
+        metavar="NAME",
+        help="Field to extract without an example (requires --model)",
+    )
     add_model_options(parser, "propose the recipe; examples become optional")
     parser.add_argument("--records-min", type=int, default=2, help="Minimum records (default 2)")
 
@@ -98,9 +120,10 @@ def _default_acquirer(policy: AcquisitionPolicy) -> AcquisitionPort:
 
 def _acquirer_for_hosts(hosts: tuple[str, ...], *, allow_http: bool = False) -> AcquisitionPort:
     try:
-        return _default_acquirer(AcquisitionPolicy(allowed_hosts=hosts, allow_http=allow_http))
-    except Exception:
+        policy = AcquisitionPolicy(allowed_hosts=hosts, allow_http=allow_http)
+    except ValidationError:
         raise ConfigurationError("Approved hosts must be exact hostnames or IP addresses") from None
+    return _default_acquirer(policy)
 
 
 def suggest_command(args: argparse.Namespace) -> int:

@@ -6,18 +6,30 @@ import asyncio
 import ipaddress
 import os
 import re
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlsplit
-
-import httpx
 
 from rastro.application.operator_trust import REMOTE_ENV, current_trust, env_flag
 from rastro.domain.json import strict_json
 from rastro.domain.models import ConfigurationError
 from rastro.ports.search import SearchHit
 
+if TYPE_CHECKING:
+    import httpx
+
 SEARXNG_ENV = "RASTRO_SEARXNG_URL"
+_LOCAL_NAMES = frozenset({"localhost"})
 _PATH = re.compile(r"(?:/(?!\.\.?(?:/|$))[A-Za-z0-9._~-]+)*")
+
+
+def _load_httpx() -> Any:
+    try:
+        import httpx
+    except ImportError:
+        raise ConfigurationError(
+            "SearXNG search needs httpx: pip install 'rastro-engine[openai]'"
+        ) from None
+    return httpx
 
 
 def _validate_searxng_url(raw: str, *, allow_remote: bool) -> str:
@@ -39,7 +51,9 @@ def _validate_searxng_url(raw: str, *, allow_remote: bool) -> str:
         addr = ipaddress.ip_address(h)
     except ValueError:
         addr = None
-    loop = addr is not None and (addr == ipaddress.ip_address("::1") or addr.is_loopback)
+    loop = h.lower() in _LOCAL_NAMES or (
+        addr is not None and (addr == ipaddress.ip_address("::1") or addr.is_loopback)
+    )
     if not loop:
         if not (allow_remote or env_flag(REMOTE_ENV) or current_trust().allow_remote):
             raise ConfigurationError("Remote SearXNG requires allow_remote=True or --allow-remote")
@@ -59,6 +73,7 @@ class SearXNGSearchProvider:
         if not raw:
             raise ConfigurationError(f"No SearXNG endpoint configured: set {SEARXNG_ENV}")
         self._url = _validate_searxng_url(raw, allow_remote=bool(opts.get("allow_remote", False)))
+        self._httpx = _load_httpx()
         self._timeout = float(opts.get("timeout", 15.0))
         self._max_bytes = int(opts.get("max_response_bytes", 262_144))
         self._transport: httpx.AsyncBaseTransport | None = opts.get("transport")
@@ -70,6 +85,7 @@ class SearXNGSearchProvider:
         q = query.strip()
         if not q or len(q) > 500 or not 1 <= limit <= 50:
             raise ConfigurationError("Search query must be 1..500 chars and limit 1..50")
+        httpx = self._httpx
         hdrs = {"Accept": "application/json", "Accept-Encoding": "identity"}
         kw: dict[str, Any] = {
             "trust_env": False,

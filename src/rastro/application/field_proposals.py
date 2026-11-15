@@ -8,7 +8,7 @@ from collections.abc import Sequence
 from typing import Any
 from urllib.parse import urljoin
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 import rastro.domain.job_fields as jf
 from rastro.application.engine import Rastro
@@ -17,7 +17,8 @@ from rastro.application.suggest import LOCAL_URL, suggest
 from rastro.domain.models import ConfigurationError, Contract, CssRecipe, Limits, Outcome, Source
 from rastro.domain.page_outline import clip_untrusted
 from rastro.domain.selector_policy import check_untrusted_recipe
-from rastro.domain.suggest import SuggestionError, infer_field_type, normalize_text
+from rastro.domain.suggest import SuggestionError, infer_field_type
+from rastro.ports.field_discovery import FieldDiscoverer
 
 MAX_PROPOSED_FIELDS = 12
 _TYPED: dict[str, type[jf.JobField]] = {
@@ -75,70 +76,6 @@ def _field_name(classes: Sequence[str], tag: str, attr: str | None) -> str:
     return {"time": "date", "a": "link"}.get(tag, _clean_ident(tag) or "field")
 
 
-def _discover_from_dom(
-    html: str, records_min: int, limits: Limits
-) -> list[tuple[str, list[tuple[str, str, list[str], tuple[str, ...]]]]]:
-    from rastro.adapters.page_outline import LxmlPageOutliner
-    from rastro.adapters.scrapling import _parse_html
-    from rastro.adapters.suggest_dom import elements, stable_classes, tag_of
-    from rastro.adapters.suggest_fields import MAX_FIELD_SELECTORS, relative_selectors
-
-    outline = LxmlPageOutliner().outline(html, limits)
-    if not html.strip():
-        return []
-    page = _parse_html(html)
-    selectors = [c.selector for c in outline.containers]
-    for parent in elements(page._root):
-        if ptag := tag_of(parent):
-            psig = ptag + "".join(f".{c}" for c in stable_classes(parent))
-            counts: dict[str, int] = {}
-            for ch in parent:
-                if isinstance(ch.tag, str) and (ctag := tag_of(ch)):
-                    csig = ctag + "".join(f".{c}" for c in stable_classes(ch))
-                    counts[csig] = counts.get(csig, 0) + 1
-            for cs, n in counts.items():
-                if n >= records_min and f"{psig} > {cs}" not in selectors:
-                    selectors.append(f"{psig} > {cs}")
-    results = []
-    for rec_sel in selectors:
-        try:
-            records = tuple(page.css(rec_sel))
-        except Exception:
-            continue
-        if not records_min <= len(records) <= limits.max_records:
-            continue
-        first_root, found, used = records[0]._root, [], set[str]()
-        for node in elements(first_root)[1:]:
-            tag, classes = tag_of(node) or "field", tuple(stable_classes(node))
-            attrs = [a for a in ("datetime", "href", "src", "content") if node.get(a)]
-            specs: list[tuple[str, str | None]] = [(f"::attr({a})", a) for a in attrs]
-            if (node.text or "").strip() and "datetime" not in attrs and "href" not in attrs:
-                specs.append(("::text", None))
-            for suffix, attr in specs:
-                for rel in relative_selectors(first_root, node)[:MAX_FIELD_SELECTORS]:
-                    sel = rel + suffix
-                    if not rel or sel in used:
-                        continue
-                    vals = [
-                        [
-                            normalize_text(str(v))
-                            for v in r.css(sel).getall()
-                            if normalize_text(str(v))
-                        ]
-                        for r in records
-                        if len(r.css(rel)) <= 1
-                    ]
-                    if len(vals) == len(records) and all(len(v) == 1 for v in vals):
-                        used.add(sel)
-                        found.append(
-                            (_field_name(classes, tag, attr), sel, [v[0] for v in vals], classes)
-                        )
-                        break
-        if found:
-            results.append((rec_sel, found[:MAX_PROPOSED_FIELDS]))
-    return results
-
-
 def _verify_and_type(
     html: str,
     rec_sel: str,
@@ -177,17 +114,30 @@ def _verify_and_type(
     return ProposedFields(items, recipe)
 
 
+def _default_discoverer() -> FieldDiscoverer:
+    from rastro.adapters.field_discovery import ScraplingFieldDiscoverer
+
+    return ScraplingFieldDiscoverer()
+
+
 def propose_fields(html: str, **opts: Any) -> ProposedFields:
     url: str | None = opts.get("url")
     records_min = int(opts.get("records_min", 2))
     limits: Limits = opts.get("limits") or Limits()
+    discoverer: FieldDiscoverer | None = opts.get("discoverer")
     req = tuple(dict.fromkeys(f.strip() for f in opts.get("fields", ()) if f.strip()))
     try:
         for name in req:
             jf.StringField(name=name)
-    except Exception:
+    except ValidationError:
         raise ConfigurationError("Field names must be valid identifiers") from None
-    for rec_sel, discovered in _discover_from_dom(html, records_min, limits):
+    finder = discoverer if discoverer is not None else _default_discoverer()
+    for group in finder.discover(html, records_min, limits):
+        rec_sel = group.record_selector
+        discovered = [
+            (_field_name(f.classes, f.tag, f.attribute), f.selector, list(f.values), f.classes)
+            for f in group.fields[:MAX_PROPOSED_FIELDS]
+        ]
         if req:
             rem, chosen = list(discovered), list[tuple[str, str, list[str]]]()
             for r in req:

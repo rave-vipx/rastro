@@ -212,3 +212,43 @@ def test_acquire_approved_pages_validation():
     )
     assert hosts == ("approved.example",)
     assert results == ()
+
+
+def test_searxng_without_httpx_raises_a_configuration_error(monkeypatch: pytest.MonkeyPatch):
+    """DISC-001: httpx lives in optional extras; a missing one names the extra to install."""
+    import importlib
+    import sys
+
+    monkeypatch.setitem(sys.modules, "httpx", None)
+    monkeypatch.delitem(sys.modules, "rastro.adapters.searxng", raising=False)
+    monkeypatch.setenv("RASTRO_SEARXNG_URL", "http://127.0.0.1:8080")
+    importlib.import_module("rastro.adapters.searxng")  # module import never needs httpx
+    for search in ("searxng", None):
+        with pytest.raises(ConfigurationError, match=r"rastro-engine\[openai\]"):
+            propose_sources("tango", search=search)
+
+
+def test_searxng_accepts_localhost_as_loopback(monkeypatch: pytest.MonkeyPatch):
+    """SEC-004: localhost is loopback like 127.0.0.1; remote names still need opt-in."""
+    monkeypatch.delenv("RASTRO_ALLOW_REMOTE", raising=False)
+    assert "http://localhost:8080/search" in repr(SearXNGSearchProvider("http://localhost:8080"))
+    assert "http://localhost/search" in repr(SearXNGSearchProvider("http://LOCALHOST"))
+    with pytest.raises(ConfigurationError, match="allow_remote"):
+        SearXNGSearchProvider("http://localhost.example.com:8080")
+
+
+def test_searxng_goal_does_not_resolve_the_model(monkeypatch: pytest.MonkeyPatch):
+    """DISC-001: choosing SearXNG never resolves RASTRO_MODEL; --search model says so."""
+    monkeypatch.setenv("RASTRO_MODEL", "not a valid model spec")
+    monkeypatch.setenv("RASTRO_SEARXNG_URL", "http://127.0.0.1:8080")
+
+    async def handler(_r: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"results": [{"url": "https://a.example/x", "title": "A"}]})
+
+    adapter = SearXNGSearchProvider(transport=httpx.MockTransport(handler))
+    assert propose_sources("tango", provider=adapter)[0].host == "a.example"
+    assert propose_sources("tango", provider=adapter, search="searxng")[0].host == "a.example"
+    monkeypatch.delenv("RASTRO_MODEL")
+    with pytest.raises(ConfigurationError, match="--search model") as info:
+        propose_sources("tango", search="model")
+    assert "RASTRO_SEARXNG_URL" not in str(info.value) and "RASTRO_MODEL" in str(info.value)

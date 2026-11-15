@@ -2,8 +2,15 @@
 
 from __future__ import annotations
 
-import pytest
+import ast
+import time
+from pathlib import Path
 
+import pytest
+from cssselect import SelectorError
+
+import rastro.application.field_proposals as field_proposals
+from rastro.adapters.field_discovery import ScraplingFieldDiscoverer
 from rastro.application.field_proposals import (
     FieldProposal,
     _clean_ident,
@@ -11,7 +18,8 @@ from rastro.application.field_proposals import (
     propose_fields,
 )
 from rastro.domain.intelligence import InferencePolicy, ModelRequest
-from rastro.domain.models import ConfigurationError
+from rastro.domain.models import ConfigurationError, Limits, ResourceLimitError
+from rastro.ports.field_discovery import DiscoveredField, DiscoveredRecords, FieldDiscoverer
 
 pytestmark = pytest.mark.usefixtures("offline_cli_loop")
 
@@ -126,3 +134,75 @@ def test_propose_fields_raises_when_invalid_or_no_records_observed():
         propose_fields("   ")
     with pytest.raises(ConfigurationError):
         propose_fields("<html><body><p>Empty</p></body></html>")
+
+
+def _letters(n: int) -> str:
+    """Letter-only (stable) class names: digits would be rejected as generated-looking."""
+    return "".join(chr(97 + (n // 26**i) % 26) for i in range(4))
+
+
+def _hostile_page(parents: int) -> str:
+    rows = (
+        f'<div class="{_letters(i)}"><span class="c">a</span><span class="c">b</span></div>'
+        for i in range(parents)
+    )
+    return f"<html><body>{''.join(rows)}</body></html>"
+
+
+def test_many_distinct_candidate_selectors_fail_fast_with_a_reported_limit():
+    """SEC-008, DISC-003: candidate record selectors are capped; no quadratic scan."""
+    html = _hostile_page(5000)
+    started = time.perf_counter()
+    with pytest.raises(ResourceLimitError, match="candidate record selectors"):
+        propose_fields(html)
+    assert time.perf_counter() - started < 1.5
+
+
+def test_candidate_cap_boundary_still_proposes_below_the_cap():
+    """DISC-003: a page within the candidate budget is still analysed."""
+    noisy = CATALOGUE_HTML.replace("<body>", "<body>" + _hostile_page(10))
+    assert propose_fields(noisy).recipe.record_selector
+
+
+def test_discovery_runs_behind_a_port_and_the_application_stays_adapter_free():
+    """Dependency rule: propose_fields calls a FieldDiscoverer; no lxml or private parser."""
+    seen: list[tuple[int, Limits]] = []
+
+    class Fake:
+        def discover(self, html: str, records_min: int, limits: Limits):
+            seen.append((records_min, limits))
+            field = DiscoveredField("h2", ("title",), None, "h2.title::text", ("A", "B", "C"))
+            return (DiscoveredRecords("article.card", (field,)),)
+
+    fake: FieldDiscoverer = Fake()
+    found = propose_fields(CATALOGUE_HTML, discoverer=fake, records_min=3)
+    assert seen and seen[0][0] == 3
+    assert [(f.name, f.selector, f.example) for f in found] == [("title", "h2.title::text", "A")]
+    assert found.record_selector == "article.card"
+
+    tree = ast.parse(Path(field_proposals.__file__).read_text())
+    text = Path(field_proposals.__file__).read_text()
+    assert "_parse_html" not in text and "_root" not in text
+    top = [n for n in tree.body if isinstance(n, ast.Import | ast.ImportFrom)]
+    assert not [n for n in top if "adapters" in ast.unparse(n)]
+
+
+def test_discovery_skips_only_selector_errors(monkeypatch: pytest.MonkeyPatch):
+    """Invalid candidate selectors are skipped; unexpected errors are not swallowed."""
+    from scrapling.parser import Selector
+
+    adapter = ScraplingFieldDiscoverer()
+    assert adapter.discover(CATALOGUE_HTML, 2, Limits())
+
+    def selector_error(self, *_a, **_k):
+        raise SelectorError("bad")
+
+    monkeypatch.setattr(Selector, "css", selector_error)
+    assert adapter.discover(CATALOGUE_HTML, 2, Limits()) == ()
+
+    def boom(self, *_a, **_k):
+        raise RuntimeError("unexpected")
+
+    monkeypatch.setattr(Selector, "css", boom)
+    with pytest.raises(RuntimeError, match="unexpected"):
+        adapter.discover(CATALOGUE_HTML, 2, Limits())

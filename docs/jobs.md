@@ -68,7 +68,7 @@ export RASTRO_SEARXNG_URL="http://127.0.0.1:8080"
 uv run rastro new --goal "cultural events in Montevideo"
 ```
 
-- **Search providers (`--search searxng|model`).** `SearXNGSearchProvider` queries a free self-hosted SearXNG JSON endpoint (`RASTRO_SEARXNG_URL`); non-loopback endpoints require HTTPS and `--allow-remote` (`SEC-004`). Passing `--search model` asks the configured model (`--model` or `RASTRO_MODEL`) for candidate URLs (`origin = "model"`), parses the response strictly, keeps only public `http(s)` URLs on standard ports, and caps proposals at 10 (`SEC-005`). If neither a search provider nor a model is configured, Rastro raises `ConfigurationError` explaining both options (`P-002`).
+- **Search providers (`--search searxng|model`).** `SearXNGSearchProvider` queries a free self-hosted SearXNG JSON endpoint (`RASTRO_SEARXNG_URL`; needs `httpx`, installed by `pip install 'rastro-engine[openai]'`); `localhost` and loopback addresses are local, other endpoints require HTTPS and `--allow-remote` (`SEC-004`). Passing `--search model` asks the configured model (`--model` or `RASTRO_MODEL`) for candidate URLs (`origin = "model"`), parses the response strictly, keeps only public `http(s)` URLs on standard ports, and caps proposals at 10 (`SEC-005`). If neither a search provider nor a model is configured, Rastro raises `ConfigurationError` explaining both options (`P-002`).
 
 ### 2. Approve hosts, propose fields and preview real records (`DISC-002`, `DISC-003`)
 

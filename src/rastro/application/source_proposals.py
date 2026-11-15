@@ -119,6 +119,11 @@ async def _propose_from_model(
     return _dedupe(pairs, "model", cap)
 
 
+def _model_port(model: ModelChoice, allow_remote: bool) -> ModelPort | None:
+    env_model = "env" if os.environ.get("RASTRO_MODEL", "").strip() else None
+    return resolve_model(model or env_model, allow_remote=allow_remote)
+
+
 def _resolve_backend(
     search: SearchProvider | Literal["searxng", "model"] | None,
     provider: SearchProvider | None,
@@ -127,12 +132,10 @@ def _resolve_backend(
 ) -> SearchProvider | ModelPort:
     if isinstance(search, SearchProvider):
         return search
-    env_model = "env" if os.environ.get("RASTRO_MODEL", "").strip() else None
-    port = resolve_model(model or env_model, allow_remote=allow_remote)
     if search == "model":
-        if port is None:
+        if (port := _model_port(model, allow_remote)) is None:
             raise ConfigurationError(
-                f"No model for --search model: pass --model or set {SEARXNG_ENV}"
+                "No model for --search model: pass --model or set RASTRO_MODEL"
             )
         return port
     if provider is not None:
@@ -141,7 +144,7 @@ def _resolve_backend(
         from rastro.adapters.searxng import SearXNGSearchProvider
 
         return SearXNGSearchProvider(allow_remote=allow_remote)
-    if port is not None:
+    if (port := _model_port(model, allow_remote)) is not None:
         return port
     raise ConfigurationError(
         f"No search provider or model configured: set {SEARXNG_ENV} or pass --search model"

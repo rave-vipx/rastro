@@ -317,3 +317,27 @@ def test_cli_new_from_goal_and_site(tmp_path: Path, monkeypatch: pytest.MonkeyPa
         main(["new", "--goal", "events", "--approve", "bad/host", "-o", str(tmp_path / "y.toml")])
         == 2
     )
+
+
+def test_cli_missing_http_extra_is_reported_not_masked_as_bad_hosts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys
+):
+    """DISC-002: only host validation errors say 'exact hostnames'; a missing extra says so."""
+    import rastro.cli_suggest as cli_suggest
+
+    def missing(_policy: AcquisitionPolicy):
+        raise ConfigurationError("Install rastro-engine[http] for HTTP acquisition")
+
+    monkeypatch.setattr(cli_suggest, "_default_acquirer", missing)
+    site = ["new", "--site", "https://approved.example/events", "-o", str(tmp_path / "a.toml")]
+    assert main(site) == 2
+    err = capsys.readouterr().err
+    assert "rastro-engine[http]" in err and "exact hostnames" not in err
+    goal = ["new", "--goal", "x", "--approve", "approved.example", "-o", str(tmp_path / "b.toml")]
+    assert main(goal) == 2
+    err = capsys.readouterr().err
+    assert "rastro-engine[http]" in err and "exact hostnames" not in err
+    assert (
+        main(["new", "--goal", "x", "--approve", "bad/host", "-o", str(tmp_path / "c.toml")]) == 2
+    )
+    assert "exact hostnames" in capsys.readouterr().err
