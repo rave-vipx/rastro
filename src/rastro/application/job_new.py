@@ -6,7 +6,7 @@ import json
 import re
 from collections.abc import Sequence
 from pathlib import Path, PurePosixPath, PureWindowsPath
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import ValidationError
 
@@ -22,6 +22,8 @@ from rastro.domain.job_sources import FileJobSource, UrlJobSource, validate_job_
 from rastro.domain.jobs import parse_job
 from rastro.domain.models import ConfigurationError, Contract, CssRecipe, Limits, Outcome, Source
 from rastro.domain.suggest import Example, check_examples, infer_field_type
+from rastro.ports.acquisition import AcquisitionPort
+from rastro.ports.search import SearchProvider
 
 
 class GoalJobResult(Contract):
@@ -132,33 +134,97 @@ def new_job(
 
 
 def new_job_from_goal(
-    path: Path | None = None, *, goal: str, approve: Sequence[str] = (), **opts: Any
+    path: Path | None = None,
+    *,
+    goal: str,
+    approve: Sequence[str] = (),
+    search: SearchProvider | Literal["searxng", "model"] | None = None,
+    provider: SearchProvider | None = None,
+    model: ModelChoice = None,
+    acquisition: AcquisitionPort | None = None,
+    allow_remote: bool = False,
+    fields: Sequence[str] = (),
+    records_min: int = 2,
+    dataset: str | None = None,
+    identity: Sequence[str] = (),
+    allow_partial: bool = False,
+    recipe_memory: str | None = None,
 ) -> GoalJobResult:
-    search, provider, model = opts.get("search"), opts.get("provider"), opts.get("model")
+    """Propose sources for ``goal``; with ``approve`` hosts, also write a verified job.
+
+    ``search`` picks SearXNG or the model to find sources, ``provider`` supplies a search
+    provider object, and ``model`` serves source search or field proposals. Without
+    ``approve`` nothing is fetched or written. ``approve`` names the only hosts fetched;
+    ``acquisition`` replaces the default HTTP acquirer and ``allow_remote`` lets a hosted
+    SearXNG or model receive data. ``fields`` names the fields to propose, ``records_min``
+    is the minimum records, ``allow_partial`` keeps pages whose preview is partial, and
+    ``dataset``, ``identity`` and ``recipe_memory`` are as in ``new_job``.
+    """
     s_model = model if search == "model" or (search is None and provider is None) else None
-    rem = bool(opts.get("allow_remote"))
     proposals = sp.propose_sources(
-        goal, search=search, provider=provider, model=s_model, allow_remote=rem
+        goal, search=search, provider=provider, model=s_model, allow_remote=allow_remote
     )
     if not approve:
         return GoalJobResult(created=None, proposals=proposals)
     if path is None:
         raise ConfigurationError("Pass -o FILE.toml to write the approved job")
-    acq = sp.acquire_approved_pages(
-        [p.url for p in proposals], approve, acquisition=opts.get("acquisition")
+    acq = sp.acquire_approved_pages([p.url for p in proposals], approve, acquisition=acquisition)
+    return _build_approved_job(
+        path,
+        acq,
+        proposals,
+        fields=fields,
+        records_min=records_min,
+        model=model,
+        allow_remote=allow_remote,
+        dataset=dataset,
+        identity=identity,
+        allow_partial=allow_partial,
+        recipe_memory=recipe_memory,
     )
-    return _build_approved_job(path, acq, proposals, **opts)
 
 
-def new_job_from_sites(path: Path, *, sites: Sequence[str], **opts: Any) -> GoalJobResult:
+def new_job_from_sites(
+    path: Path,
+    *,
+    sites: Sequence[str],
+    model: ModelChoice = None,
+    acquisition: AcquisitionPort | None = None,
+    allow_remote: bool = False,
+    fields: Sequence[str] = (),
+    records_min: int = 2,
+    dataset: str | None = None,
+    identity: Sequence[str] = (),
+    allow_partial: bool = False,
+    recipe_memory: str | None = None,
+) -> GoalJobResult:
+    """Fetch only the given ``sites`` (their hosts are the approval) and write a verified job.
+
+    ``model`` and ``allow_remote`` govern optional field proposals, ``acquisition``
+    replaces the default HTTP acquirer, ``fields`` names the fields to propose,
+    ``records_min`` is the minimum records, ``allow_partial`` keeps pages whose preview is
+    partial, and ``dataset``, ``identity`` and ``recipe_memory`` are as in ``new_job``.
+    """
     cleaned = [sp.clean_proposal(u.strip(), "", "search") for u in sites if u.strip()]
     if not cleaned or any(p is None for p in cleaned):
         raise ConfigurationError("Every --site must be a valid public HTTP(S) URL")
     valid = [p for p in cleaned if p is not None]
     acq = sp.acquire_approved_pages(
-        [p.url for p in valid], [p.host for p in valid], acquisition=opts.get("acquisition")
+        [p.url for p in valid], [p.host for p in valid], acquisition=acquisition
     )
-    return _build_approved_job(path, acq, tuple(valid), **opts)
+    return _build_approved_job(
+        path,
+        acq,
+        tuple(valid),
+        fields=fields,
+        records_min=records_min,
+        model=model,
+        allow_remote=allow_remote,
+        dataset=dataset,
+        identity=identity,
+        allow_partial=allow_partial,
+        recipe_memory=recipe_memory,
+    )
 
 
 def _build_approved_job(

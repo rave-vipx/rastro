@@ -37,3 +37,31 @@ def test_new_help_describes_example_field_memory_and_partial(capsys: pytest.Capt
         "only a partial success",
     ):
         assert phrase in flat
+
+
+def _assert_typed(func, documented: tuple[str, ...]) -> None:
+    params = inspect.signature(func).parameters
+    assert not any(p.kind is inspect.Parameter.VAR_KEYWORD for p in params.values())
+    assert set(documented) <= set(params)
+    assert all(word in (func.__doc__ or "") for word in documented)
+
+
+def test_new_job_from_goal_rejects_unknown_keywords_and_documents_its_options(tmp_path: Path):
+    from rastro.application.job_new import new_job_from_goal
+
+    with pytest.raises(TypeError):
+        new_job_from_goal(tmp_path / "j.toml", goal="events", aprove=("a.example",))  # type: ignore[call-arg]
+    _assert_typed(
+        new_job_from_goal,
+        ("search", "provider", "model", "acquisition", "allow_remote", "allow_partial", "approve"),
+    )
+
+
+def test_new_job_from_sites_rejects_unknown_keywords_and_documents_its_options(tmp_path: Path):
+    from rastro.application.job_new import new_job_from_sites
+
+    with pytest.raises(TypeError):
+        new_job_from_sites(tmp_path / "j.toml", sites=("https://a.example/x",), alow_remote=True)  # type: ignore[call-arg]
+    _assert_typed(
+        new_job_from_sites, ("model", "acquisition", "allow_remote", "allow_partial", "fields")
+    )
