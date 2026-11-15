@@ -21,3 +21,33 @@ site/
 *.db
 *.db-*
 *.sqlite*
+
+# Local agent, editor and tool state: sessions, settings, tokens, worktrees.
+# Never commit these; they can hold credentials or private transcripts.
+.claude/
+.codex/
+.opencode/
+opencode.json
+.orca/
+.cursor/
+.gemini/
+.windsurf/
+.aider*
+.continue/
+.mcp.json
+*.local.json
+.vscode/
+.idea/
+
+# Credentials and private keys
+.envrc
+.netrc
+.pypirc
+*.p12
+*.pfx
+*.keystore
+id_rsa*
+id_ed25519*
+
+# Local logs and scratch output
+*.log
