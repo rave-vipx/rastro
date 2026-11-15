@@ -85,7 +85,8 @@ def test_200_then_304_keeps_records_and_updates_status(
     assert "source_failed" not in caplog.text
     version = 3
     assert load_job_file(path).exit_code == 0
-    assert store.get_validators("d", "https://a.example/list?private=query") == {"etag": '"third"'}
+    stored = store.get_validators("d", "https://a.example/list?private=query")
+    assert stored.pop("_inputs") and stored == {"etag": '"third"'}
     assert store.get_validators("d", "https://a.example/list?private=other") == {}
     with closing(sqlite3.connect(tmp_path / "d.sqlite")) as db:
         assert "private=query" not in str(db.execute("SELECT * FROM dataset_validators").fetchall())
@@ -236,3 +237,117 @@ def test_missing_http_extra_is_a_configuration_error(tmp_path, monkeypatch):
     monkeypatch.setattr(builtins, "__import__", deny)
     with pytest.raises(ConfigurationError, match=r"rastro-engine\[http\]"):
         load_job_file(path)
+
+
+BODY_TWO = b"<article><h1>one</h1><h2>two</h2></article>"
+
+
+def _server(monkeypatch):
+    """A page that answers 304 to a conditional request and records every GET."""
+    requests: list[dict[str, str]] = []
+
+    async def resolve(self, host, port):
+        return ("8.8.8.8",)
+
+    async def get(self, target, *, headers, **kwargs):
+        if target.url.endswith("robots.txt"):
+            return HttpResponse(404, {}, b"", 0)
+        requests.append(dict(headers))
+        if "If-None-Match" in headers:
+            return HttpResponse(304, {}, b"", 0)
+        return HttpResponse(
+            200, {"content-type": "text/html", "etag": '"e"'}, BODY_TWO, len(BODY_TWO)
+        )
+
+    monkeypatch.setattr(SystemResolver, "resolve", resolve)
+    monkeypatch.setattr(CurlTransport, "get", get)
+    return requests
+
+
+def _titles(tmp_path):
+    return {r.fields["title"] for r in SQLiteDatasetStore(tmp_path / "d.sqlite").records("d")}
+
+
+def test_recipe_edit_between_runs_is_not_hidden_by_304(tmp_path, monkeypatch, offline_cli_loop):
+    """SYNC-004: validators apply only to the extraction inputs they were stored with."""
+    path = tmp_path / "job.toml"
+    path.write_text(JOB)
+    requests = _server(monkeypatch)
+    assert load_job_file(path).exit_code == 0
+    assert _titles(tmp_path) == {"one"}
+    path.write_text(JOB.replace("h1::text", "h2::text"))
+    second = load_job_file(path)
+    assert second.exit_code == 0
+    assert second.sources[0].status != "unchanged"
+    assert "If-None-Match" not in requests[1]
+    assert "two" in _titles(tmp_path)
+    third = load_job_file(path)
+    assert "If-None-Match" in requests[2] and third.sources[0].status == "unchanged"
+
+
+def test_schema_change_between_runs_forces_a_fresh_fetch(tmp_path, monkeypatch, offline_cli_loop):
+    path = tmp_path / "job.toml"
+    path.write_text(JOB)
+    requests = _server(monkeypatch)
+    assert load_job_file(path).exit_code == 0
+    path.write_text(JOB.replace('type = "string"', 'type = "string"\nrequired = false'))
+    assert load_job_file(path).exit_code == 0
+    assert "If-None-Match" not in requests[1]
+
+
+def test_newer_serving_recipe_in_memory_forces_a_fresh_fetch(
+    tmp_path, monkeypatch, offline_cli_loop
+):
+    from datetime import UTC, datetime
+
+    from rastro import SQLiteRecipeRepository, load_job
+    from rastro.domain.memory import RecipeKey
+    from rastro.domain.models import CssRecipe
+
+    path = tmp_path / "job.toml"
+    path.write_text(JOB.replace("[[fields]]", 'recipe_memory = "m.sqlite"\n[[fields]]', 1))
+    requests = _server(monkeypatch)
+    assert load_job_file(path).exit_code == 0
+    job = load_job(path)
+    source = job.region.to_source(job.sources[0].url)
+    key = RecipeKey.for_source(source, job.build_schema(), None, representation="html")
+    SQLiteRecipeRepository(tmp_path / "m.sqlite").save_success(
+        key,
+        CssRecipe(version=9, record_selector="article", fields={"title": "h2::text"}),
+        selected_index=0,
+        at=datetime.now(UTC),
+    )
+    assert load_job_file(path).exit_code == 0
+    assert "If-None-Match" not in requests[1]
+    assert "two" in _titles(tmp_path)
+
+
+def test_store_without_validators_loads_without_conditional_requests(
+    tmp_path, monkeypatch, offline_cli_loop
+):
+    """A store that is not a DatasetValidators (PostgreSQL) never gets conditional headers."""
+    from contextlib import contextmanager
+
+    from rastro.application import job_dataset
+    from rastro.ports.dataset import DatasetValidators
+
+    class Plain:
+        def __init__(self, inner):
+            self.apply_snapshot = inner.apply_snapshot
+            self.mark_source_unavailable = inner.mark_source_unavailable
+            self.records = inner.records
+            self.export_jsonl = inner.export_jsonl
+            self.source_status = inner.source_status
+
+    @contextmanager
+    def plain(job, local_path, **kwargs):
+        yield Plain(SQLiteDatasetStore(local_path, limits=job.limits))
+
+    assert not isinstance(Plain(SQLiteDatasetStore(tmp_path / "x.sqlite")), DatasetValidators)
+    monkeypatch.setattr(job_dataset, "open_dataset", plain)
+    path = tmp_path / "job.toml"
+    path.write_text(JOB)
+    requests = _server(monkeypatch)
+    assert load_job_file(path).exit_code == 0
+    assert load_job_file(path).exit_code == 0
+    assert len(requests) == 2 and all("If-None-Match" not in r for r in requests)

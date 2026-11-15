@@ -196,11 +196,11 @@ class SQLiteDatasetStore(DatasetSnapshot):
     @staticmethod
     def _validators(values: object) -> dict[str, str]:
         if not isinstance(values, dict) or any(
-            key not in {"etag", "last-modified", "_target", "_source"}
+            key not in {"etag", "last-modified", "_target", "_source", "_inputs"}
             or not isinstance(value, str)
             or not 0 < len(value.encode()) <= 4096
             or any(ord(c) < 32 or ord(c) == 127 for c in value)
-            or (key == "_target" and re.fullmatch(r"[0-9a-f]{64}", value) is None)
+            or (key in {"_target", "_inputs"} and re.fullmatch(r"[0-9a-f]{64}", value) is None)
             or (key == "_source" and Source(url=value).evidence_url != value)
             for key, value in values.items()
         ):

@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any
 from rastro.adapters.sqlite_dataset import SQLiteDatasetStore
 from rastro.adapters.sqlite_drift import SQLiteDriftMonitor
 from rastro.application.conditional import ConditionalRequests
+from rastro.application.conditional_inputs import extraction_inputs
 from rastro.application.dataset_load import load_results
 from rastro.application.drift import collect_snapshots
 from rastro.application.egress_trust import allowed_env_names, check_job_egress
@@ -90,7 +91,15 @@ def load_job_file(
         capture = nullcontext({})
     with open_dataset(job, raw_path, allow_remote=allow_remote, allow_env=allow_env) as store:
         conditional = (
-            ConditionalRequests(store, spec.name) if isinstance(store, DatasetValidators) else None
+            ConditionalRequests(
+                store,
+                spec.name,
+                extraction_inputs(
+                    job, base_dir=file.parent, allow_absolute_paths=allow_absolute_paths
+                ),
+            )
+            if isinstance(store, DatasetValidators) and job.acquisition is not None
+            else None
         )
         acquisition = _web_acquirer(job, conditional) if job.acquisition is not None else None
         with capture as snapshots, collect_successes() as successes:
