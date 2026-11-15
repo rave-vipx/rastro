@@ -100,7 +100,13 @@ class NetworkGuard:
     def result(self, url: str, body: str, status: int, max_bytes: int) -> AcquisitionResult:
         permitted_url(url, self.policy)
         if self.issue:
-            raise AcquisitionError(self.issue, Outcome.ACCESS_RESTRICTION)
+            # Same outcome as the HTTP path's exhausted request budget.
+            outcome = (
+                Outcome.PERMANENT_FAILURE
+                if self.issue == "request_limit"
+                else Outcome.ACCESS_RESTRICTION
+            )
+            raise AcquisitionError(self.issue, outcome)
         if len(body.encode("utf-8")) > max_bytes:
             raise AcquisitionError("response_too_large", Outcome.PERMANENT_FAILURE)
         if any(

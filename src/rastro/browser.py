@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from urllib.parse import urlsplit
+
 from rastro.application.operator_trust import current_trust
 from rastro.domain.acquisition import AcquisitionResult
 from rastro.domain.jobs import Job, UrlJobSource
@@ -28,8 +30,11 @@ def job_render_modes(job: Job) -> dict[str, str]:
             raise ConfigurationError(
                 "Browser modes require HTML and direct egress without profiles"
             )
+    needed = set(modes.values())
+    if needed - {"http"}:
+        needed.add(job.acquisition.render)  # undeclared URLs, such as next pages, may use it
     if (
-        "stealth" in modes.values() or job.acquisition.solve_challenges
+        "stealth" in needed or job.acquisition.solve_challenges
     ) and not current_trust().allow_stealth:
         raise ConfigurationError(
             "Stealth requires --allow-stealth, allow_stealth=True or RASTRO_ALLOW_STEALTH=1"
@@ -38,13 +43,23 @@ def job_render_modes(job: Job) -> dict[str, str]:
 
 
 class _JobAcquisition:
-    def __init__(self, modes: dict[str, str], clients: dict[str, AcquisitionPort]):
-        self.modes, self.clients = modes, clients
+    def __init__(
+        self, modes: dict[str, str], clients: dict[str, AcquisitionPort], default: str = "http"
+    ):
+        self.modes, self.clients, self.default = modes, clients, default
+
+    def mode(self, url: str) -> str:
+        """The declared mode; else the one every declared source on the exact host shares."""
+        if url in self.modes:
+            return self.modes[url]
+        host = urlsplit(url).hostname
+        siblings = {mode for known, mode in self.modes.items() if urlsplit(known).hostname == host}
+        return siblings.pop() if len(siblings) == 1 else self.default
 
     async def acquire(
         self, source: Source, *, max_bytes: int, representation: Representation
     ) -> AcquisitionResult:
-        return await self.clients[self.modes[source.url]].acquire(
+        return await self.clients[self.mode(source.url)].acquire(
             source, max_bytes=max_bytes, representation=representation
         )
 
@@ -59,7 +74,7 @@ def job_acquisition(job: Job, supplied: AcquisitionPort | None) -> AcquisitionPo
     assert job.acquisition is not None
     renderers = {
         mode: (ScraplingStealth() if mode == "stealth" else PlaywrightBrowser())
-        for mode in set(modes.values()) - {"http"}
+        for mode in {*modes.values(), job.acquisition.render} - {"http"}
     }
     from rastro.adapters.dns import SystemResolver
     from rastro.adapters.http import CurlTransport
@@ -79,4 +94,4 @@ def job_acquisition(job: Job, supplied: AcquisitionPort | None) -> AcquisitionPo
         client._hosts = client._http._hosts = http._hosts
         client._slots = http._slots
         clients[mode] = client
-    return _JobAcquisition(modes, clients)
+    return _JobAcquisition(modes, clients, job.acquisition.render)

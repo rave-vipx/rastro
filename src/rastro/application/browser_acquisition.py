@@ -104,6 +104,8 @@ class BrowserAcquirer(WebAcquirer):
                         _render_seconds.set(perf_counter() - started)
                     permitted_url(result.url, self.policy)
                     operation.url = result.url
+                    if result.url != url:
+                        await self._robots(result.url, operation)
                     if result.status != Outcome.SUCCESS:
                         raise AcquisitionError(
                             result.issue_code or "browser_failure", result.status

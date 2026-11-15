@@ -91,6 +91,39 @@ async def test_failures(case, issue):
         renderer.render.assert_not_awaited()
 
 
+@pytest.mark.asyncio
+async def test_robots_are_checked_for_the_redirected_document():
+    from dataclasses import replace
+
+    client, renderer, transport, _ = setup()
+    transport.get.return_value = HttpResponse(
+        200, {"content-type": "text/plain"}, b"User-agent: *\nDisallow: /private", 32
+    )
+    renderer.render.return_value = replace(
+        renderer.render.return_value, url="https://example.com/private/page"
+    )
+    result = await client.acquire(Source(url="https://example.com/"), max_bytes=100)
+    assert result.status == Outcome.ACCESS_RESTRICTION
+    assert result.issue_code == "robots_denied"
+    assert result.body is None
+    renderer.render.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_redirect_to_an_allowed_path_succeeds():
+    from dataclasses import replace
+
+    client, renderer, transport, _ = setup()
+    transport.get.return_value = HttpResponse(
+        200, {"content-type": "text/plain"}, b"User-agent: *\nDisallow: /private", 32
+    )
+    renderer.render.return_value = replace(
+        renderer.render.return_value, url="https://example.com/public"
+    )
+    result = await client.acquire(Source(url="https://example.com/"), max_bytes=100)
+    assert result.status == Outcome.SUCCESS
+
+
 @pytest.mark.parametrize("changes", [{"render": "stealth"}, {"solve_challenges": True}])
 def test_consent(changes, monkeypatch):
     from rastro.application.browser_acquisition import BrowserAcquirer
@@ -221,6 +254,7 @@ async def test_network_guard_checks_redirects_and_budget():
     from types import SimpleNamespace
 
     from rastro.adapters.playwright_browser import NetworkGuard
+    from rastro.domain.acquisition import AcquisitionError
 
     policy = AcquisitionPolicy(allowed_hosts=("example.com",), max_requests=1)
     guard = NetworkGuard(policy)
@@ -240,6 +274,9 @@ async def test_network_guard_checks_redirects_and_budget():
     )
     assert session.send.call_args.args[0] == "Fetch.failRequest"
     assert guard.issue == "request_limit"
+    with pytest.raises(AcquisitionError) as error:
+        guard.result("https://example.com/", "<p>x</p>", 200, 100)
+    assert (error.value.code, error.value.outcome) == ("request_limit", Outcome.PERMANENT_FAILURE)
     route = AsyncMock()
     route.request = SimpleNamespace(
         url="https://evil.test/x", resource_type="script", frame=SimpleNamespace(page=page)

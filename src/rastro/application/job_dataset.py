@@ -57,6 +57,7 @@ def load_job_file(
     allow_absolute_paths: bool = False,
     allow_remote: bool = False,
     allow_egress: bool = False,
+    allow_stealth: bool = False,
     allow_env: Iterable[str] = (),
 ) -> JobLoadResult:
     """Run a job file and load its approved fields into the job's ``[dataset]``.
@@ -91,6 +92,7 @@ def load_job_file(
                 allow_absolute_paths=allow_absolute_paths,
                 allow_remote=allow_remote,
                 allow_egress=allow_egress,
+                allow_stealth=allow_stealth,
                 allow_env=allow_env,
             )
         loaded = load_results(

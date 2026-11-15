@@ -309,12 +309,19 @@ render = "stealth"
 ```
 
 Stealth additionally needs operator consent: `rastro --allow-stealth job run job.toml`,
-`run_job_file("job.toml", allow_stealth=True)`, or `RASTRO_ALLOW_STEALTH=1` (also `true`
+`run_job_file("job.toml", allow_stealth=True)` (`load_job_file` and the `repair_job_*`
+functions take the same keyword), or `RASTRO_ALLOW_STEALTH=1` (also `true`
 or `yes`). A job file cannot grant consent. Cloudflare solving is off unless
 `[acquisition] solve_challenges = true` and consent is present. Challenge domains must
 also be explicitly allowlisted; there is no third-party solver or rotation.
 
-Robots, pacing, public DNS checks and request budgets still apply. Each page uses a
+A URL the job does not declare (for example a next page) uses the render mode shared by
+the declared sources on the same exact host, else the `[acquisition]` default; a stealth
+default therefore needs consent whenever the job renders at all.
+
+Robots, pacing, public DNS checks and request budgets still apply. Robots are checked
+again for the final URL when the browser was redirected to another path. A spent
+request budget fails as `request_limit` (permanent failure), as in HTTP mode. Each page uses a
 fresh context; images, media, fonts, WebSockets, downloads, permissions and service
 workers are blocked. Navigation uses `request_timeout_seconds`; the entire operation
 uses `operation_timeout_seconds`. Oversized rendered HTML fails explicitly.
