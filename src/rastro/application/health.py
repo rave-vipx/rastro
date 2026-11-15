@@ -7,13 +7,12 @@ from __future__ import annotations
 from pathlib import Path
 
 from rastro.adapters.sqlite import SQLiteRecipeRepository
-from rastro.adapters.sqlite_dataset import SQLiteDatasetStore
 from rastro.adapters.sqlite_drift import SQLiteDriftMonitor
 from rastro.application.active_recipes import source_key
-from rastro.application.job_dataset import dataset_location
+from rastro.application.job_dataset import dataset_location, open_dataset
 from rastro.application.job_loader import load_job, resolve_job_path
 from rastro.application.job_maintenance import current_source_urls
-from rastro.domain.dataset import SourceStatus
+from rastro.domain.dataset import DatasetNotFoundError, SourceStatus
 from rastro.domain.health import Attention, JobHealth, OpenDrift, SourceHealth
 from rastro.domain.jobs import Job
 from rastro.domain.lifecycle import RecipeState
@@ -45,14 +44,20 @@ def _dataset_state(
 ) -> tuple[dict[str, SourceStatus], dict[str, OpenDrift]]:
     assert job.dataset is not None
     name = job.dataset.name
-    if not location.is_file():
+    if job.dataset.backend == "sqlite" and not location.is_file():
         return {}, {}
-    store = SQLiteDatasetStore(location, limits=job.limits)
-    if name not in store.dataset_names():
-        return {}, {}
-    drift = SQLiteDriftMonitor(location, limits=job.limits).open_drift(name)
+    try:
+        with open_dataset(job, location) as store:
+            statuses = store.source_status(name)
+    except DatasetNotFoundError:
+        statuses = ()
+    drift = (
+        SQLiteDriftMonitor(location, limits=job.limits).open_drift(name)
+        if location.is_file()
+        else ()
+    )
     return (
-        {status.source_url: status for status in store.source_status(name)},
+        {status.source_url: status for status in statuses},
         {item.source_url: item for item in drift},
     )
 

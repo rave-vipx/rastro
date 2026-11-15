@@ -7,11 +7,20 @@ Nothing here opens, creates or writes a dataset file; storage belongs to the dat
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Any, Literal
+from typing import Any, Literal, Self
 
-from pydantic import Field, JsonValue, StrictInt, StrictStr, field_validator
+from pydantic import (
+    Field,
+    JsonValue,
+    SerializerFunctionWrapHandler,
+    StrictInt,
+    StrictStr,
+    field_validator,
+    model_serializer,
+    model_validator,
+)
 
-from rastro.domain.job_contract import RedactedContract
+from rastro.domain.job_contract import ENV_REFERENCE, RedactedContract
 from rastro.domain.job_results import JobExitCode, JobSummary
 from rastro.domain.job_sources import validate_job_path_syntax
 from rastro.domain.models import ConfigurationError, Contract, Outcome
@@ -25,7 +34,44 @@ class DatasetSpec(RedactedContract):
     """Where approved records of a job would be stored and which fields identify a record."""
 
     name: StrictStr = Field(pattern=DATASET_NAME)
-    path: StrictStr = Field(min_length=1, max_length=1024)
+    path: StrictStr = Field(default="rastro-state.sqlite", min_length=1, max_length=1024)
+    backend: Literal["sqlite", "postgres"] = "sqlite"
+    dsn_env: StrictStr | None = Field(default=None, pattern=ENV_REFERENCE, repr=False)
+    db_schema: StrictStr = Field(
+        default="rastro", alias="schema", pattern=r"^[a-z_][a-z0-9_]{0,62}$"
+    )
+
+    @model_validator(mode="after")
+    def storage_config(self) -> Self:
+        if self.backend == "postgres":
+            if self.dsn_env is None or "path" in self.model_fields_set:
+                raise ValueError("PostgreSQL requires dsn_env and does not accept path")
+        elif (
+            "path" not in self.model_fields_set
+            or self.dsn_env is not None
+            or "db_schema" in self.model_fields_set
+        ):
+            raise ValueError("SQLite requires path and does not accept PostgreSQL settings")
+        return self
+
+    @model_serializer(mode="wrap")
+    def serialize_storage(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        data: dict[str, Any] = handler(self)
+        schema = data.pop("db_schema", data.pop("schema", self.db_schema))
+        if self.backend == "postgres":
+            data.pop("path", None)
+            data["schema"] = schema
+        else:
+            data.pop("dsn_env", None)
+        return data
+
+    def require_sqlite_views(self) -> None:
+        """Studio and MCP read SQLite only; a PostgreSQL job must not look empty there."""
+        if self.backend != "sqlite":
+            raise ConfigurationError(
+                "Studio/MCP dataset views support SQLite only; query PostgreSQL with SQL"
+            )
+
     identity: tuple[StrictStr, ...] = Field(min_length=1, max_length=8)
     approve: tuple[StrictStr, ...] | None = Field(default=None, min_length=1, max_length=100)
     match_fields: tuple[StrictStr, StrictStr, StrictStr] | None = None
