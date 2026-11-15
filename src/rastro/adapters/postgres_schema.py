@@ -25,8 +25,9 @@ def safe[**P, T](operation: Callable[P, T]) -> Callable[P, T]:
         except (DatasetStorageError, ConfigurationError):
             raise
         except Exception:
-            # Driver errors can include credentials, SQL parameters and server content.
-            raise DatasetStorageError("PostgreSQL dataset operation failed") from None
+            pass  # Driver errors can include credentials, SQL parameters and server content.
+        # Raised outside the except block so the driver error is not left in __context__.
+        raise DatasetStorageError("PostgreSQL dataset operation failed")
 
     return call
 
@@ -34,16 +35,22 @@ def safe[**P, T](operation: Callable[P, T]) -> Callable[P, T]:
 def parameters(dsn: str, schema: str, allow_remote: bool) -> dict[str, Any]:
     try:
         from psycopg.conninfo import conninfo_to_dict
+
+        installed = True
     except ImportError:
+        installed = False
+    if not installed:
         raise ConfigurationError(
             "Install PostgreSQL support: pip install 'rastro-engine[postgres]'"
-        ) from None
+        )
     if not re.fullmatch(SCHEMA_NAME, schema):
         raise ConfigurationError("Invalid PostgreSQL schema identifier")
     try:
-        params = conninfo_to_dict(dsn)
+        params: dict[str, Any] | None = dict(conninfo_to_dict(dsn))
     except Exception:
-        raise ConfigurationError("Invalid PostgreSQL connection configuration") from None
+        params = None  # The parser error can quote the DSN.
+    if params is None:
+        raise ConfigurationError("Invalid PostgreSQL connection configuration")
     if "service" in params or not params.get("host"):
         raise ConfigurationError("PostgreSQL requires an explicit host and no service reference")
     hosts = str(params["host"]).split(",")

@@ -26,7 +26,9 @@ def test_invalid_postgres_config(extra):
 def test_missing_extra(monkeypatch):
     from rastro.adapters.postgres_dataset import PostgresDatasetStore
 
+    # Contract tests may have cached the submodule; block it too so test order cannot matter.
     monkeypatch.setitem(sys.modules, "psycopg", None)
+    monkeypatch.setitem(sys.modules, "psycopg.conninfo", None)
     with pytest.raises(ConfigurationError, match=r"rastro-engine\[postgres\]"):
         PostgresDatasetStore("secret")
 
@@ -119,7 +121,7 @@ def test_driver_failure_redacted(monkeypatch):
     with pytest.raises(DatasetStorageError) as caught:
         store.records("events")
     assert "secret" not in str(caught.value)
-    assert caught.value.__suppress_context__
+    assert caught.value.__context__ is None and caught.value.__cause__ is None
 
 
 @pytest.mark.parametrize("name", ["PGSERVICE", "PGHOSTADDR"])
@@ -169,3 +171,24 @@ def test_invalid_adapter_options_have_typed_error():
 
     with pytest.raises(DatasetStorageError):
         PostgresDatasetStore("host=127.0.0.1", near_match_tolerance="invalid")
+
+
+def test_driver_errors_do_not_leak_through_context():
+    """SEC-011: neither __cause__ nor __context__ carries the driver error, DSN or server text."""
+    pytest.importorskip("psycopg")
+    import traceback
+
+    from rastro.adapters.postgres_dataset import PostgresDatasetStore
+    from rastro.domain.dataset import DatasetStorageError
+
+    dsn = "postgresql://leakuser:leakpass@127.0.0.1:1/leakdb?connect_timeout=1"
+    with pytest.raises(DatasetStorageError) as storage:
+        PostgresDatasetStore(dsn).records("events")
+    garbage = "invalid-leakpass"  # a variable keeps the secret out of the shown source line
+    with pytest.raises(ConfigurationError) as invalid:
+        PostgresDatasetStore(garbage)
+    for error in (storage.value, invalid.value):
+        assert error.__cause__ is None and error.__context__ is None
+        shown = "".join(traceback.format_exception(error)) + str(error) + repr(error)
+        for part in ("leakuser", "leakpass", "leakdb", "127.0.0.1", "invalid-"):
+            assert part not in shown

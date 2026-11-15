@@ -65,6 +65,13 @@ class DatasetSpec(RedactedContract):
             data.pop("dsn_env", None)
         return data
 
+    def require_sqlite_views(self) -> None:
+        """Studio and MCP read SQLite only; a PostgreSQL job must not look empty there."""
+        if self.backend != "sqlite":
+            raise ConfigurationError(
+                "Studio/MCP dataset views support SQLite only; query PostgreSQL with SQL"
+            )
+
     identity: tuple[StrictStr, ...] = Field(min_length=1, max_length=8)
     approve: tuple[StrictStr, ...] | None = Field(default=None, min_length=1, max_length=100)
     match_fields: tuple[StrictStr, StrictStr, StrictStr] | None = None

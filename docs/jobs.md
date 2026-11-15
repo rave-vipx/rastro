@@ -520,8 +520,9 @@ preserve atomic identity updates. Reads do not create missing schemas.
 Unset `PGSERVICE` and `PGHOSTADDR` when using this adapter; use explicit DSN options
 instead, so libpq environment defaults cannot override the checked destination.
 The architecture and cleanup tradeoff are recorded in
-[ADR 0024](decisions/0024-postgres-datasets.md).
+[ADR 0025](decisions/0025-postgres-datasets.md).
 
 This backend is supported by job loading and the job-aware CLI health, maintenance,
-and repair flows. Studio dataset views and MCP dataset/history reads still use SQLite;
+and repair flows. Studio dataset views and MCP `drift_status` support SQLite only and refuse a
+PostgreSQL job with an explicit error rather than showing empty data;
 use SQL for PostgreSQL dataset queries in this release.

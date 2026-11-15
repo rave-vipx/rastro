@@ -1,4 +1,4 @@
-# ADR 0024: PostgreSQL datasets with local operational state
+# ADR 0025: PostgreSQL datasets with local operational state
 
 - **Status:** accepted for 0.7.0.
 - **Requirements:** DATA-001, DATA-003, SYNC-002, SYNC-003, SYNC-006, SEC-011.
