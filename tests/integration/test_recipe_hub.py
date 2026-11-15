@@ -66,7 +66,7 @@ def test_export_is_deterministic_and_complete(exported, tmp_path):
     after = {p.name: p.read_bytes() for p in again.iterdir()}
     assert after == before
     manifest = json.loads((bundle / "bundle.json").read_text(encoding="utf-8"))
-    assert manifest["format_version"] == 1
+    assert manifest["format_version"] == 2
     assert manifest["source"]["url"] == "https://sodre.gub.uy/espectaculos/"
     assert manifest["files"]["sample.html"] == sha256_hex(sample.read_bytes())
     assert b"\r" not in before["recipe.json"]
@@ -213,11 +213,11 @@ def test_costly_selector_is_refused_before_replay(tmp_path, capsys):
 
 def test_unknown_version_and_foreign_names_are_rejected(exported, tmp_path, capsys):
     _, _, bundle = exported
-    rewrite_manifest(bundle, format_version=2)
+    rewrite_manifest(bundle, format_version=3)
     assert "format" in import_error(bundle, tmp_path, capsys)[0]
     rewrite_manifest(
         bundle,
-        format_version=1,
+        format_version=2,
         files={"../x": "0" * 64, "a": "0" * 64, "b": "0" * 64, "c": "0" * 64},
     )
     assert "unexpected" in import_error(bundle, tmp_path, capsys)[0]
