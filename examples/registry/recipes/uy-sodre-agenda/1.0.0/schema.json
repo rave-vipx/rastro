@@ -1,0 +1,40 @@
+{
+  "fields": [
+    {
+      "max_length": null,
+      "min_length": 1,
+      "name": "title",
+      "pattern": null,
+      "required": true,
+      "type": "string"
+    },
+    {
+      "max_length": null,
+      "min_length": 1,
+      "name": "venue",
+      "pattern": null,
+      "required": true,
+      "type": "string"
+    }
+  ],
+  "json_schema": {
+    "properties": {
+      "title": {
+        "minLength": 1,
+        "title": "Title",
+        "type": "string"
+      },
+      "venue": {
+        "minLength": 1,
+        "title": "Venue",
+        "type": "string"
+      }
+    },
+    "required": [
+      "title",
+      "venue"
+    ],
+    "title": "JobRecord",
+    "type": "object"
+  }
+}

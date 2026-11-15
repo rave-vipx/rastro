@@ -1,0 +1,21 @@
+[
+  {
+    "author": {
+      "name": "Rastro Contributors",
+      "url": null
+    },
+    "id": "uy-sodre-agenda",
+    "last_verified": "2026-11-15",
+    "license": "Apache-2.0",
+    "source_patterns": [
+      "sodre.gub.uy/espectaculos"
+    ],
+    "trust": {
+      "days_since_verified": 0,
+      "format": 2,
+      "has_sample": true,
+      "replay_verified": true
+    },
+    "version": "1.0.0"
+  }
+]

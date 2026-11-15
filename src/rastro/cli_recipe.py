@@ -10,8 +10,8 @@ from uuid import uuid4
 from rastro.application.job_repair import promote_job_recipe, repair_job_sources
 from rastro.application.recipe_apply import write_serving_recipe
 from rastro.application.repair_context import RepairContext, safe_path
+from rastro.cli_hub import HUB_COMMANDS, hub_command
 from rastro.cli_hub import add_commands as add_hub_commands
-from rastro.cli_hub import hub_command
 from rastro.cli_model import add_model_options
 from rastro.cli_prune import add_commands as add_prune_commands
 from rastro.cli_prune import prune_command
@@ -70,7 +70,7 @@ def add_commands(subcommands: argparse._SubParsersAction) -> None:  # type: igno
 
 
 def recipe_command(args: argparse.Namespace) -> int:
-    if args.recipe_command in {"export", "import"}:
+    if args.recipe_command in HUB_COMMANDS:
         return hub_command(args)
     if args.recipe_command == "prune":
         return prune_command(args)

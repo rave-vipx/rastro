@@ -1,0 +1,11 @@
+{
+  "fallbacks": [],
+  "fields": {
+    "title": "h2.title::text",
+    "venue": "span.venue::text"
+  },
+  "record_selector": "article.item",
+  "require_evidence": false,
+  "strategy": "css",
+  "version": 1
+}
