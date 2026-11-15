@@ -1,4 +1,4 @@
-# ADR 0024: Bounded recipe pagination
+# ADR 0026: Bounded recipe pagination
 
 Status: accepted
 

@@ -456,7 +456,7 @@ See [dataset usage and the executed offline sequence](dataset.md#load-inspect-an
 ## Pagination
 
 For URL sources, a recipe can declare a next-page link (SYNC-002, SEC-008;
-[ADR 0024](decisions/0024-bounded-recipe-pagination.md)):
+[ADR 0026](decisions/0026-bounded-recipe-pagination.md)):
 
 ```toml
 [recipe.pagination]
