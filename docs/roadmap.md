@@ -74,6 +74,13 @@ Owner decisions after the 0.1.0 release candidate ([ADR 0012](decisions/0012-pro
 | Declarative jobs and machine-readable CLI (#35: JOB-001/002, AGENT-001) | Merged; `rastro job validate`, `rastro job run` and `rastro job schema`, with the job JSON Schemas published in `docs/schemas/` | None |
 | Repository hygiene | `dev` promoted to `main` as release candidate `0.1.0rc1` on 2026-11-03 (PR #39, tag `v0.1.0rc1`); nothing published | Close issues #2–#4 (implemented) and satisfy the release gates in issue #5 |
 
+## Deferred dependency migrations
+
+Dependency updates follow tiers: grouped minor/patch bumps merge when CI is green, boundary packages (Scrapling, curl_cffi, Protego, MCP) get their own reviewed PR, and major versions wait here for a real need.
+
+- **MCP SDK 2.x** (Dependabot #89, `mcp` 2.3): the `mcp` extra stays `<2`; the integration tests use `mcp.shared.memory.create_connected_server_and_client_session`, which 2.x removes. Migrate when an MCP client requires 2.x (AGENT-002).
+- **Scrapling 0.5.1** (Dependabot #91): a comment-only document no longer raises, so Rastro must reject it itself before the bump; Invalid HTML must never become a successful empty result (P-005, QUAL-004, SCR-001).
+
 ## Re-plan of 2026-11-06 (specification 1.2)
 
 Base for integration: `dev` (`31cbcde`). `staging` (`8f96d41`) is an ancestor of `dev` with no commits of its own; `dev` adds only #51, #52 and #43. CI is green on `main` (`3ab9dd2`, tag `v0.1.0rc1`), `staging` and `dev`. Locations of the delivered work:

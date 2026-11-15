@@ -1,14 +1,27 @@
 version: 2
 updates:
+  # Triage rules for these PRs live in the rastro-slice skill (references/dependabot.md).
   - package-ecosystem: uv
     directory: /
     target-branch: dev
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 8
+    ignore:
+      # Major versions are planned work in docs/roadmap.md, not weekly bumps.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
+      # Boundary packages (parsing, HTTP, robots, MCP) are excluded so each one
+      # gets its own PR and a contract-test review.
+      runtime:
+        dependency-type: production
+        update-types: [minor, patch]
+        exclude-patterns: [scrapling, curl-cffi, protego, mcp]
       development:
         dependency-type: development
+        update-types: [minor, patch]
+        exclude-patterns: [scrapling, curl-cffi, protego, mcp]
   - package-ecosystem: github-actions
     directory: /
     target-branch: dev
