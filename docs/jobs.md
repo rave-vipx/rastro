@@ -496,7 +496,7 @@ source in `source_url`; `page_url` records a different contributing page, with q
 and fragments removed. Drift measurement and repair evidence remain focused on
 page 1. Repair candidates keep the declared pagination block and strategy.
 Supplied-file extraction does not follow links.
-=======
+
 ## Your own PostgreSQL
 
 Install `pip install 'rastro-engine[postgres]'` and put your connection string in
@@ -570,4 +570,3 @@ This backend is supported by job loading and the job-aware CLI health, maintenan
 and repair flows. Studio dataset views and MCP `drift_status` support SQLite only and refuse a
 PostgreSQL job with an explicit error rather than showing empty data;
 use SQL for PostgreSQL dataset queries in this release.
->>>>>>> origin/dev
