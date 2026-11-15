@@ -17,11 +17,13 @@ from rastro.application.egress_trust import check_job_egress
 from rastro.application.job_loader import load_job, resolve_job_path
 from rastro.application.jobs import run_job
 from rastro.application.success_samples import collect_successes
+from rastro.domain.dataset import DatasetStorageError
 from rastro.domain.job_load import JobLoadResult
 from rastro.domain.jobs import UrlJobSource
 from rastro.domain.models import ConfigurationError, Outcome
 
 if TYPE_CHECKING:
+    from rastro.application.acquisition import WebAcquirer
     from rastro.domain.drift import StructuralSnapshot
     from rastro.domain.jobs import Job
 
@@ -88,18 +90,7 @@ def load_job_file(
     else:
         capture = nullcontext({})
     conditional = ConditionalRequests(store, spec.name)
-    acquisition = None
-    if job.acquisition is not None:
-        from rastro.adapters.dns import SystemResolver
-        from rastro.adapters.http import CurlTransport
-        from rastro.application.acquisition import WebAcquirer
-
-        acquisition = WebAcquirer(
-            job.acquisition,
-            transport=CurlTransport(),
-            resolver=SystemResolver(),
-            conditional=conditional,
-        )
+    acquisition = _web_acquirer(job, conditional) if job.acquisition is not None else None
     with capture as snapshots, collect_successes() as successes:
         report = run_job(
             job,
@@ -120,8 +111,6 @@ def load_job_file(
         snapshots=snapshots,
         drift_state=drift_state,
     )
-    from rastro.domain.dataset import DatasetStorageError
-
     try:
         for item, result, source in zip(job.sources, report.results, loaded.sources, strict=True):
             if (
@@ -160,4 +149,22 @@ def load_job_file(
                 for index, source in enumerate(loaded.sources, start=1)
             )
         }
+    )
+
+
+def _web_acquirer(job: Job, conditional: ConditionalRequests) -> WebAcquirer:
+    try:
+        from rastro.adapters.dns import SystemResolver
+        from rastro.adapters.http import CurlTransport
+        from rastro.application.acquisition import WebAcquirer
+    except ModuleNotFoundError as error:
+        if error.name not in {"curl_cffi", "protego"}:
+            raise
+        raise ConfigurationError("Install rastro-engine[http] for HTTP acquisition") from None
+    assert job.acquisition is not None
+    return WebAcquirer(
+        job.acquisition,
+        transport=CurlTransport(),
+        resolver=SystemResolver(),
+        conditional=conditional,
     )

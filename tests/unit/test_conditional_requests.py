@@ -216,3 +216,22 @@ def test_validator_storage_error_is_explicit(tmp_path, monkeypatch, offline_cli_
     monkeypatch.setattr(CurlTransport, "get", get)
     monkeypatch.setattr(SQLiteDatasetStore, "get_validators", broken)
     assert load_job_file(path).exit_code == 5
+
+
+def test_missing_http_extra_is_a_configuration_error(tmp_path, monkeypatch):
+    import builtins
+
+    from rastro.domain.models import ConfigurationError
+
+    path = tmp_path / "job.toml"
+    path.write_text(JOB)
+    real_import = builtins.__import__
+
+    def deny(name, *args, **kwargs):
+        if name == "rastro.adapters.http":
+            raise ModuleNotFoundError("No module named 'curl_cffi'", name="curl_cffi")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", deny)
+    with pytest.raises(ConfigurationError, match=r"rastro-engine\[http\]"):
+        load_job_file(path)
