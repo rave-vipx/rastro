@@ -15,6 +15,7 @@ from rastro.application.batch import run_batch
 from rastro.application.intelligence import RecipeLearner
 from rastro.application.memory import PreparedRecipe, RecipeMemory
 from rastro.application.outcomes import failure_result, stamp_acquired, stamp_provided
+from rastro.application.pagination import extract_paginated
 from rastro.domain.acquisition import AcquisitionPolicy, AcquisitionResult
 from rastro.domain.memory import RecipeContext
 from rastro.domain.models import (
@@ -116,6 +117,19 @@ class ExtractionService:
         prepared = await self._prepare(
             source, schema, recipe, context, recipe_version, representation
         )
+        if prepared.definition is not None and prepared.definition.pagination is not None:
+            return await extract_paginated(
+                source=source,
+                schema=schema,
+                recipe=prepared.definition,
+                parser=self._parsers[representation],
+                limits=self._limits,
+                acquisition=self._acquisition,
+                policy=self._policy,
+                extract_page=lambda fetched: self._extract_fetched(
+                    fetched, source, schema, prepared, representation, started_at
+                ),
+            )
         fetched = await self._acquisition.acquire(
             source,
             max_bytes=self._limits.max_input_bytes(representation),

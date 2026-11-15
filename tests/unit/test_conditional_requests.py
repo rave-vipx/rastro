@@ -422,3 +422,18 @@ def test_mixed_render_modes_keep_conditional_requests_for_http_sources(
     assert "If-None-Match" in requests[1]
     assert renderer.render.await_count == 2
     assert {s.status for s in second.sources} == {"unchanged", "success"}
+
+
+def test_engine_version_change_forces_a_fresh_fetch(tmp_path, monkeypatch, offline_cli_loop):
+    """SYNC-004: a parser change after an upgrade must not be hidden by a 304."""
+    from rastro.application import conditional_inputs
+
+    path = tmp_path / "job.toml"
+    path.write_text(JOB)
+    requests = _server(monkeypatch)
+    assert load_job_file(path).exit_code == 0
+    monkeypatch.setattr(conditional_inputs, "engine_version", lambda: "999.0.0")
+    assert load_job_file(path).exit_code == 0
+    assert "If-None-Match" not in requests[1]
+    load_job_file(path)
+    assert "If-None-Match" in requests[2]

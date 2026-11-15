@@ -93,6 +93,8 @@ def check_untrusted_recipe[R: Recipe](recipe: R) -> R:
     for candidate in (recipe, *recipe.fallbacks):
         if not isinstance(candidate, CssRecipe):
             continue
+        if candidate.pagination is not None:
+            check_untrusted_field(candidate.pagination.next)
         check_untrusted_selector(candidate.record_selector)
         for expression in candidate.fields.values():
             check_untrusted_field(expression)

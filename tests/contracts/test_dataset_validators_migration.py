@@ -64,7 +64,8 @@ def test_v1_opens_migrates_idempotently_and_preserves_status_and_mode(tmp_path):
         assert db.execute("PRAGMA user_version").fetchone()[0] == 2
         migrate(db)
         migrate(db)
-    assert path.stat().st_mode & 0o777 == 0o600
+    if os.name != "nt":
+        assert path.stat().st_mode & 0o777 == 0o600
 
 
 def test_migration_rolls_back_and_newer_versions_are_refused(tmp_path):

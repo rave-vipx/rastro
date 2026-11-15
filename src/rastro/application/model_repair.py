@@ -227,8 +227,15 @@ def _union(old: str | None, new: str) -> str:
 def _candidate(
     proposal: Recipe, schema: type[BaseModel], previous: Recipe
 ) -> RepairCandidate | None:
+    if previous.pagination is not None and proposal.strategy != previous.strategy:
+        return None
     data = proposal.model_dump()
-    data.update(require_evidence=True, fallbacks=(), version=previous.version)
+    data.update(
+        require_evidence=True,
+        fallbacks=(),
+        version=previous.version,
+        pagination=previous.pagination,
+    )
     try:
         recipe = validate_recipe(schema, Recipe.model_validate(data), previous.representation)
     except ValidationError:

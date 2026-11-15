@@ -8,7 +8,7 @@ from dataclasses import replace
 from time import perf_counter
 from urllib.parse import urlsplit, urlunsplit
 
-from rastro.application.acquisition_state import _Host, _Operation
+from rastro.application.acquisition_state import _Host, _Operation, check_page_request
 from rastro.application.conditional import ConditionalRequests
 from rastro.application.cookie_jar import CookieJar
 from rastro.application.destinations import permitted_url, pin_destination
@@ -209,6 +209,7 @@ class WebAcquirer:
         self, url: str, host: _Host, operation: _Operation, *, max_bytes: int
     ) -> HttpResponse:
         async with self._slots:
+            check_page_request(url)
             operation.requests += 1
             deadline = asyncio.get_running_loop().time() + self.policy.request_timeout_seconds
             try:
@@ -222,6 +223,7 @@ class WebAcquirer:
                             await asyncio.sleep(host.interval)
                             if operation.requests >= self.policy.max_requests:
                                 raise AcquisitionError("request_limit", Outcome.PERMANENT_FAILURE)
+                            check_page_request(url)
                             operation.requests += 1
                         remaining = deadline - asyncio.get_running_loop().time()
                         if remaining <= 0:

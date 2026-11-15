@@ -6,11 +6,17 @@ since the validators were stored, the dataset must be extracted again (SYNC-004)
 
 import json
 from hashlib import sha256
+from importlib.metadata import version
 from pathlib import Path
 
 from rastro.application.active_recipes import serving_recipe_digests
 from rastro.domain.jobs import Job, UrlJobSource
 from rastro.domain.sources import schema_fingerprint
+
+
+def engine_version() -> str:
+    """Installed Rastro version: a parser change after an upgrade must force a fresh fetch."""
+    return version("rastro-engine")
 
 
 def extraction_inputs(
@@ -21,6 +27,7 @@ def extraction_inputs(
         job, base_dir=base_dir, allow_absolute_paths=allow_absolute_paths
     )
     shared = {
+        "engine": engine_version(),
         "job": job.model_dump(mode="json"),
         "schema": schema_fingerprint(job.build_schema()),
     }
