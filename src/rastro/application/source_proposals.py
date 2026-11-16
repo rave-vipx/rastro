@@ -14,6 +14,7 @@ from pydantic import ValidationError
 
 from rastro.application.destinations import permitted_url, public_address
 from rastro.application.model_choice import ModelChoice, resolve_model
+from rastro.application.robots_cache import robots_cache
 from rastro.domain.acquisition import (
     AcquisitionError,
     AcquisitionPolicy,
@@ -222,5 +223,5 @@ def acquire_approved_pages(
             ]
         )
 
-    with asyncio.Runner(loop_factory=asyncio.SelectorEventLoop) as runner:
+    with robots_cache(), asyncio.Runner(loop_factory=asyncio.SelectorEventLoop) as runner:
         return hosts, policy, runner.run(_fetch_all())

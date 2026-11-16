@@ -126,8 +126,12 @@ signature, so existing ports continue to work.
 
 Rastro identifies itself as `Rastro/<installed version>`, checks robots.txt for each source origin,
 and uses the same protected transport for robots and documents. Rules are reused
-for one origin within one run (or one registry install), in memory only: a new run
-asks again, and `ignore_robots` is checked before the cache. A refused answer (denial,
+for one origin within one user action, in memory only: a new action asks again, and
+`ignore_robots` is checked before the cache. The covered actions are a job run or load, a
+registry search or install, the Studio/SDK URL start (`html_from_url`), `rastro new --site` and
+`--goal` approval fetches (up to three pages per host), and every repair, review and promotion
+that fetches the current page. The SDK client (`Rastro.web(...).extract`) keeps a private cache
+per call unless a caller already runs inside one of these actions. A refused answer (denial,
 HTML, malformed text, server failure) is remembered for that run with the same outcome. A 404/410 robots response
 allows acquisition. Denials,
 HTML instead of robots text, malformed encoding, and server failures fail closed.
