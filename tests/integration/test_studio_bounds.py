@@ -1,5 +1,6 @@
 """N1/N3/N9, SEC-008: previews expire and bounded settings validate before writes."""
 
+import json
 from pathlib import Path
 
 import pytest
@@ -46,7 +47,8 @@ def test_bounded_settings(tmp_path: Path) -> None:
         path = tmp_path / "job.toml"
         path.write_text(
             path.read_text(encoding="utf-8")
-            + "\n# keep me\n[scroll] # scroll comment\nmax_steps = 2 # steps comment\n"
+            + "\n# keep me\n[scroll] # scroll comment\nmax_steps = 2 # steps comment\n",
+            encoding="utf-8",
         )
         for kind, policy, bad in [
             (
@@ -120,18 +122,25 @@ def test_spider_result_line_only_uses_report_fields() -> None:
     fill = source[source.index("let spider") : source.index("async function save")].replace(
         "export ", ""
     )
+    from rastro.domain.jobs import Job
+    from rastro.studio.bounds import controls
+
+    limits = controls(Job.model_construct(sources=(), acquisition=None))["limits"]
     function += (
-        """
+        "const limits = "
+        + json.dumps(limits)
+        + ";\n"
+        + """
 const nodes = {};
 const $ = id => nodes[id] ??= {};
 const show = (id, text) => { $(id).textContent = text; };
 """
         + fill
         + """
-fillBounds({scroll_disabled: true});
+fillBounds({limits, scroll_disabled: true});
 if (!$("scroll-controls").disabled) throw Error("HTTP scroll must be disabled");
 if (!$("scroll-reason").textContent.includes("HTTP")) throw Error("Explain HTTP");
-fillBounds({scroll_disabled: false, scroll: {max_steps: 3, settle_ms: 200}});
+fillBounds({limits, scroll_disabled: false, scroll: {max_steps: 3, settle_ms: 200}});
 if ($("scroll-controls").disabled) throw Error("Browser scroll must be editable");
 """
     )
