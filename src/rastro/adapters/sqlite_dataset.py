@@ -17,6 +17,7 @@ from rastro.adapters.sqlite_dataset_schema import (
     safe,
     update_status,
 )
+from rastro.adapters.sqlite_metrics import SQLiteMetricsMixin
 from rastro.adapters.structured import load_json
 from rastro.domain.dataset import (
     DatasetNotFoundError,
@@ -29,10 +30,11 @@ from rastro.domain.dataset import (
 )
 from rastro.domain.job_sources import validate_job_path_syntax
 from rastro.domain.lifecycle_history import check_reason
+from rastro.domain.metrics import RETENTION_ROWS
 from rastro.domain.sources import Limits, Source
 
 
-class SQLiteDatasetStore(DatasetSnapshot):
+class SQLiteDatasetStore(DatasetSnapshot, SQLiteMetricsMixin):
     @safe
     def __init__(
         self,
@@ -41,7 +43,9 @@ class SQLiteDatasetStore(DatasetSnapshot):
         near_match_fields: tuple[str, str, str] | None = ("title", "venue", "start_time"),
         near_match_tolerance: timedelta = timedelta(minutes=30),
         limits: Limits | None = None,
+        metrics_retention: int = RETENTION_ROWS,
     ) -> None:
+        self._metrics_retention = max(1, metrics_retention)
         self._path = Path(validate_job_path_syntax(str(path))).absolute()
         if near_match_tolerance < timedelta(0) or (
             near_match_fields is not None and len(near_match_fields) != 3

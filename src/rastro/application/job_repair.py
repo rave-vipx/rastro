@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from rastro.application.model_budget import model_cost_override
 from rastro.application.model_choice import ModelChoice, resolve_model
 from rastro.application.model_repair import ModelAssist, assist_repair
 from rastro.application.operator_trust import operator_trust
@@ -43,6 +44,8 @@ def repair_job_source(
     allow_egress: bool = False,
     allow_stealth: bool = False,
     allow_env: Iterable[str] = (),
+    max_model_cost: float | None = None,
+    model_cost_per_call: float | None = None,
 ) -> RepairReport:
     """Propose, evaluate and store repair candidates for one source (1-based index).
 
@@ -52,7 +55,8 @@ def repair_job_source(
     it proposes candidates when relocation finds none that passes and judges every
     would-be promotion. Remote specs need ``allow_remote=True``. Re-fetching through a
     job-declared egress proxy needs ``allow_egress=True`` and a stealth render mode
-    needs ``allow_stealth=True``.
+    needs ``allow_stealth=True``. ``max_model_cost`` caps the model's cost in USD and needs
+    a price: ``model_cost_per_call`` or the job's ``[model] cost_per_call`` (COST-002).
     """
     overrides = {
         name: value
@@ -72,6 +76,8 @@ def repair_job_source(
         allow_egress=allow_egress,
         allow_stealth=allow_stealth,
         allow_env=allow_env,
+        max_model_cost=max_model_cost,
+        model_cost_per_call=model_cost_per_call,
         **overrides,
     )
 
@@ -86,6 +92,8 @@ def repair_job_sources(
     allow_egress: bool = False,
     allow_stealth: bool = False,
     allow_env: Iterable[str] = (),
+    max_model_cost: float | None = None,
+    model_cost_per_call: float | None = None,
     **overrides: Any,
 ) -> RepairReport:
     """Repair several sources, or all of them when ``sources`` is ``None``."""
@@ -99,7 +107,8 @@ def repair_job_sources(
     )
     policy = job_policy(context, overrides)
     indexes = sources if sources is not None else range(1, len(context.job.sources) + 1)
-    assist = _assist(context, model, allow_remote, allow_env)
+    with model_cost_override(max_model_cost, model_cost_per_call):
+        assist = _assist(context, model, allow_remote, allow_env)
 
     async def run() -> RepairReport:
         items = [await _repair_source(context, index, policy, assist) for index in indexes]
@@ -253,7 +262,8 @@ def _assist(
     The override and ``RASTRO_MODEL`` come from the operator and are trusted; a model
     declared in the job file passes the operator-trust checks.
     """
-    port = resolve_model(model, allow_remote=allow_remote)
+    job_model, policy = context.job.model, context.job.inference_policy
+    port = resolve_model(model, allow_remote=allow_remote, job_model=job_model, policy=policy)
     if port is None and context.job.model is not None:
         from rastro.application.job_loader import _build_model_provider
 
@@ -261,7 +271,7 @@ def _assist(
         with operator_trust(allow_remote=allow_remote, allow_env=allow_env):
             port = _build_model_provider(context.job.model)
     if port is None and context.job.repair is not None and context.job.repair.model:
-        port = resolve_model("env", allow_remote=allow_remote)
+        port = resolve_model("env", allow_remote=allow_remote, job_model=job_model, policy=policy)
     return (
         None
         if port is None

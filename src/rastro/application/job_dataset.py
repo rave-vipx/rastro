@@ -17,8 +17,9 @@ from rastro.application.conditional import ConditionalRequests
 from rastro.application.conditional_inputs import extraction_inputs
 from rastro.application.drift import collect_snapshots
 from rastro.application.egress_trust import allowed_env_names, check_job_egress
-from rastro.application.job_loader import load_job, resolve_job_path
+from rastro.application.job_loader import build_job_model, load_job, resolve_job_path
 from rastro.application.jobs import run_job
+from rastro.application.model_budget import model_cost_override
 from rastro.application.operator_trust import current_trust, operator_trust
 from rastro.application.run_lock import dataset_lock
 from rastro.application.success_samples import collect_successes
@@ -79,6 +80,8 @@ def load_job_file(
     allow_private_network: bool = False,
     allow_ports: Iterable[int] = (),
     ignore_robots: Iterable[str] = (),
+    max_model_cost: float | None = None,
+    model_cost_per_call: float | None = None,
     sources: Sequence[JobSource] | None = None,
     should_stop: Callable[[], bool] | None = None,
     _lock_held: bool = False,
@@ -89,6 +92,8 @@ def load_job_file(
     structural drift of each source is measured and reported. Each loaded source
     reports whether its recipe came from the job file or from ``recipe_memory``.
     ``allow_*`` and ``ignore_robots`` are the operator's opt-ins, as for ``run_job``.
+    ``max_model_cost`` and ``model_cost_per_call`` limit the job's model for the whole load,
+    not per source (COST-002).
     """
     file = Path(path)
     job = load_job(file, allow_absolute_paths=allow_absolute_paths)
@@ -130,10 +135,14 @@ def load_job_file(
             if isinstance(store, DatasetValidators) and job.acquisition is not None
             else None
         )
-        with operator_trust(
-            allow_remote=allow_remote, allow_stealth=allow_stealth, allow_env=allow_env
+        with (
+            operator_trust(
+                allow_remote=allow_remote, allow_stealth=allow_stealth, allow_env=allow_env
+            ),
+            model_cost_override(max_model_cost, model_cost_per_call),
         ):  # the render-mode consent check runs here, before any source is run
             acquisition = _load_acquirer(job, conditional)
+            model = build_job_model(job)  # one budget and one notice for every source
         with capture as snapshots, collect_successes() as successes:
             report, loaded, ran = run_checkpointed_load(
                 raw_path,
@@ -151,6 +160,9 @@ def load_job_file(
                     allow_ports=allow_ports,
                     ignore_robots=ignore_robots,
                     acquisition=acquisition,
+                    model=model,
+                    max_model_cost=max_model_cost,
+                    model_cost_per_call=model_cost_per_call,
                 ),
                 positions=positions,
                 monitor=monitor,

@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any, Literal
 
-from pydantic import Field, create_model
+from pydantic import Field, create_model, model_validator
 
 from rastro.domain.models import (
     Contract,
@@ -30,6 +30,29 @@ class InferencePolicy(Contract):
     context_tokens: int = Field(default=8192, ge=512, le=32_768)
     max_concurrency: int = Field(default=1, ge=1, le=16)
     max_discovery_candidates: int = Field(default=8, ge=1, le=32)
+
+
+class ModelBudget(Contract):
+    """What a model call costs and the most one run may spend on it (COST-002), in USD.
+
+    Without ``cost_per_call`` nothing can be priced, so ``max_cost`` requires it.
+    """
+
+    cost_per_call: float | None = Field(default=None, ge=0, le=1000, allow_inf_nan=False)
+    max_cost: float | None = Field(default=None, gt=0, le=1_000_000, allow_inf_nan=False)
+
+    @model_validator(mode="after")
+    def check_priced(self) -> ModelBudget:
+        if self.max_cost is not None and self.cost_per_call is None:
+            raise ValueError("max_cost needs cost_per_call")
+        return self
+
+    @property
+    def allowed_calls(self) -> int | None:
+        """Calls the limit pays for; ``None`` when unlimited. Tolerates float rounding."""
+        if self.max_cost is None or not self.cost_per_call:
+            return None
+        return int(self.max_cost / self.cost_per_call + 1e-9)
 
 
 class RecipeProposal(StrategyUnion):
@@ -111,6 +134,7 @@ class ModelError(RastroError):
             "model_response_limit",
             "invalid_model_response",
             "model_context_limit",
+            "model_budget_exhausted",
         ],
     ) -> None:
         self.code = code

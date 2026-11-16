@@ -263,6 +263,20 @@
           "title": "Argv",
           "type": "array"
         },
+        "cost_per_call": {
+          "anyOf": [
+            {
+              "maximum": 1000,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cost Per Call"
+        },
         "env": {
           "default": [],
           "items": {
@@ -290,6 +304,20 @@
           "default": false,
           "title": "Local",
           "type": "boolean"
+        },
+        "max_cost": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 1000000,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Cost"
         },
         "output": {
           "default": "json",
@@ -1379,6 +1407,34 @@
           "default": null,
           "title": "Base Url Env"
         },
+        "cost_per_call": {
+          "anyOf": [
+            {
+              "maximum": 1000,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cost Per Call"
+        },
+        "max_cost": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 1000000,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Cost"
+        },
         "model": {
           "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,199}$",
           "title": "Model",
@@ -1438,6 +1494,34 @@
           ],
           "default": null,
           "title": "Base Url Env"
+        },
+        "cost_per_call": {
+          "anyOf": [
+            {
+              "maximum": 1000,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cost Per Call"
+        },
+        "max_cost": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 1000000,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Cost"
         },
         "model": {
           "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/@+-]{0,199}$",

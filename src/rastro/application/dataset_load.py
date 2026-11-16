@@ -7,6 +7,7 @@ from typing import Any, Literal
 from rastro.application.consistency import History, evaluate_consistency, history_from_store
 from rastro.application.drift import snapshot_result
 from rastro.application.pagination_records import is_complete_snapshot
+from rastro.application.run_metrics import record_run_metrics
 from rastro.domain.consistency import ConsistencyRule
 from rastro.domain.dataset import ChangeKind, DatasetRecordKey, DatasetStorageError, ObservedRecord
 from rastro.domain.drift import StructuralSnapshot
@@ -32,6 +33,7 @@ def load_results(
     monitor: DriftMonitor | None = None,
     snapshots: Mapping[str, StructuralSnapshot] | None = None,
     drift_state: OpenDriftReader | None = None,
+    required: Sequence[str] = (),
     on_source: SourceHook | None = None,
 ) -> JobLoadResult:
     """Only observed approved fields enter snapshots; failed sources retain their old origins.
@@ -39,6 +41,8 @@ def load_results(
     Stale sources and open drift cover only this job's sources. A dataset storage failure
     stops further writes: committed sources keep their counts, the rest report
     ``storage_error`` and the result's ``status`` is ``storage_error`` (exit code 5).
+    One ``run_metrics`` row per source is recorded when the store supports it (OBS-003);
+    ``required`` names the job's required fields for the coverage count.
     ``on_source(index, result, loaded)`` runs after each source whose load, and drift
     assessment when ``monitor`` is set, completed without a storage failure.
     """
@@ -52,6 +56,7 @@ def load_results(
         monitor=monitor,
         snapshots=snapshots,
         drift_state=drift_state,
+        required=required,
         on_source=on_source,
     )
 
@@ -68,6 +73,7 @@ def load_stream(
     monitor: DriftMonitor | None = None,
     snapshots: Mapping[str, StructuralSnapshot] | None = None,
     drift_state: OpenDriftReader | None = None,
+    required: Sequence[str] = (),
     on_source: SourceHook | None = None,
 ) -> JobLoadResult:
     """`load_results` for results produced lazily: each is loaded before the next is pulled.
@@ -81,12 +87,14 @@ def load_stream(
     history: History = {}
     failed = False
     seen: set[str] = set()
+    observed: list[ExtractionResult[Any]] = []
     try:
         history = history_from_store(store, spec.name, approved) if rules else {}
     except DatasetStorageError:
         failed = True  # An unreadable dataset loads nothing, but still reports (exit 5).
     for index, result in enumerate(results):
         seen.add(result.source_url)
+        observed.append(result)
         if failed:
             sources.append(_unloaded(result))
             continue
@@ -111,6 +119,7 @@ def load_stream(
             on_source(index, result, sources[-1])
     # Redirected sources are stored under their final URL, which only the results know.
     current = seen if current is None else {*current, *seen}
+    failed = failed or record_run_metrics(store, spec.name, observed, required)
     stale: tuple[StaleSource, ...] = ()
     open_drift: tuple[OpenDrift, ...] = ()
     try:

@@ -17,6 +17,7 @@ from rastro.application.job_loader import (
     resolve_job_path,
     validate_job_paths,
 )
+from rastro.application.model_budget import model_cost_override
 from rastro.application.operator_trust import operator_trust
 from rastro.application.pagination_records import deduplicate_pages
 from rastro.application.run_log import log_failures
@@ -72,6 +73,8 @@ async def run_job_async(
     allow_private_network: bool = False,
     allow_ports: Iterable[int] = (),
     ignore_robots: Iterable[str] = (),
+    max_model_cost: float | None = None,
+    model_cost_per_call: float | None = None,
 ) -> JobRunResult[Any]:
     """Execute a validated job asynchronously through the public Rastro SDK.
 
@@ -81,16 +84,20 @@ async def run_job_async(
     proxy (``allow_egress``), extra secret variable names (``allow_env``), private-network
     destinations (``allow_private_network``), extra ports (``allow_ports``) and hosts whose
     robots.txt is not enforced (``ignore_robots``). A job file can never grant any of them
-    or make Rastro start a model command.
+    or make Rastro start a model command. ``max_model_cost`` (USD) caps every model
+    call and needs a price, ``model_cost_per_call`` or the job's ``[model] cost_per_call``.
     """
     allow_env = tuple(allow_env)
-    with operator_trust(
-        allow_remote=allow_remote,
-        allow_stealth=allow_stealth,
-        allow_env=allow_env,
-        allow_private_network=allow_private_network,
-        allow_ports=allow_ports,
-        ignore_robots=ignore_robots,
+    with (
+        operator_trust(
+            allow_remote=allow_remote,
+            allow_stealth=allow_stealth,
+            allow_env=allow_env,
+            allow_private_network=allow_private_network,
+            allow_ports=allow_ports,
+            ignore_robots=ignore_robots,
+        ),
+        model_cost_override(max_model_cost, model_cost_per_call),
     ):
         check_job_egress(job, allow_egress=allow_egress, allow_env=allow_env)
         check_job_auth(job, allow_env=allow_env)
@@ -167,6 +174,8 @@ def run_job(
     allow_private_network: bool = False,
     allow_ports: Iterable[int] = (),
     ignore_robots: Iterable[str] = (),
+    max_model_cost: float | None = None,
+    model_cost_per_call: float | None = None,
 ) -> JobRunResult[Any]:
     """Run a validated job; uses synchronous extraction when offline and model-free.
 
@@ -176,16 +185,20 @@ def run_job(
     proxy (``allow_egress``), extra secret variable names (``allow_env``), private-network
     destinations (``allow_private_network``), extra ports (``allow_ports``) and hosts whose
     robots.txt is not enforced (``ignore_robots``). A job file can never grant any of them
-    or make Rastro start a model command.
+    or make Rastro start a model command. ``max_model_cost`` (USD) caps every model
+    call and needs a price, ``model_cost_per_call`` or the job's ``[model] cost_per_call``.
     """
     allow_env = tuple(allow_env)
-    with operator_trust(
-        allow_remote=allow_remote,
-        allow_stealth=allow_stealth,
-        allow_env=allow_env,
-        allow_private_network=allow_private_network,
-        allow_ports=allow_ports,
-        ignore_robots=ignore_robots,
+    with (
+        operator_trust(
+            allow_remote=allow_remote,
+            allow_stealth=allow_stealth,
+            allow_env=allow_env,
+            allow_private_network=allow_private_network,
+            allow_ports=allow_ports,
+            ignore_robots=ignore_robots,
+        ),
+        model_cost_override(max_model_cost, model_cost_per_call),
     ):
         check_job_egress(job, allow_egress=allow_egress, allow_env=allow_env)
         check_job_auth(job, allow_env=allow_env)
@@ -271,6 +284,8 @@ def run_job_file(
     allow_private_network: bool = False,
     allow_ports: Iterable[int] = (),
     ignore_robots: Iterable[str] = (),
+    max_model_cost: float | None = None,
+    model_cost_per_call: float | None = None,
 ) -> JobRunResult[Any]:
     """Load and execute a declarative job file; see ``run_job`` for the ``allow_*`` options."""
     file_path = Path(path)
@@ -288,6 +303,8 @@ def run_job_file(
         allow_private_network=allow_private_network,
         allow_ports=allow_ports,
         ignore_robots=ignore_robots,
+        max_model_cost=max_model_cost,
+        model_cost_per_call=model_cost_per_call,
     )
 
 

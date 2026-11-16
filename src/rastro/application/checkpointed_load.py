@@ -94,6 +94,7 @@ def run_checkpointed_load(
         summary=lambda: report().job,
         current={key[1] for key, _ in slots},
         rules=job.consistency,
+        required=[f.name for f in job.fields if f.required],
         monitor=monitor,
         snapshots=snapshots,
         drift_state=drift_state,

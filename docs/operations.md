@@ -164,3 +164,63 @@ On POSIX systems Rastro creates dataset and recipe-memory files, and their SQLit
 `-journal`, `-wal` and `-shm` files, readable by the owner only (0600). It tightens
 existing files you own when it opens them. Datasets keep sanitized page samples for
 repair, so keep them private. On Windows the folder's access rules apply.
+
+## Metrics and cost
+
+Every `rastro job load` with a SQLite `[dataset]` appends one row per source to the dataset
+file's `run_metrics` table (schema 3; a schema 1 or 2 file migrates forward on its first
+write, and a newer file is refused). A row holds counts and timings only: the source URL
+without query, fragment or credentials, host, strategy (which recipe source produced the
+result), start and finish, outcome, HTTP status, requests, retries, bytes, remote latency
+(`network_seconds`), local work (`processing_seconds`: total minus network minus model
+time), `render_seconds` (0 without a browser), model calls, records, records that have every
+required field, and fields validated. Rastro keeps the newest 10,000 rows per dataset.
+`model_tokens` is stored but stays 0: model adapters do not report tokens yet. PostgreSQL
+datasets record no metrics.
+
+```console
+$ rastro job stats job.toml --since 7d --by host
+```
+
+The JSON report (`schema_version` 1) has one group per source (default), `host`, `strategy`
+or `day`: `runs`, `pages` (requests), `records`, `success_rate`, `error_rate`, `retry_rate`,
+p50/p95 of `total_seconds`, `network_seconds` and `processing_seconds`, `records_per_minute`,
+`model_calls`, `freshness_seconds` (now minus the last success, `null` if never),
+`coverage` (records with every required field over records, `null` without records), a
+daily `trend` and `observed_interval_seconds` (median gap between successful runs, the
+input for adaptive schedules; Rastro reports it and does not change your schedule). Success
+means `success` or `unchanged`; `partial_success` is neither success nor error. With no
+history the output is `{"schema_version": 1, "groups": [], "reason": "no_runs"}` and the exit
+code is 0. `--since` takes `7d` or `12h`.
+
+### Model cost limits
+
+A paid model can be priced and capped in the job (USD), or on the command line:
+
+```toml
+[model]
+provider = "http"
+model = "gpt-4.1-mini"
+allow_remote = true
+cost_per_call = 0.002
+max_cost = 1.0
+```
+
+`rastro job run job.toml --max-model-cost 0.5` overrides `max_cost`, and
+`--model-cost-per-call 0.002` overrides `cost_per_call`. Both flags work on `job run`,
+`job load`, `recipe repair`, `suggest` and `new`; the SDK takes `max_model_cost=` and
+`model_cost_per_call=` on `run_job*`, `load_job_file`, `watch_job` and `repair_job_source(s)`.
+A load or a watch tick shares one budget and one notice across all its sources.
+
+The cap covers every model Rastro calls, whoever supplied it: the job's `[model]`, an SDK
+`model=`, `--model SPEC` and `RASTRO_MODEL`. An operator model is priced by
+`--model-cost-per-call`, else by the job's `[model] cost_per_call`. A limit with no known
+price is a `ConfigurationError`; it is never ignored.
+
+Before the first call to a remote model, Rastro prints one line to stderr with the operation,
+model name, maximum calls, estimated maximum cost and the limit. Once the next call would
+exceed the limit, Rastro stops calling the model: that source ends as `insufficient_evidence`
+with the issue code `model_budget_exhausted`, and recipes found without the model still apply.
+Local models print no notice, and honor a limit if you set one. A custom `ModelPort` counts as
+remote only if it has `remote = True`. The limit covers the recipe proposal, repair and
+judgement calls in one run; each `job run`, `job load` or `recipe repair` starts at zero.
