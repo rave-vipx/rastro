@@ -1,0 +1,40 @@
+{
+  "fields": [
+    {
+      "max_length": null,
+      "min_length": 1,
+      "name": "title",
+      "pattern": null,
+      "required": true,
+      "type": "string"
+    },
+    {
+      "max_length": null,
+      "min_length": 1,
+      "name": "location",
+      "pattern": null,
+      "required": true,
+      "type": "string"
+    }
+  ],
+  "json_schema": {
+    "properties": {
+      "location": {
+        "minLength": 1,
+        "title": "Location",
+        "type": "string"
+      },
+      "title": {
+        "minLength": 1,
+        "title": "Title",
+        "type": "string"
+      }
+    },
+    "required": [
+      "location",
+      "title"
+    ],
+    "title": "JobRecord",
+    "type": "object"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "fallbacks": [],
+  "fields": {
+    "price_text": "p::text",
+    "title": "h2::text"
+  },
+  "record_selector": ".card",
+  "require_evidence": true,
+  "strategy": "css",
+  "version": 1
+}

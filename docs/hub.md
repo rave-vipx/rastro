@@ -162,3 +162,45 @@ proposals. Recipes you write in your own job file are not checked.
 
 Metadata files are capped at 1 MiB and the sample at the job's input limit. The
 JSON Schema in `schema.json` is not used for verification; the field definitions are.
+
+## Synthetic examples (N6)
+
+The [example registry](https://github.com/rave-vipx/rastro/tree/main/examples/registry)
+contains `synthetic-listing`, `synthetic-news` and `synthetic-product`, plus the
+original synthetic agenda. All are public format-2 bundles with metadata, hashes,
+expected records and offline replay samples; none is a third-party capture. The
+[README walkthrough](https://github.com/rave-vipx/rastro#share-a-recipe) installs,
+promotes and loads the listing twice. The same steps work for `news.json` and
+`product.json` with their matching store names. `price_text` deliberately remains
+source text; the example makes no numeric or currency inference.
+
+The shared object is the recipe. Samples are explicit replay evidence, not the
+next production target. These examples include samples because the current bundle
+format and import verifier require them. A URL job always fetches its URL again;
+these example jobs explicitly choose a file source so the tutorial works offline.
+Keep source URL, regional context and field definitions aligned with the bundle
+when adopting it. Installs cannot modify your job's auto-promote policy or grant stealth.
+
+## Host a static registry (N10)
+
+Serve the unchanged registry directory over HTTPS: `index.json` and
+`recipes/<id>/<version>/` with the exact exported bytes. No account system or
+Rastro-operated service is needed. Publishing remains a local write; commit/push
+or upload the directory yourself after reviewing it.
+
+**Pending in this branch:** the registry fetcher and CLI integration must land
+before these commands work; this checkout's help exposes only `--registry`:
+
+```sh
+# Planned N10 flags; replace this reserved example host with your static host.
+rastro recipe search synthetic --registry-url https://registry.example/catalogue/
+rastro recipe install synthetic-listing@1.0.0 \
+  --registry-url https://registry.example/catalogue/ --store recipes.sqlite
+```
+
+The URL path must retain the same local-layout verification gates: HTTPS only,
+public-address/SSRF checks and redirect re-checks, byte limits, digests, selector
+policy and offline replay before candidate storage. A URL, bundle or model cannot
+grant private-network access or enable stealth. Until integration is verified,
+clone the registry and use `--registry` locally. There is no executable recipe
+format, unbounded crawl or multi-tenant hosted registry in this cut.

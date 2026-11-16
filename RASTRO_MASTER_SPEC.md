@@ -56,6 +56,9 @@ Release priorities take precedence over speculative features.
 
 | Date | Version | Change | Decision record |
 |---|---|---|---|
+| 2026-11-16 | 1.2 | N1–N8: URL-first Studio, run progress and bounded discovered-link crawling supersede historical saved-page-only / named-page-only product boundaries; operator grants remain | [ADR 0032](docs/decisions/0032-vibe-coder-spider-and-studio.md) |
+| 2026-11-16 | 1.2 | N9–N11: bounded browser scroll and a hostable static registry directory / HTTPS URL supersede permanent scroll and hosted-registry exclusions; no account server or unbounded collection | [ADR 0033](docs/decisions/0033-scroll-registry-url-and-spec-amendments.md) |
+| 2026-11-16 | 1.2 | N12: auto-promote and stealth default off; promotion keeps gates plus semantic judge, stealth needs a process grant, and shared recipes remain data | [ADR 0034](docs/decisions/0034-opt-in-promote-and-stealth.md) |
 | 2026-11-15 | 1.2 | SCR-003 removed by owner decision; stealth browsing is an operator opt-in; robots, destination checks and rotation restrictions remain | [ADR 0024](docs/decisions/0024-browser-rendering-and-stealth-opt-in.md) |
 | 2026-11-06 | 1.2 | Product outcome rewritten around "describe the data, name the sources you know, get an updatable database"; first public case: a dance-event agenda for Uruguay (example only). v0.2 becomes "from known sources to a usable database" (dataset store, record identity and update semantics brought forward from v0.3, then drift and repair on that path); v0.3 becomes "from an intent to reusable sources and recipes"; MCP (AGENT-002) moves to v0.4 behind a concrete consumer; Hub starts with Git export/import; DATA-*, COST-*, DISC-003 and DIFF-002 added; work assignment decided per slice | [ADR 0016](docs/decisions/0016-dataset-outcome.md) |
 | 2026-10-30 | 1.1 | Owner decisions after the 0.1.0 release candidate: AI-005 becomes a pre-v0.2 MUST with a documented provider strategy (AI-007); declarative jobs (JOB-*), agent interface (AGENT-*), term-based source discovery (DISC-*) and Scrapling capability parity (SCR-*) are added; v0.2 scope gains the agent interface | [ADR 0012](docs/decisions/0012-product-direction.md) |
@@ -288,7 +291,7 @@ Use Scrapling's adaptive element relocation as a deterministic source of repair 
 
 ### SCR-003 — MUST
 
-Removed 2026-11-15 by owner decision; stealth browsing is an operator opt-in, see ADR 0024
+Removed 2026-11-15 by owner decision; stealth browsing is an operator opt-in, see ADR 0024. **Historical blanket stealth ban superseded by ADR 0024 and [ADR 0034](docs/decisions/0034-opt-in-promote-and-stealth.md):** the process grant remains required; browser and scroll do not grant stealth.
 
 ## Differentiation Requirement
 
@@ -1910,7 +1913,7 @@ Start from whatever the user has — known sites and fields, sites only, or only
 ### Scope
 
 - Three entry modes, source proposals with approval and field proposals from observed pages; real records shown before the job is saved (DISC-001–003).
-- Acquisition capabilities chosen by the obstacles the pilot found: pagination, JavaScript rendering through Scrapling's browser behind its adapter, sessions, per-domain concurrency, run recovery (SCHED-004). Each obstacle is resolved by its cause; access restrictions and bot challenges are reported, never evaded (SCR-003).
+- Acquisition capabilities chosen by the obstacles the pilot found: pagination, JavaScript rendering through Scrapling's browser behind its adapter, sessions, per-domain concurrency, run recovery (SCHED-004). Each obstacle is resolved by its cause; access restrictions and bot challenges are reported, never evaded (SCR-003). **Superseded in part by ADR 0024 and ADR 0034:** this historical sentence does not prohibit operator-granted stealth or separately requested challenge solving; rotation and external CAPTCHA services remain forbidden.
 - Scheduling with the same job (SCHED-001–007), incremental updates, history and retention (SYNC-001/004/005/007).
 - Freshness, coverage and cost per source; paid-service limits shown and enforced (COST-002, OBS-003–007).
 - Alerts and webhooks that distinguish failures from unchanged data (ALERT-*); optional PostgreSQL adapter.

@@ -1,0 +1,40 @@
+{
+  "fields": [
+    {
+      "max_length": null,
+      "min_length": 1,
+      "name": "title",
+      "pattern": null,
+      "required": true,
+      "type": "string"
+    },
+    {
+      "max_length": null,
+      "min_length": 1,
+      "name": "price_text",
+      "pattern": null,
+      "required": true,
+      "type": "string"
+    }
+  ],
+  "json_schema": {
+    "properties": {
+      "price_text": {
+        "minLength": 1,
+        "title": "Price Text",
+        "type": "string"
+      },
+      "title": {
+        "minLength": 1,
+        "title": "Title",
+        "type": "string"
+      }
+    },
+    "required": [
+      "price_text",
+      "title"
+    ],
+    "title": "JobRecord",
+    "type": "object"
+  }
+}
