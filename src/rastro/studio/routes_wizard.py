@@ -1,6 +1,7 @@
-"""New scraper wizard: pick a saved page, give example values, suggest, create a job.
+"""New scraper wizard: URL (or saved page), example values, suggest, create a job (N1).
 
-Calls ``suggest`` and the ``rastro new`` job writer; nothing is fetched (INT-002, JOB-001).
+URL-first path fetches through the acquisition port and writes a ``kind = "url"`` job.
+A saved HTML page remains available for offline replay; it is not required.
 """
 
 from __future__ import annotations
@@ -14,6 +15,7 @@ from starlette.requests import Request
 from starlette.responses import Response
 from starlette.routing import Route
 
+from rastro.application.job_from_url import html_from_url, new_job_from_url
 from rastro.application.job_loader import _read_local_source
 from rastro.application.job_new import new_job
 from rastro.application.suggest import suggest
@@ -78,14 +80,20 @@ def routes(studio: Studio) -> list[Route]:
 
     async def suggested(request: Request) -> Response:
         data = await body(request)
-        path, examples = page_path(data), _examples(data)
+        examples = _examples(data)
         fields = _fields(examples)
         url = optional_text(data, "url")
         records_min = integer(data, "records_min", 1, 1000, default=2)
+        page = optional_text(data, "page")
 
         def run() -> Suggestion[Any]:
-            html = _read_local_source(path, Limits().max_html_bytes, "html")
-            return suggest(html, fields, examples=examples, url=url, records_min=records_min)
+            if page is not None:
+                html = _read_local_source(page_path(data), Limits().max_html_bytes, "html")
+                return suggest(html, fields, examples=examples, url=url, records_min=records_min)
+            if url is None:
+                raise Refused(400, "missing_url")
+            final_url, html, _policy = html_from_url(url, acquisition=studio.acquisition)
+            return suggest(html, fields, examples=examples, url=final_url, records_min=records_min)
 
         return reply(_payload(await run_in_threadpool(run)))
 
@@ -97,18 +105,37 @@ def routes(studio: Studio) -> list[Route]:
             raise Refused(400, "invalid_identity")
         dataset = _beside(target, optional_text(data, "dataset"), "dataset")
         memory = _beside(target, optional_text(data, "recipe_memory"), "recipe_memory")
-        written = await run_in_threadpool(
-            lambda: new_job(
+        examples = _examples(data)
+        url = optional_text(data, "url")
+        page = optional_text(data, "page")
+        records_min = integer(data, "records_min", 1, 1000, default=2)
+
+        def write() -> Path:
+            if page is not None:
+                return new_job(
+                    target,
+                    page=page_path(data),
+                    examples=examples,
+                    url=url,
+                    records_min=records_min,
+                    dataset=dataset,
+                    identity=tuple(identity),
+                    recipe_memory=memory,
+                )
+            if url is None:
+                raise Refused(400, "missing_url")
+            return new_job_from_url(
                 target,
-                page=page_path(data),
-                examples=_examples(data),
-                url=optional_text(data, "url"),
-                records_min=integer(data, "records_min", 1, 1000, default=2),
+                url=url,
+                examples=examples,
+                records_min=records_min,
                 dataset=dataset,
                 identity=tuple(identity),
                 recipe_memory=memory,
+                acquisition=studio.acquisition,
             )
-        )
+
+        written = await run_in_threadpool(write)
         rel = written.relative_to(studio.root).as_posix()
         sha = files.digest(files.read_job_bytes(written))
         return reply({"ok": True, "file": rel, "sha256": sha})

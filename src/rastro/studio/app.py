@@ -14,6 +14,7 @@ from starlette.middleware import Middleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from rastro.domain.models import ConfigurationError
+from rastro.ports.acquisition import AcquisitionPort
 from rastro.ports.model import ModelPort
 from rastro.studio import (
     routes_ai,
@@ -36,6 +37,7 @@ def create_app(
     model_remote: bool = False,
     allow_egress: bool = False,
     allow_env: Iterable[str] = (),
+    acquisition: AcquisitionPort | None = None,
 ) -> tuple[Starlette, str]:
     """Build the app for ``root``; returns it with this run's token (for tests and the CLI).
 
@@ -43,6 +45,7 @@ def create_app(
     this machine from the built model itself (``rastro.model_factory.is_remote``);
     ``model_remote`` (``--allow-remote``) is used only for a ``ModelPort`` that does not say.
     ``allow_egress`` and ``allow_env`` are the operator opt-ins for job-declared proxies.
+    ``acquisition`` replaces the default HTTP acquirer (tests inject a fake; N1 URL create).
     """
     folder = Path(root)
     if not folder.is_dir():
@@ -53,6 +56,7 @@ def create_app(
         model_remote=model_remote,
         allow_egress=allow_egress,
         allow_env=allow_env,
+        acquisition=acquisition,
     )
     routes = [
         *routes_jobs.routes(studio),

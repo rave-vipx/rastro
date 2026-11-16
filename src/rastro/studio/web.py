@@ -25,6 +25,7 @@ from rastro.cli_errors import classify
 from rastro.domain.jobs import Job
 from rastro.domain.models import RastroError
 from rastro.model_factory import is_remote
+from rastro.ports.acquisition import AcquisitionPort
 from rastro.ports.model import ModelPort
 from rastro.studio import files
 
@@ -128,6 +129,7 @@ class Studio:
         model_remote: bool = False,
         allow_egress: bool = False,
         allow_env: Iterable[str] = (),
+        acquisition: AcquisitionPort | None = None,
     ) -> None:
         self.root = root.resolve()
         self.token = secrets.token_urlsafe(32)
@@ -137,6 +139,8 @@ class Studio:
         self.model_remote = model is not None and is_remote(model, model_remote)
         # Operator opt-ins from `rastro studio`, passed to every job run (audit H1).
         self.trust: dict[str, Any] = {"allow_egress": allow_egress, "allow_env": tuple(allow_env)}
+        # Tests inject a fake acquirer; production uses the default HTTP acquirer.
+        self.acquisition = acquisition
 
     def job_path(self, name: str) -> Path:
         return files.resolve_in_root(self.root, name)
