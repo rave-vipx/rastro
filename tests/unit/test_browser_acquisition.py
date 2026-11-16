@@ -30,9 +30,8 @@ def test_render_contract():
 def setup(mode="browser", **changes):
     from rastro.application.browser_acquisition import BrowserAcquirer
 
-    policy = AcquisitionPolicy(
-        allowed_hosts=("example.com",), render=mode, min_interval_seconds=0, **changes
-    )
+    changes.setdefault("allowed_hosts", ("example.com",))
+    policy = AcquisitionPolicy(render=mode, min_interval_seconds=0, **changes)
     renderer = AsyncMock()
     renderer.render.return_value = AcquisitionResult(
         "https://example.com/", "<p>Rendered</p>", Outcome.SUCCESS, None, http_status=200
@@ -250,6 +249,54 @@ async def test_request_budget_prevents_launch():
 
 
 @pytest.mark.asyncio
+async def test_browser_request_outside_pagination_scope_is_never_rendered():
+    from rastro.application.acquisition_state import PAGINATION_SCOPE, PaginationScope
+
+    client, renderer, _, _ = setup(allowed_hosts=("example.com", "other.test"))
+    token = PAGINATION_SCOPE.set(PaginationScope("example.com", True, 5))
+    try:
+        result = await client.acquire(Source(url="https://other.test/page"), max_bytes=100)
+    finally:
+        PAGINATION_SCOPE.reset(token)
+    assert result.issue_code == "off_host"
+    assert result.body is None
+    renderer.render.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_browser_render_spends_the_shared_pagination_budget():
+    from rastro.application.acquisition_state import PAGINATION_SCOPE, PaginationScope
+
+    client, renderer, _, _ = setup()
+    token = PAGINATION_SCOPE.set(PaginationScope("example.com", True, 1))  # robots spends it
+    try:
+        result = await client.acquire(Source(url="https://example.com/"), max_bytes=100)
+    finally:
+        PAGINATION_SCOPE.reset(token)
+    assert result.issue_code == "request_limit"
+    renderer.render.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_browser_redirect_outside_pagination_scope_is_refused():
+    from dataclasses import replace
+
+    from rastro.application.acquisition_state import PAGINATION_SCOPE, PaginationScope
+
+    client, renderer, _, _ = setup(allowed_hosts=("example.com", "other.test"))
+    renderer.render.return_value = replace(
+        renderer.render.return_value, url="https://other.test/page"
+    )
+    token = PAGINATION_SCOPE.set(PaginationScope("example.com", True, 5))
+    try:
+        result = await client.acquire(Source(url="https://example.com/"), max_bytes=100)
+    finally:
+        PAGINATION_SCOPE.reset(token)
+    assert result.issue_code == "off_host"
+    assert result.body is None
+
+
+@pytest.mark.asyncio
 async def test_network_guard_checks_redirects_and_budget():
     from types import SimpleNamespace
 
@@ -370,3 +417,26 @@ def test_missing_browser_extra_checked_before_http_import(monkeypatch):
     monkeypatch.setattr(builtins, "__import__", guarded)
     with pytest.raises(ConfigurationError, match=r"rastro-engine\[browser\]"):
         job_acquisition(job, None)
+
+
+@pytest.mark.asyncio
+async def test_operator_grants_reach_the_browser_engine():
+    """SEC-001/002/003: the browser path uses the same grants, never from the job."""
+    from rastro.application.operator_trust import operator_trust
+
+    client, renderer, transport, resolver = setup()
+    transport.get.return_value = HttpResponse(
+        200, {"content-type": "text/plain"}, b"User-agent: *\nDisallow: /", 25
+    )
+    with operator_trust(ignore_robots=["example.com"]):
+        result = await client.acquire(Source(url="https://example.com/"), max_bytes=100)
+    assert result.status == Outcome.SUCCESS and result.robots_overridden is True
+    transport.get.assert_not_awaited()  # robots.txt was never fetched
+    resolver.resolve.return_value = ("10.0.0.5",)
+    refused = await client.acquire(Source(url="https://example.com/"), max_bytes=100)
+    assert refused.issue_code == "destination_denied"
+    with operator_trust(allow_private_network=True, ignore_robots=["example.com"]):
+        allowed = await client.acquire(Source(url="https://example.com/"), max_bytes=100)
+    assert allowed.status == Outcome.SUCCESS
+    granted = renderer.render.await_args.kwargs["policy"]
+    assert granted.grants.private_network and "example.com" in granted.grants.ignore_robots

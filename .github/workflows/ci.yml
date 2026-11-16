@@ -193,7 +193,7 @@ jobs:
   gate:
     name: CI required
     if: always()
-    needs: [quality, tests, audit, package]
+    needs: [quality, tests, audit, package, postgres]
     runs-on: ubuntu-latest
     timeout-minutes: 1
     steps:
@@ -203,4 +203,5 @@ jobs:
           TESTS: ${{ needs.tests.result }}
           AUDIT: ${{ needs.audit.result }}
           PACKAGE: ${{ needs.package.result }}
-        run: test "$QUALITY" = success && test "$TESTS" = success && test "$AUDIT" = success && test "$PACKAGE" = success
+          POSTGRES: ${{ needs.postgres.result }}
+        run: test "$QUALITY" = success && test "$TESTS" = success && test "$AUDIT" = success && test "$PACKAGE" = success && test "$POSTGRES" = success

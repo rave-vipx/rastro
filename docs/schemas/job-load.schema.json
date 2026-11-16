@@ -572,6 +572,7 @@
     "Outcome": {
       "enum": [
         "success",
+        "unchanged",
         "partial_success",
         "missing_data",
         "invalid_data",

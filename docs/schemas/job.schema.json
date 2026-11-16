@@ -1,5 +1,45 @@
 {
   "$defs": {
+    "AcquisitionAuth": {
+      "additionalProperties": false,
+      "description": "Declares one request header whose value is read from an environment variable.\n\nThe job names the variable; the secret itself is never part of the policy.",
+      "properties": {
+        "header": {
+          "default": "Authorization",
+          "pattern": "^[!#$%&'*+.^_`|~0-9A-Za-z-]{1,64}$",
+          "title": "Header",
+          "type": "string"
+        },
+        "host": {
+          "title": "Host",
+          "type": "string"
+        },
+        "scheme": {
+          "anyOf": [
+            {
+              "pattern": "^[!#$%&'*+.^_`|~0-9A-Za-z-]{1,64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scheme"
+        },
+        "value_env": {
+          "pattern": "^[A-Z_][A-Z0-9_]{0,127}$",
+          "title": "Value Env",
+          "type": "string"
+        }
+      },
+      "required": [
+        "host",
+        "value_env"
+      ],
+      "title": "AcquisitionAuth",
+      "type": "object"
+    },
     "AcquisitionPolicy": {
       "additionalProperties": false,
       "description": "An exact host allowlist asserts the caller's permission to acquire a source.",
@@ -16,6 +56,15 @@
           "maxItems": 64,
           "minItems": 1,
           "title": "Allowed Hosts",
+          "type": "array"
+        },
+        "auth": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/AcquisitionAuth"
+          },
+          "maxItems": 8,
+          "title": "Auth",
           "type": "array"
         },
         "backoff_seconds": {
@@ -105,6 +154,11 @@
           "maximum": 120,
           "title": "Request Timeout Seconds",
           "type": "number"
+        },
+        "session": {
+          "default": false,
+          "title": "Session",
+          "type": "boolean"
         },
         "solve_challenges": {
           "default": false,
@@ -209,6 +263,20 @@
           "title": "Argv",
           "type": "array"
         },
+        "cost_per_call": {
+          "anyOf": [
+            {
+              "maximum": 1000,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cost Per Call"
+        },
         "env": {
           "default": [],
           "items": {
@@ -236,6 +304,20 @@
           "default": false,
           "title": "Local",
           "type": "boolean"
+        },
+        "max_cost": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 1000000,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Cost"
         },
         "output": {
           "default": "json",
@@ -691,6 +773,20 @@
       "additionalProperties": false,
       "description": "Local HTML or JSON file source resolved within the job file's directory by default.",
       "properties": {
+        "every": {
+          "anyOf": [
+            {
+              "maxLength": 16,
+              "minLength": 2,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Every"
+        },
         "kind": {
           "const": "file",
           "default": "file",
@@ -1311,6 +1407,34 @@
           "default": null,
           "title": "Base Url Env"
         },
+        "cost_per_call": {
+          "anyOf": [
+            {
+              "maximum": 1000,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cost Per Call"
+        },
+        "max_cost": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 1000000,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Cost"
+        },
         "model": {
           "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,199}$",
           "title": "Model",
@@ -1370,6 +1494,34 @@
           ],
           "default": null,
           "title": "Base Url Env"
+        },
+        "cost_per_call": {
+          "anyOf": [
+            {
+              "maximum": 1000,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cost Per Call"
+        },
+        "max_cost": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 1000000,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Cost"
         },
         "model": {
           "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/@+-]{0,199}$",
@@ -1593,6 +1745,33 @@
       ],
       "type": "string"
     },
+    "ScheduleSpec": {
+      "additionalProperties": false,
+      "description": "Optional `[schedule]` block in a job file (`every` and bounded `jitter`).",
+      "properties": {
+        "every": {
+          "title": "Every",
+          "type": "string"
+        },
+        "jitter": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Jitter"
+        }
+      },
+      "required": [
+        "every"
+      ],
+      "title": "ScheduleSpec",
+      "type": "object"
+    },
     "StringField": {
       "additionalProperties": false,
       "properties": {
@@ -1695,6 +1874,20 @@
       "additionalProperties": false,
       "description": "Permitted HTTP(S) job source; its host must appear in acquisition.allowed_hosts.",
       "properties": {
+        "every": {
+          "anyOf": [
+            {
+              "maxLength": 16,
+              "minLength": 2,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Every"
+        },
         "kind": {
           "const": "url",
           "default": "url",
@@ -1952,6 +2145,17 @@
       "anyOf": [
         {
           "$ref": "#/$defs/RepairPolicy"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "schedule": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ScheduleSpec"
         },
         {
           "type": "null"

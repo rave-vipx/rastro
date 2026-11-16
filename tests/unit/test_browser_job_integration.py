@@ -57,12 +57,19 @@ def test_load_job_file_forwards_allow_stealth(tmp_path, monkeypatch):
         raise _Stop
 
     monkeypatch.setattr(module, "run_job", fake_run_job)
-    for flag in (False, True):
-        with pytest.raises(_Stop):
-            module.load_job_file(_job(tmp_path), allow_stealth=flag)
+    import rastro.adapters.playwright_browser as playwright
+    import rastro.adapters.scrapling_stealth as stealth
+
+    monkeypatch.setattr(stealth, "ScraplingStealth", lambda: AsyncMock())
+    monkeypatch.setattr(playwright, "PlaywrightBrowser", lambda: AsyncMock())
     with pytest.raises(_Stop):
-        module.load_job_file(_job(tmp_path))
-    assert seen == [False, True, False]
+        module.load_job_file(_job(tmp_path), allow_stealth=True)
+    assert seen == [True]
+    # Without consent the shared port is refused up front, before run_job, with the same error.
+    for kwargs in ({"allow_stealth": False}, {}):
+        with pytest.raises(ConfigurationError, match="--allow-stealth"):
+            module.load_job_file(_job(tmp_path), **kwargs)
+    assert seen == [True]
 
 
 @pytest.mark.parametrize("entry", ["repair_job_source", "repair_job_sources", "promote_job_recipe"])

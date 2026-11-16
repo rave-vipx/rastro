@@ -2,74 +2,29 @@
 
 from __future__ import annotations
 
-import ipaddress
 import re
 from dataclasses import dataclass, field
 from typing import Any, Literal, Self
 from urllib.parse import urlsplit
 
 from pydantic import (
-    ConfigDict,
     Field,
-    ModelWrapValidatorHandler,
-    ValidationError,
+    PrivateAttr,
     field_validator,
     model_validator,
 )
-from pydantic_core import PydanticCustomError
 
-from rastro.domain.models import EGRESS_NAME, Contract, Outcome
-
-_ENVIRONMENT_NAME = r"^[A-Z_][A-Z0-9_]{0,127}$"
-
-
-def _exact_host(host: str) -> str:
-    host = host.lower().rstrip(".")
-    try:
-        return str(ipaddress.ip_address(host))
-    except ValueError:
-        if len(host) > 253 or not all(
-            re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", label)
-            for label in host.split(".")
-        ):
-            raise ValueError("Use exact ASCII/Punycode hostnames or IP addresses") from None
-        return host
+from rastro.domain.acquisition_auth import AcquisitionAuth, NetworkGrants
+from rastro.domain.acquisition_base import ENVIRONMENT_NAME, RedactedContract, exact_host
+from rastro.domain.models import EGRESS_NAME, Outcome
 
 
-def _without_input(error: ValidationError, title: str) -> ValidationError:
-    """Rebuild errors without input values, which may hold inline proxy credentials."""
-    return ValidationError.from_exception_data(
-        title,
-        [
-            {
-                "type": PydanticCustomError(item["type"], item["msg"]),
-                "loc": item["loc"],
-                "input": None,
-            }
-            for item in error.errors(include_url=False, include_input=False, include_context=False)
-        ],
-        hide_input=True,
-    )
-
-
-class _RedactedErrors(Contract):
-    model_config = ConfigDict(extra="forbid", frozen=True, hide_input_in_errors=True)
-
-    @model_validator(mode="wrap")
-    @classmethod
-    def redact_errors(cls, data: Any, handler: ModelWrapValidatorHandler[Self]) -> Self:
-        try:
-            return handler(data)
-        except ValidationError as error:
-            raise _without_input(error, cls.__name__) from None
-
-
-class EgressProfile(_RedactedErrors):
+class EgressProfile(RedactedContract):
     """One administrator-declared HTTP(S) proxy. Credentials are environment references."""
 
     proxy_url: str = Field(min_length=1, max_length=2048)
-    username_env: str | None = Field(default=None, pattern=_ENVIRONMENT_NAME)
-    password_env: str | None = Field(default=None, pattern=_ENVIRONMENT_NAME)
+    username_env: str | None = Field(default=None, pattern=ENVIRONMENT_NAME)
+    password_env: str | None = Field(default=None, pattern=ENVIRONMENT_NAME)
 
     @field_validator("proxy_url")
     @classmethod
@@ -95,7 +50,7 @@ class EgressProfile(_RedactedErrors):
             raise ValueError(
                 "Proxy URLs must be http(s)://host[:port] without credentials or paths"
             )
-        host = _exact_host(parsed.hostname)
+        host = exact_host(parsed.hostname)
         netloc = f"[{host}]" if ":" in host else host
         return f"{parsed.scheme.lower()}://{netloc}" + (f":{port}" if port else "")
 
@@ -106,13 +61,14 @@ class EgressProfile(_RedactedErrors):
         return self
 
 
-class AcquisitionPolicy(_RedactedErrors):
+class AcquisitionPolicy(RedactedContract):
     """An exact host allowlist asserts the caller's permission to acquire a source."""
 
     allowed_hosts: tuple[str, ...] = Field(min_length=1, max_length=64)
     render: Literal["http", "browser", "stealth"] = "http"
     solve_challenges: bool = False
     allow_http: bool = False
+    session: bool = False
     max_concurrency: int = Field(default=4, ge=1, le=32)
     max_requests: int = Field(default=30, ge=1, le=100)
     max_sources: int = Field(default=100, ge=1, le=1_000)
@@ -124,11 +80,23 @@ class AcquisitionPolicy(_RedactedErrors):
     backoff_seconds: float = Field(default=1, gt=0, le=30, allow_inf_nan=False)
     max_retry_delay_seconds: float = Field(default=30, gt=0, le=120, allow_inf_nan=False)
     egress_profiles: dict[str, EgressProfile] = Field(default_factory=dict, max_length=16)
+    auth: tuple[AcquisitionAuth, ...] = Field(default=(), max_length=8)
+    _grants: NetworkGrants = PrivateAttr(default_factory=NetworkGrants)
+
+    @property
+    def grants(self) -> NetworkGrants:
+        return self._grants
+
+    def with_grants(self, grants: NetworkGrants) -> Self:
+        """A copy carrying the operator's grants; they are never part of the serialised policy."""
+        copy = self.model_copy()
+        copy._grants = grants
+        return copy
 
     @field_validator("allowed_hosts")
     @classmethod
     def normalize_hosts(cls, hosts: tuple[str, ...]) -> tuple[str, ...]:
-        return tuple(dict.fromkeys(_exact_host(host) for host in hosts))
+        return tuple(dict.fromkeys(exact_host(host) for host in hosts))
 
     @field_validator("egress_profiles", mode="before")
     @classmethod
@@ -145,6 +113,16 @@ class AcquisitionPolicy(_RedactedErrors):
             name: {"proxy_url": value} if isinstance(value, str) else value
             for name, value in profiles.items()
         }
+
+    @model_validator(mode="after")
+    def check_auth(self) -> Self:
+        seen: set[tuple[str, str]] = set()
+        for entry in self.auth:
+            key = (entry.host, entry.header.lower())
+            if entry.host not in self.allowed_hosts or key in seen:
+                raise ValueError("Each auth header needs an allowed host and may appear once")
+            seen.add(key)
+        return self
 
     @model_validator(mode="after")
     def check_timeouts(self) -> Self:
@@ -177,7 +155,7 @@ class ProxyRoute:
 @dataclass(frozen=True)
 class HttpResponse:
     status: int
-    headers: dict[str, str]
+    headers: dict[str, str] = field(repr=False)
     body: bytes
     bytes_received: int
 
@@ -200,6 +178,7 @@ class AcquisitionResult:
     retry_after_seconds: float | None = None
     egress: str = "direct"
     render_seconds: float = 0
+    robots_overridden: bool = False
 
 
 class AcquisitionError(Exception):

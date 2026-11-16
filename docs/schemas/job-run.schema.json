@@ -732,6 +732,11 @@
           "title": "Retry Count",
           "type": "integer"
         },
+        "robots_overridden": {
+          "default": false,
+          "title": "Robots Overridden",
+          "type": "boolean"
+        },
         "storage_seconds": {
           "default": 0,
           "title": "Storage Seconds",
@@ -761,6 +766,7 @@
     "Outcome": {
       "enum": [
         "success",
+        "unchanged",
         "partial_success",
         "missing_data",
         "invalid_data",

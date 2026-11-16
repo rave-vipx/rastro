@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from rastro.adapters.sqlite import SQLiteRecipeRepository
 from rastro.adapters.sqlite_relocation import SQLiteRelocationStore
+from rastro.application.auth_headers import check_job_auth
 from rastro.application.consistency import History, history_from_store
 from rastro.application.egress_trust import check_job_egress
 from rastro.application.job_dataset import open_dataset
@@ -170,6 +171,7 @@ class RepairContext:
 
         assert self.job.acquisition is not None
         check_job_egress(self.job, allow_egress=self.allow_egress, allow_env=self.allow_env)
+        check_job_auth(self.job, allow_env=self.allow_env)
         from rastro.application.operator_trust import operator_trust
         from rastro.browser import job_acquisition
 

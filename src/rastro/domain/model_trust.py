@@ -13,6 +13,7 @@ import ipaddress
 from dataclasses import dataclass
 from urllib.parse import urlsplit
 
+from rastro.domain.acquisition_auth import NetworkGrants
 from rastro.domain.job_providers import CommandProvider, JobModelProvider
 from rastro.domain.models import ConfigurationError
 from rastro.domain.secret_env import check_secret_env_name
@@ -27,9 +28,18 @@ class OperatorTrust:
     allow_remote: bool = False
     allowed_env: frozenset[str] = frozenset()
     allow_stealth: bool = False
+    allow_private_network: bool = False
+    allowed_ports: frozenset[int] = frozenset()
+    ignore_robots: frozenset[str] = frozenset()
+
+    def network_grants(self) -> NetworkGrants:
+        return NetworkGrants(self.allow_private_network, self.allowed_ports, self.ignore_robots)
 
     def merged(self, other: OperatorTrust) -> OperatorTrust:
         return OperatorTrust(
+            allow_private_network=self.allow_private_network or other.allow_private_network,
+            allowed_ports=self.allowed_ports | other.allowed_ports,
+            ignore_robots=self.ignore_robots | other.ignore_robots,
             allow_remote=self.allow_remote or other.allow_remote,
             allow_stealth=self.allow_stealth or other.allow_stealth,
             allowed_env=self.allowed_env | other.allowed_env,

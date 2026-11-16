@@ -1,13 +1,23 @@
 """Atomic SQLite dataset snapshots, with short-lived connections and no deletion."""
 
+import json
+import re
 import sqlite3
 from collections.abc import Sequence
 from datetime import datetime, timedelta
+from hashlib import sha256
 from pathlib import Path
 from typing import TextIO
 
 from rastro.adapters.dataset_snapshot import DatasetSnapshot
-from rastro.adapters.sqlite_dataset_schema import connection, last_attempt, safe, update_status
+from rastro.adapters.sqlite_dataset_schema import (
+    connection,
+    has_validators,
+    last_attempt,
+    safe,
+    update_status,
+)
+from rastro.adapters.sqlite_metrics import SQLiteMetricsMixin
 from rastro.adapters.structured import load_json
 from rastro.domain.dataset import (
     DatasetNotFoundError,
@@ -20,10 +30,11 @@ from rastro.domain.dataset import (
 )
 from rastro.domain.job_sources import validate_job_path_syntax
 from rastro.domain.lifecycle_history import check_reason
-from rastro.domain.sources import Limits
+from rastro.domain.metrics import RETENTION_ROWS
+from rastro.domain.sources import Limits, Source
 
 
-class SQLiteDatasetStore(DatasetSnapshot):
+class SQLiteDatasetStore(DatasetSnapshot, SQLiteMetricsMixin):
     @safe
     def __init__(
         self,
@@ -32,7 +43,9 @@ class SQLiteDatasetStore(DatasetSnapshot):
         near_match_fields: tuple[str, str, str] | None = ("title", "venue", "start_time"),
         near_match_tolerance: timedelta = timedelta(minutes=30),
         limits: Limits | None = None,
+        metrics_retention: int = RETENTION_ROWS,
     ) -> None:
+        self._metrics_retention = max(1, metrics_retention)
         self._path = Path(validate_job_path_syntax(str(path))).absolute()
         if near_match_tolerance < timedelta(0) or (
             near_match_fields is not None and len(near_match_fields) != 3
@@ -156,4 +169,94 @@ class SQLiteDatasetStore(DatasetSnapshot):
                 for row in db.execute(
                     "SELECT DISTINCT dataset FROM dataset_sources ORDER BY dataset"
                 )
+            )
+
+    @safe
+    def get_validators(self, dataset: str, source_url: str) -> dict[str, str]:
+        self._validate(dataset, Source(url=source_url).evidence_url, datetime.now().astimezone())
+        if not self._path.exists() and not any(
+            p.is_symlink() for p in (self._path, *self._path.parents)
+        ):
+            return {}
+        with connection(self._path, self._limits) as db:
+            if not has_validators(db):
+                return {}
+            row = db.execute(
+                "SELECT payload, origin, observed_at FROM dataset_validators "
+                "WHERE dataset = ? AND source = ?",
+                (dataset, sha256(source_url.encode()).hexdigest()),
+            ).fetchone()
+            values = self._validators(load_json(row[0], self._limits)) if row else {}
+            origin = row[1] if row else Source(url=source_url).evidence_url
+            status = db.execute(
+                "SELECT payload FROM dataset_sources WHERE dataset = ? AND source = ?",
+                (dataset, origin),
+            ).fetchone()
+            success = SourceStatus.model_validate_json(status[0]).last_success if status else None
+            if success is None or row is None or success.isoformat() != row[2]:
+                return {}
+        return values
+
+    @staticmethod
+    def _validators(values: object) -> dict[str, str]:
+        if not isinstance(values, dict) or any(
+            key not in {"etag", "last-modified", "_target", "_source", "_inputs"}
+            or not isinstance(value, str)
+            or not 0 < len(value.encode()) <= 4096
+            or any(ord(c) < 32 or ord(c) == 127 for c in value)
+            or (key in {"_target", "_inputs"} and re.fullmatch(r"[0-9a-f]{64}", value) is None)
+            or (key == "_source" and Source(url=value).evidence_url != value)
+            for key, value in values.items()
+        ):
+            raise DatasetStorageError("Invalid HTTP validators")
+        return dict(values)
+
+    @safe
+    def save_validators(
+        self,
+        dataset: str,
+        source_url: str,
+        validators: dict[str, str],
+        *,
+        observed_at: datetime | None = None,
+    ) -> None:
+        self._validate(dataset, Source(url=source_url).evidence_url, datetime.now().astimezone())
+        payload = json.dumps(self._validators(validators))
+        origin = validators.get("_source", Source(url=source_url).evidence_url)
+        with connection(self._path, self._limits, write=True) as db:
+            row = db.execute(
+                "SELECT payload FROM dataset_sources WHERE dataset = ? AND source = ?",
+                (dataset, origin),
+            ).fetchone()
+            success = SourceStatus.model_validate_json(row[0]).last_success if row else None
+            if success is None or (observed_at is not None and observed_at != success):
+                return
+            db.execute(
+                "INSERT OR REPLACE INTO dataset_validators VALUES (?, ?, ?, ?, ?)",
+                (
+                    dataset,
+                    sha256(source_url.encode()).hexdigest(),
+                    origin,
+                    success.isoformat(),
+                    payload,
+                ),
+            )
+
+    @safe
+    def mark_source_unchanged(self, dataset: str, source_url: str, observed_at: datetime) -> None:
+        self._validate(dataset, source_url, observed_at)
+        with connection(self._path, self._limits, write=True) as db:
+            row = db.execute(
+                "SELECT payload FROM dataset_sources WHERE dataset = ? AND source = ?",
+                (dataset, source_url),
+            ).fetchone()
+            old = SourceStatus.model_validate_json(row[0]) if row else None
+            if old is None or old.last_success is None:
+                raise DatasetStorageError("Unchanged source requires a previous load")
+            observed_at = max(old.last_attempt, observed_at)
+            update_status(db, dataset, source_url, observed_at, True, None)
+            db.execute(
+                "UPDATE dataset_validators SET observed_at = ? "
+                "WHERE dataset = ? AND origin = ? AND observed_at = ?",
+                (observed_at.isoformat(), dataset, source_url, old.last_success.isoformat()),
             )

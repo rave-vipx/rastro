@@ -10,14 +10,36 @@ from __future__ import annotations
 
 from typing import Any
 
+from rastro.domain.intelligence import InferencePolicy
+from rastro.domain.job_providers import JobModelProvider
 from rastro.domain.models import ConfigurationError
 from rastro.ports.model import ModelPort
 
 type ModelChoice = ModelPort | str | None
 
 
-def resolve_model(choice: ModelChoice, *, allow_remote: bool = False) -> ModelPort | None:
-    """``None`` stays ``None``; a port is returned unchanged; a spec goes to ``rastro.model``."""
+def resolve_model(
+    choice: ModelChoice,
+    *,
+    allow_remote: bool = False,
+    job_model: JobModelProvider | None = None,
+    policy: InferencePolicy | None = None,
+) -> ModelPort | None:
+    """``None`` stays ``None``; a port or a spec becomes a model under the cost limit.
+
+    The result is wrapped by ``budget_operator_model`` (COST-002): the remote notice and
+    ``--max-model-cost`` apply to every operator model. ``job_model`` supplies the price
+    when the job file declares one.
+    """
+    port = _resolve(choice, allow_remote)
+    if port is None:
+        return None
+    from rastro.application.model_budget import budget_operator_model
+
+    return budget_operator_model(port, job_model=job_model, policy=policy)
+
+
+def _resolve(choice: ModelChoice, allow_remote: bool) -> ModelPort | None:
     if choice is None:
         return None
     if not isinstance(choice, str):

@@ -282,7 +282,7 @@ def test_next_cursor_is_normalized_before_repeat_check():
         ({"/one": (200, page("A", next="/two")), "/two": (200, page())}, "empty_page"),
     ],
 )
-def test_normal_end_of_list_is_complete_snapshot(pages, stop):
+def test_normal_end_of_list_succeeds(pages, stop):
     report, _ = run(job(), pages)
     result = report.results[0]
     assert result.pagination_stop == stop
@@ -298,9 +298,24 @@ def test_end_of_list_loads_as_complete_and_marks_missing(tmp_path):
     store = SQLiteDatasetStore(tmp_path / "agenda.sqlite")
     pages = {"/one": (200, page("A", next="/two")), "/two": (200, page("B"))}
     load_results(spec.dataset, ["name"], run(spec, pages)[0], store)
-    pages["/two"] = (200, page())  # B vanished from the list: an honest complete snapshot
+    pages["/one"] = (200, page("A"))  # B vanished from the list: an honest complete snapshot
     loaded = load_results(spec.dataset, ["name"], run(spec, pages)[0], store)
     assert loaded.sources[0].counts["missing"] == 1
+
+
+def test_empty_later_page_succeeds_but_never_marks_missing(tmp_path):
+    spec = job()
+    store = SQLiteDatasetStore(tmp_path / "agenda.sqlite")
+    pages = {"/one": (200, page("A", next="/two")), "/two": (200, page("B"))}
+    load_results(spec.dataset, ["name"], run(spec, pages)[0], store)
+    pages["/two"] = (200, page())  # Page two drifted to zero records; drift sees page one only.
+    report, _ = run(spec, pages)
+    assert report.results[0].pagination_stop == "empty_page"
+    assert report.results[0].status == Outcome.SUCCESS
+    assert int(report.exit_code) == 0
+    loaded = load_results(spec.dataset, ["name"], report, store)
+    assert loaded.sources[0].counts["missing"] == 0
+    assert [r.name for r in report.results[0].items] == ["A"]
 
 
 def test_empty_first_page_is_not_end_of_list():

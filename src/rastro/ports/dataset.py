@@ -37,3 +37,23 @@ class SourceFailureRecorder(Protocol):
     def record_source_failure(
         self, dataset: str, source_url: str, observed_at: datetime, reason: str, detail: str | None
     ) -> None: ...
+
+
+@runtime_checkable
+class DatasetValidators(Protocol):
+    """Optional conditional HTTP support; URLs are keyed without persisting their queries."""
+
+    def get_validators(self, dataset: str, source_url: str) -> dict[str, str]: ...
+
+    def save_validators(
+        self,
+        dataset: str,
+        source_url: str,
+        validators: dict[str, str],
+        *,
+        observed_at: datetime | None = None,
+    ) -> None: ...
+
+    def mark_source_unchanged(
+        self, dataset: str, source_url: str, observed_at: datetime
+    ) -> None: ...

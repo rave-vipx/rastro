@@ -49,7 +49,7 @@ def test_retention_is_idempotent_rejects_foreign_versions_and_is_read_only(tmp_p
     assert SQLiteDatasetStore(path).records("items") == ()
     with closing(sqlite3.connect(path)) as db:
         assert db.execute("SELECT count(*) FROM relocation_samples").fetchone() == (1,)
-        assert db.execute("PRAGMA user_version").fetchone() == (1,)
+        assert db.execute("PRAGMA user_version").fetchone() == (3,)
         db.execute("UPDATE relocation_schema SET version=999")
         db.commit()
     before = path.read_bytes()

@@ -7,7 +7,15 @@ from rastro.domain.job_dataset import DatasetSpec
 from rastro.domain.models import ExtractionRecord, ExtractionResult, Issue, Limits, Metrics, Outcome
 
 # A normal end of the list is a complete snapshot; every other stop is partial.
-COMPLETE_STOPS = frozenset({"no_next", "repeat", "empty_page"})
+COMPLETE_STOPS = frozenset({"no_next", "repeat"})
+# An empty later page succeeds, but page one alone measures drift, so it cannot mark
+# unseen records missing.
+SUCCESS_STOPS = COMPLETE_STOPS | {"empty_page"}
+
+
+def is_complete_snapshot(result: ExtractionResult[BaseModel]) -> bool:
+    """Whether a result may mark unseen dataset records missing."""
+    return result.status == Outcome.SUCCESS and result.pagination_stop != "empty_page"
 
 
 def deduplicate_pages[T: BaseModel](
@@ -85,16 +93,19 @@ def combine_pages[T: BaseModel](
             for issue in page.issues
         )
         offset += len(page.records) + page.metrics.rejected
-    complete = stop in COMPLETE_STOPS
-    if not complete:
+    succeeded = stop in SUCCESS_STOPS
+    if not succeeded:
         issues.append(Issue(code=f"pagination_{stop}"))
-    status = Outcome.SUCCESS if complete else (Outcome.PARTIAL_SUCCESS if records else first.status)
+    status = (
+        Outcome.SUCCESS if succeeded else (Outcome.PARTIAL_SUCCESS if records else first.status)
+    )
     # Keep page one's identity: drift/repair snapshots belong to that document only.
     totals = {
         name: sum(getattr(page.metrics, name) for page in pages)
         for name in Metrics.model_fields
-        if name not in {"acquisition_method", "egress"}
+        if name not in {"acquisition_method", "egress", "robots_overridden"}
     }
+    totals["robots_overridden"] = any(page.metrics.robots_overridden for page in pages)
     return first.model_copy(
         update={
             "pagination_stop": stop,

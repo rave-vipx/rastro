@@ -9,7 +9,7 @@ from time import perf_counter
 from urllib.parse import urlsplit
 
 from rastro.application.acquisition import WebAcquirer
-from rastro.application.acquisition_state import _Host, _Operation
+from rastro.application.acquisition_state import _Host, _Operation, check_page_request
 from rastro.application.destinations import permitted_url, pin_destination
 from rastro.application.operator_trust import current_trust
 from rastro.domain.acquisition import (
@@ -43,6 +43,8 @@ class BrowserAcquirer(WebAcquirer):
             )
         if policy.egress_profiles:
             raise ConfigurationError("Browser modes do not support egress profiles")
+        if policy.auth:
+            raise ConfigurationError("auth headers are HTTP-engine only")
         super().__init__(
             policy.model_copy(update={"max_retries": 0}), transport=transport, resolver=resolver
         )
@@ -71,26 +73,27 @@ class BrowserAcquirer(WebAcquirer):
         self, url: str, host: _Host, operation: _Operation, *, max_bytes: int
     ) -> HttpResponse:
         async with self._slots:
+            check_page_request(url)
             operation.requests += 1
             try:
                 async with asyncio.timeout(self.policy.request_timeout_seconds):
-                    target = await pin_destination(url, self.policy, self._resolver)
+                    target = await pin_destination(url, operation.policy, self._resolver)
                     targets = [target]
                     for hostname in self.policy.allowed_hosts:
                         if hostname != target.host:
                             authority = f"[{hostname}]" if ":" in hostname else hostname
                             targets.append(
                                 await pin_destination(
-                                    f"https://{authority}/", self.policy, self._resolver
+                                    f"https://{authority}/", operation.policy, self._resolver
                                 )
                             )
                     started = perf_counter()
                     try:
                         result = await self._renderer.render(
                             target,
-                            policy=self.policy.model_copy(
+                            policy=operation.policy.model_copy(
                                 update={
-                                    "allow_http": self.policy.allow_http
+                                    "allow_http": operation.policy.allow_http
                                     and urlsplit(url).scheme == "http",
                                     "max_requests": self.policy.max_requests
                                     - operation.requests
@@ -102,7 +105,7 @@ class BrowserAcquirer(WebAcquirer):
                         )
                     finally:
                         _render_seconds.set(perf_counter() - started)
-                    permitted_url(result.url, self.policy)
+                    permitted_url(result.url, operation.policy)
                     operation.url = result.url
                     if result.url != url:
                         await self._robots(result.url, operation)

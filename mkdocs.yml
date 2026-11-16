@@ -59,6 +59,9 @@ nav:
   - Clean code and module size: development/clean-code.md
   - Development work log: development/work-log.md
   - Engineering decisions:
+      - Operator network permissions: decisions/0031-operator-network-permissions.md
+      - HTTP sessions and conditional loads: decisions/0030-http-sessions-and-conditional-loads.md
+      - Browser rendering and stealth opt-in: decisions/0024-browser-rendering-and-stealth-opt-in.md
       - Open drift and attention exit codes: decisions/0023-open-drift-and-attention-exit-codes.md
       - PostgreSQL datasets: decisions/0025-postgres-datasets.md
       - Bounded recipe pagination: decisions/0026-bounded-recipe-pagination.md
