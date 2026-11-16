@@ -22,7 +22,9 @@ these may become something a job can switch on.
 - **Metadata stays blocked.** The private-network grant is an explicit allow-list (RFC 1918,
   ULA, loopback, CGNAT). Link-local, unspecified, multicast, reserved, mapped and transition
   addresses and scoped `%` forms remain denied, because `169.254.169.254` is the cloud
-  credential endpoint and no internal source needs it. Host allowlist, DNS pinning and
+  credential endpoint and no internal source needs it. Metadata services that live inside
+  the opened ranges (AWS IMDS over IPv6 `fd00:ec2::254`, Alibaba Cloud `100.100.100.200`)
+  are denied by exact address. Host allowlist, DNS pinning and
   per-hop checks do not change.
 - **Robots is an assertion, not a bypass.** `--ignore-robots HOST` skips robots.txt for an
   exact host. Pacing, the 401/403/451 stop and 429 cooldowns remain. Each use is logged once
