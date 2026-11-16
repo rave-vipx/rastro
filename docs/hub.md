@@ -111,6 +111,37 @@ not match any of its `source_patterns` (a host such as `example.com`, or a
 `host/path-prefix` that matches whole path segments; the port must match when given). Imported packages never execute code (HUB-005): only JSON,
 HTML, and declarative selector data are read.
 
+### Install from a registry URL
+
+A hosted registry is any `https` URL that serves the same directory: `index.json` and
+`recipes/<id>/<version>/` (a static host or the web view of a Git repository). There is no
+account system and no Rastro-operated server. Install the `http` extra first
+(`pip install 'rastro-engine[http]'`).
+
+```console
+$ rastro recipe search sodre --registry-url https://registry.example.org/catalog/
+$ rastro recipe install uy-sodre-agenda --registry-url https://registry.example.org/catalog/ --store recipes.sqlite
+```
+
+`--registry-url` replaces `--registry`; give one of them, not both. The SDK equivalents are
+`rastro.application.registry_fetch.search_registry_url` and `install_from_registry_url`.
+
+The URL is input, not a grant:
+
+- It must be `https`, with no user name or password, no query string, no fragment and a path of plain segments (no `..`, no percent-encoding). Anything else is refused before a request.
+- Fetching uses the same acquisition stack as a scrape, with only the registry host allowed: public addresses only, DNS pinned for each request, and every redirect re-checked (a redirect to another host, a plain-`http` URL or a private address is refused). Redirects within the registry host are followed.
+- Port 443 only. Another port, a private or loopback address, and `robots.txt` overrides need the operator's flags, never anything in the registry: `--allow-port N`, `--allow-private-network`, `--ignore-robots HOST`. `robots.txt` is enforced like for any fetch; a host that disallows everything needs `--ignore-robots`.
+- A package is `index.json` plus five files at fixed names (`bundle.json`, `recipe.json`, `schema.json`, `expected.json` and the sample). The index is capped at 1 MiB, metadata files at 1 MiB and the sample at the job's input limit, the same caps as a local bundle; the whole download is bounded. Ids and versions in `index.json` must match the same patterns as a local registry, so no entry can point outside `recipes/`.
+
+The downloaded bytes go to a temporary directory and through exactly the gates of a local
+`install`: file digests, the untrusted-selector policy, offline replay, index match and
+compatibility. The result is a `candidate`; install never promotes and never reads or changes a
+job file or `[repair] auto_promote`. A digest mismatch, a refused address, an oversize file or a
+bad path stops the install with `RegistryError` (or a bundle error) and leaves the recipe store
+unchanged. Error messages carry a short category such as `destination_denied` or
+`body_too_large`, never the URL query or a response body. A missing `index.json` is an error,
+not an empty registry.
+
 ### Trust indicators (HUB-006)
 
 Trust indicators are computed from offline verification, never self-declared:
