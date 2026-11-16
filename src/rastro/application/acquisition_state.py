@@ -5,14 +5,11 @@ from __future__ import annotations
 import asyncio
 from contextvars import ContextVar
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
 from urllib.parse import urlsplit
 
+from rastro.application.robots_cache import RobotsCache, current_robots_cache
 from rastro.domain.acquisition import AcquisitionError, AcquisitionPolicy, ProxyRoute
 from rastro.domain.models import Outcome
-
-if TYPE_CHECKING:
-    from protego import Protego
 
 
 @dataclass
@@ -37,7 +34,7 @@ class _Operation:
     network_seconds: float = 0
     http_status: int | None = None
     retry_after_seconds: float | None = None
-    robots: dict[str, Protego | None] = field(default_factory=dict)
+    robots: RobotsCache = field(default_factory=current_robots_cache)
     proxy: ProxyRoute | None = None
     auth: dict[str, dict[str, str]] = field(default_factory=dict, repr=False)
     robots_fetch: bool = False  # robots.txt is fetched without credentials

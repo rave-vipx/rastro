@@ -3,13 +3,10 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 from collections.abc import Mapping
 from dataclasses import replace
 from time import perf_counter
-from urllib.parse import urlsplit, urlunsplit
-
-import structlog
+from urllib.parse import urlsplit
 
 from rastro.application.acquisition_state import _Host, _Operation, check_page_request
 from rastro.application.auth_headers import request_auth, resolve_auth
@@ -27,7 +24,7 @@ from rastro.application.http_policy import (
     retry_after,
 )
 from rastro.application.operator_trust import current_trust
-from rastro.application.robots import parse_robots_response
+from rastro.application.robots_gate import check_robots
 from rastro.domain.acquisition import (
     AcquisitionError,
     AcquisitionPolicy,
@@ -39,10 +36,6 @@ from rastro.domain.models import Outcome, Representation, Source
 from rastro.ports.acquisition import HttpTransport, Resolver
 
 __all__ = ["WebAcquirer", "retry_after"]
-
-_LOG = structlog.wrap_logger(
-    logging.getLogger("rastro"), processors=[structlog.processors.JSONRenderer()]
-)
 
 
 class WebAcquirer:
@@ -147,45 +140,7 @@ class WebAcquirer:
         )
 
     async def _robots(self, url: str, operation: _Operation) -> None:
-        parsed = urlsplit(url)
-        hostname = parsed.hostname or ""
-        if hostname in operation.policy.grants.ignore_robots:
-            # The operator asserts permission (SEC-003); every other check still applies.
-            if hostname not in operation.overridden:
-                operation.overridden.add(hostname)
-                _LOG.info("robots_overridden", host=hostname)
-            return
-        origin = urlunsplit((parsed.scheme, parsed.netloc, "", "", ""))
-        if origin not in operation.robots:
-            operation.robots_fetch = True
-            try:
-                await self._fetch_robots(origin, hostname, operation)
-            finally:
-                operation.robots_fetch = False
-        cached_rules = operation.robots[origin]
-        if cached_rules is not None and not cached_rules.can_fetch(url, "Rastro"):
-            raise AcquisitionError("robots_denied", Outcome.ACCESS_RESTRICTION)
-
-    async def _fetch_robots(self, origin: str, hostname: str, operation: _Operation) -> None:
-        robots_url = origin + "/robots.txt"
-        for hop in range(self.policy.max_redirects + 1):
-            response = await self._request(robots_url, operation, max_bytes=512_000)
-            if response.status in REDIRECT_STATUSES:
-                if hop == self.policy.max_redirects:
-                    raise AcquisitionError("robots_redirect_limit", Outcome.ACCESS_RESTRICTION)
-                robots_url = redirect_target(robots_url, response, operation.policy)
-                operation.redirects += 1
-                continue
-            if response.status in {404, 410}:
-                operation.robots[origin] = None
-                return
-            check_status(response.status)
-            rules, min_interval = parse_robots_response(response)
-            operation.robots[origin] = rules
-            host = self._hosts[hostname]
-            host.interval = max(host.interval, min_interval)
-            host.next_request = max(host.next_request, perf_counter() + host.interval)
-            return
+        await check_robots(url, operation, request=self._request, hosts=self._hosts)
 
     async def _request(self, url: str, operation: _Operation, *, max_bytes: int) -> HttpResponse:
         _, hostname, _ = permitted_url(url, operation.policy)

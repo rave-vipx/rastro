@@ -20,6 +20,7 @@ from rastro.application.job_loader import (
 from rastro.application.model_budget import model_cost_override
 from rastro.application.operator_trust import operator_trust
 from rastro.application.pagination_records import deduplicate_pages
+from rastro.application.robots_cache import robots_cache
 from rastro.application.run_log import log_failures
 from rastro.domain.job_results import JobRunResult
 from rastro.domain.jobs import FileJobSource, Job, UrlJobSource
@@ -98,6 +99,7 @@ async def run_job_async(
             ignore_robots=ignore_robots,
         ),
         model_cost_override(max_model_cost, model_cost_per_call),
+        robots_cache(),
     ):
         check_job_egress(job, allow_egress=allow_egress, allow_env=allow_env)
         check_job_auth(job, allow_env=allow_env)
@@ -199,6 +201,7 @@ def run_job(
             ignore_robots=ignore_robots,
         ),
         model_cost_override(max_model_cost, model_cost_per_call),
+        robots_cache(),
     ):
         check_job_egress(job, allow_egress=allow_egress, allow_env=allow_env)
         check_job_auth(job, allow_env=allow_env)

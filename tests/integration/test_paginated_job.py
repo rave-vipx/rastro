@@ -132,8 +132,8 @@ def test_page_two_failure_retains_previous_snapshot(tmp_path):
     assert store.source_status("agenda")[0].reason == "partial_snapshot"
 
 
-@pytest.mark.parametrize("budget", [2, 3])
-def test_shared_budget_includes_robots_and_never_overshoots(budget):
+def test_shared_budget_includes_robots_and_never_overshoots():
+    budget = 2
     report, transport = run(
         job(budget=budget), {"/one": (200, page("A", next="/two")), "/two": (200, page("B"))}
     )
@@ -357,3 +357,11 @@ def test_later_page_provenance_drops_query_and_fragment(tmp_path):
     store = SQLiteDatasetStore(tmp_path / "agenda.sqlite")
     load_results(spec.dataset, ["name"], report, store)
     assert "token=" not in repr([r.model_dump(mode="json") for r in store.records("agenda")])
+
+
+def test_robots_is_fetched_once_for_all_pages_of_a_run():
+    pages = {"/one": (200, page("A", next="/two")), "/two": (200, page("B"))}
+    report, transport = run(job(budget=3), pages)  # robots + two pages: no per-page robots charge
+    assert report.results[0].status == Outcome.SUCCESS
+    assert transport.urls.count("https://agenda.test/robots.txt") == 1
+    assert report.results[0].metrics.request_count == 3
