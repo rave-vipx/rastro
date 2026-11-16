@@ -26,6 +26,8 @@
 pip install rastro-engine                    # core: parse supplied HTML, no network
 pip install "rastro-engine[http]"            # fetch permitted URLs
 pip install "rastro-engine[mcp,studio]"      # agent server and local web UI
+pip install "rastro-engine[browser]"         # render JavaScript pages (opt-in)
+pip install "rastro-engine[postgres]"        # PostgreSQL datasets
 ```
 
 The package is `rastro-engine`; the import is `rastro`. Python 3.12 or newer. The core needs
@@ -122,6 +124,8 @@ you pass `--dataset` and `--identity`, and `recipe_memory` when you pass
 ```sh
 rastro job validate job.toml
 rastro job load job.toml --drift          # load approved fields, measure structural drift
+rastro job watch job.toml                 # reload on the job's [schedule]
+rastro job stats job.toml                 # success rates, timings, freshness per source
 rastro dataset export offers.sqlite --format jsonl
 rastro recipe repair job.toml --source 1  # propose a gated repair for a broken source
 rastro recipe promote job.toml --source 1 --version 2 --reason "checked by hand"

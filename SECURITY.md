@@ -11,7 +11,7 @@ Rastro is in beta (0.7.0). Security fixes target `main` and the latest released 
 `extract_html` processes caller-supplied HTML without network access. `Rastro.web`
 adds opt-in HTTP acquisition with an exact source allowlist, public-IP checks,
 validated DNS pinning, per-hop redirect checks, verified TLS, robots rules, host
-pacing, and request/body/deadline budgets. Standard HTTP(S) ports only; HTTP requires
+pacing, and request/body/deadline budgets. Standard HTTP(S) ports only unless the operator grants more (see the trust model below); HTTP requires
 explicit opt-in and HTTPS never redirects to HTTP. Cookies are disabled by default; opt-in sessions keep bounded, exact-host cookies
 in memory for one run, while ambient proxies, netrc, browser impersonation and
 transport-level redirects/retries remain disabled.

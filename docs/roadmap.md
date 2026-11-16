@@ -4,7 +4,7 @@
 
 v0.1 remains the reference release. It is complete: `0.1.0rc1` is its release candidate, with M1–M4 implemented, the M5 technical evidence recorded, every section 18 acceptance criterion evidenced, and DIFF-001 partially demonstrated. Publication (namespace ownership, legal/trademark review, tag and Trusted Publishing) awaits maintainer approval through the release gates in issue #5; nothing has been published.
 
-## 0.7.0 (2026-11-14): AI-assisted repair with any model, monitoring and alerts
+## 0.7.0 (2026-11-15): AI-assisted repair with any model, monitoring and alerts
 
 **AI in the everyday flows (ADR 0022):** a provider-agnostic `rastro.model()` (OpenAI-compatible HTTP, any local CLI, a Python callable, `RASTRO_MODEL`) is consulted only when deterministic repair fails. Model candidates pass recipe CI, value checks and the selector policy before a veto-only semantic judge. Offline benchmark: 23/28 repaired with a good model against 12/28 without one, with 0 wrong promotions even under an approve-all judge. MCP agent tools and one operator-trust model (`--allow-remote`, `--allow-egress`, `--allow-env`) complete it.
 
@@ -73,6 +73,20 @@ Owner decisions after the 0.1.0 release candidate ([ADR 0012](decisions/0012-pro
 | Latency wins: fingerprint cache and hoisted provenance (#32) | Merged; small-page gap −57 to −62%, large-page gap −48% | Re-profile as further optimizations land |
 | Declarative jobs and machine-readable CLI (#35: JOB-001/002, AGENT-001) | Merged; `rastro job validate`, `rastro job run` and `rastro job schema`, with the job JSON Schemas published in `docs/schemas/` | None |
 | Repository hygiene | `dev` promoted to `main` as release candidate `0.1.0rc1` on 2026-11-03 (PR #39, tag `v0.1.0rc1`); nothing published | Close issues #2–#4 (implemented) and satisfy the release gates in issue #5 |
+
+**Completion wave (2026-11-15):** the remaining v0.3–v0.5 scope, delivered by a Claude agent team with one cross-model reviewer per slice:
+
+- JavaScript pages through an opt-in browser engine; Scrapling stealth only with operator consent after the owner removed the SCR-003 restriction on 2026-11-15 (no proxy rotation, no paid CAPTCHA services) ([ADR 0024](decisions/0024-browser-rendering-and-stealth-opt-in.md); SCR-003 amended, SEC-005, SEC-008).
+- Run-local sessions and conditional loads with an `unchanged` outcome ([ADR 0030](decisions/0030-http-sessions-and-conditional-loads.md); SCHED-005, SYNC-004).
+- Bounded pagination ([ADR 0026](decisions/0026-bounded-recipe-pagination.md); SYNC-002).
+- PostgreSQL datasets ([ADR 0025](decisions/0025-postgres-datasets.md); DATA-001, DATA-003, SYNC-003, SYNC-006); the contract job is part of `CI required`.
+- `rastro job watch`, overlap locks and run recovery (SCHED-001–004, SCHED-006, SCHED-007, SYNC-001).
+- Start from a goal or sites with source and field proposals (DISC-001–003, P-002).
+- Run metrics, `rastro job stats` and model cost limits (OBS-003–007, COST-002).
+- Hub phase 2: bundle format 2, trust indicators and a Git registry (HUB-002–006).
+- Operator network permissions: private network, extra ports, robots override per host, and auth headers from the environment ([ADR 0031](decisions/0031-operator-network-permissions.md); SEC-001–004, SEC-011).
+
+Known follow-ups: Studio and MCP dataset views assume SQLite; goal discovery fails above 64 candidate record selectors instead of keeping the best ones; `job stats` and run metrics are SQLite-only; browser permissions are tested with a fake renderer; `acquisition.py`, `jobs.py`, `job_dataset.py` and `job_repair.py` exceed the 250-line soft budget.
 
 ## Deferred dependency migrations
 
