@@ -88,7 +88,10 @@ $ rastro recipe publish ./my-recipe --registry ./registry
 
 When all checks pass, Rastro writes `<registry>/recipes/<id>/<version>/`, updates
 `<registry>/index.json` atomically, and prints the `git` commands you may run to commit
-and push.
+and push (paths and the commit message are shell-quoted, so you can paste them as is).
+If writing the package or `index.json` fails, Rastro removes the package directory this
+publish created (and nothing else), leaves `index.json` as it was, and exits with a
+`RegistryError`, so you can fix the cause and publish again.
 
 ### Search and install
 
@@ -101,7 +104,11 @@ $ rastro recipe install uy-sodre-agenda@1.0.0 --registry ./examples/registry --s
 `search` matches the query against `id` and `source_patterns`. `install` selects the
 highest semver version by default (or the pinned `@VERSION`), verifies file hashes,
 selector policy, and offline sample replay, recomputes trust indicators, and stores the
-recipe as a `candidate`. Imported packages never execute code (HUB-005): only JSON,
+recipe as a `candidate`. A package that declares `compatibility` is also checked
+against this install: it is refused (`RegistryError`, store unchanged) when the running
+`rastro-engine` version is below its `min_rastro`, or when the bundle's source URL does
+not match any of its `source_patterns` (a host such as `example.com`, or a
+`host/path-prefix` that matches whole path segments; the port must match when given). Imported packages never execute code (HUB-005): only JSON,
 HTML, and declarative selector data are read.
 
 ### Trust indicators (HUB-006)

@@ -15,7 +15,7 @@ _DENIED_STATUSES = {401, 403, 451}
 
 def failure_detail(result: ExtractionResult[Any]) -> str | None:
     """``robots_denied``, ``http_429``, ``http_403`` (401, 451), ``timeout`` or an issue code."""
-    if result.status in (Outcome.SUCCESS, Outcome.PARTIAL_SUCCESS):
+    if result.status in (Outcome.SUCCESS, Outcome.PARTIAL_SUCCESS, Outcome.UNCHANGED):
         return None
     codes = [issue.code for issue in result.issues]
     if "robots_denied" in codes:

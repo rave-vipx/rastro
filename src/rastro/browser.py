@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from urllib.parse import urlsplit
 
 from rastro.application.operator_trust import current_trust
@@ -9,6 +10,9 @@ from rastro.domain.acquisition import AcquisitionResult
 from rastro.domain.jobs import Job, UrlJobSource
 from rastro.domain.models import ConfigurationError, Representation, Source
 from rastro.ports.acquisition import AcquisitionPort
+
+if TYPE_CHECKING:
+    from rastro.application.conditional import ConditionalRequests
 
 
 def job_render_modes(job: Job) -> dict[str, str]:
@@ -64,7 +68,13 @@ class _JobAcquisition:
         )
 
 
-def job_acquisition(job: Job, supplied: AcquisitionPort | None) -> AcquisitionPort | None:
+def job_acquisition(
+    job: Job,
+    supplied: AcquisitionPort | None,
+    *,
+    conditional: ConditionalRequests | None = None,
+) -> AcquisitionPort | None:
+    """Route by render mode; ``conditional`` revalidates only the HTTP-mode sources."""
     modes = job_render_modes(job)
     if supplied is not None or not any(mode != "http" for mode in modes.values()):
         return supplied
@@ -82,7 +92,9 @@ def job_acquisition(job: Job, supplied: AcquisitionPort | None) -> AcquisitionPo
     from rastro.application.browser_acquisition import BrowserAcquirer
 
     transport, resolver = CurlTransport(), SystemResolver()
-    http = WebAcquirer(job.acquisition, transport=transport, resolver=resolver)
+    http = WebAcquirer(
+        job.acquisition, transport=transport, resolver=resolver, conditional=conditional
+    )
     clients: dict[str, AcquisitionPort] = {"http": http}
     for mode, renderer in renderers.items():
         client = BrowserAcquirer(

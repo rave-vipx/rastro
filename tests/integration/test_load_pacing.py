@@ -66,11 +66,13 @@ identity = ["title"]
     )
     transport, built = Transport(), []
 
-    def one_acquirer(policy):
-        built.append(policy)
-        return WebAcquirer(policy, transport=transport, resolver=Resolver())
+    def one_acquirer(job, conditional):
+        built.append(job.acquisition)
+        return WebAcquirer(
+            job.acquisition, transport=transport, resolver=Resolver(), conditional=conditional
+        )
 
-    monkeypatch.setattr("rastro.application.job_dataset.web_acquirer", one_acquirer)
+    monkeypatch.setattr("rastro.application.job_dataset._web_acquirer", one_acquirer)
     loaded = load_job_file(job_file)
     assert [s.status.value for s in loaded.sources] == ["success", "success"]
     assert len(built) == 1

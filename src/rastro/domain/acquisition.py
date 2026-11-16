@@ -113,6 +113,7 @@ class AcquisitionPolicy(_RedactedErrors):
     render: Literal["http", "browser", "stealth"] = "http"
     solve_challenges: bool = False
     allow_http: bool = False
+    session: bool = False
     max_concurrency: int = Field(default=4, ge=1, le=32)
     max_requests: int = Field(default=30, ge=1, le=100)
     max_sources: int = Field(default=100, ge=1, le=1_000)
@@ -177,7 +178,7 @@ class ProxyRoute:
 @dataclass(frozen=True)
 class HttpResponse:
     status: int
-    headers: dict[str, str]
+    headers: dict[str, str] = field(repr=False)
     body: bytes
     bytes_received: int
 

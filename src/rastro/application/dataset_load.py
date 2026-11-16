@@ -16,7 +16,7 @@ from rastro.domain.job_dataset import DatasetSpec
 from rastro.domain.job_load import JobLoadResult, LoadedSource, StaleSource
 from rastro.domain.job_results import JobRunResult, JobSummary
 from rastro.domain.models import ExtractionResult, Issue, Outcome
-from rastro.ports.dataset import DatasetStore, SourceFailureRecorder
+from rastro.ports.dataset import DatasetStore, DatasetValidators, SourceFailureRecorder
 from rastro.ports.drift import DriftMonitor, OpenDriftReader
 
 SourceHook = Callable[[int, ExtractionResult[Any], LoadedSource], None]
@@ -97,7 +97,7 @@ def load_stream(
             sources.append(_unloaded(result))
             continue
         sources.append(source)
-        if monitor is not None:
+        if monitor is not None and result.status != Outcome.UNCHANGED:
             try:
                 assessments.append(
                     monitor.assess(spec.name, _snapshot(result, source, approved, snapshots))
@@ -109,7 +109,8 @@ def load_stream(
                 )
         if not failed and on_source is not None:
             on_source(index, result, sources[-1])
-    current = seen if current is None else current
+    # Redirected sources are stored under their final URL, which only the results know.
+    current = seen if current is None else {*current, *seen}
     stale: tuple[StaleSource, ...] = ()
     open_drift: tuple[OpenDrift, ...] = ()
     try:
@@ -164,7 +165,15 @@ def _load_source(
     consistency = None
     reason = None
     next_action: Literal["rastro recipe repair"] | None = None
-    if result.status in (Outcome.SUCCESS, Outcome.PARTIAL_SUCCESS):
+    if result.status == Outcome.UNCHANGED:
+        with _storage():
+            if not isinstance(store, DatasetValidators):
+                raise DatasetStorageError("Dataset does not support conditional requests")
+            store.mark_source_unchanged(spec.name, result.source_url, result.completed_at)
+            counts[ChangeKind.UNCHANGED] = sum(
+                result.source_url in row.origins for row in store.records(spec.name)
+            )
+    elif result.status in (Outcome.SUCCESS, Outcome.PARTIAL_SUCCESS):
         observations = _observations(spec, approved, result)
         if rules:
             consistency = evaluate_consistency(

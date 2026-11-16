@@ -7,11 +7,13 @@ from collections.abc import Callable, Iterable, Iterator, Sequence
 from contextlib import AbstractContextManager, contextmanager, nullcontext
 from datetime import timedelta
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from rastro.adapters.sqlite_dataset import SQLiteDatasetStore
 from rastro.adapters.sqlite_drift import SQLiteDriftMonitor
 from rastro.application.checkpointed_load import run_checkpointed_load
+from rastro.application.conditional import ConditionalRequests
+from rastro.application.conditional_inputs import extraction_inputs
 from rastro.application.drift import collect_snapshots
 from rastro.application.egress_trust import allowed_env_names, check_job_egress
 from rastro.application.job_loader import load_job, resolve_job_path
@@ -19,12 +21,13 @@ from rastro.application.jobs import run_job
 from rastro.application.operator_trust import current_trust, operator_trust
 from rastro.application.run_lock import dataset_lock
 from rastro.application.success_samples import collect_successes
+from rastro.domain.dataset import DatasetStorageError
 from rastro.domain.job_load import JobLoadResult
+from rastro.domain.job_results import JobRunResult
 from rastro.domain.jobs import UrlJobSource
-from rastro.domain.models import ConfigurationError
+from rastro.domain.models import ConfigurationError, Outcome
 from rastro.domain.secret_env import check_secret_env_name
-from rastro.ports.dataset import DatasetStore
-from rastro.scrape_target import web_acquirer
+from rastro.ports.dataset import DatasetStore, DatasetValidators
 
 if TYPE_CHECKING:
     from rastro.domain.drift import StructuralSnapshot
@@ -61,23 +64,6 @@ def _positions(job: Job, sources: Sequence[JobSource]) -> tuple[int, ...]:
         return tuple(job.sources.index(source) for source in sources)
     except ValueError:
         raise ConfigurationError("Sources to load must come from the job file") from None
-
-
-def load_acquisition(job: Job) -> AcquisitionPort | None:
-    """One acquisition port for the whole load: host pacing, robots and sessions span sources.
-
-    Call inside the operator's trust scope; browser modes need it (``allow_stealth``).
-    """
-    from rastro.browser import job_acquisition
-
-    if job.acquisition is None or not any(isinstance(s, UrlJobSource) for s in job.sources):
-        return None
-    if (shared := job_acquisition(job, None)) is not None:
-        return shared
-    try:
-        return web_acquirer(job.acquisition)
-    except ImportError:
-        raise ConfigurationError("Install rastro-engine[http] for HTTP acquisition") from None
 
 
 def load_job_file(
@@ -122,38 +108,50 @@ def load_job_file(
         capture = collect_snapshots(ScraplingDriftProbe())
     else:
         capture = nullcontext({})
-    with operator_trust(
-        allow_remote=allow_remote, allow_stealth=allow_stealth, allow_env=allow_env
-    ):
-        acquisition = load_acquisition(job)
     with (
         dataset_lock(
             raw_path, timeout_seconds=timeout, source_count=len(job.sources), held=_lock_held
         ),
         open_dataset(job, raw_path, allow_remote=allow_remote, allow_env=allow_env) as store,
-        capture as snapshots,
-        collect_successes() as successes,
     ):
-        report, loaded = run_checkpointed_load(
-            raw_path,
-            job,
-            store,
-            extract_fn=lambda sub_job: run_job(
-                sub_job,
-                base_dir=file.parent,
-                allow_absolute_paths=allow_absolute_paths,
-                allow_remote=allow_remote,
-                allow_egress=allow_egress,
-                allow_stealth=allow_stealth,
-                allow_env=allow_env,
-                acquisition=acquisition,
-            ),
-            positions=positions,
-            monitor=monitor,
-            snapshots=snapshots,
-            drift_state=drift_state,
-            should_stop=should_stop,
+        conditional = (
+            ConditionalRequests(
+                store,
+                spec.name,
+                extraction_inputs(
+                    job, base_dir=file.parent, allow_absolute_paths=allow_absolute_paths
+                ),
+            )
+            if isinstance(store, DatasetValidators) and job.acquisition is not None
+            else None
         )
+        with operator_trust(
+            allow_remote=allow_remote, allow_stealth=allow_stealth, allow_env=allow_env
+        ):  # the render-mode consent check runs here, before any source is run
+            acquisition = _load_acquirer(job, conditional)
+        with capture as snapshots, collect_successes() as successes:
+            report, loaded = run_checkpointed_load(
+                raw_path,
+                job,
+                store,
+                extract_fn=lambda sub_job: run_job(
+                    sub_job,
+                    base_dir=file.parent,
+                    allow_absolute_paths=allow_absolute_paths,
+                    allow_remote=allow_remote,
+                    allow_egress=allow_egress,
+                    allow_stealth=allow_stealth,
+                    allow_env=allow_env,
+                    acquisition=acquisition,
+                ),
+                positions=positions,
+                monitor=monitor,
+                snapshots=snapshots,
+                drift_state=drift_state,
+                should_stop=should_stop,
+            )
+        if conditional is not None:
+            loaded = _commit_validators(conditional, job, report, loaded)
     from rastro.application.repair_storage import retain_successes
 
     held_urls = {
@@ -180,6 +178,60 @@ def load_job_file(
             )
         }
     )
+
+
+def _load_acquirer(job: Job, conditional: ConditionalRequests | None) -> AcquisitionPort | None:
+    """The load's one acquisition port: host pacing, robots and the cookie session span sources.
+
+    Built inside the operator's trust scope; browser modes need it (``allow_stealth``).
+    """
+    if job.acquisition is None or not any(isinstance(s, UrlJobSource) for s in job.sources):
+        return None
+    return _web_acquirer(job, conditional)
+
+
+def _web_acquirer(job: Job, conditional: ConditionalRequests | None) -> AcquisitionPort:
+    """HTTP acquisition, or the browser composition when a source renders (SCR-003)."""
+    try:
+        from rastro.adapters.dns import SystemResolver
+        from rastro.adapters.http import CurlTransport
+        from rastro.application.acquisition import WebAcquirer
+        from rastro.browser import job_acquisition
+
+        assert job.acquisition is not None
+        return job_acquisition(job, None, conditional=conditional) or WebAcquirer(
+            job.acquisition,
+            transport=CurlTransport(),
+            resolver=SystemResolver(),
+            conditional=conditional,
+        )
+    except ModuleNotFoundError as error:
+        if error.name not in {"curl_cffi", "protego"}:
+            raise
+        raise ConfigurationError("Install rastro-engine[http] for HTTP acquisition") from None
+
+
+def _commit_validators(
+    conditional: ConditionalRequests,
+    job: Job,
+    report: JobRunResult[Any],
+    loaded: JobLoadResult,
+) -> JobLoadResult:
+    """Save validators only for sources that loaded cleanly; storage failures are explicit."""
+    try:
+        for item, result, source in zip(job.sources, report.results, loaded.sources, strict=True):
+            if (
+                isinstance(item, UrlJobSource)
+                and source.status == Outcome.SUCCESS
+                and not source.inconsistent
+                and not source.issues
+            ):
+                conditional.save(item.url, result.completed_at)
+    except DatasetStorageError:
+        conditional.failed = True
+    if conditional.failed:
+        return loaded.model_copy(update={"status": "storage_error"})
+    return loaded
 
 
 @contextmanager

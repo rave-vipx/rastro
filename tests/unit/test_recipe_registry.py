@@ -21,6 +21,7 @@ from rastro.domain.models import ConfigurationError, CssRecipe, Representation, 
 from rastro.domain.recipe_bundle import (
     MANIFEST_FILE,
     BundleAuthor,
+    BundleCompatibility,
     BundleIntegrityError,
     BundleVerificationError,
     canonical_json,
@@ -46,6 +47,7 @@ def _write_sample_bundle(
     author: BundleAuthor | None = _DEFAULT_AUTHOR,
     spdx_license: str | None = "Apache-2.0",
     public: bool = True,
+    compatibility: BundleCompatibility | None = None,
     verified_on: date = date(2026, 11, 10),
     sample_html: str = (
         "<html><body><article class='item'><h2>Evento</h2></article></body></html>"
@@ -68,6 +70,7 @@ def _write_sample_bundle(
         author=author,
         license=spdx_license,
         public=public,
+        compatibility=compatibility,
     )
     return directory
 
