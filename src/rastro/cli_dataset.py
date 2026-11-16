@@ -2,13 +2,16 @@
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
 from rastro.adapters.sqlite_dataset import SQLiteDatasetStore
 from rastro.adapters.sqlite_drift import SQLiteDriftMonitor
 from rastro.application.dataset_load import stale_sources
+from rastro.application.errors import RunInProgressError
 from rastro.application.job_dataset import load_job_file
 from rastro.cli_dataset_export import html_export, select_records
+from rastro.cli_errors import classify
 from rastro.cli_hook import add_hook_argument, hook_argv, load_summary, notify
 from rastro.cli_trust import add_trust_arguments, trust_options
 from rastro.domain.job_results import JobExitCode
@@ -44,12 +47,16 @@ def add_commands(subcommands: argparse._SubParsersAction, jobs: argparse._SubPar
 
 def load_job_command(args: argparse.Namespace) -> int:
     hook = hook_argv(args)
-    loaded = load_job_file(
-        args.file,
-        drift=args.drift,
-        allow_absolute_paths=args.allow_absolute_paths,
-        **trust_options(args),
-    )
+    try:
+        loaded = load_job_file(
+            args.file,
+            drift=args.drift,
+            allow_absolute_paths=args.allow_absolute_paths,
+            **trust_options(args),
+        )
+    except RunInProgressError as error:
+        print(json.dumps(classify(error)), file=sys.stderr)
+        return int(JobExitCode.NEEDS_ATTENTION)
     print(loaded.model_dump_json(indent=2), flush=True)
     notify(hook, load_summary(args.file, loaded))
     return int(loaded.exit_code)

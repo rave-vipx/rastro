@@ -243,7 +243,8 @@ Every hop is allowlisted and re-resolved. Mixed public/private DNS answers are
 rejected; the connection is pinned to one validated IP while preserving the
 hostname for TLS verification. IPv4/IPv6 private, loopback, metadata, reserved,
 multicast, mapped, and known transition addresses are rejected. Standard ports
-only. Ambient (environment) proxies, ambient cookies, netrc, impersonation, and
+only. The operator can widen the first and the last
+([Operator permissions](#operator-permissions)); a job file never can. Ambient (environment) proxies, ambient cookies, netrc, impersonation, and
 automatic redirects or transport retries are disabled; only an explicitly selected egress
 profile uses a proxy. There is no identity rotation or restriction bypass.
 
@@ -280,6 +281,49 @@ proxies and discovered-link crawling are not implemented. Optional [recipe memor
 [recipe learning](intelligence.md) integrate with the async SDK. See the
 [transport ADR](decisions/0002-policy-aware-acquisition.md) for the documented use of
 curl_cffi, Scrapling's HTTP engine, to expose public DNS-pinning controls.
+
+## Operator permissions
+
+Four widenings of the policy come only from the operator running Rastro, exactly like
+`--allow-egress`: a root CLI flag (before or after the subcommand, so `rastro mcp` and
+`rastro studio` inherit it), an SDK keyword on `run_job_file`, `run_job_async`, `run_job`
+and `load_job_file` (or the `operator_trust(...)` scope), or a `RASTRO_*` environment
+variable. A job file, a bundle, an MCP argument or a model output can never grant any of
+them: the first three are not job fields (unknown keys are rejected). Without a grant,
+behavior is unchanged (SEC-001, SEC-002, SEC-003, SEC-004, SEC-011).
+
+| Permission | CLI | Environment | SDK |
+| --- | --- | --- | --- |
+| Private network | `--allow-private-network` | `RASTRO_ALLOW_PRIVATE_NETWORK=1` | `allow_private_network=True` |
+| Extra ports | `--allow-port N` (repeatable) | `RASTRO_ALLOWED_PORTS="8443,8080"` | `allow_ports=[8443]` |
+| Ignore robots | `--ignore-robots HOST` (repeatable) | `RASTRO_IGNORE_ROBOTS="a.example,b.example"` | `ignore_robots=["a.example"]` |
+
+**Private network.** Permits RFC 1918, ULA `fc00::/7`, loopback and CGNAT `100.64.0.0/10`
+destinations, after DNS pinning. Link-local (`169.254.0.0/16`, `fe80::/10`, the cloud
+metadata range), the metadata services inside opened ranges (`fd00:ec2::254`,
+`100.100.100.200`), unspecified, multicast, reserved and broadcast addresses, IPv4-mapped and
+transition IPv6 forms and scoped `%` addresses stay denied. The host must still be in
+`allowed_hosts`; a mixed answer with one denied address is rejected as a whole, and every
+redirect hop is checked again.
+
+**Extra ports.** Integers 1 to 65535; anything else is a `ConfigurationError`. A granted
+port is accepted for `http` and `https` alike, in addition to 80 and 443.
+
+**Ignore robots.** For each listed host (exact lowercase name, no wildcards), robots.txt is
+neither fetched nor enforced, in the HTTP and browser engines. The allowlist, destination
+checks, pacing, the 401/403/451 stop and 429/Retry-After cooldowns still apply. Each
+overridden source logs one `robots_overridden` INFO line with the host only, and the
+result's `metrics.robots_overridden` is `true` (the key is absent otherwise), so the
+override can be audited. This is not an access-restriction bypass: by passing the flag the
+operator asserts permission to fetch those paths. Rastro does not check that assertion.
+
+**Auth header from the environment.** A job declares `[[acquisition.auth]]` and Rastro
+sends one header with a secret read from the environment. This needs no flag because the
+name follows the usual rule (`RASTRO_*` or `--allow-env NAME`); see
+[the jobs guide](jobs.md#auth-header-from-the-environment). The value goes only to that
+exact host over HTTPS (or loopback HTTP when the private network is granted), never to
+robots.txt, a redirect to another host, or a proxy, and never appears in a log, error,
+repr, result or digest. The browser engine does not support it.
 
 ## Sessions
 

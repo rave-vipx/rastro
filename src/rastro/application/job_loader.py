@@ -170,6 +170,11 @@ def _active_model(job: Job, model: ModelPort | None) -> ModelPort | None:
     return _build_model_provider(job.model, job.inference_policy) if job.model else None
 
 
+def build_job_model(job: Job) -> ModelPort | None:
+    """The job's own ``[model]``, budgeted and trust-checked; a load builds it once (COST-002)."""
+    return _active_model(job, None)
+
+
 def prepare_job(
     job: Job,
     *,

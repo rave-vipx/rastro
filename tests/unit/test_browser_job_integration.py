@@ -64,13 +64,11 @@ def test_load_job_file_forwards_allow_stealth(tmp_path, monkeypatch):
     monkeypatch.setattr(playwright, "PlaywrightBrowser", lambda: AsyncMock())
     with pytest.raises(_Stop):
         module.load_job_file(_job(tmp_path), allow_stealth=True)
-    # Without consent the acquirer is refused before run_job, with the same error.
-    for flag in (False, None):
+    assert seen == [True]
+    # Without consent the shared port is refused up front, before run_job, with the same error.
+    for kwargs in ({"allow_stealth": False}, {}):
         with pytest.raises(ConfigurationError, match="--allow-stealth"):
-            if flag is None:
-                module.load_job_file(_job(tmp_path))
-            else:
-                module.load_job_file(_job(tmp_path), allow_stealth=flag)
+            module.load_job_file(_job(tmp_path), **kwargs)
     assert seen == [True]
 
 

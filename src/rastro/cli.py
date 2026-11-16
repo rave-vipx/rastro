@@ -36,6 +36,7 @@ from rastro.cli_ops import add_job_commands as add_ops_job_commands
 from rastro.cli_ops import job_command as ops_job_command
 from rastro.cli_recipe import add_commands as add_recipe_commands
 from rastro.cli_recipe import recipe_command
+from rastro.cli_schedule import add_schedule_command, watch_job_command
 from rastro.cli_stats import add_stats_command, stats_command
 from rastro.cli_studio import add_command as add_studio_command
 from rastro.cli_studio import studio_command
@@ -134,6 +135,7 @@ def _build_parser() -> argparse.ArgumentParser:
     add_commands(subcommands, job_commands)
     add_ops_job_commands(job_commands)
     add_stats_command(job_commands)
+    add_schedule_command(job_commands)
     add_health_command(subcommands)
     add_recipe_commands(subcommands)
     add_studio_command(subcommands)
@@ -156,6 +158,8 @@ def _run_job_command(args: argparse.Namespace) -> int:
         return stats_command(args)
     if args.job_command == "load":
         return load_job_command(args)
+    if args.job_command == "watch":
+        return watch_job_command(args)
     if args.job_command in OPS_JOB_COMMANDS:
         return ops_job_command(args)
     if args.job_command == "validate":

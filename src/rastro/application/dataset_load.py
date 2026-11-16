@@ -1,6 +1,6 @@
 """Load validated job results through the dataset port (DATA-001, SYNC-002/006/008)."""
 
-from collections.abc import Collection, Iterator, Mapping, Sequence
+from collections.abc import Callable, Collection, Iterable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from typing import Any, Literal
 
@@ -15,10 +15,12 @@ from rastro.domain.failure_reason import failure_detail
 from rastro.domain.health import OpenDrift
 from rastro.domain.job_dataset import DatasetSpec
 from rastro.domain.job_load import JobLoadResult, LoadedSource, StaleSource
-from rastro.domain.job_results import JobRunResult
+from rastro.domain.job_results import JobRunResult, JobSummary
 from rastro.domain.models import ExtractionResult, Issue, Outcome
 from rastro.ports.dataset import DatasetStore, DatasetValidators, SourceFailureRecorder
 from rastro.ports.drift import DriftMonitor, OpenDriftReader
+
+SourceHook = Callable[[int, ExtractionResult[Any], LoadedSource], None]
 
 
 def load_results(
@@ -32,6 +34,7 @@ def load_results(
     snapshots: Mapping[str, StructuralSnapshot] | None = None,
     drift_state: OpenDriftReader | None = None,
     required: Sequence[str] = (),
+    on_source: SourceHook | None = None,
 ) -> JobLoadResult:
     """Only observed approved fields enter snapshots; failed sources retain their old origins.
 
@@ -40,17 +43,58 @@ def load_results(
     ``storage_error`` and the result's ``status`` is ``storage_error`` (exit code 5).
     One ``run_metrics`` row per source is recorded when the store supports it (OBS-003);
     ``required`` names the job's required fields for the coverage count.
+    ``on_source(index, result, loaded)`` runs after each source whose load, and drift
+    assessment when ``monitor`` is set, completed without a storage failure.
+    """
+    return load_stream(
+        spec,
+        names,
+        report.results,
+        store,
+        summary=lambda: report.job,
+        rules=rules,
+        monitor=monitor,
+        snapshots=snapshots,
+        drift_state=drift_state,
+        required=required,
+        on_source=on_source,
+    )
+
+
+def load_stream(
+    spec: DatasetSpec,
+    names: list[str],
+    results: Iterable[ExtractionResult[Any]],
+    store: DatasetStore,
+    *,
+    summary: Callable[[], JobSummary],
+    current: Collection[str] | None = None,
+    rules: Sequence[ConsistencyRule] = (),
+    monitor: DriftMonitor | None = None,
+    snapshots: Mapping[str, StructuralSnapshot] | None = None,
+    drift_state: OpenDriftReader | None = None,
+    required: Sequence[str] = (),
+    on_source: SourceHook | None = None,
+) -> JobLoadResult:
+    """`load_results` for results produced lazily: each is loaded before the next is pulled.
+
+    ``summary`` is called once ``results`` is exhausted; ``current`` names the origins of the
+    whole job (default: those of the results seen) for stale sources and open drift.
     """
     sources: list[LoadedSource] = []
     assessments = []
     approved = spec.approved_fields(names)
     history: History = {}
     failed = False
+    seen: set[str] = set()
+    observed: list[ExtractionResult[Any]] = []
     try:
         history = history_from_store(store, spec.name, approved) if rules else {}
     except DatasetStorageError:
         failed = True  # An unreadable dataset loads nothing, but still reports (exit 5).
-    for result in report.results:
+    for index, result in enumerate(results):
+        seen.add(result.source_url)
+        observed.append(result)
         if failed:
             sources.append(_unloaded(result))
             continue
@@ -71,8 +115,11 @@ def load_results(
                 sources[-1] = source.model_copy(
                     update={"issues": (*source.issues, Issue(code="drift_storage_error"))}
                 )
-    failed = failed or record_run_metrics(store, spec.name, report, required)
-    current = {result.source_url for result in report.results}
+        if not failed and on_source is not None:
+            on_source(index, result, sources[-1])
+    # Redirected sources are stored under their final URL, which only the results know.
+    current = seen if current is None else {*current, *seen}
+    failed = failed or record_run_metrics(store, spec.name, observed, required)
     stale: tuple[StaleSource, ...] = ()
     open_drift: tuple[OpenDrift, ...] = ()
     try:
@@ -85,7 +132,7 @@ def load_results(
         failed = True
     loaded = JobLoadResult(
         dataset=spec.name,
-        job=report.job,
+        job=summary(),
         sources=tuple(sources),
         stale_sources=stale,
         drift=tuple(assessments) if monitor is not None else None,

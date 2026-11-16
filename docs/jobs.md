@@ -51,6 +51,44 @@ uv run rastro job validate job.toml
 uv run rastro job run job.toml --output json
 ```
 
+## Start from a goal
+
+A job can start from three entry points:
+
+1. **Known sites and fields** from a saved HTML page and example values (`rastro new job.toml --from page.html --example title="Field notebook"`).
+2. **Known sites only** (`rastro new --site URL [--site URL ...] -o job.toml`), where your URLs are the host approval.
+3. **Only a goal** (`rastro new --goal "TEXT" [--fields a,b] [--search searxng|model] [--approve HOST ...] -o job.toml`).
+
+### 1. Propose candidate sources (`DISC-001`, `DISC-002`)
+
+Without `--approve`, `rastro new --goal` runs in **proposals-only** mode: it queries the search provider or model, prints candidate sources as JSON (`url`, `host`, `title`, `origin = "search" | "model"`), writes no file, and never fetches any candidate host:
+
+```bash
+export RASTRO_SEARXNG_URL="http://127.0.0.1:8080"
+uv run rastro new --goal "cultural events in Montevideo"
+```
+
+- **Search providers (`--search searxng|model`).** `SearXNGSearchProvider` queries a free self-hosted SearXNG JSON endpoint (`RASTRO_SEARXNG_URL`; needs `httpx`, installed by `pip install 'rastro-engine[openai]'`); `localhost` and loopback addresses are local, other endpoints require HTTPS and `--allow-remote` (`SEC-004`). Passing `--search model` asks the configured model (`--model` or `RASTRO_MODEL`) for candidate URLs (`origin = "model"`), parses the response strictly, keeps only public `http(s)` URLs on standard ports, and caps proposals at 10 (`SEC-005`). If neither a search provider nor a model is configured, Rastro raises `ConfigurationError` explaining both options (`P-002`).
+
+### 2. Approve hosts, propose fields and preview real records (`DISC-002`, `DISC-003`)
+
+Discovered hosts never enter an allowlist without explicit approval. Pass `--approve HOST ...` (or `--site URL ...` when you already know the URLs) with `-o job.toml`:
+
+```bash
+uv run rastro new --goal "cultural events in Montevideo" \
+  --approve agenda.example \
+  --fields title,starts_on,url \
+  -o job.toml
+
+# Or start directly from known site URLs (your URLs are the approval):
+uv run rastro new --site https://agenda.example/events -o job.toml
+```
+
+- Only exact approved hosts enter `[acquisition] allowed_hosts`.
+- Rastro fetches at most **3 pages per approved host** through `WebAcquirer` (enforcing `robots.txt`, host pacing, and public-IP checks) and never follows links off approved hosts.
+- When `--fields` is omitted, Rastro proposes fields from observed repeated structures on the page (`page_outline` and `suggest_fields`), reporting each field's inferred type, selector, and observed example value with zero model calls unless a model fallback is needed.
+- Rastro writes `job.toml` and prints a preview of real extracted records. If no valid records can be observed, the command exits non-zero with an explicit outcome (`insufficient_evidence`) and writes no job file.
+
 ## Complete TOML example
 
 The example below exercises HTTP and local JSON sources, field constraints, host allowlists,
@@ -420,9 +458,46 @@ need operator opt-in. The job file cannot grant it to itself.
   must be named `RASTRO_*` or listed in `RASTRO_ALLOWED_ENV`. Otherwise the run fails at
   `model` / `model.api_key_env` before any request. Loopback models need no opt-in.
 
+- Private-network destinations, extra ports and a robots.txt override are likewise the
+  operator's: `--allow-private-network`, `--allow-port N` and `--ignore-robots HOST` (SDK
+  `allow_private_network=`, `allow_ports=`, `ignore_robots=`; env `RASTRO_ALLOW_PRIVATE_NETWORK`,
+  `RASTRO_ALLOWED_PORTS`, `RASTRO_IGNORE_ROBOTS`). A job file that sets any of them is
+  rejected as an unknown key. See [Operator permissions](acquisition.md#operator-permissions).
+
 ```console
 $ RASTRO_PROXY_USER=me RASTRO_PROXY_PASS=secret rastro job run job.toml --allow-egress
 ```
+
+### Auth header from the environment
+
+`[[acquisition.auth]]` declares a request header whose value comes from an environment
+variable. The job names the variable; the secret is never in the file.
+
+```toml
+[acquisition]
+allowed_hosts = ["api.example.com"]
+
+[[acquisition.auth]]
+host = "api.example.com"       # must be in allowed_hosts
+header = "Authorization"       # default
+value_env = "RASTRO_API_TOKEN" # RASTRO_* or --allow-env NAME
+scheme = "Bearer"              # optional; sent as "Bearer <value>"
+```
+
+- `header` must be an HTTP token and cannot be `Host`, `Cookie`, `Set-Cookie`,
+  `Content-Length`, `Transfer-Encoding`, `Connection`, `Proxy-Authorization` (or other
+  hop-by-hop headers) or a header Rastro sets itself (`User-Agent`, `Accept`,
+  `Accept-Language`, `If-None-Match`, `If-Modified-Since`). Each host/header pair appears once.
+- A missing, empty or malformed value (control characters, non-ASCII, oversized) is a
+  `ConfigurationError` before any request; the error never echoes the variable name or value.
+- The header goes only to that exact host, over HTTPS; the source must be `https`, except a
+  loopback source with `--allow-private-network`. It is not sent on a redirect to another
+  host, to robots.txt, or to a proxy in any way but the end-to-end request.
+- HTTP engine only: with `render = "browser"` or `"stealth"` (or `solve_challenges`), or a
+  per-source `render`, the job is refused with `auth headers are HTTP-engine only`.
+- Reprs, logs, errors, dataset rows, run metrics and conditional-load digests carry only
+  the variable name, never the value. Hub bundles hold recipes and fields but no
+  acquisition block, so they cannot carry it.
 
 ## Python API
 

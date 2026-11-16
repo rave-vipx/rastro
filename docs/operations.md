@@ -1,9 +1,60 @@
 # Monitoring and alerts
 
-**Requirements:** DRIFT-004, OBS-002, OBS-007, DATA-004, REPAIR-005, SEC-009.
+**Requirements:** DRIFT-004, OBS-002, OBS-007, DATA-004, REPAIR-005, SEC-009, SCHED-001, SCHED-002, SCHED-003, SCHED-004, SCHED-006, SCHED-007, SYNC-001.
 
-Rastro runs from cron, CI or any scheduler (SCHED-002). Everything an operator needs to
-alert on is in the exit code; the JSON on stdout says why.
+Rastro runs from cron, CI or any scheduler, or with its built-in foreground watcher
+(`rastro job watch`, SCHED-002). Everything an operator needs to alert on is in the exit
+code; the JSON on stdout says why.
+
+## Scheduler
+
+Recurring runs use the **same job file** (SCHED-007); add an optional `[schedule]` block
+and optional per-source `every` overrides (SCHED-001, SCHED-006, SYNC-001):
+
+```toml
+[schedule]
+every = "6h"    # units: s, m, h, d; min 1m, max 30d
+jitter = "5m"   # optional; bounded <= every / 4
+
+[[sources]]
+url = "https://fast.example/events"
+every = "1h"    # optional per-source override
+```
+
+Run in the foreground or trigger one tick from cron or CI:
+
+```sh
+rastro job watch job.toml --drift
+rastro job watch job.toml --once --on-failure 'notify-send "Rastro needs attention"'
+```
+
+- Each tick checks `last_attempt` in `[dataset]` (never attempted = due), runs one load
+  restricted to the due sources, and sleeps until the next due time plus deterministic
+  jitter seeded from the job path and source URL hash.
+- `--once` runs a single tick and exits with that load's exit code (`0` when no source is
+  due), so cron or CI (`0 * * * * rastro job watch /path/to/job.toml --once`) can trigger
+  due sources without a separate config file (see also [Daily dataset and agenda](scheduling.md)).
+- `SIGINT` and `SIGTERM` finish the current source, release the lock, and exit `0`. They
+  also wake the wait for the next due time at once.
+- **Overlap protection (SCHED-003):** every `rastro job load` and each `watch` tick creates
+  an owner-only lock `<dataset file>.lock` (`O_CREAT|O_EXCL`, mode `0600`) holding the PID,
+  a random start token and the start time. If another live process holds the lock,
+  `job load` and `watch --once` do no work, print `{"error": "run_in_progress", ...}` on
+  stderr, and exit `4`. A running `watch` instead logs a `WARNING` (`watch_tick_skipped`),
+  skips that tick and retries after at least 30 seconds. A stale lock (dead PID or older
+  than `operation_timeout_seconds × sources + 1h`) is replaced with a `WARNING` log: the
+  starter moves the stale file aside, checks it is still the file it judged stale, and
+  creates the new lock exclusively, so two starters cannot both take over. A holder only
+  deletes the lock while it still holds its own PID and token, never a successor's. PID
+  liveness uses `OpenProcess` on Windows and signal `0` elsewhere.
+- **Checkpoint and recovery (SCHED-004):** during a load Rastro atomically writes
+  `<dataset file>.run.json` (`0600`) with the completed sources of the current run, each
+  keyed by its position in the job file and its URL, so two sources with one URL in
+  different regions stay distinct. If a load is interrupted, the next load of the same job
+  resumes with the remaining sources first and then clears the checkpoint;
+  already-completed sources keep their records and status. One load uses one acquisition
+  client for all its sources, so host pacing (`min_interval_seconds`) and run-local
+  sessions carry over from one source to the next.
 
 ## Exit codes
 
@@ -158,7 +209,8 @@ max_cost = 1.0
 `rastro job run job.toml --max-model-cost 0.5` overrides `max_cost`, and
 `--model-cost-per-call 0.002` overrides `cost_per_call`. Both flags work on `job run`,
 `job load`, `recipe repair`, `suggest` and `new`; the SDK takes `max_model_cost=` and
-`model_cost_per_call=` on `run_job*` and `repair_job_source(s)`.
+`model_cost_per_call=` on `run_job*`, `load_job_file`, `watch_job` and `repair_job_source(s)`.
+A load or a watch tick shares one budget and one notice across all its sources.
 
 The cap covers every model Rastro calls, whoever supplied it: the job's `[model]`, an SDK
 `model=`, `--model SPEC` and `RASTRO_MODEL`. An operator model is priced by

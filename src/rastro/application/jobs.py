@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from rastro.application.active_recipes import active_job
+from rastro.application.auth_headers import check_job_auth
 from rastro.application.egress_trust import check_job_egress
 from rastro.application.job_loader import (
     PreparedJob,
@@ -69,6 +70,9 @@ async def run_job_async(
     allow_egress: bool = False,
     allow_stealth: bool = False,
     allow_env: Iterable[str] = (),
+    allow_private_network: bool = False,
+    allow_ports: Iterable[int] = (),
+    ignore_robots: Iterable[str] = (),
     max_model_cost: float | None = None,
     model_cost_per_call: float | None = None,
 ) -> JobRunResult[Any]:
@@ -77,16 +81,26 @@ async def run_job_async(
     With ``recipe_memory``, a stored serving recipe newer than the job file's is used;
     ``JobRunResult.recipes`` reports the recipe each source used. The operator, not the
     job file, allows a remote model endpoint (``allow_remote``), a job-declared egress
-    proxy (``allow_egress``) and extra secret variable names (``allow_env``). A job file
-    can never make Rastro start a model command. ``max_model_cost`` (USD) caps every model
+    proxy (``allow_egress``), extra secret variable names (``allow_env``), private-network
+    destinations (``allow_private_network``), extra ports (``allow_ports``) and hosts whose
+    robots.txt is not enforced (``ignore_robots``). A job file can never grant any of them
+    or make Rastro start a model command. ``max_model_cost`` (USD) caps every model
     call and needs a price, ``model_cost_per_call`` or the job's ``[model] cost_per_call``.
     """
     allow_env = tuple(allow_env)
     with (
-        operator_trust(allow_remote=allow_remote, allow_stealth=allow_stealth, allow_env=allow_env),
+        operator_trust(
+            allow_remote=allow_remote,
+            allow_stealth=allow_stealth,
+            allow_env=allow_env,
+            allow_private_network=allow_private_network,
+            allow_ports=allow_ports,
+            ignore_robots=ignore_robots,
+        ),
         model_cost_override(max_model_cost, model_cost_per_call),
     ):
         check_job_egress(job, allow_egress=allow_egress, allow_env=allow_env)
+        check_job_auth(job, allow_env=allow_env)
         active, selections = active_job(
             job, base_dir=base_dir, allow_absolute_paths=allow_absolute_paths
         )
@@ -157,6 +171,9 @@ def run_job(
     allow_egress: bool = False,
     allow_stealth: bool = False,
     allow_env: Iterable[str] = (),
+    allow_private_network: bool = False,
+    allow_ports: Iterable[int] = (),
+    ignore_robots: Iterable[str] = (),
     max_model_cost: float | None = None,
     model_cost_per_call: float | None = None,
 ) -> JobRunResult[Any]:
@@ -165,16 +182,26 @@ def run_job(
     With ``recipe_memory``, a stored serving recipe newer than the job file's is used;
     ``JobRunResult.recipes`` reports the recipe each source used. The operator, not the
     job file, allows a remote model endpoint (``allow_remote``), a job-declared egress
-    proxy (``allow_egress``) and extra secret variable names (``allow_env``). A job file
-    can never make Rastro start a model command. ``max_model_cost`` (USD) caps every model
+    proxy (``allow_egress``), extra secret variable names (``allow_env``), private-network
+    destinations (``allow_private_network``), extra ports (``allow_ports``) and hosts whose
+    robots.txt is not enforced (``ignore_robots``). A job file can never grant any of them
+    or make Rastro start a model command. ``max_model_cost`` (USD) caps every model
     call and needs a price, ``model_cost_per_call`` or the job's ``[model] cost_per_call``.
     """
     allow_env = tuple(allow_env)
     with (
-        operator_trust(allow_remote=allow_remote, allow_stealth=allow_stealth, allow_env=allow_env),
+        operator_trust(
+            allow_remote=allow_remote,
+            allow_stealth=allow_stealth,
+            allow_env=allow_env,
+            allow_private_network=allow_private_network,
+            allow_ports=allow_ports,
+            ignore_robots=ignore_robots,
+        ),
         model_cost_override(max_model_cost, model_cost_per_call),
     ):
         check_job_egress(job, allow_egress=allow_egress, allow_env=allow_env)
+        check_job_auth(job, allow_env=allow_env)
         active, selections = active_job(
             job, base_dir=base_dir, allow_absolute_paths=allow_absolute_paths
         )
@@ -254,6 +281,9 @@ def run_job_file(
     allow_egress: bool = False,
     allow_stealth: bool = False,
     allow_env: Iterable[str] = (),
+    allow_private_network: bool = False,
+    allow_ports: Iterable[int] = (),
+    ignore_robots: Iterable[str] = (),
     max_model_cost: float | None = None,
     model_cost_per_call: float | None = None,
 ) -> JobRunResult[Any]:
@@ -270,6 +300,9 @@ def run_job_file(
         allow_egress=allow_egress,
         allow_stealth=allow_stealth,
         allow_env=allow_env,
+        allow_private_network=allow_private_network,
+        allow_ports=allow_ports,
+        ignore_robots=ignore_robots,
         max_model_cost=max_model_cost,
         model_cost_per_call=model_cost_per_call,
     )
