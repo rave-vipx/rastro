@@ -1,11 +1,14 @@
 """N2, N3, N9, SEC-001/008: failures after browser transfers keep their count; no unsafe reuse."""
 
+import asyncio
 from contextlib import asynccontextmanager
 
 import pytest
 
+from rastro.application.acquisition_state import PAGINATION_SCOPE
 from rastro.application.browser_acquisition import BrowserAcquirer
 from rastro.application.browser_sessions import source_session
+from rastro.application.scroll import scroll_scope
 from rastro.domain.acquisition import (
     AcquisitionError,
     AcquisitionPolicy,
@@ -58,6 +61,8 @@ class Session:
 
     async def render(self, target, *, policy, max_bytes):
         self.owner.events.append(("render", target.url))
+        if self.owner.hang_render:
+            await asyncio.sleep(5)
         if self.owner.render_error:
             raise self.owner.render_error
         self.url = target.url
@@ -66,6 +71,9 @@ class Session:
         )
 
     async def scroll(self, *, policy, max_bytes, settle_ms):
+        self.owner.granted.append(policy.max_requests)
+        if self.owner.hang_scroll:
+            await asyncio.sleep(5)
         if self.owner.scroll_error:
             raise self.owner.scroll_error
         return self.owner.scroll_result(self.url)
@@ -75,6 +83,7 @@ class Browser:
     def __init__(self):
         self.opened = self.closed = 0
         self.events, self.render_error, self.scroll_error = [], None, None
+        self.granted, self.hang_render, self.hang_scroll = [], False, False
         self.scroll_result = lambda url: AcquisitionResult(
             url, "<p>ok</p>", Outcome.SUCCESS, None, http_status=200, requests=4
         )
@@ -152,3 +161,37 @@ async def test_a_scroll_that_raises_discards_its_context():
         assert (browser.opened, browser.closed) == (1, 1)
         await client.acquire(Source(url="https://agenda.test/next"), max_bytes=1000)
         assert browser.opened == 2
+
+
+def _quick_timeout(browser):
+    policy = POLICY.model_copy(update={"request_timeout_seconds": 0.05})
+    return BrowserAcquirer(policy, renderer=browser, transport=Transport(), resolver=Resolver())
+
+
+@pytest.mark.asyncio
+async def test_a_render_that_times_out_spends_its_whole_allowance():
+    """A timeout loses the browser's own count: never undercount, charge what was granted."""
+    browser, source = Browser(), Source(url="https://agenda.test/slow")
+    browser.hang_render = True
+    async with source_session():
+        with scroll_scope(source, POLICY):
+            scope = PAGINATION_SCOPE.get()
+            result = await _quick_timeout(browser).acquire(source, max_bytes=1000)
+            assert result.status == Outcome.TRANSIENT_FAILURE
+            assert scope is not None and scope.remaining == 0  # nothing left for a later page
+
+
+@pytest.mark.asyncio
+async def test_a_scroll_step_that_times_out_spends_its_whole_allowance():
+    browser, source = Browser(), Source(url="https://agenda.test/list")
+    client = _quick_timeout(browser)
+    async with source_session():
+        with scroll_scope(source, POLICY):
+            scope = PAGINATION_SCOPE.get()
+            await client.acquire(source, max_bytes=1000)
+            assert scope is not None
+            before, browser.hang_scroll = scope.remaining, True
+            step = await client.scroll(source, settle_ms=10, max_bytes=1000)
+    assert step.issue_code == "operation_timeout"
+    assert step.requests == before  # the whole remaining budget, which is all the step was given
+    assert browser.granted == [before]  # and the step was never granted more than was left
