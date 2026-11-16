@@ -145,8 +145,11 @@ integrated from their own branches. A visible control is not a grant.
   Clicking an element in the preview to pick it is not available yet: type the selector.
 - **Auto-promote** (a switch, off by default) writes only `[repair] auto_promote` on the
   job you opened, with the same digest and reparse check. On, a repair candidate starts
-  serving only after every gate and the semantic judge pass. Off, you promote with a
-  reason. Installing a registry package never changes it.
+  serving only after every gate and the semantic judge pass. The judge is a model: the
+  Studio `--model`, the job's `[model]`, or `[repair] model = true` with `RASTRO_MODEL`.
+  Without one, **Fix this site** stores the candidate, keeps the current recipe serving
+  and says why, so you promote with a reason. Off, you always promote with a reason.
+  Installing a registry package never changes it.
 - **Allow stealth for this Studio session** (a switch, off by default) grants the running
   Studio process, like `--allow-stealth` or `RASTRO_ALLOW_STEALTH=1`, and applies to
   preview, extract, load, repair and promote. It is never written to a job or a bundle.

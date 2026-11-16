@@ -10,6 +10,7 @@ failed gates: promotion re-runs them and a refusal is shown as an alert (N5, N7,
 
 from __future__ import annotations
 
+import os
 import shlex
 from pathlib import Path
 from typing import Any
@@ -84,6 +85,25 @@ def health(job: Job, base: Path) -> dict[str, Any]:
     return {**payload, "alerts": alerts(payload)}
 
 
+NO_JUDGE = (
+    "Auto-promote is on, but no model is configured to act as the semantic judge, so this "
+    "repair was not promoted. Review the candidate and promote it with a reason, or start "
+    "Studio with --model (or give the job a [model])."
+)
+
+
+def has_judge(job: Job, studio_model: object | None) -> bool:
+    """Whether repair would get a model to judge meaning, mirroring ``job_repair._assist``.
+
+    The Studio model, the job's own ``[model]``, or ``[repair] model = true`` with the
+    operator's ``RASTRO_MODEL``. No other environment model is consulted.
+    """
+    if studio_model is not None or job.model is not None:
+        return True
+    wants_env = job.repair is not None and bool(job.repair.model)
+    return wants_env and bool(os.environ.get("RASTRO_MODEL", "").strip())
+
+
 def failure_command(rel: str) -> str:
     """The exact command that runs the operator's hook on failure (the job cannot set it)."""
     hook = shlex.quote("python notify.py")  # The README's copy-paste hook script.
@@ -104,10 +124,21 @@ def routes(studio: Studio) -> list[Route]:
         path, _, job = studio.load(text(data, "file"))
         index = integer(data, "source", 1, MAX_SOURCES)
 
+        # N12: Studio's switch promises the semantic judge. Without a model to provide it,
+        # this repair stores candidates only; the core API keeps its deterministic default.
+        held = bool(job.repair and job.repair.auto_promote) and not has_judge(job, studio.model)
+
         def run() -> dict[str, Any]:
-            report = repair_job_source(path, index, model=studio.model, **studio.trust)
+            report = repair_job_source(
+                path,
+                index,
+                model=studio.model,
+                auto_promote=False if held else None,  # None keeps the job's own policy
+                **studio.trust,
+            )
             payload = with_diffs(job, path.parent, index, plain(report))
-            return {"ok": True, "report": payload, "alerts": alerts(payload)}
+            messages = ([NO_JUDGE] if held else []) + alerts(payload)
+            return {"ok": True, "report": payload, "alerts": messages}
 
         with operation(studio, "repair", path) as outcome:
             payload = await run_in_threadpool(run)

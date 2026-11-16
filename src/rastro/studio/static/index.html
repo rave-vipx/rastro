@@ -59,7 +59,7 @@
         <button type="button" id="save-pagination">Save next page</button>
       </div>
       <label class="check"><input type="checkbox" id="auto-promote"> Auto-promote repairs for this job</label>
-      <p class="muted">Off by default. On writes <code>[repair] auto_promote</code> to this job only; a repair still has to pass every gate and the semantic judge. Off means you promote with a reason.</p>
+      <p class="muted">Off by default. On writes <code>[repair] auto_promote</code> to this job only; a repair still has to pass every gate and the semantic judge, which needs a configured model. Off means you promote with a reason.</p>
       <label class="check"><input type="checkbox" id="allow-stealth"> Allow stealth for this Studio session</label>
       <p class="muted">Off by default. Lets jobs that ask for <code>engine = "stealth"</code> run while this Studio is open. Nothing is written to a job or a bundle.</p>
       <p id="controls-status" role="status" aria-live="polite"></p>

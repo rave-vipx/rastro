@@ -79,7 +79,7 @@ async function saveAutoPromote(enabled) {
   const data = await api("/api/auto-promote", { file: requireFile(), sha256: state.sha, enabled });
   state.sha = data.sha256;
   show("controls-status", enabled
-    ? "Auto-promote is on for this job. A repair still has to pass every gate and the semantic judge."
+    ? "Auto-promote is on for this job. A repair still has to pass every gate and the semantic judge (a configured model)."
     : "Auto-promote is off for this job. Promote repairs yourself, with a reason.", "good");
 }
 
