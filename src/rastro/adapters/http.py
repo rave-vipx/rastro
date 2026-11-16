@@ -13,6 +13,7 @@ from rastro.domain.acquisition import AcquisitionError, HttpResponse, PinnedTarg
 from rastro.domain.models import Outcome
 
 _PROXY_TYPES = {"http": 0, "https": 2}  # CURLPROXY_HTTP and CURLPROXY_HTTPS
+_HEADERS_SEPARATE = 1  # CURLHEADER_SEPARATE
 
 
 class CurlTransport:
@@ -76,6 +77,8 @@ class CurlTransport:
                     CurlOpt.PROXYTYPE: proxy_type,
                     CurlOpt.NOPROXY: b"",
                     CurlOpt.HTTPPROXYTUNNEL: 1,
+                    # Request headers (credentials, cookies) go to the target, never the proxy.
+                    CurlOpt.HEADEROPT: _HEADERS_SEPARATE,
                     CurlOpt.PROXY_CREDENTIAL_NO_REUSE: 1,
                 }
             )

@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from collections.abc import Mapping
 from dataclasses import replace
 from time import perf_counter
 from urllib.parse import urlsplit, urlunsplit
 
+import structlog
+
 from rastro.application.acquisition_state import _Host, _Operation, check_page_request
+from rastro.application.auth_headers import request_auth, resolve_auth
 from rastro.application.conditional import ConditionalRequests
 from rastro.application.cookie_jar import CookieJar
 from rastro.application.destinations import permitted_url, pin_destination
@@ -22,17 +26,23 @@ from rastro.application.http_policy import (
     resolve_proxy,
     retry_after,
 )
+from rastro.application.operator_trust import current_trust
 from rastro.application.robots import parse_robots_response
 from rastro.domain.acquisition import (
     AcquisitionError,
     AcquisitionPolicy,
     AcquisitionResult,
     HttpResponse,
+    PinnedTarget,
 )
 from rastro.domain.models import Outcome, Representation, Source
 from rastro.ports.acquisition import HttpTransport, Resolver
 
 __all__ = ["WebAcquirer", "retry_after"]
+
+_LOG = structlog.wrap_logger(
+    logging.getLogger("rastro"), processors=[structlog.processors.JSONRenderer()]
+)
 
 
 class WebAcquirer:
@@ -62,17 +72,19 @@ class WebAcquirer:
         self, source: Source, *, max_bytes: int, representation: Representation = "html"
     ) -> AcquisitionResult:
         started = perf_counter()
-        operation = _Operation(source.url, cookie_host=urlsplit(source.url).hostname)
+        policy = self.policy.with_grants(current_trust().network_grants())
+        operation = _Operation(source.url, policy, cookie_host=urlsplit(source.url).hostname)
         body: str | None = None
         issue: str | None = None
         status = Outcome.SUCCESS
         try:
             operation.proxy = resolve_proxy(source.egress, self.policy, self._environ)
+            operation.auth = resolve_auth(self.policy, self._environ)
             operation.headers = request_headers(source, representation)
             async with asyncio.timeout(self.policy.operation_timeout_seconds):
                 url = source.url
                 for hop in range(self.policy.max_redirects + 1):
-                    url, _, _ = permitted_url(url, self.policy)
+                    url, _, _ = permitted_url(url, policy)
                     operation.url = url
                     operation.headers = request_headers(source, representation)
                     await self._robots(url, operation)
@@ -94,7 +106,7 @@ class WebAcquirer:
                         break
                     if hop == self.policy.max_redirects:
                         raise AcquisitionError("redirect_limit", Outcome.PERMANENT_FAILURE)
-                    url = redirect_target(url, response, self.policy)
+                    url = redirect_target(url, response, policy)
                     if urlsplit(url).hostname != operation.cookie_host:
                         operation.cookie_host = None
                     operation.redirects += 1
@@ -116,37 +128,52 @@ class WebAcquirer:
             acquisition_seconds=perf_counter() - started,
             retry_after_seconds=operation.retry_after_seconds,
             egress=source.egress,
+            robots_overridden=bool(operation.overridden),
         )
 
     async def _robots(self, url: str, operation: _Operation) -> None:
         parsed = urlsplit(url)
+        hostname = parsed.hostname or ""
+        if hostname in operation.policy.grants.ignore_robots:
+            # The operator asserts permission (SEC-003); every other check still applies.
+            if hostname not in operation.overridden:
+                operation.overridden.add(hostname)
+                _LOG.info("robots_overridden", host=hostname)
+            return
         origin = urlunsplit((parsed.scheme, parsed.netloc, "", "", ""))
         if origin not in operation.robots:
-            robots_url = origin + "/robots.txt"
-            for hop in range(self.policy.max_redirects + 1):
-                response = await self._request(robots_url, operation, max_bytes=512_000)
-                if response.status in REDIRECT_STATUSES:
-                    if hop == self.policy.max_redirects:
-                        raise AcquisitionError("robots_redirect_limit", Outcome.ACCESS_RESTRICTION)
-                    robots_url = redirect_target(robots_url, response, self.policy)
-                    operation.redirects += 1
-                    continue
-                if response.status in {404, 410}:
-                    operation.robots[origin] = None
-                    break
-                check_status(response.status)
-                rules, min_interval = parse_robots_response(response)
-                operation.robots[origin] = rules
-                host = self._hosts[parsed.hostname or ""]
-                host.interval = max(host.interval, min_interval)
-                host.next_request = max(host.next_request, perf_counter() + host.interval)
-                break
+            operation.robots_fetch = True
+            try:
+                await self._fetch_robots(origin, hostname, operation)
+            finally:
+                operation.robots_fetch = False
         cached_rules = operation.robots[origin]
         if cached_rules is not None and not cached_rules.can_fetch(url, "Rastro"):
             raise AcquisitionError("robots_denied", Outcome.ACCESS_RESTRICTION)
 
+    async def _fetch_robots(self, origin: str, hostname: str, operation: _Operation) -> None:
+        robots_url = origin + "/robots.txt"
+        for hop in range(self.policy.max_redirects + 1):
+            response = await self._request(robots_url, operation, max_bytes=512_000)
+            if response.status in REDIRECT_STATUSES:
+                if hop == self.policy.max_redirects:
+                    raise AcquisitionError("robots_redirect_limit", Outcome.ACCESS_RESTRICTION)
+                robots_url = redirect_target(robots_url, response, operation.policy)
+                operation.redirects += 1
+                continue
+            if response.status in {404, 410}:
+                operation.robots[origin] = None
+                return
+            check_status(response.status)
+            rules, min_interval = parse_robots_response(response)
+            operation.robots[origin] = rules
+            host = self._hosts[hostname]
+            host.interval = max(host.interval, min_interval)
+            host.next_request = max(host.next_request, perf_counter() + host.interval)
+            return
+
     async def _request(self, url: str, operation: _Operation, *, max_bytes: int) -> HttpResponse:
-        _, hostname, _ = permitted_url(url, self.policy)
+        _, hostname, _ = permitted_url(url, operation.policy)
         host = self._hosts[hostname]
         for attempt in range(self.policy.max_retries + 1):
             try:
@@ -205,6 +232,26 @@ class WebAcquirer:
                     raise AcquisitionError("retry_after_pending", Outcome.TRANSIENT_FAILURE)
             return response
 
+    def _request_headers(
+        self, url: str, target: PinnedTarget, address: str, operation: _Operation
+    ) -> dict[str, str]:
+        headers = dict(operation.headers)
+        if self._cookies is not None and target.host == operation.cookie_host:
+            cookie = self._cookies.header(url)
+            if cookie:
+                headers["Cookie"] = cookie
+        if not operation.robots_fetch:
+            headers.update(
+                request_auth(
+                    operation.auth,
+                    url,
+                    address,
+                    proxied=operation.proxy is not None,
+                    grants=operation.policy.grants,
+                )
+            )
+        return headers
+
     async def _pinned_get(
         self, url: str, host: _Host, operation: _Operation, *, max_bytes: int
     ) -> HttpResponse:
@@ -214,7 +261,7 @@ class WebAcquirer:
             deadline = asyncio.get_running_loop().time() + self.policy.request_timeout_seconds
             try:
                 async with asyncio.timeout_at(deadline):
-                    target = await pin_destination(url, self.policy, self._resolver)
+                    target = await pin_destination(url, operation.policy, self._resolver)
                     addresses = (target.address, *target.alternates[:2])
                     if operation.proxy is not None:
                         addresses = addresses[:1]
@@ -234,11 +281,7 @@ class WebAcquirer:
                         )
                         network_start = perf_counter()
                         try:
-                            headers = dict(operation.headers)
-                            if self._cookies is not None and target.host == operation.cookie_host:
-                                cookie = self._cookies.header(url)
-                                if cookie:
-                                    headers["Cookie"] = cookie
+                            headers = self._request_headers(url, target, address, operation)
                             response = await self._transport.get(
                                 replace(target, address=address, alternates=addresses[index + 1 :]),
                                 headers=headers,

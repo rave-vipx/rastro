@@ -1,5 +1,45 @@
 {
   "$defs": {
+    "AcquisitionAuth": {
+      "additionalProperties": false,
+      "description": "Declares one request header whose value is read from an environment variable.\n\nThe job names the variable; the secret itself is never part of the policy.",
+      "properties": {
+        "header": {
+          "default": "Authorization",
+          "pattern": "^[!#$%&'*+.^_`|~0-9A-Za-z-]{1,64}$",
+          "title": "Header",
+          "type": "string"
+        },
+        "host": {
+          "title": "Host",
+          "type": "string"
+        },
+        "scheme": {
+          "anyOf": [
+            {
+              "pattern": "^[!#$%&'*+.^_`|~0-9A-Za-z-]{1,64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scheme"
+        },
+        "value_env": {
+          "pattern": "^[A-Z_][A-Z0-9_]{0,127}$",
+          "title": "Value Env",
+          "type": "string"
+        }
+      },
+      "required": [
+        "host",
+        "value_env"
+      ],
+      "title": "AcquisitionAuth",
+      "type": "object"
+    },
     "AcquisitionPolicy": {
       "additionalProperties": false,
       "description": "An exact host allowlist asserts the caller's permission to acquire a source.",
@@ -16,6 +56,15 @@
           "maxItems": 64,
           "minItems": 1,
           "title": "Allowed Hosts",
+          "type": "array"
+        },
+        "auth": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/AcquisitionAuth"
+          },
+          "maxItems": 8,
+          "title": "Auth",
           "type": "array"
         },
         "backoff_seconds": {

@@ -83,6 +83,9 @@ def _run_tick(
     allow_egress: bool,
     allow_stealth: bool,
     allow_env: tuple[str, ...],
+    allow_private_network: bool,
+    allow_ports: tuple[int, ...],
+    ignore_robots: tuple[str, ...],
     should_stop: Callable[[], bool],
     on_tick: Callable[[JobLoadResult], None] | None,
     load_runner: Callable[[Path, Job], JobLoadResult | int] | None,
@@ -118,6 +121,9 @@ def _run_tick(
         allow_egress=allow_egress,
         allow_stealth=allow_stealth,
         allow_env=allow_env,
+        allow_private_network=allow_private_network,
+        allow_ports=allow_ports,
+        ignore_robots=ignore_robots,
         sources=due,
         should_stop=should_stop,
         _lock_held=True,
@@ -145,6 +151,9 @@ def watch_job(
     allow_egress: bool = False,
     allow_stealth: bool = False,
     allow_env: Iterable[str] = (),
+    allow_private_network: bool = False,
+    allow_ports: Iterable[int] = (),
+    ignore_robots: Iterable[str] = (),
     on_tick: Callable[[JobLoadResult], None] | None = None,
     clock: Callable[[], datetime] | None = None,
     sleep: Callable[[float], object] | None = None,
@@ -155,6 +164,7 @@ def watch_job(
     file = Path(path)
     job = load_job(file, allow_absolute_paths=allow_absolute_paths)
     allow_env_tuple = tuple(allow_env)
+    ports, robots = tuple(allow_ports), tuple(ignore_robots)
     check_job_egress(job, allow_egress=allow_egress, allow_env=allow_env_tuple)
     if job.schedule is None or job.dataset is None:
         missing = "schedule" if job.schedule is None else "dataset"
@@ -184,6 +194,9 @@ def watch_job(
                         allow_egress=allow_egress,
                         allow_stealth=allow_stealth,
                         allow_env=allow_env_tuple,
+                        allow_private_network=allow_private_network,
+                        allow_ports=ports,
+                        ignore_robots=robots,
                         should_stop=stop.is_set,
                         on_tick=on_tick,
                         load_runner=load_runner,

@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 
 from rastro.adapters.sqlite_dataset import SQLiteDatasetStore
 from rastro.adapters.sqlite_drift import SQLiteDriftMonitor
+from rastro.application.auth_headers import check_job_auth
 from rastro.application.checkpointed_load import run_checkpointed_load
 from rastro.application.conditional import ConditionalRequests
 from rastro.application.conditional_inputs import extraction_inputs
@@ -75,6 +76,9 @@ def load_job_file(
     allow_egress: bool = False,
     allow_stealth: bool = False,
     allow_env: Iterable[str] = (),
+    allow_private_network: bool = False,
+    allow_ports: Iterable[int] = (),
+    ignore_robots: Iterable[str] = (),
     sources: Sequence[JobSource] | None = None,
     should_stop: Callable[[], bool] | None = None,
     _lock_held: bool = False,
@@ -84,7 +88,7 @@ def load_job_file(
     Raises ``ConfigurationError`` for invalid jobs or paths. With ``drift=True`` the
     structural drift of each source is measured and reported. Each loaded source
     reports whether its recipe came from the job file or from ``recipe_memory``.
-    ``allow_*`` are the operator's opt-ins, as for ``run_job``.
+    ``allow_*`` and ``ignore_robots`` are the operator's opt-ins, as for ``run_job``.
     """
     file = Path(path)
     job = load_job(file, allow_absolute_paths=allow_absolute_paths)
@@ -94,6 +98,7 @@ def load_job_file(
         job = job.model_copy(update={"sources": tuple(sources)})
     allow_env = tuple(allow_env)
     check_job_egress(job, allow_egress=allow_egress, allow_env=allow_env)
+    check_job_auth(job, allow_env=allow_env, allow_private_network=allow_private_network)
     spec = job.dataset
     if spec is None:
         raise ConfigurationError("job load requires a [dataset] block in the job file")
@@ -142,6 +147,9 @@ def load_job_file(
                     allow_egress=allow_egress,
                     allow_stealth=allow_stealth,
                     allow_env=allow_env,
+                    allow_private_network=allow_private_network,
+                    allow_ports=allow_ports,
+                    ignore_robots=ignore_robots,
                     acquisition=acquisition,
                 ),
                 positions=positions,

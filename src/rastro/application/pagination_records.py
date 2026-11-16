@@ -103,8 +103,9 @@ def combine_pages[T: BaseModel](
     totals = {
         name: sum(getattr(page.metrics, name) for page in pages)
         for name in Metrics.model_fields
-        if name not in {"acquisition_method", "egress"}
+        if name not in {"acquisition_method", "egress", "robots_overridden"}
     }
+    totals["robots_overridden"] = any(page.metrics.robots_overridden for page in pages)
     return first.model_copy(
         update={
             "pagination_stop": stop,

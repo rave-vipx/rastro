@@ -18,8 +18,8 @@ from rastro.domain.acquisition import (
     AcquisitionError,
     AcquisitionPolicy,
     AcquisitionResult,
-    _exact_host,
 )
+from rastro.domain.acquisition_base import exact_host
 from rastro.domain.intelligence import InferencePolicy, ModelError, ModelRequest
 from rastro.domain.json import strict_json
 from rastro.domain.models import ConfigurationError, Contract, Limits, Source
@@ -61,7 +61,7 @@ def clean_proposal(raw_url: str, raw_title: str, origin: SourceOrigin) -> Source
         parts = urlsplit(clean_url)
         if parts.port not in (None, 443 if parts.scheme == "https" else 80):
             return None
-        host = _exact_host(parts.hostname or "")
+        host = exact_host(parts.hostname or "")
     except (ValidationError, ValueError):
         return None
     try:
@@ -193,7 +193,7 @@ def acquire_approved_pages(
     limits: Limits | None = None,
 ) -> tuple[tuple[str, ...], AcquisitionPolicy, tuple[AcquisitionResult, ...]]:
     try:
-        hosts = tuple(dict.fromkeys(_exact_host(h.strip()) for h in approved_hosts if h.strip()))
+        hosts = tuple(dict.fromkeys(exact_host(h.strip()) for h in approved_hosts if h.strip()))
     except ValueError:
         raise ConfigurationError("Approved hosts must be exact hostnames or IP addresses") from None
     if not hosts:
