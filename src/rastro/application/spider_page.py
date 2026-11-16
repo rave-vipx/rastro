@@ -26,7 +26,7 @@ from rastro.domain.models import ExtractionResult, Limits, Recipe, Representatio
 from rastro.domain.scroll import ScrollSpec
 from rastro.domain.spider import SpiderPolicy
 from rastro.ports.acquisition import AcquisitionPort
-from rastro.ports.browser import BrowserRendered
+from rastro.ports.browser import BrowserMayRender, BrowserRendered
 from rastro.ports.parser import DocumentParser
 
 
@@ -71,6 +71,13 @@ async def fetch_spider_page[T: BaseModel](
     return stamp_acquired(
         result, source=page, fetched=fetched, started=started, started_at=started_at
     )
+
+
+def _may_render_in_browser(acquisition: AcquisitionPort, url: str) -> bool:
+    """Any page of the crawl may share one browser page, so pages must not overlap."""
+    if isinstance(acquisition, BrowserMayRender):
+        return acquisition.may_render_in_browser(url)
+    return isinstance(acquisition, BrowserRendered) and acquisition.renders_in_browser(url)
 
 
 async def crawl_source[T: BaseModel](
@@ -118,9 +125,7 @@ async def crawl_source[T: BaseModel](
             extract_page=extract_page,
         )
 
-    in_browser = isinstance(acquisition, BrowserRendered) and acquisition.renders_in_browser(
-        source.url
-    )
+    in_browser = _may_render_in_browser(acquisition, source.url)
     async with source_session():  # one browser context per start source, closed after it
         return await extract_spider(
             source=source,

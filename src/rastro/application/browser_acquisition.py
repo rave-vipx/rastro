@@ -144,12 +144,19 @@ class BrowserAcquirer(WebAcquirer):
         if scope is not None and isinstance(self._renderer, BrowserSessions):
             session = await scope.reuse(self._renderer, target, targets, policy)
             if session is not None:
-                return await session.render(target, policy=policy, max_bytes=max_bytes)
+                scope.mark_rendered(self._renderer, None)  # unknown until this render returns
+                result = await session.render(target, policy=policy, max_bytes=max_bytes)
+                if result.status == Outcome.SUCCESS:
+                    scope.mark_rendered(self._renderer, _canonical(result.url, policy))
+                return result
         return await self._renderer.render(
             target, policy=policy, max_bytes=max_bytes, targets=targets
         )
 
     def renders_in_browser(self, url: str) -> bool:
+        return True
+
+    def may_render_in_browser(self, url: str) -> bool:
         return True
 
     def scrolls(self, url: str) -> bool:
@@ -161,13 +168,15 @@ class BrowserAcquirer(WebAcquirer):
     async def scroll(self, source: Source, *, settle_ms: int, max_bytes: int) -> AcquisitionResult:
         """One scroll step in the source's open context, under the same budget and pacing."""
         scope = SOURCE_SESSIONS.get()
-        session = scope.current(self._renderer) if scope is not None else None
-        if session is None:
+        if scope is None or not isinstance(self._renderer, BrowserSessions):
             raise ConfigurationError("Scroll needs a browser renderer that keeps one session")
         policy = self.policy.with_grants(current_trust().network_grants())
         started = perf_counter()
         try:
-            _, hostname, _ = permitted_url(source.url, policy)
+            canonical, hostname, _ = permitted_url(source.url, policy)
+            session = scope.showing(self._renderer, host=hostname, url=canonical)
+            if session is None:  # a page rendered outside the session has no page to scroll
+                raise ConfigurationError("This page is not the one the session last rendered")
             host = self._hosts[hostname]
             async with host.lock, self._slots:
                 await asyncio.sleep(max(0, host.next_request - perf_counter()))
@@ -198,6 +207,14 @@ class BrowserAcquirer(WebAcquirer):
             return _scroll_failure(source, Outcome.TRANSIENT_FAILURE, "operation_timeout")
         except AcquisitionError as error:
             return _scroll_failure(source, error.outcome, error.code)
+
+
+def _canonical(url: str, policy: AcquisitionPolicy) -> str:
+    """The form ``scroll`` compares: what ``permitted_url`` makes of the rendered URL."""
+    try:
+        return permitted_url(url, policy)[0]
+    except AcquisitionError:
+        return ""  # never equals a permitted URL, so no scroll follows it
 
 
 def _scroll_failure(source: Source, status: Outcome, code: str) -> AcquisitionResult:

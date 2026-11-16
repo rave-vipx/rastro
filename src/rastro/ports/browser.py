@@ -69,3 +69,12 @@ class BrowserRendered(Protocol):
     def renders_in_browser(self, url: str) -> bool:
         """True when fetches of this source share one page and must not overlap."""
         ...
+
+
+@runtime_checkable
+class BrowserMayRender(Protocol):
+    """Optional: whether any page of a crawl from ``url`` may render in a browser (separate)."""
+
+    def may_render_in_browser(self, url: str) -> bool:
+        """True when a page reached from ``url`` can share the source's browser page."""
+        ...

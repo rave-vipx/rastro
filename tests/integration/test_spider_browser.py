@@ -11,10 +11,11 @@ from urllib.parse import urlsplit
 import pytest
 
 from rastro.application.browser_acquisition import BrowserAcquirer
+from rastro.application.browser_sessions import source_session
 from rastro.application.jobs import run_job
 from rastro.domain.acquisition import AcquisitionResult, HttpResponse
 from rastro.domain.jobs import Job
-from rastro.domain.models import Outcome
+from rastro.domain.models import ConfigurationError, Outcome, Source
 
 pytestmark = pytest.mark.usefixtures("offline_cli_loop")
 
@@ -214,3 +215,100 @@ def test_only_browser_modes_report_a_shared_page():
     assert isinstance(routed, BrowserRendered)
     assert routed.renders_in_browser("https://shop.test/list")
     assert not routed.renders_in_browser("https://other.test/")
+
+
+OTHER = {
+    "/list": item("Root", "https://other.test/x", "https://other.test/y"),
+    "/x": item("X"),
+    "/y": item("Y"),
+}
+
+
+def cross_host_job(*, max_pages=10):
+    spec = job(spider={"same_host": False, "max_pages": max_pages}, scroll={"max_steps": 1})
+    return spec.model_copy(
+        update={
+            "acquisition": spec.acquisition.model_copy(
+                update={"allowed_hosts": ("shop.test", "other.test")}
+            )
+        }
+    )
+
+
+def test_a_scroll_never_runs_on_a_page_rendered_outside_the_session():
+    leaked = item("Root", "https://other.test/x", "https://other.test/y", more=("LEAKED",))
+    browser = FakeBrowser(OTHER, [leaked])
+    result = run_browser(cross_host_job(), browser).results[0]
+    names = [r.name for r in result.items]
+    assert names.count("LEAKED") == 1 and names.count("Root") == 1  # no copy for other.test
+    assert sorted(names) == ["LEAKED", "Root", "X", "Y"]
+    scrolled = [url for kind, url in browser.events if kind == "scroll"]
+    assert scrolled == ["https://shop.test/list"]  # nothing scrolled for the other host's pages
+    assert any(i.code == "scroll_step_failed" for i in result.issues)
+    assert not any("other.test" in (i.code or "") for i in result.issues)  # content-free codes
+
+
+def test_a_refused_scroll_step_gives_its_page_back_to_the_page_cap():
+    # list 1, its step 2, x 3, y 4, x's refused step 5: with the page given back, y's step
+    # is refused for the same reason instead of being starved by the cap.
+    browser = FakeBrowser(OTHER, [item("Root", "https://other.test/x", "https://other.test/y")])
+    result = run_browser(cross_host_job(max_pages=5), browser).results[0]
+    assert sorted(r.name for r in result.items) == ["Root", "X", "Y"]
+    assert not any(i.code == "scroll_budget" for i in result.issues)
+
+
+@pytest.mark.asyncio
+async def test_a_scroll_step_is_refused_unless_the_page_is_the_one_just_rendered():
+    browser = FakeBrowser(SITE, [SITE["/list"]])
+    acquirer = BrowserAcquirer(
+        job().acquisition, renderer=browser, transport=Transport(), resolver=Resolver()
+    )
+    async with source_session():
+        await acquirer.acquire(Source(url="https://shop.test/a"), max_bytes=100_000)
+        await acquirer.scroll(Source(url="https://shop.test/a"), settle_ms=0, max_bytes=100_000)
+        await acquirer.acquire(Source(url="https://shop.test/b"), max_bytes=100_000)
+        with pytest.raises(ConfigurationError):  # the session moved on to /b
+            await acquirer.scroll(Source(url="https://shop.test/a"), settle_ms=0, max_bytes=100_000)
+    assert browser.scrolls == 1
+
+
+def test_a_crawl_is_sequential_when_any_page_may_render_in_a_browser():
+    from rastro.browser import _JobAcquisition
+
+    http_start = _JobAcquisition({"https://shop.test/list": "http"}, {}, default="browser")
+    assert not http_start.renders_in_browser("https://shop.test/list")
+    assert http_start.may_render_in_browser("https://shop.test/list")
+    all_http = _JobAcquisition({"https://shop.test/list": "http"}, {}, default="http")
+    assert not all_http.may_render_in_browser("https://shop.test/list")
+    declared = _JobAcquisition(
+        {"https://shop.test/list": "http", "https://other.test/": "browser"}, {}, default="http"
+    )
+    assert declared.may_render_in_browser("https://shop.test/list")  # a link may reach other.test
+
+
+def test_an_http_start_with_a_browser_default_crawls_one_page_at_a_time():
+    from rastro.browser import _JobAcquisition
+
+    live = {"now": 0, "peak": 0}
+
+    class Http:
+        async def acquire(self, source, *, max_bytes, representation="html"):
+            live["now"] += 1
+            live["peak"] = max(live["peak"], live["now"])
+            await asyncio.sleep(0.01)
+            live["now"] -= 1
+            body = SITE[urlsplit(source.url).path]
+            return AcquisitionResult(source.url, body, Outcome.SUCCESS, None, http_status=200)
+
+    routed = _JobAcquisition(
+        {"https://shop.test/list": "http"}, {"http": Http()}, default="browser"
+    )
+    spec = Job.model_validate(
+        {
+            **job(render="browser").model_dump(mode="json", exclude_none=True),
+            "sources": [{"url": "https://shop.test/list", "render": "http"}],
+        }
+    )
+    result = run_job(spec, acquisition=routed, base_dir=Path.cwd()).results[0]
+    assert len(result.items) == 4
+    assert live["peak"] == 1

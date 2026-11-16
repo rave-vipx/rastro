@@ -68,6 +68,14 @@ class _JobAcquisition:
     def renders_in_browser(self, url: str) -> bool:
         return self.mode(url) != "http"
 
+    def may_render_in_browser(self, url: str) -> bool:
+        """Links can lead to undeclared URLs (the default mode) or declared browser hosts."""
+        return (
+            self.mode(url) != "http"
+            or self.default != "http"
+            or any(mode != "http" for mode in self.modes.values())
+        )
+
     def scrolls(self, url: str) -> bool:
         """Only plain browser sources scroll: Rastro does not drive scroll in a stealth page."""
         return self.mode(url) == "browser"

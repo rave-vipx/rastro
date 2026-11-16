@@ -11,9 +11,17 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack, asynccontextmanager
 from contextvars import ContextVar
+from dataclasses import dataclass
 
 from rastro.domain.acquisition import AcquisitionPolicy, PinnedTarget
 from rastro.ports.browser import BrowserSession, BrowserSessions
+
+
+@dataclass
+class _Entry:
+    host: str
+    session: BrowserSession
+    rendered: str | None = None  # the URL the session's page shows; ``None`` while unknown
 
 
 class SourceSessions:
@@ -21,7 +29,7 @@ class SourceSessions:
 
     def __init__(self) -> None:
         self._stack = AsyncExitStack()
-        self._open: dict[int, tuple[str, BrowserSession]] = {}
+        self._open: dict[int, _Entry] = {}
 
     async def reuse(
         self,
@@ -36,13 +44,26 @@ class SourceSessions:
             session = await self._stack.enter_async_context(
                 renderer.session(targets, policy=policy)
             )
-            self._open[id(renderer)] = (target.host, session)
+            self._open[id(renderer)] = _Entry(target.host, session)
             return session
-        return entry[1] if entry[0] == target.host else None
+        return entry.session if entry.host == target.host else None
 
-    def current(self, renderer: object) -> BrowserSession | None:
+    def mark_rendered(self, renderer: object, url: str | None) -> None:
+        """Record what the renderer's session page shows now (``None``: unknown, mid-render)."""
         entry = self._open.get(id(renderer))
-        return entry[1] if entry else None
+        if entry is not None:
+            entry.rendered = url
+
+    def showing(self, renderer: object, *, host: str, url: str) -> BrowserSession | None:
+        """The session only while bound to ``host`` and last rendered exactly ``url``.
+
+        A scroll step acts on the session's one page, so it may only follow the page it
+        belongs to: not one rendered in a fresh context, nor one rendered after it.
+        """
+        entry = self._open.get(id(renderer))
+        if entry is None or entry.host != host or entry.rendered != url:
+            return None
+        return entry.session
 
     async def close(self) -> None:
         self._open.clear()

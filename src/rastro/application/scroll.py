@@ -92,6 +92,13 @@ def spend_page() -> bool:
     return True
 
 
+def refund_page() -> None:
+    """Give back a page spent on a step that never ran."""
+    counter = PAGE_COUNTER.get()
+    if counter is not None:
+        counter.remaining += 1
+
+
 def scrolled[T: BaseModel](
     extract_page: Callable[[AcquisitionResult], Awaitable[ExtractionResult[T]]],
     *,
@@ -148,7 +155,8 @@ async def _scroll[T: BaseModel](
             step = await acquisition.scroll(
                 source, settle_ms=spec.settle_ms, max_bytes=limits.max_input_bytes("html")
             )
-        except ConfigurationError:  # a renderer that cannot keep a session cannot scroll
+        except ConfigurationError:  # no session page to scroll: nothing was requested
+            refund_page()
             stop = "step_failed"
             break
         requests += max(1, step.requests)
