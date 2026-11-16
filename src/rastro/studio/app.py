@@ -6,8 +6,9 @@ Origin, per-run token on every POST), bounded bodies and the Content-Security-Po
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from pathlib import Path
+from time import monotonic
 
 from starlette.applications import Starlette
 from starlette.middleware import Middleware
@@ -41,6 +42,7 @@ def create_app(
     allow_stealth: bool = False,
     allow_env: Iterable[str] = (),
     acquisition: AcquisitionPort | None = None,
+    clock: Callable[[], float] = monotonic,
 ) -> tuple[Starlette, str]:
     """Build the app for ``root``; returns it with this run's token (for tests and the CLI).
 
@@ -63,6 +65,7 @@ def create_app(
         allow_stealth=allow_stealth,
         allow_env=allow_env,
         acquisition=acquisition,
+        clock=clock,
     )
     routes = [
         *routes_jobs.routes(studio),

@@ -14,6 +14,7 @@ from starlette.routing import Route
 
 from rastro.application.operator_trust import current_trust
 from rastro.domain.recipes import Pagination
+from rastro.studio.bounds import save_bounds
 from rastro.studio.settings import save_auto_promote, save_pagination
 from rastro.studio.web import Refused, Studio, body, flag, integer, reply, text
 
@@ -62,6 +63,17 @@ def routes(studio: Studio) -> list[Route]:
         sha = await run_in_threadpool(save_auto_promote, path, text(data, "sha256"), enabled)
         return reply({"ok": True, "sha256": sha, "auto_promote": enabled})
 
+    async def bounds(request: Request) -> Response:
+        data = await body(request)
+        path = studio.job_path(text(data, "file"))
+        studio.check_digest(path, data)
+        if "policy" not in data:
+            raise Refused(400, "missing_policy")
+        sha = await run_in_threadpool(
+            save_bounds, path, text(data, "sha256"), text(data, "kind"), data["policy"]
+        )
+        return reply({"ok": True, "sha256": sha})
+
     async def progress(request: Request) -> Response:
         return reply(dict(studio.progress))
 
@@ -71,4 +83,5 @@ def routes(studio: Studio) -> list[Route]:
         studio.route("/api/pagination", pagination, post=True),
         studio.route("/api/auto-promote", auto_promote, post=True),
         studio.route("/api/progress", progress),
+        studio.route("/api/bounds", bounds, post=True),
     ]
