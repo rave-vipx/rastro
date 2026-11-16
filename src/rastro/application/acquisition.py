@@ -8,8 +8,14 @@ from dataclasses import replace
 from time import perf_counter
 from urllib.parse import urlsplit
 
-from rastro.application.acquisition_state import _Host, _Operation, check_page_request
-from rastro.application.auth_headers import request_auth, resolve_auth
+from rastro.application.acquisition_state import (
+    _Host,
+    _Operation,
+    check_page_request,
+    record_response,
+    transfer_headers,
+)
+from rastro.application.auth_headers import resolve_auth
 from rastro.application.conditional import ConditionalRequests
 from rastro.application.cookie_jar import CookieJar
 from rastro.application.destinations import permitted_url, pin_destination
@@ -30,7 +36,6 @@ from rastro.domain.acquisition import (
     AcquisitionPolicy,
     AcquisitionResult,
     HttpResponse,
-    PinnedTarget,
 )
 from rastro.domain.models import Outcome, Representation, Source
 from rastro.ports.acquisition import HttpTransport, Resolver
@@ -121,22 +126,13 @@ class WebAcquirer:
             status, issue = Outcome.TRANSIENT_FAILURE, "operation_timeout"
         except AcquisitionError as error:
             status, issue = error.outcome, error.code
-        return AcquisitionResult(
-            url=operation.url,
+        return operation.result(
             body=body,
-            status=status,
-            issue_code=issue,
-            http_status=operation.http_status,
-            requests=operation.requests,
-            retries=operation.retries,
-            redirects=operation.redirects,
-            bytes_received=operation.bytes_received,
-            network_seconds=operation.network_seconds,
-            acquisition_seconds=perf_counter() - started,
-            retry_after_seconds=operation.retry_after_seconds,
-            egress=source.egress,
-            robots_overridden=bool(operation.overridden),
             raw_body=raw_body,
+            status=status,
+            issue=issue,
+            egress=source.egress,
+            started=started,
         )
 
     async def _robots(self, url: str, operation: _Operation) -> None:
@@ -180,47 +176,8 @@ class WebAcquirer:
             if operation.requests >= self.policy.max_requests:
                 raise AcquisitionError("request_limit", Outcome.PERMANENT_FAILURE)
             response = await self._pinned_get(url, host, operation, max_bytes=max_bytes)
-            operation.bytes_received += response.bytes_received
-            operation.http_status = response.status
-            if response.status in {401, 403, 451}:
-                host.denied = True
-            if response.status == 429:
-                delay = retry_after(response.headers.get("retry-after"))
-                if delay is None:
-                    delay = self.policy.max_retry_delay_seconds
-                host.cooldown = perf_counter() + delay
-                operation.retry_after_seconds = delay
-                raise AcquisitionError("rate_limited", Outcome.ACCESS_RESTRICTION)
-            if response.status in TRANSIENT_STATUSES:
-                delay = retry_after(response.headers.get("retry-after"))
-                if "retry-after" in response.headers and delay is None:
-                    delay = self.policy.max_retry_delay_seconds
-                if delay is not None:
-                    host.cooldown = perf_counter() + delay
-                    operation.retry_after_seconds = delay
-                    # Defer to the caller; never retry before a server's deadline.
-                    raise AcquisitionError("retry_after_pending", Outcome.TRANSIENT_FAILURE)
+            record_response(response, host, operation, self.policy)
             return response
-
-    def _request_headers(
-        self, url: str, target: PinnedTarget, address: str, operation: _Operation
-    ) -> dict[str, str]:
-        headers = dict(operation.headers)
-        if self._cookies is not None and target.host == operation.cookie_host:
-            cookie = self._cookies.header(url)
-            if cookie:
-                headers["Cookie"] = cookie
-        if not operation.robots_fetch:
-            headers.update(
-                request_auth(
-                    operation.auth,
-                    url,
-                    address,
-                    proxied=operation.proxy is not None,
-                    grants=operation.policy.grants,
-                )
-            )
-        return headers
 
     async def _pinned_get(
         self, url: str, host: _Host, operation: _Operation, *, max_bytes: int
@@ -251,7 +208,9 @@ class WebAcquirer:
                         )
                         network_start = perf_counter()
                         try:
-                            headers = self._request_headers(url, target, address, operation)
+                            headers = transfer_headers(
+                                self._cookies, url, target, address, operation
+                            )
                             response = await self._transport.get(
                                 replace(target, address=address, alternates=addresses[index + 1 :]),
                                 headers=headers,

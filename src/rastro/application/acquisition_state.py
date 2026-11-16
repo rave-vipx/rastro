@@ -5,10 +5,21 @@ from __future__ import annotations
 import asyncio
 from contextvars import ContextVar
 from dataclasses import dataclass, field
+from time import perf_counter
 from urllib.parse import urlsplit
 
+from rastro.application.auth_headers import request_auth
+from rastro.application.cookie_jar import CookieJar
+from rastro.application.http_policy import TRANSIENT_STATUSES, retry_after
 from rastro.application.robots_cache import RobotsCache, current_robots_cache
-from rastro.domain.acquisition import AcquisitionError, AcquisitionPolicy, ProxyRoute
+from rastro.domain.acquisition import (
+    AcquisitionError,
+    AcquisitionPolicy,
+    AcquisitionResult,
+    HttpResponse,
+    PinnedTarget,
+    ProxyRoute,
+)
 from rastro.domain.models import Outcome
 
 
@@ -39,6 +50,82 @@ class _Operation:
     auth: dict[str, dict[str, str]] = field(default_factory=dict, repr=False)
     robots_fetch: bool = False  # robots.txt is fetched without credentials
     overridden: set[str] = field(default_factory=set)
+
+    def result(
+        self,
+        *,
+        body: str | None,
+        raw_body: bytes | None,
+        status: Outcome,
+        issue: str | None,
+        egress: str,
+        started: float,
+    ) -> AcquisitionResult:
+        return AcquisitionResult(
+            url=self.url,
+            body=body,
+            status=status,
+            issue_code=issue,
+            http_status=self.http_status,
+            requests=self.requests,
+            retries=self.retries,
+            redirects=self.redirects,
+            bytes_received=self.bytes_received,
+            network_seconds=self.network_seconds,
+            acquisition_seconds=perf_counter() - started,
+            retry_after_seconds=self.retry_after_seconds,
+            egress=egress,
+            robots_overridden=bool(self.overridden),
+            raw_body=raw_body,
+        )
+
+
+def record_response(
+    response: HttpResponse, host: _Host, operation: _Operation, policy: AcquisitionPolicy
+) -> None:
+    """Account for one response and apply the host's denial, rate-limit and retry-after state."""
+    operation.bytes_received += response.bytes_received
+    operation.http_status = response.status
+    if response.status in {401, 403, 451}:
+        host.denied = True
+    if response.status == 429:
+        delay = retry_after(response.headers.get("retry-after"))
+        if delay is None:
+            delay = policy.max_retry_delay_seconds
+        host.cooldown = perf_counter() + delay
+        operation.retry_after_seconds = delay
+        raise AcquisitionError("rate_limited", Outcome.ACCESS_RESTRICTION)
+    if response.status in TRANSIENT_STATUSES:
+        delay = retry_after(response.headers.get("retry-after"))
+        if "retry-after" in response.headers and delay is None:
+            delay = policy.max_retry_delay_seconds
+        if delay is not None:
+            host.cooldown = perf_counter() + delay
+            operation.retry_after_seconds = delay
+            # Defer to the caller; never retry before a server's deadline.
+            raise AcquisitionError("retry_after_pending", Outcome.TRANSIENT_FAILURE)
+
+
+def transfer_headers(
+    cookies: CookieJar | None, url: str, target: PinnedTarget, address: str, operation: _Operation
+) -> dict[str, str]:
+    """Headers for one transfer: the host's session cookie and auth (never auth for robots)."""
+    headers = dict(operation.headers)
+    if cookies is not None and target.host == operation.cookie_host:
+        cookie = cookies.header(url)
+        if cookie:
+            headers["Cookie"] = cookie
+    if not operation.robots_fetch:
+        headers.update(
+            request_auth(
+                operation.auth,
+                url,
+                address,
+                proxied=operation.proxy is not None,
+                grants=operation.policy.grants,
+            )
+        )
+    return headers
 
 
 @dataclass
