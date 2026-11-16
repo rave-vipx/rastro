@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import importlib
-from typing import Any
+from collections.abc import AsyncIterator
+from contextlib import AsyncExitStack, asynccontextmanager
+from typing import TYPE_CHECKING, Any
 
 from rastro.application.destinations import permitted_url
 from rastro.application.http_policy import USER_AGENT
@@ -14,6 +16,9 @@ from rastro.domain.acquisition import (
     PinnedTarget,
 )
 from rastro.domain.models import ConfigurationError, Outcome
+
+if TYPE_CHECKING:
+    from rastro.adapters.playwright_session import PlaywrightSession
 
 INSTALL = (
     "Install pip install 'rastro-engine[browser]' then playwright install chromium "
@@ -52,6 +57,10 @@ class NetworkGuard:
         self.policy = policy
         self.requests = 0
         self.issue: str | None = None
+
+    def begin(self, policy: AcquisitionPolicy) -> None:
+        """Count the next navigation or scroll step on its own, under the budget left for it."""
+        self.policy, self.requests, self.issue = policy, 0, None
 
     async def setup(self, page: Any) -> None:
         try:
@@ -166,3 +175,28 @@ class PlaywrightBrowser:
             raise AcquisitionError(
                 guard.issue or "browser_navigation_failed", Outcome.TRANSIENT_FAILURE
             ) from None
+
+    @asynccontextmanager
+    async def session(
+        self, targets: tuple[PinnedTarget, ...], *, policy: AcquisitionPolicy
+    ) -> AsyncIterator[PlaywrightSession]:
+        """One Chromium context for one source: same guard, flags and blocks as ``render``."""
+        guard = NetworkGuard(policy)
+        async with AsyncExitStack() as stack:
+            try:
+                driver = await stack.enter_async_context(self.api.async_playwright())
+                browser = await driver.chromium.launch(args=browser_flags(targets))
+                stack.push_async_callback(browser.close)
+                context = await browser.new_context(
+                    user_agent=USER_AGENT,
+                    accept_downloads=False,
+                    permissions=[],
+                    service_workers="block",
+                )
+            except Exception:
+                raise AcquisitionError(
+                    "browser_navigation_failed", Outcome.TRANSIENT_FAILURE
+                ) from None
+            from rastro.adapters.playwright_session import PlaywrightSession
+
+            yield PlaywrightSession(context, guard)
