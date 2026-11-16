@@ -1,5 +1,6 @@
 """Offline paginated agenda loading, retention and egress (SYNC-002, SEC-008)."""
 
+import asyncio
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -8,7 +9,7 @@ import pytest
 from rastro.adapters.sqlite_dataset import SQLiteDatasetStore
 from rastro.application.acquisition import WebAcquirer
 from rastro.application.dataset_load import load_results
-from rastro.application.jobs import run_job
+from rastro.application.jobs import run_job, run_job_async
 from rastro.domain.acquisition import HttpResponse
 from rastro.domain.jobs import Job
 from rastro.domain.models import Outcome
@@ -132,8 +133,8 @@ def test_page_two_failure_retains_previous_snapshot(tmp_path):
     assert store.source_status("agenda")[0].reason == "partial_snapshot"
 
 
-@pytest.mark.parametrize("budget", [2, 3])
-def test_shared_budget_includes_robots_and_never_overshoots(budget):
+def test_shared_budget_includes_robots_and_never_overshoots():
+    budget = 2
     report, transport = run(
         job(budget=budget), {"/one": (200, page("A", next="/two")), "/two": (200, page("B"))}
     )
@@ -339,3 +340,71 @@ def test_trailing_dot_next_host_is_the_same_host(next):
 def test_other_host_with_trailing_dot_is_still_refused():
     report, _ = run(job(), {"/one": (200, page("A", next="https://other.test./two"))})
     assert report.results[0].pagination_stop == "off_host"
+
+
+def test_later_page_provenance_drops_query_and_fragment(tmp_path):
+    spec = job()
+    pages = {
+        "/one": (200, page("A", next="/two?page=2&token=abc#f")),
+        "/two": (200, page("B")),
+    }
+    report, transport = run(spec, pages)
+    result = report.results[0]
+    assert "https://agenda.test/two?page=2&token=abc" in transport.urls
+    assert result.records[0].evidence["name"].source_url == "https://agenda.test/one"
+    assert "page_url" not in result.records[0].evidence["name"].model_dump(mode="json")
+    assert result.records[-1].evidence["name"].page_url == "https://agenda.test/two"
+    assert "token=" not in result.model_dump_json()
+    store = SQLiteDatasetStore(tmp_path / "agenda.sqlite")
+    load_results(spec.dataset, ["name"], report, store)
+    assert "token=" not in repr([r.model_dump(mode="json") for r in store.records("agenda")])
+
+
+def test_robots_is_fetched_once_for_all_pages_of_a_run():
+    pages = {"/one": (200, page("A", next="/two")), "/two": (200, page("B"))}
+    report, transport = run(job(budget=3), pages)  # robots + two pages: no per-page robots charge
+    assert report.results[0].status == Outcome.SUCCESS
+    assert transport.urls.count("https://agenda.test/robots.txt") == 1
+    assert report.results[0].metrics.request_count == 3
+
+
+def test_a_run_started_from_a_task_that_inherited_another_runs_cache_asks_again():
+    """A context copied while run A was active must not carry A's robots answer into run B."""
+    release = asyncio.Event()
+    spec = job(pagination=False)
+
+    class Switching(Transport):
+        child = None
+        deny = False
+
+        async def get(self, target, **kwargs):
+            if self.child is None:  # created while run A's robots scope is the current context
+                self.child = asyncio.create_task(later_run())
+            if self.deny and target.url.endswith("/robots.txt"):
+                self.urls.append(target.url)
+                body = b"User-agent: *\nDisallow: /\n"
+                return HttpResponse(200, {"content-type": "text/plain"}, body, len(body))
+            return await super().get(target, **kwargs)
+
+    transport = Switching({"/one": (200, page("A"))})
+
+    def fresh_run():
+        acquirer = WebAcquirer(spec.acquisition, transport=transport, resolver=Resolver())
+        return run_job_async(spec, base_dir=Path.cwd(), acquisition=acquirer)
+
+    async def later_run():
+        await release.wait()
+        return await fresh_run()
+
+    async def scenario():
+        first = await fresh_run()
+        transport.deny = True
+        release.set()
+        return first, await transport.child
+
+    with asyncio.Runner(loop_factory=asyncio.SelectorEventLoop) as runner:
+        first, second = runner.run(scenario())
+    assert first.results[0].status == Outcome.SUCCESS
+    assert second.results[0].status == Outcome.ACCESS_RESTRICTION
+    assert [i.code for i in second.results[0].issues] == ["robots_denied"]
+    assert transport.urls.count("https://agenda.test/robots.txt") == 2

@@ -578,8 +578,8 @@ differ; zero is omitted from the source result. Duplicate identities within one
 page still fail dataset storage, just as without pagination. Without a dataset,
 the extraction result retains every record because no record identity is declared.
 Each paginated record has a 1-based `page_index`. Field provenance keeps the logical
-source in `source_url`; `page_url` records a different contributing page, with queries
-and fragments removed. Drift measurement and repair evidence remain focused on
+source in `source_url`; `page_url` records a different contributing page and keeps only
+scheme, host, port and path (userinfo, `;params`, query and fragment are dropped). Drift measurement and repair evidence remain focused on
 page 1. Repair candidates keep the declared pagination block and strategy.
 Supplied-file extraction does not follow links.
 

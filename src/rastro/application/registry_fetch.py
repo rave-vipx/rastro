@@ -21,6 +21,7 @@ from rastro.application.recipe_hub import ParserFor
 from rastro.application.registry_install import InstalledPackage, install_package_dir
 from rastro.application.registry_store import parse_index
 from rastro.application.registry_url import RegistryLocation, parse_registry_url, registry_policy
+from rastro.application.robots_cache import robots_cache
 from rastro.domain.models import ConfigurationError, Limits, Outcome, Representation, Source
 from rastro.domain.recipe_bundle import (
     EXPECTED_FILE,
@@ -106,7 +107,8 @@ def _fetcher(
 
 
 def _run[T](coroutine: Coroutine[Any, Any, T]) -> T:
-    with asyncio.Runner(loop_factory=asyncio.SelectorEventLoop) as runner:
+    """One search or install shares one robots.txt answer per origin (N10)."""
+    with robots_cache(), asyncio.Runner(loop_factory=asyncio.SelectorEventLoop) as runner:
         return runner.run(coroutine)
 
 

@@ -210,9 +210,9 @@ def test_shared_request_budget_is_not_reset_by_pagination_inside_a_spider_page()
         "/item/2": (200, item("Two")),
         "/item/3": (200, item("Three")),
     }
-    report, transport = run(job(budget=6, pagination=True), pages)
+    report, transport = run(job(budget=4, pagination=True), pages)
     result = report.results[0]
-    assert len(transport.urls) == 6  # robots + page, three times: one budget for the source
+    assert len(transport.urls) == 4  # one robots.txt, then three pages: one budget for the source
     assert result.status == Outcome.PARTIAL_SUCCESS
     assert result.pagination_stop == "spider_budget"
     assert "budget" in {o for _, _, o in outcomes(result)}
