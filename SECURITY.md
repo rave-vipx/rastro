@@ -58,6 +58,19 @@ agent using the MCP server, a Studio workspace. It cannot make trust decisions o
   named `RASTRO_*`, or names the operator lists in `RASTRO_ALLOWED_ENV` (comma-separated)
   or with `--allow-env NAME` (`allow_env=` in Python). Otherwise a hostile job could name
   `GITHUB_TOKEN` as a proxy password and send it to its own proxy.
+- **Network permissions.** Four widenings of the acquisition policy are the operator's alone
+  (SEC-001, SEC-002, SEC-003, SEC-004, SEC-011), through a root flag, an SDK keyword or a
+  `RASTRO_*` variable; a job file, bundle, MCP argument or model output cannot grant them.
+  `--allow-private-network` (`RASTRO_ALLOW_PRIVATE_NETWORK`) permits RFC 1918, ULA, loopback
+  and CGNAT destinations of allowed hosts; link-local and cloud metadata addresses,
+  unspecified, multicast, reserved and mapped forms stay denied. `--allow-port N`
+  (`RASTRO_ALLOWED_PORTS`) adds ports. `--ignore-robots HOST` (`RASTRO_IGNORE_ROBOTS`) stops
+  robots.txt fetching and enforcement for an exact host: the operator asserts permission,
+  Rastro logs one `robots_overridden` line per source and flags the result, and allowlist,
+  pacing and 401/403/451/429 handling still apply. A job's `[[acquisition.auth]]` reads a
+  header value from a `RASTRO_*` or allow-listed variable and sends it only to its exact host
+  over HTTPS, never to robots.txt, another host or a proxy; the browser engine refuses it.
+  See [Operator permissions](docs/acquisition.md#operator-permissions).
 - **Gate overrides from agents.** The MCP `recipe_promote(override_gates=true)` can activate
   a quarantined candidate, including one the semantic judge vetoed, and the agent calling
   it reads untrusted pages that can prompt-inject it. It is refused unless the operator

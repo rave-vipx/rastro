@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from rastro.application.active_recipes import active_job
+from rastro.application.auth_headers import check_job_auth
 from rastro.application.egress_trust import check_job_egress
 from rastro.application.job_loader import (
     PreparedJob,
@@ -68,20 +69,31 @@ async def run_job_async(
     allow_egress: bool = False,
     allow_stealth: bool = False,
     allow_env: Iterable[str] = (),
+    allow_private_network: bool = False,
+    allow_ports: Iterable[int] = (),
+    ignore_robots: Iterable[str] = (),
 ) -> JobRunResult[Any]:
     """Execute a validated job asynchronously through the public Rastro SDK.
 
     With ``recipe_memory``, a stored serving recipe newer than the job file's is used;
     ``JobRunResult.recipes`` reports the recipe each source used. The operator, not the
     job file, allows a remote model endpoint (``allow_remote``), a job-declared egress
-    proxy (``allow_egress``) and extra secret variable names (``allow_env``). A job file
-    can never make Rastro start a model command.
+    proxy (``allow_egress``), extra secret variable names (``allow_env``), private-network
+    destinations (``allow_private_network``), extra ports (``allow_ports``) and hosts whose
+    robots.txt is not enforced (``ignore_robots``). A job file can never grant any of them
+    or make Rastro start a model command.
     """
     allow_env = tuple(allow_env)
     with operator_trust(
-        allow_remote=allow_remote, allow_stealth=allow_stealth, allow_env=allow_env
+        allow_remote=allow_remote,
+        allow_stealth=allow_stealth,
+        allow_env=allow_env,
+        allow_private_network=allow_private_network,
+        allow_ports=allow_ports,
+        ignore_robots=ignore_robots,
     ):
         check_job_egress(job, allow_egress=allow_egress, allow_env=allow_env)
+        check_job_auth(job, allow_env=allow_env)
         active, selections = active_job(
             job, base_dir=base_dir, allow_absolute_paths=allow_absolute_paths
         )
@@ -152,20 +164,31 @@ def run_job(
     allow_egress: bool = False,
     allow_stealth: bool = False,
     allow_env: Iterable[str] = (),
+    allow_private_network: bool = False,
+    allow_ports: Iterable[int] = (),
+    ignore_robots: Iterable[str] = (),
 ) -> JobRunResult[Any]:
     """Run a validated job; uses synchronous extraction when offline and model-free.
 
     With ``recipe_memory``, a stored serving recipe newer than the job file's is used;
     ``JobRunResult.recipes`` reports the recipe each source used. The operator, not the
     job file, allows a remote model endpoint (``allow_remote``), a job-declared egress
-    proxy (``allow_egress``) and extra secret variable names (``allow_env``). A job file
-    can never make Rastro start a model command.
+    proxy (``allow_egress``), extra secret variable names (``allow_env``), private-network
+    destinations (``allow_private_network``), extra ports (``allow_ports``) and hosts whose
+    robots.txt is not enforced (``ignore_robots``). A job file can never grant any of them
+    or make Rastro start a model command.
     """
     allow_env = tuple(allow_env)
     with operator_trust(
-        allow_remote=allow_remote, allow_stealth=allow_stealth, allow_env=allow_env
+        allow_remote=allow_remote,
+        allow_stealth=allow_stealth,
+        allow_env=allow_env,
+        allow_private_network=allow_private_network,
+        allow_ports=allow_ports,
+        ignore_robots=ignore_robots,
     ):
         check_job_egress(job, allow_egress=allow_egress, allow_env=allow_env)
+        check_job_auth(job, allow_env=allow_env)
         active, selections = active_job(
             job, base_dir=base_dir, allow_absolute_paths=allow_absolute_paths
         )
@@ -245,6 +268,9 @@ def run_job_file(
     allow_egress: bool = False,
     allow_stealth: bool = False,
     allow_env: Iterable[str] = (),
+    allow_private_network: bool = False,
+    allow_ports: Iterable[int] = (),
+    ignore_robots: Iterable[str] = (),
 ) -> JobRunResult[Any]:
     """Load and execute a declarative job file; see ``run_job`` for the ``allow_*`` options."""
     file_path = Path(path)
@@ -259,6 +285,9 @@ def run_job_file(
         allow_egress=allow_egress,
         allow_stealth=allow_stealth,
         allow_env=allow_env,
+        allow_private_network=allow_private_network,
+        allow_ports=allow_ports,
+        ignore_robots=ignore_robots,
     )
 
 

@@ -417,3 +417,26 @@ def test_missing_browser_extra_checked_before_http_import(monkeypatch):
     monkeypatch.setattr(builtins, "__import__", guarded)
     with pytest.raises(ConfigurationError, match=r"rastro-engine\[browser\]"):
         job_acquisition(job, None)
+
+
+@pytest.mark.asyncio
+async def test_operator_grants_reach_the_browser_engine():
+    """SEC-001/002/003: the browser path uses the same grants, never from the job."""
+    from rastro.application.operator_trust import operator_trust
+
+    client, renderer, transport, resolver = setup()
+    transport.get.return_value = HttpResponse(
+        200, {"content-type": "text/plain"}, b"User-agent: *\nDisallow: /", 25
+    )
+    with operator_trust(ignore_robots=["example.com"]):
+        result = await client.acquire(Source(url="https://example.com/"), max_bytes=100)
+    assert result.status == Outcome.SUCCESS and result.robots_overridden is True
+    transport.get.assert_not_awaited()  # robots.txt was never fetched
+    resolver.resolve.return_value = ("10.0.0.5",)
+    refused = await client.acquire(Source(url="https://example.com/"), max_bytes=100)
+    assert refused.issue_code == "destination_denied"
+    with operator_trust(allow_private_network=True, ignore_robots=["example.com"]):
+        allowed = await client.acquire(Source(url="https://example.com/"), max_bytes=100)
+    assert allowed.status == Outcome.SUCCESS
+    granted = renderer.render.await_args.kwargs["policy"]
+    assert granted.grants.private_network and "example.com" in granted.grants.ignore_robots

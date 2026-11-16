@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 
 from rastro.adapters.sqlite_dataset import SQLiteDatasetStore
 from rastro.adapters.sqlite_drift import SQLiteDriftMonitor
+from rastro.application.auth_headers import check_job_auth
 from rastro.application.conditional import ConditionalRequests
 from rastro.application.conditional_inputs import extraction_inputs
 from rastro.application.dataset_load import load_results
@@ -65,18 +66,22 @@ def load_job_file(
     allow_egress: bool = False,
     allow_stealth: bool = False,
     allow_env: Iterable[str] = (),
+    allow_private_network: bool = False,
+    allow_ports: Iterable[int] = (),
+    ignore_robots: Iterable[str] = (),
 ) -> JobLoadResult:
     """Run a job file and load its approved fields into the job's ``[dataset]``.
 
     Raises ``ConfigurationError`` for invalid jobs or paths. With ``drift=True`` the
     structural drift of each source is measured and reported. Each loaded source
     reports whether its recipe came from the job file or from ``recipe_memory``.
-    ``allow_*`` are the operator's opt-ins, as for ``run_job``.
+    ``allow_*`` and ``ignore_robots`` are the operator's opt-ins, as for ``run_job``.
     """
     file = Path(path)
     job = load_job(file, allow_absolute_paths=allow_absolute_paths)
     allow_env = tuple(allow_env)
     check_job_egress(job, allow_egress=allow_egress, allow_env=allow_env)
+    check_job_auth(job, allow_env=allow_env, allow_private_network=allow_private_network)
     spec = job.dataset
     if spec is None:
         raise ConfigurationError("job load requires a [dataset] block in the job file")
@@ -115,6 +120,9 @@ def load_job_file(
                 allow_egress=allow_egress,
                 allow_stealth=allow_stealth,
                 allow_env=allow_env,
+                allow_private_network=allow_private_network,
+                allow_ports=allow_ports,
+                ignore_robots=ignore_robots,
                 acquisition=acquisition,
             )
         loaded = load_results(
