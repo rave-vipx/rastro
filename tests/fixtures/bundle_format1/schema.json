@@ -1,0 +1,151 @@
+{
+  "fields": [
+    {
+      "max_length": null,
+      "min_length": 1,
+      "name": "title",
+      "pattern": null,
+      "required": true,
+      "type": "string"
+    },
+    {
+      "max_length": null,
+      "min_length": 1,
+      "name": "performers",
+      "pattern": null,
+      "required": true,
+      "type": "string"
+    },
+    {
+      "max_length": null,
+      "min_length": 1,
+      "name": "venue",
+      "pattern": null,
+      "required": true,
+      "type": "string"
+    },
+    {
+      "max_length": null,
+      "min_length": 1,
+      "name": "city",
+      "pattern": null,
+      "required": true,
+      "type": "string"
+    },
+    {
+      "localized": true,
+      "name": "starts_at",
+      "required": true,
+      "type": "datetime"
+    },
+    {
+      "name": "ticket_url",
+      "required": true,
+      "type": "url"
+    },
+    {
+      "ge": "0",
+      "le": null,
+      "name": "price",
+      "required": false,
+      "type": "decimal"
+    },
+    {
+      "max_length": 3,
+      "min_length": 3,
+      "name": "currency",
+      "pattern": null,
+      "required": false,
+      "type": "string"
+    },
+    {
+      "max_length": null,
+      "min_length": 1,
+      "name": "performance_id",
+      "pattern": null,
+      "required": true,
+      "type": "string"
+    }
+  ],
+  "json_schema": {
+    "properties": {
+      "city": {
+        "minLength": 1,
+        "title": "City",
+        "type": "string"
+      },
+      "currency": {
+        "anyOf": [
+          {
+            "maxLength": 3,
+            "minLength": 3,
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Currency"
+      },
+      "performance_id": {
+        "minLength": 1,
+        "title": "Performance Id",
+        "type": "string"
+      },
+      "performers": {
+        "minLength": 1,
+        "title": "Performers",
+        "type": "string"
+      },
+      "price": {
+        "anyOf": [
+          {
+            "minimum": 0.0,
+            "type": "number"
+          },
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Price"
+      },
+      "starts_at": {
+        "format": "date-time",
+        "title": "Starts At",
+        "type": "string"
+      },
+      "ticket_url": {
+        "format": "uri",
+        "minLength": 1,
+        "title": "Ticket Url",
+        "type": "string"
+      },
+      "title": {
+        "minLength": 1,
+        "title": "Title",
+        "type": "string"
+      },
+      "venue": {
+        "minLength": 1,
+        "title": "Venue",
+        "type": "string"
+      }
+    },
+    "required": [
+      "city",
+      "performance_id",
+      "performers",
+      "starts_at",
+      "ticket_url",
+      "title",
+      "venue"
+    ],
+    "title": "JobRecord",
+    "type": "object"
+  }
+}

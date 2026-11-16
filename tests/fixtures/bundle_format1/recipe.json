@@ -1,0 +1,35 @@
+{
+  "fallbacks": [
+    {
+      "fallbacks": [],
+      "fields": {
+        "city": "address img::attr(alt)",
+        "performance_id": "::attr(data-performance-id)",
+        "performers": "p::text",
+        "starts_at": "time.cyg--dia::text",
+        "ticket_url": "a.cyg--btn::attr(href)",
+        "title": "h2.cyg--display-3::text",
+        "venue": "address img::attr(alt)"
+      },
+      "record_selector": ".item .cyg--info.espectaculo",
+      "require_evidence": true,
+      "strategy": "css",
+      "version": 1
+    }
+  ],
+  "fields": {
+    "city": "address span.cyg--ciudad::text",
+    "currency": "span.cyg--moneda::text",
+    "performance_id": "::attr(data-performance-id)",
+    "performers": "p::text",
+    "price": "span.cyg--precio::text",
+    "starts_at": "time.cyg--dia::text",
+    "ticket_url": "a.cyg--btn::attr(href)",
+    "title": "h2.cyg--display-3::text",
+    "venue": "address img::attr(alt)"
+  },
+  "record_selector": ".item .cyg--info.espectaculo",
+  "require_evidence": true,
+  "strategy": "css",
+  "version": 1
+}

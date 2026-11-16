@@ -1,0 +1,27 @@
+{
+  "context": {
+    "region": "default",
+    "schema_revision": "1",
+    "template": "page"
+  },
+  "files": {
+    "expected.json": "c4daa956b7cfcff3355b528d36b1541a38681a2282599e5b3c611b78ef09ae1d",
+    "recipe.json": "aa663187535550d79d3fb524e23993f9073f3f29e8056c19eb02720cea0bb7c0",
+    "sample.html": "de9c4152d27cd93c1b65a219d1617851170d830b24bb8e89d5122dedf39efa5a",
+    "schema.json": "e0e9c4571a35dd513ef676ba94ff8e2d9828216e59e69b096b0c0c08fc19e575"
+  },
+  "format_version": 1,
+  "last_verified": "2026-11-15",
+  "representation": "html",
+  "source": {
+    "currency": "UYU",
+    "egress": "direct",
+    "languages": [
+      "es-UY",
+      "es"
+    ],
+    "locale": "es-UY",
+    "timezone": "America/Montevideo",
+    "url": "https://sodre.gub.uy/espectaculos/"
+  }
+}
