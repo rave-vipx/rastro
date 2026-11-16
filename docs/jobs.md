@@ -582,6 +582,68 @@ and fragments removed. Drift measurement and repair evidence remain focused on
 page 1. Repair candidates keep the declared pagination block and strategy.
 Supplied-file extraction does not follow links.
 
+## Spider
+
+A job can follow links from the pages it names (N3;
+[ADR 0032](decisions/0032-vibe-coder-spider-and-studio.md)). The start URLs are the job's
+`[[sources]]`; nothing else starts a crawl, and a model or bundle cannot supply a bare
+domain.
+
+```toml
+[spider]
+mode = "spider"                  # absent or "list" keeps today's named sources
+links = "a.item::attr(href)"     # or link_field = "url": one declared field holds the link
+max_depth = 2                    # 1 to 4; depth 0 is the start URL
+max_pages = 25                   # 1 to 100 documents per start source
+same_host = true                 # default; false still needs the host in allowed_hosts
+allow = ["/item"]                # optional path prefixes, whole segments
+deny = ["/login", "/cart"]
+```
+
+| Key | Meaning |
+| --- | --- |
+| `mode` | `"list"` (default) reads each source once; `"spider"` follows links. |
+| `links` | A CSS expression ending in `::attr(name)`; every match is a link. It follows the selector cost policy of any job recipe. HTML sources only. |
+| `link_field` | The name of a declared field whose value in each accepted record is a link. Works for JSON too. Exactly one of `links` or `link_field` is required in spider mode. |
+| `max_depth` | Link hops from the start URL, 1 to 4 (default 2). |
+| `max_pages` | Fetched documents per start source, 1 to 100 (default 25). Pagination pages count. |
+| `same_host` | Default `true`. With `false`, a link is followed only when its host is in `[acquisition].allowed_hosts`. |
+| `allow`, `deny` | Path prefixes matched on whole segments: `/item` covers `/item` and `/item/1`, never `/items`. `deny` wins; with `allow`, a path outside it is skipped. The start URL is always fetched. |
+
+The table grants nothing and rejects unknown keys, so a job file cannot add
+`ignore_robots`, private-network or stealth permissions here. They stay operator flags
+([Operator opt-in](#operator-opt-in)).
+
+Rules:
+
+- Links resolve against the acquired page. Fragments are dropped, hosts are lowercased,
+  the query is kept for the fetch but never logged or reported, and a URL is fetched
+  once. `javascript:`, `mailto:`, userinfo, encoded slashes and dot segments are refused.
+- Every page uses the normal acquisition port: allowlist, robots, pacing, DNS checks,
+  egress and the concurrency cap. Robots are enforced per page unless the operator passed
+  `--ignore-robots` for that host.
+- Pages of one start source share **one** request budget (`max_requests`, robots and
+  redirects included). With pagination, the tighter of the two caps wins and
+  neither resets per page. Pagination inside a spider page costs from the same budget.
+  A recipe with `pagination` makes the crawl sequential so the caps are deterministic.
+- A spider needs an explicit recipe or a stored one (`recipe`, `[sources.recipe]` or
+  `recipe_memory`); a learned recipe is not reused across pages yet and reports
+  `spider_needs_recipe`.
+
+The source result combines records from all pages in discovery order (identity dedupe
+as for pagination, with `page_index` up to 100) and adds `spider`: every discovered URL as
+`{ordinal, depth, host, path, outcome, records}` and no query. Outcomes: `fetched`,
+`no_records` (a links-only page), `partial`, `failed`, `robots_denied`, `off_host`,
+`https_downgrade`, `path_denied`, `invalid_url`, `depth_limit`, `page_limit`, `budget`.
+At most 600 pages are listed; `unreported` counts the rest.
+
+`pagination_stop` ends with `spider_complete` (success, a complete snapshot),
+`spider_depth_limit`, `spider_page_limit`, `spider_budget` or `spider_page_failed`.
+Hitting a cap, a robots denial or a failed page is `partial_success` with the records
+already accepted (exit 3); it never deletes dataset rows. Skipped links that match a
+filter (`off_host`, `path_denied`, ...) are reported but do not make the run partial.
+If no page yields a record the result is `missing_data`, not an empty success.
+
 ## Your own PostgreSQL
 
 Install `pip install 'rastro-engine[postgres]'` and put your connection string in

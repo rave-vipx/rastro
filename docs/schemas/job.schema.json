@@ -1772,6 +1772,88 @@
       "title": "ScheduleSpec",
       "type": "object"
     },
+    "SpiderPolicy": {
+      "additionalProperties": false,
+      "description": "The job's ``[spider]`` table. ``mode = \"list\"`` (the default) is today's behaviour.",
+      "properties": {
+        "allow": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 32,
+          "title": "Allow",
+          "type": "array"
+        },
+        "deny": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 32,
+          "title": "Deny",
+          "type": "array"
+        },
+        "link_field": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Link Field"
+        },
+        "links": {
+          "anyOf": [
+            {
+              "maxLength": 1024,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Links"
+        },
+        "max_depth": {
+          "default": 2,
+          "maximum": 4,
+          "minimum": 1,
+          "title": "Max Depth",
+          "type": "integer"
+        },
+        "max_pages": {
+          "default": 25,
+          "maximum": 100,
+          "minimum": 1,
+          "title": "Max Pages",
+          "type": "integer"
+        },
+        "mode": {
+          "default": "list",
+          "enum": [
+            "list",
+            "spider"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "same_host": {
+          "default": true,
+          "title": "Same Host",
+          "type": "boolean"
+        }
+      },
+      "title": "SpiderPolicy",
+      "type": "object"
+    },
     "StringField": {
       "additionalProperties": false,
       "properties": {
@@ -2171,6 +2253,17 @@
       "minItems": 1,
       "title": "Sources",
       "type": "array"
+    },
+    "spider": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SpiderPolicy"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     }
   },
   "required": [

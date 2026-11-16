@@ -214,6 +214,7 @@ def prepare_job(
                 inference_policy=job.inference_policy,
                 discover_recipes=job.discover_recipes,
                 discovery_aliases=aliases,
+                spider=job.spider,
             )
             if acquisition is not None
             else rastro.Rastro.web(
@@ -224,6 +225,7 @@ def prepare_job(
                 inference_policy=job.inference_policy,
                 discover_recipes=job.discover_recipes,
                 discovery_aliases=aliases,
+                spider=job.spider,
             )
         )
     else:
