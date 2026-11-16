@@ -96,8 +96,11 @@ def combine_pages[T: BaseModel](
     succeeded = stop in SUCCESS_STOPS
     if not succeeded:
         issues.append(Issue(code=stop if stop.startswith("spider_") else f"pagination_{stop}"))
+    capped = any(page.status == Outcome.PARTIAL_SUCCESS for page in pages)  # a scroll cap
     status = (
-        Outcome.SUCCESS if succeeded else (Outcome.PARTIAL_SUCCESS if records else first.status)
+        Outcome.SUCCESS
+        if succeeded and not capped
+        else (Outcome.PARTIAL_SUCCESS if records else first.status)
     )
     # Keep page one's identity: drift/repair snapshots belong to that document only.
     totals = {

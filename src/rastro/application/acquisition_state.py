@@ -49,8 +49,8 @@ class PaginationScope:
     host: str | None
     secure: bool
     remaining: int
+    total: int = 0  # the budget this traversal started with
     hosts: frozenset[str] = frozenset()  # further hosts a spider may reach (all allowed_hosts)
-    documents: int | None = None  # documents left for the source; None = the recipe's own cap
 
 
 PAGINATION_SCOPE: ContextVar[PaginationScope | None] = ContextVar("pagination_scope", default=None)

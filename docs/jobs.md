@@ -551,7 +551,8 @@ same acquisition port, permission allowlist, robots rules, pacing, DNS checks an
 egress policy. One `max_requests` budget covers the whole source, including robots,
 redirects, retries and address fallbacks when using `WebAcquirer`. Redirects cannot
 escape the exact source hostname or downgrade HTTPS. There are no JavaScript clicks,
-infinite scroll, URL templates, guessed page numbers or cross-host traversal.
+URL templates, guessed page numbers or cross-host traversal; scrolling a rendered page
+is a separate, bounded [`[scroll]`](#scroll) table.
 
 The source result combines records in page order and reports `pagination_stop`:
 `no_next`, `repeat`, `empty_page`, `max_pages`, `off_host`, `https_downgrade`,
@@ -582,6 +583,38 @@ and fragments removed. Drift measurement and repair evidence remain focused on
 page 1. Repair candidates keep the declared pagination block and strategy.
 Supplied-file extraction does not follow links.
 
+## Scroll
+
+A browser source can scroll to load more records (N9,
+[ADR 0033](decisions/0033-scroll-registry-url-and-spec-amendments.md)):
+
+```toml
+[acquisition]
+allowed_hosts = ["example.com"]
+render = "browser"
+
+[scroll]
+max_steps = 10          # 1 to 30
+settle_ms = 500         # 100 to 3000
+stop_when = "no_new_records"
+```
+
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `max_steps` | `10` | Scroll steps per page, from 1 through 30. |
+| `settle_ms` | `500` | The longest a step waits after scrolling before it reads the page, from 100 through 3000. |
+| `stop_when` | `"no_new_records"` | The only value: a step with no new accepted record ends the scroll. |
+
+The table is optional and applies to the whole job; unknown keys and out-of-range values
+are rejected. It needs `render = "browser"`: with `render = "http"` it is ignored and the
+source result carries the issue `scroll_ignored_http` (still a success); with
+`render = "stealth"` it is ignored the same way and the issue is `scroll_unsupported_stealth`
+(Rastro does not drive scroll in a stealth page). Scroll never
+turns on stealth or challenge solving, and a job file cannot grant either. Steps spend the
+per-source `max_requests` budget, shared with pagination; hitting `max_steps` or the budget
+is `partial_success` (`scroll_max_steps`, `scroll_budget`) and keeps every accepted record.
+See [Scroll](acquisition.md#scroll) for the full behavior and
+[Browser contexts](acquisition.md#browser-contexts) for how a source's context is reused.
 ## Spider
 
 A job can follow links from the pages it names (N3;
@@ -626,6 +659,12 @@ Rules:
   redirects included). With pagination, the tighter of the two caps wins and
   neither resets per page. Pagination inside a spider page costs from the same budget.
   A recipe with `pagination` makes the crawl sequential so the caps are deterministic.
+- With `render = "browser"` (or `"stealth"`), a start source's pages share **one** browser
+  context, closed when the source finishes, and the crawl fetches one page at a time
+  (HTTP spiders keep `max_concurrency`). With `[scroll]`, every scroll step also spends
+  `max_pages` and `max_requests`: the tighter cap wins, and a page reached after the caps
+  are spent is not scrolled and is `partial` (`scroll_budget`). Records already collected
+  are kept.
 - A spider needs an explicit recipe or a stored one (`recipe`, `[sources.recipe]` or
   `recipe_memory`); a learned recipe is not reused across pages yet and reports
   `spider_needs_recipe`.

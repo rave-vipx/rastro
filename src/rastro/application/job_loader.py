@@ -214,6 +214,7 @@ def prepare_job(
                 inference_policy=job.inference_policy,
                 discover_recipes=job.discover_recipes,
                 discovery_aliases=aliases,
+                scroll=job.scroll,
                 spider=job.spider,
             )
             if acquisition is not None
@@ -225,6 +226,7 @@ def prepare_job(
                 inference_policy=job.inference_policy,
                 discover_recipes=job.discover_recipes,
                 discovery_aliases=aliases,
+                scroll=job.scroll,
                 spider=job.spider,
             )
         )

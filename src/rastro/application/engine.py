@@ -20,6 +20,7 @@ from rastro.domain.models import (
     Representation,
     Source,
 )
+from rastro.domain.scroll import ScrollSpec
 from rastro.domain.spider import SpiderPolicy
 from rastro.ports.acquisition import AcquisitionPort
 from rastro.ports.discovery import AliasMap, RecipeDiscovery
@@ -44,6 +45,7 @@ class Rastro:
         discover_recipes: bool = False,
         discovery: RecipeDiscovery | None = None,
         discovery_aliases: AliasMap | None = None,
+        scroll: ScrollSpec | None = None,
         spider: SpiderPolicy | None = None,
     ) -> None:
         from rastro.adapters.structured import JsonDiscovery, JsonParser
@@ -77,6 +79,7 @@ class Rastro:
             discover_recipes=discover_recipes or model is not None,
             acquisition=acquisition,
             policy=policy,
+            scroll=scroll,
             spider=spider,
         )
 
@@ -133,6 +136,7 @@ class Rastro:
         inference_policy: InferencePolicy | None = None,
         discover_recipes: bool = False,
         discovery_aliases: AliasMap | None = None,
+        scroll: ScrollSpec | None = None,
         spider: SpiderPolicy | None = None,
     ) -> Rastro:
         """Create an HTTP client. Install rastro-engine[http]; use one event loop per client."""
@@ -153,6 +157,7 @@ class Rastro:
             inference_policy=inference_policy,
             discover_recipes=discover_recipes,
             discovery_aliases=discovery_aliases,
+            scroll=scroll,
             spider=spider,
         )
 

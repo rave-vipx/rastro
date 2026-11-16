@@ -1772,6 +1772,34 @@
       "title": "ScheduleSpec",
       "type": "object"
     },
+    "ScrollSpec": {
+      "additionalProperties": false,
+      "description": "Scroll a rendered page until a step finds no new records, or a cap is reached.\n\nScroll applies to ``render = \"browser\"``. It never enables stealth or challenge solving.\nHTTP sources ignore it and say so (``scroll_ignored_http``); so do stealth sources\n(``scroll_unsupported_stealth``): Scrapling keeps the page pooled, but Rastro does not\ndrive scroll in it. Both stay successful runs.",
+      "properties": {
+        "max_steps": {
+          "default": 10,
+          "maximum": 30,
+          "minimum": 1,
+          "title": "Max Steps",
+          "type": "integer"
+        },
+        "settle_ms": {
+          "default": 500,
+          "maximum": 3000,
+          "minimum": 100,
+          "title": "Settle Ms",
+          "type": "integer"
+        },
+        "stop_when": {
+          "const": "no_new_records",
+          "default": "no_new_records",
+          "title": "Stop When",
+          "type": "string"
+        }
+      },
+      "title": "ScrollSpec",
+      "type": "object"
+    },
     "SpiderPolicy": {
       "additionalProperties": false,
       "description": "The job's ``[spider]`` table. ``mode = \"list\"`` (the default) is today's behaviour.",
@@ -2238,6 +2266,17 @@
       "anyOf": [
         {
           "$ref": "#/$defs/ScheduleSpec"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "scroll": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ScrollSpec"
         },
         {
           "type": "null"

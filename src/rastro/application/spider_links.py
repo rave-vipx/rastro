@@ -93,6 +93,7 @@ class LinkHarvest:
     def __init__(self, spider: SpiderPolicy, parser: DocumentParser, limits: Limits) -> None:
         self._spider, self._parser, self._limits = spider, parser, limits
         self.hrefs: list[str] = []
+        self._known: set[str] = set()  # a scrolled page is added once per step
         self.failed = False
 
     def add[T: BaseModel](
@@ -107,7 +108,10 @@ class LinkHarvest:
         except (ConfigurationError, ResourceLimitError):
             self.failed = True
             return
-        self.hrefs.extend(_absolute(url, href) for href in found)
+        for href in (_absolute(url, value) for value in found):
+            if href not in self._known:
+                self._known.add(href)
+                self.hrefs.append(href)
 
     def _from_field[T: BaseModel](self, result: ExtractionResult[T]) -> list[str]:
         name = self._spider.link_field

@@ -16,6 +16,7 @@ from rastro.application.acquisition_state import (
 )
 from rastro.application.outcomes import failure_result, stamp_acquired
 from rastro.application.pagination_records import combine_pages
+from rastro.application.scroll import pages_left, spend_page
 from rastro.domain.acquisition import AcquisitionPolicy, AcquisitionResult
 from rastro.domain.models import (
     ConfigurationError,
@@ -159,14 +160,13 @@ async def _traverse[T: BaseModel](
                 stop = "repeat"
             if not stop and len(pages) >= recipe.pagination.max_pages:
                 stop = "max_pages"
-            if not stop and scope.documents is not None and scope.documents <= 0:
-                stop = "max_pages"  # the spider's page cap counts pagination documents too
+            if not stop and not pages_left():
+                stop = "max_pages"  # the crawl's page cap counts pagination documents too
             if not stop and scope.remaining <= 0:
                 stop = "budget"
             if stop:
                 break
-            if scope.documents is not None:
-                scope.documents -= 1
+            spend_page()
             current = following
         except (ValueError, ValidationError, ConfigurationError, ResourceLimitError):
             stop = "invalid_next"
@@ -188,4 +188,8 @@ def _page_stop[T: BaseModel](fetched: AcquisitionResult, result: ExtractionResul
         return "budget"
     if fetched.issue_code in {"off_host", "https_downgrade", "invalid_next"}:
         return fetched.issue_code
-    return None if result.status == Outcome.SUCCESS else "page_failure"
+    # A page whose scroll hit a cap is partial but real: later pages are still collected.
+    scrolled = result.status == Outcome.PARTIAL_SUCCESS and all(
+        issue.code.startswith("scroll_") for issue in result.issues
+    )
+    return None if result.status == Outcome.SUCCESS or scrolled else "page_failure"

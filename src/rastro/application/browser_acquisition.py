@@ -9,18 +9,26 @@ from time import perf_counter
 from urllib.parse import urlsplit
 
 from rastro.application.acquisition import WebAcquirer
-from rastro.application.acquisition_state import _Host, _Operation, check_page_request
+from rastro.application.acquisition_state import (
+    PAGINATION_SCOPE,
+    _Host,
+    _Operation,
+    check_page_request,
+)
+from rastro.application.browser_sessions import SOURCE_SESSIONS
 from rastro.application.destinations import permitted_url, pin_destination
 from rastro.application.operator_trust import current_trust
+from rastro.application.stealth_grant import require_stealth_grant
 from rastro.domain.acquisition import (
     AcquisitionError,
     AcquisitionPolicy,
     AcquisitionResult,
     HttpResponse,
+    PinnedTarget,
 )
 from rastro.domain.models import ConfigurationError, Outcome, Representation, Source
 from rastro.ports.acquisition import HttpTransport, Resolver
-from rastro.ports.browser import BrowserRenderer
+from rastro.ports.browser import BrowserRenderer, BrowserSessions
 
 _render_seconds: ContextVar[float] = ContextVar("render_seconds", default=0)
 
@@ -35,12 +43,12 @@ class BrowserAcquirer(WebAcquirer):
         resolver: Resolver,
         allow_stealth: bool = False,
     ):
-        if (policy.render == "stealth" or policy.solve_challenges) and not (
-            allow_stealth is True or current_trust().allow_stealth
-        ):
-            raise ConfigurationError(
-                "Stealth requires --allow-stealth, allow_stealth=True or RASTRO_ALLOW_STEALTH=1"
-            )
+        # First, before the renderer is looked at: no grant, no stealth browser (ADR 0034).
+        require_stealth_grant(
+            stealth=policy.render == "stealth",
+            solve_challenges=policy.solve_challenges,
+            allow=allow_stealth,
+        )
         if policy.egress_profiles:
             raise ConfigurationError("Browser modes do not support egress profiles")
         if policy.auth:
@@ -89,19 +97,8 @@ class BrowserAcquirer(WebAcquirer):
                             )
                     started = perf_counter()
                     try:
-                        result = await self._renderer.render(
-                            target,
-                            policy=operation.policy.model_copy(
-                                update={
-                                    "allow_http": operation.policy.allow_http
-                                    and urlsplit(url).scheme == "http",
-                                    "max_requests": self.policy.max_requests
-                                    - operation.requests
-                                    + 1,
-                                }
-                            ),
-                            max_bytes=max_bytes,
-                            targets=tuple(targets),
+                        result = await self._render(
+                            target, tuple(targets), operation, url, max_bytes
                         )
                     finally:
                         _render_seconds.set(perf_counter() - started)
@@ -127,3 +124,98 @@ class BrowserAcquirer(WebAcquirer):
                     )
             finally:
                 host.next_request = perf_counter() + host.interval
+
+    async def _render(
+        self,
+        target: PinnedTarget,
+        targets: tuple[PinnedTarget, ...],
+        operation: _Operation,
+        url: str,
+        max_bytes: int,
+    ) -> AcquisitionResult:
+        """Render in the source's open context when there is one, else in a fresh one."""
+        policy = operation.policy.model_copy(
+            update={
+                "allow_http": operation.policy.allow_http and urlsplit(url).scheme == "http",
+                "max_requests": self.policy.max_requests - operation.requests + 1,
+            }
+        )
+        scope = SOURCE_SESSIONS.get()
+        if scope is not None and isinstance(self._renderer, BrowserSessions):
+            session = await scope.reuse(self._renderer, target, targets, policy)
+            if session is not None:
+                scope.mark_rendered(self._renderer, None)  # unknown until this render returns
+                result = await session.render(target, policy=policy, max_bytes=max_bytes)
+                if result.status == Outcome.SUCCESS:
+                    scope.mark_rendered(self._renderer, _canonical(result.url, policy))
+                return result
+        return await self._renderer.render(
+            target, policy=policy, max_bytes=max_bytes, targets=targets
+        )
+
+    def renders_in_browser(self, url: str) -> bool:
+        return True
+
+    def may_render_in_browser(self, url: str) -> bool:
+        return True
+
+    def scrolls(self, url: str) -> bool:
+        return self.policy.render != "stealth"  # Rastro does not drive scroll in a stealth page
+
+    def scroll_skip_code(self, url: str) -> str:
+        return "scroll_unsupported_stealth"
+
+    async def scroll(self, source: Source, *, settle_ms: int, max_bytes: int) -> AcquisitionResult:
+        """One scroll step in the source's open context, under the same budget and pacing."""
+        scope = SOURCE_SESSIONS.get()
+        if scope is None or not isinstance(self._renderer, BrowserSessions):
+            raise ConfigurationError("Scroll needs a browser renderer that keeps one session")
+        policy = self.policy.with_grants(current_trust().network_grants())
+        started = perf_counter()
+        try:
+            canonical, hostname, _ = permitted_url(source.url, policy)
+            session = scope.showing(self._renderer, host=hostname, url=canonical)
+            if session is None:  # a page rendered outside the session has no page to scroll
+                raise ConfigurationError("This page is not the one the session last rendered")
+            host = self._hosts[hostname]
+            async with host.lock, self._slots:
+                await asyncio.sleep(max(0, host.next_request - perf_counter()))
+                check_page_request(source.url)
+                budget = PAGINATION_SCOPE.get()
+                step = policy.model_copy(
+                    update={"max_requests": budget.remaining + 1 if budget else policy.max_requests}
+                )
+                try:
+                    async with asyncio.timeout(
+                        self.policy.request_timeout_seconds + settle_ms / 1000
+                    ):
+                        result = await session.scroll(
+                            policy=step, max_bytes=max_bytes, settle_ms=settle_ms
+                        )
+                finally:
+                    host.next_request = perf_counter() + host.interval
+            permitted_url(result.url, policy)
+            if result.status != Outcome.SUCCESS or not result.body:
+                raise AcquisitionError(
+                    result.issue_code or "empty_document",
+                    result.status if result.status != Outcome.SUCCESS else Outcome.INVALID_DATA,
+                )
+            if len(result.body.encode("utf-8")) > max_bytes:
+                raise AcquisitionError("response_too_large", Outcome.PERMANENT_FAILURE)
+            return replace(result, acquisition_seconds=perf_counter() - started)
+        except TimeoutError:
+            return _scroll_failure(source, Outcome.TRANSIENT_FAILURE, "operation_timeout")
+        except AcquisitionError as error:
+            return _scroll_failure(source, error.outcome, error.code)
+
+
+def _canonical(url: str, policy: AcquisitionPolicy) -> str:
+    """The form ``scroll`` compares: what ``permitted_url`` makes of the rendered URL."""
+    try:
+        return permitted_url(url, policy)[0]
+    except AcquisitionError:
+        return ""  # never equals a permitted URL, so no scroll follows it
+
+
+def _scroll_failure(source: Source, status: Outcome, code: str) -> AcquisitionResult:
+    return AcquisitionResult(source.url, None, status, code, egress=source.egress)

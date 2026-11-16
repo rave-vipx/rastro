@@ -21,6 +21,7 @@ from rastro.application.destinations import permitted_url
 from rastro.application.operator_trust import current_trust
 from rastro.application.outcomes import failure_result
 from rastro.application.pagination_records import combine_pages
+from rastro.application.scroll import PAGE_COUNTER, PageCounter, pages_left, spend_page
 from rastro.application.spider_links import (
     Link,
     LinkHarvest,
@@ -80,14 +81,16 @@ async def extract_spider[T: BaseModel](
         hosts=frozenset()
         if spider.same_host
         else frozenset(policy.allowed_hosts if policy else ()),
-        documents=spider.max_pages,
+        total=policy.max_requests if policy else 30,
     )
     token = PAGINATION_SCOPE.set(scope)
+    pages = PAGE_COUNTER.set(PageCounter(spider.max_pages))  # scroll steps spend it too
     try:
         crawl = _Crawl(source, schema, spider, parser, limits, fetch_page, scope, policy)
         workers = 1 if sequential or policy is None else policy.max_concurrency
         return await crawl.run(start, workers)
     finally:
+        PAGE_COUNTER.reset(pages)
         PAGINATION_SCOPE.reset(token)
 
 
@@ -134,10 +137,9 @@ class _Crawl[T: BaseModel]:
         for ordinal, link in frontier:
             if self.scope.remaining <= 0:
                 self._note(ordinal, depth, link, "budget")
-            elif not self.scope.documents:
+            elif not spend_page():
                 self._note(ordinal, depth, link, "page_limit")
             else:
-                self.scope.documents -= 1
                 batch.append((ordinal, link))
         return batch
 
@@ -189,7 +191,7 @@ class _Crawl[T: BaseModel]:
             result = result.model_copy(update={"issues": ()})
         if outcome == "budget" or result.pagination_stop == "budget":
             self.hit.add("budget")
-        if result.pagination_stop == "max_pages" and not self.scope.documents:
+        if result.pagination_stop == "max_pages" and not pages_left():
             self.hit.add("page_limit")  # pagination ran into the spider's page cap
         if outcome in PAGE_FAILURES or harvest.failed:
             self.hit.add("page_failed")

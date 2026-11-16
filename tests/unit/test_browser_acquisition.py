@@ -440,3 +440,78 @@ async def test_operator_grants_reach_the_browser_engine():
     assert allowed.status == Outcome.SUCCESS
     granted = renderer.render.await_args.kwargs["policy"]
     assert granted.grants.private_network and "example.com" in granted.grants.ignore_robots
+
+
+def _cdp_guard(max_requests):
+    from rastro.adapters.playwright_browser import NetworkGuard
+
+    guard = NetworkGuard(
+        AcquisitionPolicy(allowed_hosts=("example.com",), max_requests=max_requests)
+    )
+    page, session, handlers = AsyncMock(), AsyncMock(), {}
+    session.on = lambda event, callback: handlers.update({event: callback})
+    page.context.new_cdp_session.return_value = session
+    return guard, page, session, handlers
+
+
+async def _fire(handlers, session, count):
+    """Fire ``count`` same-host XHRs and return how many were continued."""
+    continued = 0
+    for number in range(count):
+        await handlers["Fetch.requestPaused"](
+            {
+                "requestId": str(number),
+                "request": {"url": "https://example.com/poll"},
+                "resourceType": "XHR",
+            }
+        )
+        continued += session.send.call_args.args[0] == "Fetch.continueRequest"
+    return continued
+
+
+@pytest.mark.asyncio
+async def test_idle_guard_fails_every_request_between_steps():
+    """H1: traffic between navigations or scroll steps never passes, nor is it charged."""
+    from types import SimpleNamespace
+
+    guard, page, session, handlers = _cdp_guard(5)
+    await guard.setup(page)
+    policy = guard.policy
+    for _ in range(3):  # three steps, the page polling after each of them
+        guard.begin(policy)
+        assert await _fire(handlers, session, 2) == 2
+        guard.result("https://example.com/", "<p>x</p>", 200, 100)
+        before = guard.requests
+        assert await _fire(handlers, session, 10) == 0  # idle: all failed
+        assert guard.requests == before and guard.issue is None
+    route = AsyncMock()
+    route.request = SimpleNamespace(
+        url="https://example.com/poll", resource_type="xhr", frame=SimpleNamespace(page=page)
+    )
+    await page.context.route.call_args.args[1](route)
+    route.abort.assert_awaited_once()  # the context route is idle too
+
+
+@pytest.mark.asyncio
+async def test_guard_goes_idle_after_a_failed_step_and_rearms_on_begin():
+    guard, page, session, handlers = _cdp_guard(5)
+    await guard.setup(page)
+    guard.begin(guard.policy)
+    guard.end()  # the step raised before result()
+    assert await _fire(handlers, session, 3) == 0
+    guard.begin(guard.policy)
+    assert await _fire(handlers, session, 3) == 3
+
+
+@pytest.mark.asyncio
+async def test_guard_sets_up_each_page_once():
+    """L1: a pooled page that is set up again must not stack another CDP session."""
+    guard, page, session, _ = _cdp_guard(5)
+    await guard.setup(page)
+    await guard.setup(page)
+    assert page.context.new_cdp_session.await_count == 1
+    assert page.context.route.await_count == 1
+    other = AsyncMock()
+    other.context.new_cdp_session.return_value = session
+    await guard.setup(other)
+    assert other.context.new_cdp_session.await_count == 1
