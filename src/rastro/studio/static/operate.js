@@ -3,6 +3,8 @@
 import { $, api, bind, el, pill, requireFile, show, state, table } from "./dom.js";
 import { showAlerts, withProgress } from "./controls.js";
 
+import { spiderLine } from "./bounds.js";
+
 const PAGE_SIZE = 25;
 let offset = 0;
 
@@ -30,7 +32,7 @@ async function extract() {
   const data = await withProgress(() => api("/api/extract", { file: requireFile() }));
   showAlerts("run-alerts", data.alerts);
   const j = data.job;
-  show("run-status", `Extract ${j.status}: ${j.records_accepted} accepted, ${j.records_rejected} rejected. Nothing was written.`,
+  show("run-status", `Extract ${j.status}: ${j.records_accepted} accepted, ${j.records_rejected} rejected. Nothing was written. ${spiderLine(data.sources)}`,
     j.status === "success" ? "good" : "warn");
   const rows = data.sources.map((s) => [s.source_index, s.source_url, s.status, s.records, origin(s), issues(s.issues)]);
   $("run-result").replaceChildren(table(["#", "source", "status", "records", "recipe", "issues"], rows));

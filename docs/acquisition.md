@@ -126,7 +126,10 @@ signature, so existing ports continue to work.
 
 Rastro identifies itself as `Rastro/<installed version>`, checks robots.txt for each source origin,
 and uses the same protected transport for robots and documents. Rules are reused
-only within one operation. A 404/410 robots response allows acquisition. Denials,
+for one origin within one run (or one registry install), in memory only: a new run
+asks again, and `ignore_robots` is checked before the cache. A refused answer (denial,
+HTML, malformed text, server failure) is remembered for that run with the same outcome. A 404/410 robots response
+allows acquisition. Denials,
 HTML instead of robots text, malformed encoding, and server failures fail closed.
 Robots redirects must stay within the allowlist. `Crawl-delay` is honored; for
 `Request-rate`, Rastro conservatively spaces requests by the full window.

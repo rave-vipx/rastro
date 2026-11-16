@@ -16,6 +16,7 @@ from rastro.application.job_loader import load_job, validate_job_paths
 from rastro.application.job_preview import bounded_preview, preview_job
 from rastro.domain.jobs import Job
 from rastro.studio import editing, files
+from rastro.studio.bounds import controls
 from rastro.studio.web import HEADERS, Refused, Studio, body, reply, text
 
 STATIC = Path(__file__).parent / "static"
@@ -29,6 +30,7 @@ ASSETS = frozenset(
         "ai.js",
         "controls.js",
         "registry.js",
+        "bounds.js",
     }
 )
 
@@ -100,6 +102,7 @@ def routes(studio: Studio) -> list[Route]:
                 "sources": len(job.sources),
                 "auto_promote": bool(job.repair and job.repair.auto_promote),
                 "recipes": _recipes(job),
+                "bounds": controls(job),
             }
         )
 

@@ -16,7 +16,12 @@ from starlette.requests import Request
 from starlette.responses import Response
 from starlette.routing import Route
 
-from rastro.application.job_from_url import html_from_url, new_job_from_url
+from rastro.application.job_from_url import (
+    FetchedUrl,
+    html_from_url,
+    new_job_from_url,
+    prepare_url_policy,
+)
 from rastro.application.job_loader import _read_local_source
 from rastro.application.job_new import new_job
 from rastro.application.suggest import suggest
@@ -99,7 +104,7 @@ def routes(studio: Studio) -> list[Route]:
             if url is None:
                 raise Refused(400, "missing_url")
             fetched = html_from_url(url, acquisition=studio.acquisition)
-            studio.url_preview = fetched
+            studio.url_preview = (url, studio.clock(), fetched)
             return (
                 suggest(
                     fetched.html,
@@ -152,7 +157,7 @@ def routes(studio: Studio) -> list[Route]:
                 identity=tuple(identity),
                 recipe_memory=memory,
                 acquisition=studio.acquisition,
-                fetched=studio.url_preview,
+                fetched=_preview(studio, url),
             )
             studio.url_preview = None
             return written, allow_http
@@ -180,3 +185,13 @@ def _beside(target: Path, name: str | None, key: str) -> str | None:
     if not wanted.parent.is_dir():
         raise Refused(400, f"{key}_folder_missing")
     return name
+
+
+def _preview(studio: Studio, url: str) -> FetchedUrl | None:
+    cached = studio.url_preview
+    studio.url_preview = None
+    if cached is not None and cached[0] == url and 0 <= studio.clock() - cached[1] < 600:
+        _, policy = prepare_url_policy(url)
+        if cached[2].policy == policy:
+            return cached[2]
+    return None

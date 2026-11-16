@@ -133,8 +133,8 @@ The page has two views, **Jobs** and **New scraper**, switched with the buttons 
 
 These controls sit in the Jobs view and call the existing services. URL-first job
 creation (N1) and the acquisition schema for spider and scroll (N2, N3, N9) are
-integrated. Jobs with `[spider]` and `[scroll]` list and validate normally; editors for
-those policies are a follow-up. A visible control is not a grant.
+integrated. Jobs with `[spider]` and `[scroll]` can be edited through the bounded
+controls below. A visible control is not a grant.
 
 - **Next page and repair settings.** Pick the job recipe or a source's recipe, type
   the next-link selector (for example `a.next::attr(href)`) and a page cap from 1 to 50,
@@ -215,3 +215,24 @@ several `--example` records when one is not enough. Repair needs `recipe_memory`
 `[dataset]` in the job. Long-running actions keep their button disabled until they finish; progress names the
 running operation and its outcome, not a page count or an estimate of completion time. It is single-user and has no authentication beyond the
 per-run token.
+
+
+### Bounded links and scrolling (N3, N9)
+
+After creating a scraper, open its job and use **Follow links** to enable a
+bounded spider. Set link depth (1–4), page cap (1–100), a link selector,
+same-host restriction, and optional allowed or denied path prefixes.
+Jobs already using a declared link field keep that field instead of a selector.
+Other hosts still need the job's allowed-host list; these controls grant no
+network permissions.
+
+**Scroll for more records** sets a step cap (1–30) and wait (100–3000 ms),
+stopping when no new records appear. The controls are disabled unless a source
+uses browser rendering: HTTP ignores scroll and stealth does not support it.
+Saving validates the domain policy before replacing the job atomically and
+retains TOML comments. Unusual TOML layouts that cannot be safely edited are refused.
+Extract results show each reported spider page's outcome, host and path, never
+its page body.
+
+URL previews are reused only for the exact requested URL and for less than ten
+minutes. Creating after expiry fetches again under the operator's current grants.

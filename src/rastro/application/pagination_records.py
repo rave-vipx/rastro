@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from rastro.domain.dataset import DatasetRecordKey, DatasetStorageError
 from rastro.domain.job_dataset import DatasetSpec
 from rastro.domain.models import ExtractionRecord, ExtractionResult, Issue, Limits, Metrics, Outcome
+from rastro.domain.provenance_url import provenance_url
 
 # A normal end of the list is a complete snapshot; every other stop is partial.
 COMPLETE_STOPS = frozenset({"no_next", "repeat", "spider_complete"})
@@ -69,7 +70,7 @@ def combine_pages[T: BaseModel](
                     name: evidence.model_copy(
                         update={
                             "source_url": first.source_url,
-                            "page_url": evidence.page_url or evidence.source_url,
+                            "page_url": provenance_url(evidence.page_url or evidence.source_url),
                         }
                     )
                     if evidence.source_url != first.source_url
