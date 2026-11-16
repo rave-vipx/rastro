@@ -35,6 +35,7 @@ def _extract_summary(report: JobRunResult[Any], selections: list[dict[str, Any]]
                 "source_url": result.source_url,
                 "status": str(result.status),
                 "pagination_stop": result.pagination_stop,
+                "spider": plain(result.spider) if result.spider else None,
                 "records": len(result.records),
                 "issues": [plain(issue) for issue in result.issues[:MAX_ISSUES]],
                 "recipe_origin": chosen.get("recipe_origin"),

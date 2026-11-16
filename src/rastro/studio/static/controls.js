@@ -2,9 +2,12 @@
 // readable alerts and the observed operation line. Text is always set as text content.
 import { $, api, bind, el, requireFile, show, state } from "./dom.js";
 
+import { fillBounds, initBounds } from "./bounds.js";
+
 let recipes = [];
 
 export function fillControls(data) {
+  fillBounds(data.bounds);
   $("auto-promote").checked = data.auto_promote === true;
   recipes = data.recipes || [];
   $("pagination-source").replaceChildren(...recipes.map((row, index) =>
@@ -99,6 +102,7 @@ async function saveStealth(enabled) {
 }
 
 export async function initControls() {
+  initBounds();
   showStealth(await api("/api/session"));
   if ($("allow-stealth").disabled) {
     show("controls-status", "Stealth was allowed when Studio started (--allow-stealth or RASTRO_ALLOW_STEALTH).", "muted");

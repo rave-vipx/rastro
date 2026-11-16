@@ -91,3 +91,44 @@ def edited_job(text: str, suffix: str, edit: SelectorEdit) -> tuple[str, Job]:
     """Apply ``edit`` and validate the whole result as a job."""
     new_text = apply_edit(text, suffix, edit)
     return new_text, parse_job(new_text, format="json" if suffix.lower() == ".json" else "toml")
+
+
+def edit_policy_table(text: str, name: str, values: dict[str, Any] | None) -> str:
+    """Edit ordinary policy assignments, preserving comments; callers verify the job."""
+    import re
+
+    header = re.search(rf"(?m)^\[{name}\][ \t]*(?:#.*)?$", text)
+    if header is None:
+        if values is None:
+            return text
+        return (
+            text
+            + "\n["
+            + name
+            + "]\n"
+            + "".join(f"{key} = {json.dumps(value)}\n" for key, value in values.items())
+        )
+    following = re.search(r"(?m)^[ \t]*\[", text[header.end() :])
+    stop = header.end() + following.start() if following else len(text)
+    section = text[header.end() : stop]
+    # Match quoted strings before comments so a selector's # is not a comment.
+    literal = r"""(?:"(?:\\.|[^"\\])*"|'[^']*'|[^#\n"'])*"""
+    for key, value in (values or {}).items():
+        pattern = re.compile(rf"(?m)^([ \t]*{key}[ \t]*=[ \t]*)({literal})([ \t]*(?:#.*)?)$")
+        if pattern.search(section):
+
+            def replace(match: re.Match[str], encoded: str = json.dumps(value)) -> str:
+                return match[1] + encoded + " " + match[3]
+
+            section = pattern.sub(replace, section, count=1)
+        else:
+            section += f"\n{key} = {json.dumps(value)}\n"
+    if values is None:
+        # Disabling scroll removes its table, retaining standalone comments.
+        section = (
+            "\n"
+            + "\n".join(line for line in section.splitlines() if line.lstrip().startswith("#"))
+            + "\n"
+        )
+        return text[: header.start()] + section + text[stop:]
+    return text[: header.end()] + section + text[stop:]

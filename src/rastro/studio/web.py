@@ -11,6 +11,7 @@ import json
 import secrets
 from collections.abc import Awaitable, Callable, Iterable
 from pathlib import Path
+from time import monotonic
 from typing import Any
 
 from pydantic import ValidationError
@@ -132,6 +133,7 @@ class Studio:
         allow_stealth: bool = False,
         allow_env: Iterable[str] = (),
         acquisition: AcquisitionPort | None = None,
+        clock: Callable[[], float] = monotonic,
     ) -> None:
         self.root = root.resolve()
         self.token = secrets.token_urlsafe(32)
@@ -152,7 +154,8 @@ class Studio:
         # Tests inject a fake acquirer; production uses the default HTTP acquirer.
         self.acquisition = acquisition
         # Last URL-first preview fetch for this Studio run; create reuses it when the URL matches.
-        self.url_preview: FetchedUrl | None = None
+        self.url_preview: tuple[str, float, FetchedUrl] | None = None
+        self.clock = clock
 
     def job_path(self, name: str) -> Path:
         return files.resolve_in_root(self.root, name)
