@@ -60,7 +60,9 @@ def test_non_bmp_policy_round_trip(tmp_path: Path, suffix: str) -> None:
         )
         path = tmp_path / f"job.{suffix}"
         if suffix == "json":
-            path.write_text(json.dumps(tomllib.loads((tmp_path / "job.toml").read_text())))
+            path.write_text(
+                json.dumps(tomllib.loads((tmp_path / "job.toml").read_text(encoding="utf-8")))
+            )
         for prefix in ("/😀", "/😀/more"):
             opened = post(client, "/api/validate", {"file": path.name}).json()
             saved = post(
@@ -74,7 +76,7 @@ def test_non_bmp_policy_round_trip(tmp_path: Path, suffix: str) -> None:
                 },
             )
             assert saved.status_code == 200, saved.text
-            assert prefix in path.read_text()
+            assert prefix in path.read_text(encoding="utf-8")
 
 
 def test_policy_write_does_not_add_trailing_spaces() -> None:

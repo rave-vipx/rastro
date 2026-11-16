@@ -45,7 +45,7 @@ def test_bounded_settings(tmp_path: Path) -> None:
         )
         path = tmp_path / "job.toml"
         path.write_text(
-            path.read_text()
+            path.read_text(encoding="utf-8")
             + "\n# keep me\n[scroll] # scroll comment\nmax_steps = 2 # steps comment\n"
         )
         for kind, policy, bad in [
@@ -70,9 +70,9 @@ def test_bounded_settings(tmp_path: Path) -> None:
             assert saved.status_code == 200, saved.text
         assert load_job(path).spider.max_pages == 100
         assert load_job(path).scroll.max_steps == 30
-        assert "# keep me" in path.read_text()
-        assert "# steps comment" in path.read_text()
-        assert "# scroll comment" in path.read_text()
+        assert "# keep me" in path.read_text(encoding="utf-8")
+        assert "# steps comment" in path.read_text(encoding="utf-8")
+        assert "# scroll comment" in path.read_text(encoding="utf-8")
         opened = post(client, "/api/validate", {"file": "job.toml"}).json()
         assert opened["bounds"]["scroll_disabled"] is True
 
@@ -82,7 +82,9 @@ def test_disable_scroll_and_reject_malformed_policy(tmp_path: Path) -> None:
     from tests.integration.test_job_api import JOB
 
     path = tmp_path / "job.toml"
-    path.write_text(JOB + "\n# standalone\n[scroll] # header comment\nmax_steps = 2 # steps\n")
+    path.write_text(
+        JOB + "\n# standalone\n[scroll] # header comment\nmax_steps = 2 # steps\n", encoding="utf-8"
+    )
     app, token = create_app(tmp_path)
     with serving(app, "http://127.0.0.1:8765") as client:
         client.headers["X-Studio-Token"] = token
@@ -102,7 +104,7 @@ def test_disable_scroll_and_reject_malformed_policy(tmp_path: Path) -> None:
         assert post(client, "/api/bounds", {**data, "policy": None}).status_code == 200
         assert load_job(path).scroll is None
         for comment in ("# standalone", "# header comment", "# steps"):
-            assert comment in path.read_text()
+            assert comment in path.read_text(encoding="utf-8")
 
 
 def test_spider_result_line_only_uses_report_fields() -> None:
@@ -113,7 +115,7 @@ def test_spider_result_line_only_uses_report_fields() -> None:
     node = shutil.which("node")
     if node is None:
         pytest.skip("Node is needed for the standalone JS assertion")
-    source = Path("src/rastro/studio/static/bounds.js").read_text()
+    source = Path("src/rastro/studio/static/bounds.js").read_text(encoding="utf-8")
     function = source[source.index("export function spiderLine") :].replace("export ", "")
     fill = source[source.index("let spider") : source.index("async function save")].replace(
         "export ", ""
