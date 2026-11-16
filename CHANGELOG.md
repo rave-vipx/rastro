@@ -27,7 +27,8 @@ All notable user-facing changes are recorded here. The project follows [Semantic
 
 ### Changed
 
-- robots.txt is fetched once per origin for each run, registry search or registry install, and cached only in memory for that operation; a registry install no longer fetches it once per file (N10, SEC-008).
+- robots.txt is fetched once per origin for each user operation (run, registry search or install, Studio or SDK URL start, `rastro new --site/--goal`, repair, review and promotion) and cached only in memory for that operation; a registry install no longer fetches it once per file (N1, N10, SEC-008).
+- Studio reads the spider, scroll and next-page limits from the job models instead of copies in the page, and shows each link-following control on its own row (N3, N4, N9).
 - Studio no longer offers **Override failed gates**: `/api/promote` refuses `override_gates` with `gate_override_refused`. Operators who need it run `rastro recipe promote --override-gates` themselves (N7, ADR 0034).
 
 ## 0.7.0 — 2026-11-15
