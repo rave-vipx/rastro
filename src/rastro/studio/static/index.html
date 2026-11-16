@@ -88,13 +88,11 @@
 
   <div id="view-wizard" hidden>
     <section class="card">
-      <h2>1. Saved page</h2>
-      <p class="muted">Save the web page as HTML inside the Studio folder, then pick it here.</p>
+      <h2>1. Page URL</h2>
+      <p class="muted">Paste a page URL. Studio fetches it and the job scrapes that URL on every run.</p>
       <div class="row">
-        <label for="page">Page</label>
-        <select id="page"></select>
-        <label for="page-url">Address it came from</label>
-        <input id="page-url" type="url" size="40" placeholder="https://example.com/list">
+        <label for="page-url">Page URL</label>
+        <input id="page-url" type="url" size="48" placeholder="https://example.com/list" required>
       </div>
     </section>
     <section class="card">
@@ -125,7 +123,7 @@
         <input id="new-memory" type="text" size="24" spellcheck="false" placeholder="recipes.sqlite">
         <button type="button" id="create" class="primary">Create job</button>
       </div>
-      <p class="muted">The job file goes next to the page. A dataset needs at least one record key.</p>
+      <p class="muted">The job scrapes this URL on every run. A dataset needs at least one record key.</p>
       <p id="create-status" role="status" aria-live="polite"></p>
     </section>
   </div>
