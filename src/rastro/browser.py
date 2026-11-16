@@ -70,7 +70,8 @@ class _JobAcquisition:
         return self.mode(url) == "browser"
 
     def scroll_skip_code(self, url: str) -> str:
-        return "scroll_unsupported_stealth" if self.mode(url) == "stealth" else "scroll_ignored_http"
+        stealth = self.mode(url) == "stealth"
+        return "scroll_unsupported_stealth" if stealth else "scroll_ignored_http"
 
     async def scroll(self, source: Source, *, settle_ms: int, max_bytes: int) -> AcquisitionResult:
         client = self.clients[self.mode(source.url)]

@@ -506,7 +506,7 @@ async def test_guard_goes_idle_after_a_failed_step_and_rearms_on_begin():
 @pytest.mark.asyncio
 async def test_guard_sets_up_each_page_once():
     """L1: a pooled page that is set up again must not stack another CDP session."""
-    guard, page, session, handlers = _cdp_guard(5)
+    guard, page, session, _ = _cdp_guard(5)
     await guard.setup(page)
     await guard.setup(page)
     assert page.context.new_cdp_session.await_count == 1

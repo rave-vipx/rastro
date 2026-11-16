@@ -1774,7 +1774,7 @@
     },
     "ScrollSpec": {
       "additionalProperties": false,
-      "description": "Scroll a rendered page until a step finds no new records, or a cap is reached.\n\nScroll applies to ``render = \"browser\"``. It never enables stealth or challenge solving.\nHTTP sources ignore it and say so; the stealth browser cannot scroll a live page yet.",
+      "description": "Scroll a rendered page until a step finds no new records, or a cap is reached.\n\nScroll applies to ``render = \"browser\"``. It never enables stealth or challenge solving.\nHTTP sources ignore it and say so (``scroll_ignored_http``); so do stealth sources\n(``scroll_unsupported_stealth``): Scrapling keeps the page pooled, but Rastro does not\ndrive scroll in it. Both stay successful runs.",
       "properties": {
         "max_steps": {
           "default": 10,
