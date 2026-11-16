@@ -5,11 +5,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from urllib.parse import urlsplit
 
-from rastro.application.operator_trust import current_trust
+from rastro.application.stealth_grant import require_stealth_grant
 from rastro.domain.acquisition import AcquisitionResult
 from rastro.domain.jobs import Job, UrlJobSource
 from rastro.domain.models import ConfigurationError, Representation, Source
 from rastro.ports.acquisition import AcquisitionPort
+from rastro.ports.browser import BrowserRenderer, ScrollingAcquisition
 
 if TYPE_CHECKING:
     from rastro.application.conditional import ConditionalRequests
@@ -37,12 +38,9 @@ def job_render_modes(job: Job) -> dict[str, str]:
     needed = set(modes.values())
     if needed - {"http"}:
         needed.add(job.acquisition.render)  # undeclared URLs, such as next pages, may use it
-    if (
-        "stealth" in needed or job.acquisition.solve_challenges
-    ) and not current_trust().allow_stealth:
-        raise ConfigurationError(
-            "Stealth requires --allow-stealth, allow_stealth=True or RASTRO_ALLOW_STEALTH=1"
-        )
+    require_stealth_grant(
+        stealth="stealth" in needed, solve_challenges=job.acquisition.solve_challenges
+    )
     return modes
 
 
@@ -67,6 +65,42 @@ class _JobAcquisition:
             source, max_bytes=max_bytes, representation=representation
         )
 
+    def renders_in_browser(self, url: str) -> bool:
+        return self.mode(url) != "http"
+
+    def may_render_in_browser(self, url: str) -> bool:
+        """Links can lead to undeclared URLs (the default mode) or declared browser hosts."""
+        return (
+            self.mode(url) != "http"
+            or self.default != "http"
+            or any(mode != "http" for mode in self.modes.values())
+        )
+
+    def scrolls(self, url: str) -> bool:
+        """Only plain browser sources scroll: Rastro does not drive scroll in a stealth page."""
+        return self.mode(url) == "browser"
+
+    def scroll_skip_code(self, url: str) -> str:
+        stealth = self.mode(url) == "stealth"
+        return "scroll_unsupported_stealth" if stealth else "scroll_ignored_http"
+
+    async def scroll(self, source: Source, *, settle_ms: int, max_bytes: int) -> AcquisitionResult:
+        client = self.clients[self.mode(source.url)]
+        if not isinstance(client, ScrollingAcquisition):
+            raise ConfigurationError("This source's acquisition cannot scroll")
+        return await client.scroll(source, settle_ms=settle_ms, max_bytes=max_bytes)
+
+
+def _renderer(mode: str) -> BrowserRenderer:
+    """Import and build only the renderer this mode needs: stealth stays unbuilt unless asked."""
+    if mode == "stealth":
+        from rastro.adapters.scrapling_stealth import ScraplingStealth
+
+        return ScraplingStealth()
+    from rastro.adapters.playwright_browser import PlaywrightBrowser
+
+    return PlaywrightBrowser()
+
 
 def job_acquisition(
     job: Job,
@@ -78,13 +112,9 @@ def job_acquisition(
     modes = job_render_modes(job)
     if supplied is not None or not any(mode != "http" for mode in modes.values()):
         return supplied
-    from rastro.adapters.playwright_browser import PlaywrightBrowser
-    from rastro.adapters.scrapling_stealth import ScraplingStealth
-
     assert job.acquisition is not None
     renderers = {
-        mode: (ScraplingStealth() if mode == "stealth" else PlaywrightBrowser())
-        for mode in {*modes.values(), job.acquisition.render} - {"http"}
+        mode: _renderer(mode) for mode in {*modes.values(), job.acquisition.render} - {"http"}
     }
     from rastro.adapters.dns import SystemResolver
     from rastro.adapters.http import CurlTransport

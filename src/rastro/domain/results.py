@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 
 from rastro.domain.recipes import Recipe
 from rastro.domain.sources import EGRESS_NAME, Contract
+from rastro.domain.spider_report import SpiderReport
 
 
 class Outcome(StrEnum):
@@ -53,7 +54,7 @@ class Evidence(Contract):
 
 
 class ExtractionRecord[T: BaseModel](Contract):
-    page_index: int | None = Field(default=None, ge=1, le=50, exclude_if=_absent)
+    page_index: int | None = Field(default=None, ge=1, le=100, exclude_if=_absent)
     data: T
     evidence: dict[str, Evidence]
 
@@ -130,9 +131,16 @@ class ExtractionResult[T: BaseModel](Contract):
             "page_failure",
             "invalid_next",
             "record_limit",
+            "spider_complete",
+            "spider_depth_limit",
+            "spider_page_limit",
+            "spider_budget",
+            "spider_page_failed",
         ]
         | None
     ) = Field(default=None, exclude_if=_absent)
+    # Present only for a spider run: every discovered URL and its outcome (N3).
+    spider: SpiderReport | None = Field(default=None, exclude_if=_absent)
     learned_recipe: Recipe | None = None
     recipe_version: int | None = None
     recipe_reused: bool = False

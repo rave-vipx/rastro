@@ -43,7 +43,12 @@ def load_index(registry_dir: Path) -> tuple[RegistryEntry, ...]:
     index_path = registry_dir / INDEX_FILE
     if not index_path.exists() and not index_path.is_symlink():
         return ()
-    raw_bytes = read_bounded(index_path, MAX_METADATA_BYTES, bundle=True)
+    return parse_index(read_bounded(index_path, MAX_METADATA_BYTES, bundle=True))
+
+
+def parse_index(raw_bytes: bytes) -> tuple[RegistryEntry, ...]:
+    """Validate ``index.json`` bytes; ids and versions are checked against their patterns, so
+    an entry can never carry a path separator or ``..`` into a package path."""
     try:
         return _INDEX_ADAPTER.validate_python(json.loads(raw_bytes))
     except (ValueError, RecursionError, ValidationError) as error:

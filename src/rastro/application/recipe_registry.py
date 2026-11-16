@@ -11,14 +11,8 @@ from datetime import date, datetime
 from pathlib import Path
 
 from rastro.application.bundle_files import read_bounded, write_all
-from rastro.application.engine_version import running_version
-from rastro.application.recipe_hub import (
-    GITATTRIBUTES,
-    ImportedRecipe,
-    ParserFor,
-    import_bundle,
-    verify_bundle,
-)
+from rastro.application.recipe_hub import GITATTRIBUTES, ParserFor, verify_bundle
+from rastro.application.registry_install import InstalledPackage, install_package_dir
 from rastro.application.registry_store import (
     check_registry_root,
     load_index,
@@ -30,7 +24,6 @@ from rastro.domain.recipe_bundle import (
     MANIFEST_FILE,
     MAX_METADATA_BYTES,
     SAMPLE_FILES,
-    BundleIntegrityError,
     BundleManifest,
     canonical_json,
     default_source_pattern,
@@ -40,11 +33,10 @@ from rastro.domain.registry import (
     RECIPES_DIR,
     RegistryEntry,
     RegistryError,
-    TrustIndicators,
-    check_compatibility,
     compute_trust,
     matches_query,
     parse_package_spec,
+    select_entry,
     semver_key,
 )
 from rastro.mocklab.detectors import secret_categories
@@ -58,17 +50,6 @@ class PublishedPackage:
     entry: RegistryEntry
     package_dir: Path
     git_commands: tuple[str, ...]
-
-
-@dataclass(frozen=True)
-class InstalledPackage:
-    """Result of installing a recipe package from a local registry directory."""
-
-    id: str
-    version: str
-    imported: ImportedRecipe
-    trust: TrustIndicators
-    published_trust: TrustIndicators
 
 
 def publish_to_registry(
@@ -149,35 +130,16 @@ def install_from_registry(
     """
     pkg_id, pinned = parse_package_spec(spec)
     check_registry_root(registry_dir, create=False)
-    candidates = [item for item in load_index(registry_dir) if item.id == pkg_id]
-    if not candidates:
-        raise RegistryError(f"Package {pkg_id!r} was not found in the registry")
-    selected = (
-        next((item for item in candidates if item.version == pinned), None)
-        if pinned is not None
-        else max(candidates, key=lambda item: semver_key(item.version))
-    )
-    if selected is None:
-        raise RegistryError(f"Package {pkg_id}@{pinned} was not found in the registry")
+    selected = select_entry(load_index(registry_dir), pkg_id, pinned)
     package_dir = package_path(registry_dir, selected.id, selected.version)
-    manifest, files, _, _ = verify_bundle(package_dir, parser_for, limits)
-    if manifest.id != selected.id or manifest.version != selected.version:
-        raise BundleIntegrityError("Package manifest does not match its registry index entry")
-    check_compatibility(manifest, engine_version=engine_version or running_version())
-    recomputed = compute_trust(
-        replay_verified=True,
-        last_verified=manifest.last_verified,
-        today=at.date(),
-        has_sample=bool(files.get(SAMPLE_FILES[manifest.representation])),
-        format_version=manifest.format_version,
-    )
-    imported = import_bundle(package_dir, repository, parser_for, at=at, limits=limits)
-    return InstalledPackage(
-        id=selected.id,
-        version=selected.version,
-        imported=imported,
-        trust=recomputed,
-        published_trust=selected.trust,
+    return install_package_dir(
+        package_dir,
+        selected,
+        repository,
+        parser_for,
+        at=at,
+        limits=limits,
+        engine_version=engine_version,
     )
 
 

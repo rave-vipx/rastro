@@ -110,7 +110,8 @@ def stamp_acquired[T: BaseModel](
             "robots_overridden": fetched.robots_overridden,
             "acquisition_seconds": fetched.acquisition_seconds,
             "network_seconds": fetched.network_seconds,
-            "request_count": fetched.requests,
+            # A scrolled result already carries the requests its scroll steps spent.
+            "request_count": fetched.requests + result.metrics.request_count,
             "retry_count": fetched.retries,
             "redirect_count": fetched.redirects,
             "bytes_received": fetched.bytes_received,
