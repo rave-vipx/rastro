@@ -77,7 +77,7 @@ function defaultJobName(url) {
 
 function httpNotice(allowHttp) {
   return allowHttp
-    ? el("p", "This job will allow plain HTTP (allow_http = true) because the URL is http://.", "warn")
+    ? el("p", "This job will allow plain HTTP (allow_http = true) because the URL uses unencrypted HTTP.", "warn")
     : null;
 }
 
