@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import datetime as dt
 import ipaddress
-import math
 import re
 import tomllib
 from typing import Any, Literal, Self
@@ -23,7 +21,7 @@ from pydantic import (
 from rastro.domain.acquisition import AcquisitionPolicy
 from rastro.domain.consistency import ConsistencyRule
 from rastro.domain.intelligence import InferencePolicy
-from rastro.domain.job_contract import ENV_REFERENCE, RedactedContract
+from rastro.domain.job_contract import ENV_REFERENCE, RedactedContract, check_toml_scalars
 from rastro.domain.job_dataset import DatasetSpec
 from rastro.domain.job_fields import JobField, build_job_schema
 from rastro.domain.job_providers import JobModelProvider
@@ -41,6 +39,7 @@ from rastro.domain.recipe_compare import RepairPolicy
 from rastro.domain.schedule import ScheduleSpec
 from rastro.domain.scroll import ScrollSpec
 from rastro.domain.selector_policy import check_untrusted_recipe
+from rastro.domain.spider import SpiderPolicy
 
 JOB_SCHEMA_ID = "https://rave-vipx.github.io/rastro/schemas/job.schema.json"
 MAX_JOB_BYTES = 262_144
@@ -85,6 +84,7 @@ class Job(RedactedContract):
     repair: RepairPolicy | None = Field(default=None, exclude_if=lambda value: value is None)
     schedule: ScheduleSpec | None = Field(default=None, exclude_if=lambda value: value is None)
     scroll: ScrollSpec | None = Field(default=None, exclude_if=lambda value: value is None)
+    spider: SpiderPolicy | None = Field(default=None, exclude_if=lambda value: value is None)
 
     @field_validator("format_version", mode="before")
     @classmethod
@@ -121,6 +121,8 @@ class Job(RedactedContract):
                 validate_job_path_syntax(path)
         if self.dataset is not None:
             self.dataset.check_against([item.name for item in self.fields])
+        if self.spider is not None:
+            self.spider.check_against(declared, self.sources)
         self._check_env_references()
         self._check_http_policy()
         self._check_source_recipes_and_egress(declared)
@@ -190,19 +192,6 @@ def _redact_env(value: Any) -> Any:
     return value
 
 
-def _check_toml_scalars(value: object) -> None:
-    if isinstance(value, float) and not math.isfinite(value):
-        raise ValueError("Non-finite numbers are not allowed")
-    if isinstance(value, (dt.date, dt.time)):
-        raise ValueError("Use strings for dates and times in job definitions")
-    if isinstance(value, dict):
-        for item in value.values():
-            _check_toml_scalars(item)
-    elif isinstance(value, list):
-        for item in value:
-            _check_toml_scalars(item)
-
-
 def parse_job(raw: str | bytes, *, format: Literal["toml", "json"]) -> Job:
     """Parse and validate a TOML or JSON job definition without touching the filesystem."""
     encoded = raw.encode("utf-8") if isinstance(raw, str) else raw
@@ -215,7 +204,7 @@ def parse_job(raw: str | bytes, *, format: Literal["toml", "json"]) -> Job:
         parsed = strict_json(text)
     elif format == "toml":
         parsed = tomllib.loads(text)
-        _check_toml_scalars(parsed)
+        check_toml_scalars(parsed)
     else:
         raise ValueError("Job format must be 'toml' or 'json'")
     if not isinstance(parsed, dict):

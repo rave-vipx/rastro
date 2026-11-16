@@ -16,6 +16,7 @@ from rastro.application.acquisition_state import (
 )
 from rastro.application.outcomes import failure_result, stamp_acquired
 from rastro.application.pagination_records import combine_pages
+from rastro.application.scroll import pages_left, spend_page
 from rastro.domain.acquisition import AcquisitionPolicy, AcquisitionResult
 from rastro.domain.models import (
     ConfigurationError,
@@ -76,6 +77,11 @@ async def extract_paginated[T: BaseModel](
 ) -> ExtractionResult[T]:
     """Keep page one's memory/repair evidence and combine later pages in acquisition order."""
     check_untrusted_recipe(recipe)
+    shared = PAGINATION_SCOPE.get()
+    if shared is not None:  # inside a spider run: one budget for every page of the source
+        return await _traverse(
+            source, schema, recipe, parser, limits, acquisition, shared, extract_page
+        )
     scope = PaginationScope(
         urlsplit(source.url).hostname,
         urlsplit(source.url).scheme == "https",
@@ -149,15 +155,18 @@ async def _traverse[T: BaseModel](
             target = urldefrag(urljoin(fetched.url, cursor))[0]
             following = Source.model_validate({**source.model_dump(), "url": target})
             target = following.url
-            stop = pagination_boundary(target, scope.host, scope.secure)
+            stop = pagination_boundary(target, urlsplit(source.url).hostname, scope.secure)
             if not stop and target in visited:
                 stop = "repeat"
             if not stop and len(pages) >= recipe.pagination.max_pages:
                 stop = "max_pages"
+            if not stop and not pages_left():
+                stop = "max_pages"  # the crawl's page cap counts pagination documents too
             if not stop and scope.remaining <= 0:
                 stop = "budget"
             if stop:
                 break
+            spend_page()
             current = following
         except (ValueError, ValidationError, ConfigurationError, ResourceLimitError):
             stop = "invalid_next"

@@ -65,6 +65,9 @@ class _JobAcquisition:
             source, max_bytes=max_bytes, representation=representation
         )
 
+    def renders_in_browser(self, url: str) -> bool:
+        return self.mode(url) != "http"
+
     def scrolls(self, url: str) -> bool:
         """Only plain browser sources scroll: Rastro does not drive scroll in a stealth page."""
         return self.mode(url) == "browser"

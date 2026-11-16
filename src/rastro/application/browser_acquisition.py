@@ -149,6 +149,9 @@ class BrowserAcquirer(WebAcquirer):
             target, policy=policy, max_bytes=max_bytes, targets=targets
         )
 
+    def renders_in_browser(self, url: str) -> bool:
+        return True
+
     def scrolls(self, url: str) -> bool:
         return self.policy.render != "stealth"  # Rastro does not drive scroll in a stealth page
 

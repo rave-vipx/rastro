@@ -133,7 +133,7 @@
         "page_index": {
           "anyOf": [
             {
-              "maximum": 50,
+              "maximum": 100,
               "minimum": 1,
               "type": "integer"
             },
@@ -239,7 +239,12 @@
                 "budget",
                 "page_failure",
                 "invalid_next",
-                "record_limit"
+                "record_limit",
+                "spider_complete",
+                "spider_depth_limit",
+                "spider_page_limit",
+                "spider_budget",
+                "spider_page_failed"
               ],
               "type": "string"
             },
@@ -324,6 +329,17 @@
         "source_url": {
           "title": "Source Url",
           "type": "string"
+        },
+        "spider": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SpiderReport"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "started_at": {
           "format": "date-time",
@@ -979,6 +995,98 @@
         "previous_version"
       ],
       "title": "SelfRepair",
+      "type": "object"
+    },
+    "SpiderPage": {
+      "additionalProperties": false,
+      "description": "One discovered URL and what became of it: host and path only, never a query.",
+      "properties": {
+        "depth": {
+          "maximum": 4,
+          "minimum": 0,
+          "title": "Depth",
+          "type": "integer"
+        },
+        "host": {
+          "maxLength": 253,
+          "title": "Host",
+          "type": "string"
+        },
+        "ordinal": {
+          "minimum": 1,
+          "title": "Ordinal",
+          "type": "integer"
+        },
+        "outcome": {
+          "enum": [
+            "fetched",
+            "no_records",
+            "partial",
+            "failed",
+            "robots_denied",
+            "off_host",
+            "https_downgrade",
+            "path_denied",
+            "port_not_allowed",
+            "invalid_url",
+            "depth_limit",
+            "page_limit",
+            "budget"
+          ],
+          "title": "Outcome",
+          "type": "string"
+        },
+        "path": {
+          "maxLength": 256,
+          "title": "Path",
+          "type": "string"
+        },
+        "records": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Records",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "ordinal",
+        "depth",
+        "host",
+        "path",
+        "outcome"
+      ],
+      "title": "SpiderPage",
+      "type": "object"
+    },
+    "SpiderReport": {
+      "additionalProperties": false,
+      "description": "Every attempted page in discovery order, capped; ``unreported`` counts the rest.",
+      "properties": {
+        "discovered": {
+          "minimum": 0,
+          "title": "Discovered",
+          "type": "integer"
+        },
+        "pages": {
+          "items": {
+            "$ref": "#/$defs/SpiderPage"
+          },
+          "maxItems": 600,
+          "title": "Pages",
+          "type": "array"
+        },
+        "unreported": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Unreported",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "pages",
+        "discovered"
+      ],
+      "title": "SpiderReport",
       "type": "object"
     }
   },

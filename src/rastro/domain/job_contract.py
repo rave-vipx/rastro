@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import datetime as dt
+import math
 import types
 from decimal import Decimal
 from typing import Annotated, Any, Self, Union, get_args, get_origin
@@ -98,3 +100,16 @@ class RedactedContract(Contract):
                 ],
                 hide_input=True,
             ) from None
+
+
+def check_toml_scalars(value: object) -> None:
+    if isinstance(value, float) and not math.isfinite(value):
+        raise ValueError("Non-finite numbers are not allowed")
+    if isinstance(value, (dt.date, dt.time)):
+        raise ValueError("Use strings for dates and times in job definitions")
+    if isinstance(value, dict):
+        for item in value.values():
+            check_toml_scalars(item)
+    elif isinstance(value, list):
+        for item in value:
+            check_toml_scalars(item)

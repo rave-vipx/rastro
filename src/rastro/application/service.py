@@ -19,6 +19,7 @@ from rastro.application.memory import PreparedRecipe, RecipeMemory
 from rastro.application.outcomes import failure_result, stamp_acquired, stamp_provided
 from rastro.application.pagination import extract_paginated
 from rastro.application.scroll import scroll_scope, scrolled
+from rastro.application.spider_page import crawl_source
 from rastro.domain.acquisition import AcquisitionPolicy, AcquisitionResult
 from rastro.domain.memory import RecipeContext
 from rastro.domain.models import (
@@ -32,6 +33,7 @@ from rastro.domain.models import (
     Source,
 )
 from rastro.domain.scroll import ScrollSpec
+from rastro.domain.spider import SpiderPolicy
 from rastro.ports.acquisition import AcquisitionPort
 from rastro.ports.parser import DocumentParser
 
@@ -54,6 +56,7 @@ class ExtractionService:
         acquisition: AcquisitionPort | None,
         policy: AcquisitionPolicy | None = None,
         scroll: ScrollSpec | None = None,
+        spider: SpiderPolicy | None = None,
     ) -> None:
         self._parsers = dict(parsers)
         self._memory = memory
@@ -63,6 +66,7 @@ class ExtractionService:
         self._acquisition = acquisition
         self._scroll = scroll
         self._policy = policy
+        self._spider = spider if spider is not None and spider.mode == "spider" else None
 
     def extract_provided[T: BaseModel](
         self,
@@ -123,6 +127,8 @@ class ExtractionService:
         prepared = await self._prepare(
             source, schema, recipe, context, recipe_version, representation
         )
+        if self._spider is not None:
+            return await self._extract_spider(source, schema, prepared, representation, started_at)
 
         async def extract_one(fetched: AcquisitionResult) -> ExtractionResult[T]:
             return await self._extract_fetched(
@@ -173,6 +179,39 @@ class ExtractionService:
             acquisition_seconds=fetched.acquisition_seconds,
         )
         return stamped
+
+    async def _extract_spider[T: BaseModel](
+        self,
+        source: Source,
+        schema: type[T],
+        prepared: PreparedRecipe,
+        representation: Representation,
+        started_at: datetime,
+    ) -> ExtractionResult[T]:
+        recipe, spider, acquisition = prepared.definition, self._spider, self._acquisition
+        if recipe is None or spider is None or acquisition is None:
+            return failure_result(  # a learned recipe is not reused page to page yet
+                status=Outcome.PERMANENT_FAILURE,
+                issue_code="spider_needs_recipe",
+                source=source,
+                schema=schema,
+                started_at=started_at,
+            )
+        return await crawl_source(
+            source,
+            schema=schema,
+            spider=spider,
+            recipe=recipe,
+            parser=self._parsers[representation],
+            limits=self._limits,
+            acquisition=acquisition,
+            policy=self._policy,
+            representation=representation,
+            extract_fetched=lambda fetched, page: self._extract_fetched(
+                fetched, page, schema, prepared, representation, started_at
+            ),
+            scroll=self._scroll,
+        )
 
     async def extract_many[T: BaseModel](
         self,

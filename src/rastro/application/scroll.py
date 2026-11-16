@@ -45,6 +45,13 @@ class PageCounter:
     remaining: int
 
 
+@dataclass
+class NoteOnce:
+    """Shared by every page of one source: the 'scroll ignored' issue is reported once."""
+
+    done: bool = False
+
+
 PAGE_COUNTER: ContextVar[PageCounter | None] = ContextVar("page_counter", default=None)
 
 
@@ -68,7 +75,14 @@ def _key[T: BaseModel](record: ExtractionRecord[T]) -> str:
     return record.data.model_dump_json()
 
 
-def _spend_page() -> bool:
+def pages_left() -> bool:
+    """Whether the crawl's page cap still has room (no counter: the recipe's own cap rules)."""
+    counter = PAGE_COUNTER.get()
+    return counter is None or counter.remaining > 0
+
+
+def spend_page() -> bool:
+    """Spend one page of the cap, for a document or a scroll step; False when none is left."""
     counter = PAGE_COUNTER.get()
     if counter is None:
         return True
@@ -85,19 +99,19 @@ def scrolled[T: BaseModel](
     acquisition: AcquisitionPort,
     limits: Limits,
     owns_scope: bool,
+    note: NoteOnce | None = None,
 ) -> Callable[[AcquisitionResult], Awaitable[ExtractionResult[T]]]:
     """Wrap one source's page extraction so each page is scrolled until nothing is new."""
-    noted = False
+    note = note or NoteOnce()
 
     async def run(fetched: AcquisitionResult) -> ExtractionResult[T]:
-        nonlocal noted
         first = await extract_page(fetched)
         if fetched.status != Outcome.SUCCESS or first.status != Outcome.SUCCESS:
             return first
         if not (isinstance(acquisition, ScrollingAcquisition) and acquisition.scrolls(fetched.url)):
-            if noted:
+            if note.done:
                 return first
-            noted = True
+            note.done = True
             code = (
                 acquisition.scroll_skip_code(fetched.url)
                 if isinstance(acquisition, ScrollSkipReason)
@@ -126,7 +140,7 @@ async def _scroll[T: BaseModel](
     rejected, requests, stop = first.metrics.rejected, 0, "max_steps"
     source = Source(url=fetched.url)
     for _ in range(spec.max_steps):
-        if (scope is not None and scope.remaining <= 0) or not _spend_page():
+        if (scope is not None and scope.remaining <= 0) or not spend_page():
             stop = "budget"
             break
         before = scope.remaining if scope else 0

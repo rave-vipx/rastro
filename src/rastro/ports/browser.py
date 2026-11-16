@@ -60,3 +60,12 @@ class ScrollSkipReason(Protocol):
     """Optional: the issue code to report when ``scrolls(url)`` is false (a separate protocol)."""
 
     def scroll_skip_code(self, url: str) -> str: ...
+
+
+@runtime_checkable
+class BrowserRendered(Protocol):
+    """Optional: whether ``url`` is rendered in one shared browser page (a separate protocol)."""
+
+    def renders_in_browser(self, url: str) -> bool:
+        """True when fetches of this source share one page and must not overlap."""
+        ...

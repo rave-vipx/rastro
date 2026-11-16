@@ -341,6 +341,32 @@ including attributes. Oversized, malformed and excess cookies are dropped; the j
 counts drops without echoing their contents. curl's own cookie handling remains
 disabled, and separate `Set-Cookie` response headers are preserved.
 
+## Spider
+
+A job's `[spider]` table (`mode = "spider"`, see [Spider in jobs](jobs.md#spider)) follows
+links from the job's own sources. It adds no acquisition path and no grant (N3, SEC-001,
+SEC-003, SEC-008):
+
+- **One entry point.** Every page, including pagination pages, is fetched by one
+  function, `fetch_spider_page`, through the normal `AcquisitionPort`. Anything that
+  scopes acquisition per source, such as a reused browser context, applies to spider
+  pages unchanged.
+- **One budget per start source.** The request budget (`max_requests`) and the document
+  cap (`max_pages`) live in the same per-source scope pagination uses. Robots lookups,
+  redirects and retries spend it; pagination inside a spider page does not get a new one.
+  Robots rules are reused only within one operation, so each page also pays for its own
+  `robots.txt` lookup.
+- **Same host by default.** Redirects and links stay on the start host. With
+  `same_host = false`, only hosts already in `allowed_hosts` are reachable; private
+  networks, extra ports and robots overrides remain operator grants.
+- **Bounded and ordered.** Breadth-first, depth-capped, deduplicated by normalised URL,
+  with at most `max_concurrency` pages in flight and per-host pacing as always. Results
+  are combined in discovery order whatever the completion order.
+- **Visible.** Each discovered URL gets an outcome in the result's `spider` report (host
+  and path only, never a query), and a robots denial is an issue, not a silent skip.
+
+Hitting a cap ends the run as `partial_success` with the accepted records kept.
+
 ## Conditional requests
 
 `rastro job load` automatically revalidates HTTP sources when the job declares a
