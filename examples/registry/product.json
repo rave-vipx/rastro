@@ -1,0 +1,36 @@
+{
+  "dataset": {
+    "identity": [
+      "title"
+    ],
+    "name": "product",
+    "path": "product-data.sqlite"
+  },
+  "fields": [
+    {
+      "max_length": null,
+      "min_length": 1,
+      "name": "title",
+      "pattern": null,
+      "required": true,
+      "type": "string"
+    },
+    {
+      "max_length": null,
+      "min_length": 1,
+      "name": "price_text",
+      "pattern": null,
+      "required": true,
+      "type": "string"
+    }
+  ],
+  "format_version": 1,
+  "recipe_memory": "product-recipes.sqlite",
+  "sources": [
+    {
+      "kind": "file",
+      "path": "recipes/synthetic-product/1.0.0/sample.html",
+      "url": "https://product.example/cards"
+    }
+  ]
+}

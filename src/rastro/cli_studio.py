@@ -61,7 +61,11 @@ def studio_command(args: argparse.Namespace) -> int:
         raise ConfigurationError("Port must be between 1 and 65535")
     model = _model(args.model, args.allow_remote)
     app, token = create_app(
-        args.root, model=model, model_remote=args.allow_remote, **trust_options(args)
+        args.root,
+        model=model,
+        model_remote=args.allow_remote,
+        allow_stealth=getattr(args, "allow_stealth", False) is True,
+        **trust_options(args),
     )
     url = f"http://{HOST}:{args.port}/#token={token}"
     print(f"Rastro Studio: open {url}  (Ctrl+C to stop)", file=sys.stderr)

@@ -18,6 +18,7 @@ from rastro.application.job_dataset import load_job_file
 from rastro.application.jobs import run_job
 from rastro.application.preview_recipes import read_only_job
 from rastro.domain.job_results import JobRunResult
+from rastro.studio.operations import alerts, operation
 from rastro.studio.web import Studio, body, flag, plain, reply, text
 
 MAX_ISSUES = 50
@@ -33,6 +34,7 @@ def _extract_summary(report: JobRunResult[Any], selections: list[dict[str, Any]]
                 "source_index": index,
                 "source_url": result.source_url,
                 "status": str(result.status),
+                "pagination_stop": result.pagination_stop,
                 "records": len(result.records),
                 "issues": [plain(issue) for issue in result.issues[:MAX_ISSUES]],
                 "recipe_origin": chosen.get("recipe_origin"),
@@ -53,14 +55,24 @@ def routes(studio: Studio) -> list[Route]:
             report = run_job(view, base_dir=path.parent, **studio.trust)
             return _extract_summary(report, [plain(s) for s in selections])
 
-        return reply(await run_in_threadpool(run))
+        with operation(studio, "extract", path) as outcome:
+            payload = await run_in_threadpool(run)
+            payload["alerts"] = alerts(payload)
+            outcome.update(status=payload["job"]["status"], alerts=payload["alerts"])
+        return reply(payload)
 
     async def load(request: Request) -> Response:
         data = await body(request)
         path = studio.job_path(text(data, "file"))
         drift = flag(data, "drift")
-        loaded = await run_in_threadpool(lambda: load_job_file(path, drift=drift, **studio.trust))
-        return reply({"ok": True, "result": plain(loaded)})
+        with operation(studio, "load", path) as outcome:
+            loaded = await run_in_threadpool(
+                lambda: load_job_file(path, drift=drift, **studio.trust)
+            )
+            result = plain(loaded)
+            messages = alerts(result)
+            outcome.update(status=loaded.status, alerts=messages)
+        return reply({"ok": True, "result": result, "alerts": messages})
 
     return [
         studio.route("/api/extract", extract, post=True),

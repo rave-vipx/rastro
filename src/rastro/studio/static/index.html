@@ -47,6 +47,25 @@
     </section>
 
     <section class="card">
+      <h2>Next page and repair settings</h2>
+      <p class="muted">Follow a next link up to a page cap. Studio writes the recipe's existing pagination fields.</p>
+      <div class="row">
+        <label for="pagination-source">Recipe</label>
+        <select id="pagination-source"></select>
+        <label for="pagination-next">Next-link selector</label>
+        <input id="pagination-next" type="text" maxlength="1024" size="32" spellcheck="false" placeholder="a.next::attr(href)">
+        <label for="pagination-cap">Page cap (1–50)</label>
+        <input id="pagination-cap" type="number" min="1" max="50" value="5">
+        <button type="button" id="save-pagination">Save next page</button>
+      </div>
+      <label class="check"><input type="checkbox" id="auto-promote"> Auto-promote repairs for this job</label>
+      <p class="muted">Off by default. On writes <code>[repair] auto_promote</code> to this job only; a repair still has to pass every gate and the semantic judge, which needs a configured model. Off means you promote with a reason.</p>
+      <label class="check"><input type="checkbox" id="allow-stealth"> Allow stealth for this Studio session</label>
+      <p class="muted">Off by default. Lets jobs that ask for <code>render = "stealth"</code> run while this Studio is open. Nothing is written to a job or a bundle.</p>
+      <p id="controls-status" role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="card">
       <h2>Run</h2>
       <div class="row">
         <button type="button" id="extract">Extract (writes nothing)</button>
@@ -54,6 +73,8 @@
         <label class="check"><input type="checkbox" id="drift"> Measure drift</label>
       </div>
       <p id="run-status" role="status" aria-live="polite"></p>
+      <p id="operation-progress" role="status" aria-live="polite"></p>
+      <div id="run-alerts" role="alert"></div>
       <div id="run-result"></div>
     </section>
 
@@ -61,6 +82,9 @@
       <h2>Health and repair</h2>
       <button type="button" id="health">Check health</button>
       <p id="health-status" role="status" aria-live="polite"></p>
+      <div id="health-alerts" role="alert"></div>
+      <p class="muted" id="failure-hint" hidden>Get the same alerts outside Studio: create <code>notify.py</code> as the README's "Notify on failure" section shows, then run this from the Studio folder. A job file cannot set this hook.</p>
+      <pre id="failure-command"></pre>
       <div id="health-result"></div>
       <div id="repair-result"></div>
       <div id="ai-repair-result"></div>

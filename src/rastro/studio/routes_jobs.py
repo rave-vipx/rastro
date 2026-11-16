@@ -19,7 +19,31 @@ from rastro.studio import editing, files
 from rastro.studio.web import HEADERS, Refused, Studio, body, reply, text
 
 STATIC = Path(__file__).parent / "static"
-ASSETS = frozenset({"studio.js", "studio.css", "wizard.js", "operate.js", "dom.js", "ai.js"})
+ASSETS = frozenset(
+    {
+        "studio.js",
+        "studio.css",
+        "wizard.js",
+        "operate.js",
+        "dom.js",
+        "ai.js",
+        "controls.js",
+        "registry.js",
+    }
+)
+
+
+def _recipes(job: Job) -> list[dict[str, Any]]:
+    """Recipes the page may edit (N4): the job recipe (``source`` None) and per-source ones."""
+    declared = [(None, job.recipe), *((i, s.recipe) for i, s in enumerate(job.sources))]
+    return [
+        {
+            "source": index,
+            "pagination": recipe.pagination.model_dump() if recipe.pagination else None,
+        }
+        for index, recipe in declared
+        if recipe is not None
+    ]
 
 
 def _edit_of(data: dict[str, Any]) -> editing.SelectorEdit | None:
@@ -74,6 +98,8 @@ def routes(studio: Studio) -> list[Route]:
                 "has_dataset": job.dataset is not None,
                 "has_memory": job.recipe_memory is not None,
                 "sources": len(job.sources),
+                "auto_promote": bool(job.repair and job.repair.auto_promote),
+                "recipes": _recipes(job),
             }
         )
 

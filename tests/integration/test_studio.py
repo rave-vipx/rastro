@@ -329,3 +329,21 @@ def test_listing_includes_json_jobs_only_with_format_version(
     (root / "deep.json").write_text("[" * 100_000 + "]" * 100_000)
     (root / "broken.json").write_text("{")
     assert client.get("/api/jobs").json()["files"] == ["job.toml", "job2.json"]
+
+
+def test_lists_and_validates_job_with_spider_and_scroll(client: TestClient, root: Path) -> None:
+    """N3, N9, P-008: engine policies load without a separate Studio editor."""
+    path = root / "job.toml"
+    original = path.read_text().replace('path = "page.html"', 'render = "browser"')
+    original += '\n[acquisition]\nallowed_hosts = ["agenda.example.com"]\n'
+    original += '\n[spider]\nmode = "spider"\nlinks = "a::attr(href)"\nmax_pages = 3\n'
+    original += "\n[scroll]\nmax_steps = 2\n"
+    path.write_text(original)
+    before = path.read_bytes()
+    job = load_job(path)
+    assert job.spider.mode == "spider" and job.scroll.max_steps == 2
+    assert client.get("/api/jobs").json()["files"] == ["job.toml"]
+    checked = post(client, "/api/validate", {"file": "job.toml"})
+    assert checked.status_code == 200, checked.text
+    assert checked.json()["ok"] and checked.json()["sources"] == 1
+    assert path.read_bytes() == before

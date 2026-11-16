@@ -2,6 +2,30 @@
 
 All notable user-facing changes are recorded here. The project follows [Semantic Versioning](docs/stability.md) from 0.6.0. Versions before 0.6.0 were never published to a package registry.
 
+## Unreleased — N1–N12 product cut
+
+### Added
+
+- Bounded spider follows allowed links from URL sources with depth and page caps, same-host defaults, robots enforcement and a shared request budget (N3, SEC-001).
+- Bounded browser scroll stops when no new records appear or the step cap is reached; it does not enable stealth (N9).
+- Browser pages of one source reuse one context during a run, then close it; sources keep separate contexts (N2).
+- Stealth requests require the operator grant before any renderer starts, including custom renderers (N12, SEC-005).
+- `rastro recipe search` and `install --registry-url HTTPS_URL` consume a hostable static registry with SSRF checks, digest verification and candidate-only installation (N10, SEC-001, SEC-005).
+- Studio **Next page** setting: pick a recipe, type a next-link selector and a page cap (1–50); Studio writes the existing `pagination` fields (ADR 0026) after the untrusted selector policy, a digest check and a reparse that must show only that change. TOML and JSON jobs (N4, P-008).
+- Studio alerts and progress: extract, load, repair and promote answer with plain-language alerts for failure, open drift, stale sources, quarantine, a refused promotion and pagination caps; Health adds last success, why a source is stale, open drift, the last run's alerts and the exact `rastro job load ... --on-failure 'python notify.py'` command for the README hook. `GET /api/progress` reports the running operation, its job file and its real outcome; no page or scroll ordinal is invented and no body, query or secret is included. One operation at a time (`operation_in_progress`) (N5, OBS-002).
+- **Fix this site** (formerly **Propose repair**) passes the configured Studio model to `repair_job_source`; promotion still needs a reason when auto-promote is off (N7, REPAIR-005).
+- Two switches, both off: **Auto-promote** writes only `[repair] auto_promote` on the opened job (digest and reparse checked), and Studio's **Fix this site** promotes only when a model (Studio `--model`, the job's `[model]`, or `[repair] model` with `RASTRO_MODEL`) can act as the semantic judge, otherwise it keeps the candidate and explains why; **Allow stealth for this Studio session** changes the process grant passed to preview, extract, load, repair and promote, is never written to a job, and is locked on when the process was started with `--allow-stealth` or `RASTRO_ALLOW_STEALTH`. `create_app(..., allow_stealth=)` and `rastro studio --allow-stealth` pass it; `preview_job` accepts `allow_stealth` (N12, ADR 0034, SEC-005).
+- Studio registry section: search a local registry directory, install a package as a candidate into the open job's recipe memory (never promotes, never edits the job), and publish an exported public bundle into a local registry without Git or push. HTTPS search and install use the same policy-bound fetcher as `--registry-url`, including operator grants for private networks, extra ports and robots overrides (N10, HUB-002–006).
+- Three synthetic public registry bundles under `examples/registry/` (listing, news card, product card) with offline consumer jobs; the README leads with the five-minute Studio path and a copy-paste failure hook; the master spec Amendment Log cites ADR 0032–0034 (N6, N8, N11).
+
+### Fixed
+
+- Studio preserves CRLF line endings when saving pagination and auto-promote settings in Windows TOML jobs (N4, N12, SEC-005). Synthetic registry inputs and rebuilds keep identical bytes across platforms (N6).
+
+### Changed
+
+- Studio no longer offers **Override failed gates**: `/api/promote` refuses `override_gates` with `gate_override_refused`. Operators who need it run `rastro recipe promote --override-gates` themselves (N7, ADR 0034).
+
 ## 0.7.0 — 2026-11-15
 
 Bring your own AI: any model or agent proposes recipes and repairs while Rastro verifies. Operators also hear about drift and stuck state, not only hard failures; see [Monitoring and alerts](docs/operations.md) and ADR 0023. The release also completes the v0.3–v0.5 roadmap: JavaScript pages, sessions, pagination, scheduling, PostgreSQL, start-from-a-goal, run metrics and cost limits, Hub phase 2 and operator network permissions.

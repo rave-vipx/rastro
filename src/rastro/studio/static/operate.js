@@ -1,6 +1,7 @@
 // Run, health and repair, and the dataset browser for the open job.
 // All source-derived text is set as plain text content; markup is never parsed.
 import { $, api, bind, el, pill, requireFile, show, state, table } from "./dom.js";
+import { showAlerts, withProgress } from "./controls.js";
 
 const PAGE_SIZE = 25;
 let offset = 0;
@@ -10,7 +11,9 @@ export function resetOperate() {
   for (const id of ["run-result", "health-result", "repair-result", "ai-repair-result", "dataset-result"]) {
     $(id).replaceChildren();
   }
-  for (const id of ["run-status", "health-status", "dataset-status"]) show(id, "");
+  for (const id of ["run-status", "health-status", "dataset-status", "operation-progress", "failure-command"]) show(id, "");
+  for (const id of ["run-alerts", "health-alerts"]) $(id).replaceChildren();
+  $("failure-hint").hidden = true;
 }
 
 function origin(source) {
@@ -24,7 +27,8 @@ function issues(list) {
 }
 
 async function extract() {
-  const data = await api("/api/extract", { file: requireFile() });
+  const data = await withProgress(() => api("/api/extract", { file: requireFile() }));
+  showAlerts("run-alerts", data.alerts);
   const j = data.job;
   show("run-status", `Extract ${j.status}: ${j.records_accepted} accepted, ${j.records_rejected} rejected. Nothing was written.`,
     j.status === "success" ? "good" : "warn");
@@ -33,7 +37,9 @@ async function extract() {
 }
 
 async function load() {
-  const { result } = await api("/api/load", { file: requireFile(), drift: $("drift").checked });
+  const data = await withProgress(() => api("/api/load", { file: requireFile(), drift: $("drift").checked }));
+  const { result } = data;
+  showAlerts("run-alerts", data.alerts);
   // Green only for a clean load: open drift ("degraded") or a storage error is a warning.
   const open = (result.open_drift || []).length;
   show("run-status", `Load ${result.status} into dataset "${result.dataset}".`
@@ -52,6 +58,9 @@ async function load() {
 async function health() {
   const data = await api("/api/health", { file: requireFile() });
   const out = $("health-result");
+  showAlerts("health-alerts", data.alerts);
+  show("failure-command", data.on_failure_command);
+  $("failure-hint").hidden = false;
   const rows = data.sources.map((s, i) => {
     const status = !s.status ? "no dataset yet"
       : s.status.stale ? pill("stale", false)
@@ -60,12 +69,13 @@ async function health() {
     const versions = s.versions.map((v) => `v${v.version} ${v.state}`).join(", ") || "-";
     const actions = el("div", undefined, "row");
     if (data.has_memory) {
-      actions.append(button("Propose repair", () => repair(i + 1)));
+      actions.append(button("Fix this site", () => repair(i + 1)));
       actions.append(button("Write to job file", () => apply(i + 1)));
     }
-    return [i + 1, s.source_url, origin(s), status, s.status?.reason || "", versions, actions];
+    const drift = s.open_drift ? `${s.open_drift.risk}: review or fix` : "none";
+    return [i + 1, s.source_url, origin(s), status, s.status?.last_success || "never", s.status?.reason || "", drift, versions, actions];
   });
-  out.replaceChildren(table(["#", "source", "serving recipe", "status", "reason", "stored versions", "actions"], rows));
+  out.replaceChildren(table(["#", "source", "serving recipe", "status", "last success", "why stale", "open drift", "stored versions", "actions"], rows));
   show("health-status", data.has_memory ? "" : "Add recipe_memory to the job to propose and promote repairs.", "muted");
 }
 
@@ -81,8 +91,11 @@ function button(label, action) {
 }
 
 async function repair(source) {
-  show("health-status", `Proposing a repair for source ${source}…`, "muted");
-  const { report } = await api("/api/repair", { file: requireFile(), source });
+  const notice = state.ai.enabled ? (state.ai.remote ? " The configured model may help; page content is sent to the remote model." : " The configured model may help.") : "";
+  show("health-status", `Fixing source ${source}: looking for a recipe that passes the checks…${notice}`, "muted");
+  const data = await withProgress(() => api("/api/repair", { file: requireFile(), source }));
+  const { report } = data;
+  showAlerts("health-alerts", data.alerts);
   const item = report.sources[0];
   const out = $("repair-result");
   out.replaceChildren(el("h3", `Repair for source ${source}: ${item.outcome || "done"}`));
@@ -145,26 +158,15 @@ function promoteForm(source, version) {
   label.htmlFor = id;
   const reason = el("input");
   Object.assign(reason, { id, type: "text", maxLength: 500, size: 32 });
-  const overrideLabel = el("label", undefined, "check");
-  const override = el("input");
-  override.type = "checkbox";
-  overrideLabel.append(override, " Override failed gates");
-  const warning = el("p", "", "warn");
-  warning.setAttribute("role", "alert");
-  override.addEventListener("change", () => {
-    warning.textContent = override.checked
-      ? "Overriding activates a candidate that did not pass every gate. The reason is recorded."
-      : "";
-  });
   const go = button("Promote", async () => {
     if (!reason.value.trim()) throw new Error("give a reason before promoting");
-    const { report } = await api("/api/promote", {
-      file: requireFile(), source, version, reason: reason.value, override_gates: override.checked,
-    });
-    const done = report.sources[0].promoted_version;
-    show("health-status", done ? `Version ${done} now serves. Use "Write to job file" to save it there.` : "Not promoted: the candidate failed its gates.", done ? "good" : "warn");
+    const data = await withProgress(() => api("/api/promote", { file: requireFile(), source, version, reason: reason.value }));
+    showAlerts("health-alerts", data.alerts);
+    const done = data.report.sources[0].promoted_version;
+    show("health-status", done ? `Version ${done} now serves. Use "Write to job file" to save it there.` : "Not promoted: the candidate failed its checks. The current recipe keeps serving.", done ? "good" : "warn");
   });
-  form.append(label, reason, overrideLabel, go, warning);
+  const note = el("p", "Promotion re-runs every check. Studio cannot override a failed check.", "muted");
+  form.append(label, reason, go, note);
   return form;
 }
 

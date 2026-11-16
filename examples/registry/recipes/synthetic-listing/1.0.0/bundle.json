@@ -1,0 +1,38 @@
+{
+  "author": {
+    "name": "Rastro Contributors",
+    "url": null
+  },
+  "compatibility": {
+    "min_rastro": "0.7.0",
+    "source_patterns": [
+      "listing.example/cards"
+    ]
+  },
+  "context": {
+    "region": "default",
+    "schema_revision": "1",
+    "template": "page"
+  },
+  "files": {
+    "expected.json": "29cee2a4be2a3c05a7eeea45370fac0dcc3ff77b4c09eff8c629ab9d79b4ff89",
+    "recipe.json": "0771b3ba65308ffe2572b6740803c32f01758233a645941d31e8385af65a9ba3",
+    "sample.html": "db41735c7a5d7a6925424376902c0e79422f40703b015f02edb8f7d57b2c02b9",
+    "schema.json": "8bf3c852a741783f633dcca389ed828b7bd30a8e794f62edece50577f44976db"
+  },
+  "format_version": 2,
+  "id": "synthetic-listing",
+  "last_verified": "2026-11-16",
+  "license": "Apache-2.0",
+  "representation": "html",
+  "source": {
+    "currency": null,
+    "egress": "direct",
+    "languages": [],
+    "locale": "und",
+    "timezone": "UTC",
+    "url": "https://listing.example/cards"
+  },
+  "version": "1.0.0",
+  "visibility": "public"
+}

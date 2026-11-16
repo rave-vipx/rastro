@@ -4,6 +4,10 @@
 
 v0.1 remains the reference release. It is complete: `0.1.0rc1` is its release candidate, with M1–M4 implemented, the M5 technical evidence recorded, every section 18 acceptance criterion evidenced, and DIFF-001 partially demonstrated. Publication (namespace ownership, legal/trademark review, tag and Trusted Publishing) awaits maintainer approval through the release gates in issue #5; nothing has been published.
 
+## N1–N12 product cut (2026-11-16, in integration, not released)
+
+**Studio half integrated on `cut/studio-product`:** next-link pagination setting (N4), plain-language alerts, Health detail and an observed operation line (N5), **Fix this site** with the Studio model and no gate override (N7), the auto-promote and session stealth switches (N12), the registry search/install/publish section (N10), and the synthetic registry bundles, newcomer README and spec Amendment Log (N6, N8, N11). URL-first creation (N1) and dev’s spider, scroll, browser reuse, stealth enforcement and HTTPS registry fetcher (N2, N3, N9, N10, N12) are integrated. Studio registry URL search/install exercise the real fetcher under operator trust and keep installations as candidates; jobs with `[spider]` and `[scroll]` list and validate, while their Studio editors remain a follow-up. The engine has no progress event seam yet, so Studio does not show page or scroll steps. See [product needs](product-needs.md) and [Studio](studio.md).
+
 ## 0.7.0 (2026-11-15): AI-assisted repair with any model, monitoring and alerts
 
 **AI in the everyday flows (ADR 0022):** a provider-agnostic `rastro.model()` (OpenAI-compatible HTTP, any local CLI, a Python callable, `RASTRO_MODEL`) is consulted only when deterministic repair fails. Model candidates pass recipe CI, value checks and the selector policy before a veto-only semantic judge. Offline benchmark: 23/28 repaired with a good model against 12/28 without one, with 0 wrong promotions even under an approve-all judge. MCP agent tools and one operator-trust model (`--allow-remote`, `--allow-egress`, `--allow-env`) complete it.

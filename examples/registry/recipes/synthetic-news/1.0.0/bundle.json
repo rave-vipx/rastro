@@ -1,0 +1,38 @@
+{
+  "author": {
+    "name": "Rastro Contributors",
+    "url": null
+  },
+  "compatibility": {
+    "min_rastro": "0.7.0",
+    "source_patterns": [
+      "news.example/cards"
+    ]
+  },
+  "context": {
+    "region": "default",
+    "schema_revision": "1",
+    "template": "page"
+  },
+  "files": {
+    "expected.json": "a42111087a39890757b09b0f1e28a0ec2717b6ef81470b138237be48b1e97775",
+    "recipe.json": "461ee188abed70eb9ebcf68fe635220363c2a9c0b0f35a81b0c07d8aa3795b4a",
+    "sample.html": "350ba4411214e63824f2d177e9194ab8119345698d03fbb899737ea15275295d",
+    "schema.json": "7234d9ff67ecabf1c54acec478758c15bed314caf1c5f5aba12b7f78ad067033"
+  },
+  "format_version": 2,
+  "id": "synthetic-news",
+  "last_verified": "2026-11-16",
+  "license": "Apache-2.0",
+  "representation": "html",
+  "source": {
+    "currency": null,
+    "egress": "direct",
+    "languages": [],
+    "locale": "und",
+    "timezone": "UTC",
+    "url": "https://news.example/cards"
+  },
+  "version": "1.0.0",
+  "visibility": "public"
+}

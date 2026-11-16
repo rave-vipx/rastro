@@ -1,0 +1,36 @@
+{
+  "dataset": {
+    "identity": [
+      "title"
+    ],
+    "name": "news",
+    "path": "news-data.sqlite"
+  },
+  "fields": [
+    {
+      "max_length": null,
+      "min_length": 1,
+      "name": "title",
+      "pattern": null,
+      "required": true,
+      "type": "string"
+    },
+    {
+      "max_length": null,
+      "min_length": 1,
+      "name": "section",
+      "pattern": null,
+      "required": true,
+      "type": "string"
+    }
+  ],
+  "format_version": 1,
+  "recipe_memory": "news-recipes.sqlite",
+  "sources": [
+    {
+      "kind": "file",
+      "path": "recipes/synthetic-news/1.0.0/sample.html",
+      "url": "https://news.example/cards"
+    }
+  ]
+}
