@@ -71,10 +71,21 @@ class WebAcquirer:
     async def acquire(
         self, source: Source, *, max_bytes: int, representation: Representation = "html"
     ) -> AcquisitionResult:
+        return await self._acquire(source, max_bytes=max_bytes, representation=representation)
+
+    async def acquire_raw(self, source: Source, *, max_bytes: int) -> AcquisitionResult:
+        """Same policy, redirect and robots rules as ``acquire``; the bytes come back undecoded
+        in ``raw_body`` for callers that verify them by digest (the registry fetch)."""
+        return await self._acquire(source, max_bytes=max_bytes, representation="json", raw=True)
+
+    async def _acquire(
+        self, source: Source, *, max_bytes: int, representation: Representation, raw: bool = False
+    ) -> AcquisitionResult:
         started = perf_counter()
         policy = self.policy.with_grants(current_trust().network_grants())
         operation = _Operation(source.url, policy, cookie_host=urlsplit(source.url).hostname)
         body: str | None = None
+        raw_body: bytes | None = None
         issue: str | None = None
         status = Outcome.SUCCESS
         try:
@@ -100,7 +111,10 @@ class WebAcquirer:
                         break
                     if response.status not in REDIRECT_STATUSES:
                         check_status(response.status)
-                        body = decode_body(response, representation)
+                        if raw:
+                            raw_body = response.body
+                        else:
+                            body = decode_body(response, representation)
                         if self._conditional is not None:
                             self._conditional.remember(source.url, url, response)
                         break
@@ -129,6 +143,7 @@ class WebAcquirer:
             retry_after_seconds=operation.retry_after_seconds,
             egress=source.egress,
             robots_overridden=bool(operation.overridden),
+            raw_body=raw_body,
         )
 
     async def _robots(self, url: str, operation: _Operation) -> None:

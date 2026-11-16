@@ -52,17 +52,28 @@ def add_commands(commands: argparse._SubParsersAction) -> None:  # type: ignore[
     publish.add_argument("--registry", type=Path, required=True, help="Local registry directory")
 
     search = commands.add_parser(
-        "search", help="Search a local Git registry by package id or source pattern"
+        "search", help="Search a Git registry (directory or https URL) by id or source pattern"
     )
     search.add_argument("query", help="Substring to match against id or source_patterns")
-    search.add_argument("--registry", type=Path, required=True, help="Local registry directory")
+    _registry_location(search)
 
     install = commands.add_parser(
-        "install", help="Verify and install a recipe package from a local Git registry"
+        "install", help="Verify and install a recipe package from a Git registry as a candidate"
     )
     install.add_argument("package", help="Package id or id@version")
-    install.add_argument("--registry", type=Path, required=True, help="Local registry directory")
+    _registry_location(install)
     install.add_argument("--store", type=Path, required=True, help="Recipe SQLite file")
+
+
+def _registry_location(parser: argparse.ArgumentParser) -> None:
+    where = parser.add_mutually_exclusive_group(required=True)
+    where.add_argument("--registry", type=Path, help="Local registry directory")
+    where.add_argument(
+        "--registry-url",
+        metavar="URL",
+        help="https URL that serves the registry directory (index.json and recipes/); no "
+        "credentials or query. Needs the [http] extra; never promotes",
+    )
 
 
 def hub_command(args: argparse.Namespace) -> int:
@@ -185,7 +196,12 @@ def _publish(args: argparse.Namespace) -> int:
 
 
 def _search(args: argparse.Namespace) -> int:
-    entries = search_registry(args.registry, args.query)
+    if args.registry_url is not None:
+        from rastro.application.registry_fetch import search_registry_url
+
+        entries = search_registry_url(args.registry_url, args.query)
+    else:
+        entries = search_registry(args.registry, args.query)
     print(
         json.dumps(
             {
@@ -203,13 +219,17 @@ def _install(args: argparse.Namespace) -> int:
 
     if args.store.is_symlink():
         raise ConfigurationError("Recipe command paths must not contain symlinks")
-    installed = install_from_registry(
-        args.registry,
-        args.package,
-        SQLiteRecipeRepository(args.store),
-        _parser_for,
-        at=datetime.now(UTC),
-    )
+    repository, at = SQLiteRecipeRepository(args.store), datetime.now(UTC)
+    if args.registry_url is not None:
+        from rastro.application.registry_fetch import install_from_registry_url
+
+        installed = install_from_registry_url(
+            args.registry_url, args.package, repository, _parser_for, at=at
+        )
+    else:
+        installed = install_from_registry(
+            args.registry, args.package, repository, _parser_for, at=at
+        )
     print(
         json.dumps(
             {
