@@ -1,4 +1,4 @@
-"""SYNC-004: transactional forward-only v1→v2 dataset migration."""
+"""SYNC-004: transactional forward-only v1→v2 (and onward) dataset migration."""
 
 import os
 import sqlite3
@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 import pytest
 
 from rastro.adapters.sqlite_dataset import SQLiteDatasetStore
-from rastro.adapters.sqlite_dataset_schema import APPLICATION_ID, migrate
+from rastro.adapters.sqlite_dataset_schema import APPLICATION_ID, SCHEMA_VERSION, migrate
 from rastro.domain.dataset import DatasetStorageError, RecordOrigin, SourceStatus, StoredRecord
 from tests.integration.test_sqlite_dataset import record
 
@@ -61,7 +61,7 @@ def test_v1_opens_migrates_idempotently_and_preserves_status_and_mode(tmp_path):
     store.save_validators("d", status.source_url, {"etag": '"v1"'})
     assert SQLiteDatasetStore(path).get_validators("d", status.source_url) == {"etag": '"v1"'}
     with closing(sqlite3.connect(path)) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 2
+        assert db.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION
         migrate(db)
         migrate(db)
     if os.name != "nt":
@@ -74,7 +74,7 @@ def test_migration_rolls_back_and_newer_versions_are_refused(tmp_path):
     with closing(sqlite3.connect(path, isolation_level=None)) as db:
         db.execute("BEGIN IMMEDIATE")
         migrate(db)
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 2
+        assert db.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION
         db.rollback()
         assert db.execute("PRAGMA user_version").fetchone()[0] == 1
         assert not db.execute(
@@ -147,7 +147,7 @@ def test_write_path_migrates_v1_to_v2(tmp_path):
     SQLiteDatasetStore(path).mark_source_unavailable(
         "d", status.source_url, datetime.now(UTC), "boom"
     )
-    assert _version(path) == 2
+    assert _version(path) == SCHEMA_VERSION
 
 
 def test_rejected_dataset_connections_are_closed(tmp_path, monkeypatch):
