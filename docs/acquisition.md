@@ -276,8 +276,8 @@ call may finish after cancellation. Parsing/validation runs in a worker thread a
 can also finish after cancellation. Acquisition deadlines do not forcibly stop
 trusted validators or native parsers. Use process isolation for hostile workloads.
 
-JavaScript rendering, browser geolocation, authenticated sessions, SOCKS or rotating
-proxies and discovered-link crawling are not implemented. Optional [recipe memory](memory.md) and
+Browser geolocation, SOCKS or rotating proxies and discovered-link crawling are not
+implemented; JavaScript rendering and sessions are opt-in (see below). Optional [recipe memory](memory.md) and
 [recipe learning](intelligence.md) integrate with the async SDK. See the
 [transport ADR](decisions/0002-policy-aware-acquisition.md) for the documented use of
 curl_cffi, Scrapling's HTTP engine, to expose public DNS-pinning controls.
