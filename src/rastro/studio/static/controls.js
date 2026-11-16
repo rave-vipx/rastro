@@ -5,9 +5,11 @@ import { $, api, bind, el, requireFile, show, state } from "./dom.js";
 import { fillBounds, initBounds } from "./bounds.js";
 
 let recipes = [];
+let paginationDefault;
 
 export function fillControls(data) {
   fillBounds(data.bounds);
+  paginationDefault = data.bounds.limits.pagination.max_pages.default;
   $("auto-promote").checked = data.auto_promote === true;
   recipes = data.recipes || [];
   $("pagination-source").replaceChildren(...recipes.map((row, index) =>
@@ -18,7 +20,7 @@ export function fillControls(data) {
 function selectRecipe() {
   const row = recipes[Number($("pagination-source").value)];
   $("pagination-next").value = row?.pagination?.next || "";
-  $("pagination-cap").value = row?.pagination?.max_pages || 5;
+  $("pagination-cap").value = row?.pagination?.max_pages ?? paginationDefault ?? "";
 }
 
 export function showAlerts(id, messages) {

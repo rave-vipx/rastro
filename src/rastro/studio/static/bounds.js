@@ -3,18 +3,28 @@ import { $, api, bind, requireFile, show, state } from "./dom.js";
 let spider = {};
 
 export function fillBounds(data) {
+  for (const [kind, name, id] of [
+    ["pagination", "max_pages", "pagination-cap"],
+    ["spider", "max_depth", "spider-depth"], ["spider", "max_pages", "spider-pages"],
+    ["scroll", "max_steps", "scroll-steps"], ["scroll", "settle_ms", "scroll-settle"],
+  ]) {
+    const limit = data.limits[kind][name];
+    const input = $(id);
+    input.min = limit.min ?? "";
+    input.max = limit.max ?? "";
+    input.step = limit.step;
+    input.value = data[kind]?.[name] ?? limit.default ?? "";
+    show(id + "-range", limit.min != null && limit.max != null
+      ? `(${limit.min}–${limit.max}, step ${limit.step})` : "");
+  }
   spider = data.spider || {};
   $("spider-enabled").checked = spider.mode === "spider";
-  $("spider-depth").value = spider.max_depth ?? 2;
-  $("spider-pages").value = spider.max_pages ?? 25;
   $("spider-links").value = spider.link_field || spider.links || "a::attr(href)";
   $("spider-link-label").textContent = spider.link_field ? "Link field" : "Link selector";
   $("spider-same-host").checked = spider.same_host !== false;
   $("spider-allow").value = (spider.allow || []).join("\n");
   $("spider-deny").value = (spider.deny || []).join("\n");
   $("scroll-enabled").checked = !!data.scroll;
-  $("scroll-steps").value = data.scroll?.max_steps ?? 10;
-  $("scroll-settle").value = data.scroll?.settle_ms ?? 500;
   $("scroll-controls").disabled = data.scroll_disabled;
   show("scroll-reason", data.scroll_disabled ? "Scroll needs browser rendering; HTTP ignores scroll and stealth does not support it." : "Stops when no new records appear, or at the step cap.");
 }

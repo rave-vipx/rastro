@@ -50,3 +50,8 @@ pre { padding: 0.6rem; overflow-x: auto; white-space: pre-wrap; }
 .skip, .sr { position: absolute; left: -9999px; }
 .skip:focus { left: 1rem; top: 0.5rem; background: var(--card); padding: 0.25rem 0.5rem; }
 @media (max-width: 40rem) { nav { margin-left: 0; } .row > * { flex: 1 1 100%; } }
+
+.bound-controls { display: grid; grid-template-columns: 1fr; gap: 0.5rem; margin: 1rem 0; min-width: 0; }
+.bound-controls > label { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.bound-controls input[type="checkbox"] { flex-shrink: 0; }
+.bound-controls textarea { width: 100%; }
