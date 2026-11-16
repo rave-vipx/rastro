@@ -47,7 +47,9 @@ def describe_url(url: str) -> Link:
     name = f"[{host}]" if ":" in host else host
     netloc = name if port in (None, _DEFAULT_PORTS[parts.scheme]) else f"{name}:{port}"
     path = parts.path or "/"
-    return Link(urlunsplit((parts.scheme, netloc, path, parts.query, "")), host, path[:256])
+    return Link(
+        urlunsplit((parts.scheme, netloc, path, parts.query, "")), host, tidy_path(path)[:256]
+    )
 
 
 def classify_link(base: str, href: str) -> Link:
@@ -69,9 +71,15 @@ def classify_link(base: str, href: str) -> Link:
     return link
 
 
+def tidy_path(path: str) -> str:
+    """Drop ``;params`` (session ids live there) and repeated slashes, as most servers do."""
+    segments = [segment.split(";", 1)[0] for segment in path.split("/")]
+    return "/" + "/".join(segment for segment in segments if segment)
+
+
 def path_matches(path: str, prefixes: tuple[str, ...]) -> bool:
     """Whole-segment prefix match: ``/item`` covers ``/item`` and ``/item/1``, not ``/items``."""
-    decoded = unquote(path).casefold()
+    decoded = tidy_path(unquote(path)).casefold()
     for prefix in prefixes:
         root = prefix.rstrip("/").casefold()
         if decoded == root or decoded.startswith(root + "/"):

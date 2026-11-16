@@ -17,6 +17,8 @@ from rastro.application.acquisition_state import (
     PaginationScope,
     pagination_boundary,
 )
+from rastro.application.destinations import permitted_url
+from rastro.application.operator_trust import current_trust
 from rastro.application.outcomes import failure_result
 from rastro.application.pagination_records import combine_pages
 from rastro.application.spider_links import (
@@ -27,7 +29,7 @@ from rastro.application.spider_links import (
     path_matches,
 )
 from rastro.application.spider_outcome import PAGE_FAILURES, page_outcome
-from rastro.domain.acquisition import AcquisitionPolicy
+from rastro.domain.acquisition import AcquisitionError, AcquisitionPolicy
 from rastro.domain.models import (
     ConfigurationError,
     ExtractionResult,
@@ -45,6 +47,12 @@ _FILTERS: dict[str, SpiderOutcome] = {
     "invalid_next": "invalid_url",
     "off_host": "off_host",
     "https_downgrade": "https_downgrade",
+}
+_DESTINATION: dict[str, SpiderOutcome] = {
+    "invalid_url": "invalid_url",
+    "host_not_allowed": "off_host",
+    "https_required": "https_downgrade",
+    "port_not_allowed": "port_not_allowed",
 }
 _NOTE_CAP = 500  # discovered-but-not-fetched rows; fetched pages (max 100) always have a row
 _LIMITS = ("budget", "page_limit", "depth_limit")  # a hit cap: partial, in this order
@@ -76,7 +84,7 @@ async def extract_spider[T: BaseModel](
     )
     token = PAGINATION_SCOPE.set(scope)
     try:
-        crawl = _Crawl(source, schema, spider, parser, limits, fetch_page, scope)
+        crawl = _Crawl(source, schema, spider, parser, limits, fetch_page, scope, policy)
         workers = 1 if sequential or policy is None else policy.max_concurrency
         return await crawl.run(start, workers)
     finally:
@@ -93,7 +101,9 @@ class _Crawl[T: BaseModel]:
         limits: Limits,
         fetch_page: Callable[[Source, LinkHarvest], Awaitable[ExtractionResult[T]]],
         scope: PaginationScope,
+        policy: AcquisitionPolicy | None,
     ) -> None:
+        self.policy = policy
         self.source, self.schema, self.spider = source, schema, spider
         self.parser, self.limits, self.fetch_page, self.scope = parser, limits, fetch_page, scope
         self.rows: dict[int, SpiderPage] = {}
@@ -217,10 +227,23 @@ class _Crawl[T: BaseModel]:
         )
         if boundary:
             return _FILTERS[boundary]
+        refusal = self._destination_refusal(link)
+        if refusal:
+            return refusal
         if path_matches(link.path, self.spider.deny) or (
             self.spider.allow and not path_matches(link.path, self.spider.allow)
         ):
             return "path_denied"
+        return None
+
+    def _destination_refusal(self, link: Link) -> SpiderOutcome | None:
+        """What the fetch would refuse anyway, decided before a page slot is spent."""
+        if self.policy is None:
+            return None
+        try:
+            permitted_url(link.url, self.policy.with_grants(current_trust().network_grants()))
+        except AcquisitionError as error:
+            return _DESTINATION.get(error.code, "failed")
         return None
 
     def _note(self, ordinal: int, depth: int, link: Link, outcome: SpiderOutcome) -> None:

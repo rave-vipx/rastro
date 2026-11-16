@@ -13,7 +13,7 @@ from time import perf_counter
 
 from pydantic import BaseModel
 
-from rastro.application.acquisition_state import PAGINATION_SCOPE
+from rastro.application.acquisition_state import PAGE_CHARGES, PAGINATION_SCOPE
 from rastro.application.outcomes import stamp_acquired
 from rastro.application.pagination import extract_paginated
 from rastro.application.spider import extract_spider
@@ -49,15 +49,19 @@ async def fetch_spider_page[T: BaseModel](
             extract_page=extract_page,
         )
     scope = PAGINATION_SCOPE.get()
-    remaining = scope.remaining if scope else 0
     started, started_at = perf_counter(), datetime.now(UTC)
-    fetched = await acquisition.acquire(
-        page,
-        max_bytes=limits.max_input_bytes(recipe.representation),
-        representation=recipe.representation,
-    )
+    charges = [0]
+    token = PAGE_CHARGES.set(charges)
+    try:
+        fetched = await acquisition.acquire(
+            page,
+            max_bytes=limits.max_input_bytes(recipe.representation),
+            representation=recipe.representation,
+        )
+    finally:
+        PAGE_CHARGES.reset(token)
     if scope is not None:  # an acquirer that does not charge the scope is still counted
-        scope.remaining = min(scope.remaining, remaining - fetched.requests)
+        scope.remaining -= max(0, fetched.requests - charges[0])
     result = await extract_page(fetched)
     return stamp_acquired(
         result, source=page, fetched=fetched, started=started, started_at=started_at

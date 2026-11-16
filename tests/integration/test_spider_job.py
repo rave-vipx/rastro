@@ -355,3 +355,46 @@ def test_a_discovering_job_without_a_stored_recipe_refuses_to_spider():
     assert result.status == Outcome.PERMANENT_FAILURE
     assert [issue.code for issue in result.issues] == ["spider_needs_recipe"]
     assert transport.urls == []
+
+
+def test_a_link_to_a_port_the_fetch_would_refuse_never_takes_a_page_slot():
+    hub = links(*[f"https://shop.test:8443/x{i}" for i in range(5)], "/item/2")
+    report, transport = run(job(spider={"max_pages": 3}), {**SITE, "/list": (200, hub)})
+    result = report.results[0]
+    got = {p.path: p.outcome for p in result.spider.pages}
+    assert [got[f"/x{i}"] for i in range(5)] == ["port_not_allowed"] * 5
+    assert got["/item/2"] == "fetched"
+    assert "https://shop.test/item/2" in transport.urls
+    assert result.status == Outcome.SUCCESS
+    assert result.pagination_stop == "spider_complete"
+
+
+def test_an_operator_granted_port_is_still_followed():
+    spec = job()
+    pages = {**SITE, "/list": (200, links("https://shop.test:8443/item/2"))}
+    transport = Transport(pages)
+    acquirer = WebAcquirer(spec.acquisition, transport=transport, resolver=Resolver())
+    report = run_job(spec, acquisition=acquirer, base_dir=Path.cwd(), allow_ports=[8443])
+    assert "https://shop.test:8443/item/2" in transport.urls
+    assert {o for _, _, o in outcomes(report.results[0])} <= {"fetched", "no_records"}
+
+
+def test_path_params_never_reach_the_report_and_cannot_dodge_a_deny():
+    pages = {
+        "/list": (
+            200,
+            links(
+                "/item/1;jsessionid=SESSIONSECRET", "https://shop.test//login", "/login;x=1", "/ok"
+            ),
+        ),
+        "/item/1": (200, item("One")),
+        "/ok": (200, item("Ok")),
+        "/login": (200, item("Login")),
+    }
+    report, transport = run(job(spider={"deny": ["/login"]}), pages)
+    result = report.results[0]
+    assert "SESSIONSECRET" not in result.spider.model_dump_json()
+    got = [p.path for p in result.spider.pages]
+    assert "/item/1" in got
+    assert [p.outcome for p in result.spider.pages if p.path == "/login"] == ["path_denied"] * 2
+    assert not any("login" in url for url in transport.fetched())

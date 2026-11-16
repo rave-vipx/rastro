@@ -54,6 +54,8 @@ class PaginationScope:
 
 
 PAGINATION_SCOPE: ContextVar[PaginationScope | None] = ContextVar("pagination_scope", default=None)
+# One counter per spider page fetch: what ``check_page_request`` charged on that page's behalf.
+PAGE_CHARGES: ContextVar[list[int] | None] = ContextVar("page_charges", default=None)
 
 
 def check_page_request(url: str) -> None:
@@ -67,6 +69,8 @@ def check_page_request(url: str) -> None:
     if scope.remaining <= 0:
         raise AcquisitionError("request_limit", Outcome.PERMANENT_FAILURE)
     scope.remaining -= 1
+    if (charges := PAGE_CHARGES.get()) is not None:
+        charges[0] += 1
     scope.secure |= urlsplit(url).scheme == "https"
 
 

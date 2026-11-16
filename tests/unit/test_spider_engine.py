@@ -124,3 +124,44 @@ def test_page_outcomes_follow_status_and_issue_codes():
     assert page_outcome(fail("https_downgrade")) == "https_downgrade"
     assert page_outcome(fail("anything")) == "failed"
     assert page_outcome(fail("x", Outcome.MISSING_DATA)) == "no_records"
+
+
+@pytest.mark.asyncio
+async def test_an_acquirer_that_does_not_charge_the_scope_is_counted_by_delta():
+    from rastro.application.acquisition_state import PAGINATION_SCOPE
+    from rastro.application.spider_page import fetch_spider_page
+    from rastro.domain.acquisition import AcquisitionResult
+
+    class Free:
+        async def acquire(self, source, *, max_bytes, representation):
+            await asyncio.sleep(0.01)
+            return AcquisitionResult(
+                url=source.url, body="<p/>", status=Outcome.SUCCESS, issue_code=None, requests=2
+            )
+
+    async def extract(fetched):
+        source = Source(url=fetched.url)
+        return Rastro().extract_html("<p/>", source=source, schema=Item, recipe=RECIPE)
+
+    remaining = []
+
+    async def fetch(source, harvest):
+        result = await fetch_spider_page(
+            source,
+            schema=Item,
+            recipe=RECIPE,
+            parser=ScraplingParser(),
+            limits=Limits(),
+            acquisition=Free(),
+            policy=POLICY,
+            extract_page=extract,
+        )
+        if source.url.endswith("a.test/"):
+            harvest.hrefs.extend(f"https://a.test/{i}" for i in range(10))
+        remaining.append(PAGINATION_SCOPE.get().remaining)
+        return result
+
+    site = Site({})
+    site.fetch = fetch
+    await crawl(site, max_pages=30)
+    assert min(remaining) == 30 - 2 * 11

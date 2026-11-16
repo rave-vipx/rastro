@@ -19,6 +19,7 @@ SpiderOutcome = Literal[
     "off_host",
     "https_downgrade",
     "path_denied",  # outside `allow` or inside `deny`
+    "port_not_allowed",  # a port only the operator may grant
     "invalid_url",
     "depth_limit",
     "page_limit",

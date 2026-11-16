@@ -1027,6 +1027,7 @@
             "off_host",
             "https_downgrade",
             "path_denied",
+            "port_not_allowed",
             "invalid_url",
             "depth_limit",
             "page_limit",

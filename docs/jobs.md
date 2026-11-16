@@ -634,7 +634,10 @@ The source result combines records from all pages in discovery order (identity d
 as for pagination, with `page_index` up to 100) and adds `spider`: every discovered URL as
 `{ordinal, depth, host, path, outcome, records}` and no query. Outcomes: `fetched`,
 `no_records` (a links-only page), `partial`, `failed`, `robots_denied`, `off_host`,
-`https_downgrade`, `path_denied`, `invalid_url`, `depth_limit`, `page_limit`, `budget`.
+`https_downgrade`, `path_denied`, `port_not_allowed` (a port only the operator can grant;
+it never takes a page slot), `invalid_url`, `depth_limit`, `page_limit`, `budget`.
+Reported paths drop `;params` and repeated slashes, and `allow`/`deny` match the same way,
+so `//login` and `/login;x=1` are denied by `deny = ["/login"]`.
 At most 600 pages are listed; `unreported` counts the rest.
 
 `pagination_stop` ends with `spider_complete` (success, a complete snapshot),
