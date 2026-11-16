@@ -31,6 +31,13 @@ _PRIVATE_NETWORKS = tuple(
 )
 
 
+# Cloud metadata services that sit inside ranges the private grant opens (AWS IMDS over
+# IPv6 in a ULA, Alibaba Cloud in CGNAT). IPv4 169.254.169.254 is already link-local.
+_METADATA_ADDRESSES = frozenset(
+    ipaddress.ip_address(value) for value in ("fd00:ec2::254", "100.100.100.200")
+)
+
+
 def public_address(value: str, *, allow_private: bool = False) -> str:
     try:
         address = ipaddress.ip_address(value)
@@ -40,6 +47,7 @@ def public_address(value: str, *, allow_private: bool = False) -> str:
         address.is_multicast
         or address.is_unspecified
         or address.is_link_local
+        or address in _METADATA_ADDRESSES
         or "%" in value
         or (
             isinstance(address, ipaddress.IPv6Address)

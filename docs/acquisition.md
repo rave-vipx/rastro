@@ -300,7 +300,8 @@ behavior is unchanged (SEC-001, SEC-002, SEC-003, SEC-004, SEC-011).
 
 **Private network.** Permits RFC 1918, ULA `fc00::/7`, loopback and CGNAT `100.64.0.0/10`
 destinations, after DNS pinning. Link-local (`169.254.0.0/16`, `fe80::/10`, the cloud
-metadata range), unspecified, multicast, reserved and broadcast addresses, IPv4-mapped and
+metadata range), the metadata services inside opened ranges (`fd00:ec2::254`,
+`100.100.100.200`), unspecified, multicast, reserved and broadcast addresses, IPv4-mapped and
 transition IPv6 forms and scoped `%` addresses stay denied. The host must still be in
 `allowed_hosts`; a mixed answer with one denied address is rejected as a whole, and every
 redirect hop is checked again.
