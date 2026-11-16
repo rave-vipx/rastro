@@ -21,7 +21,7 @@ from rastro.application.recipe_hub import ParserFor
 from rastro.application.registry_install import InstalledPackage, install_package_dir
 from rastro.application.registry_store import parse_index
 from rastro.application.registry_url import RegistryLocation, parse_registry_url, registry_policy
-from rastro.domain.models import Limits, Outcome, Representation, Source
+from rastro.domain.models import ConfigurationError, Limits, Outcome, Representation, Source
 from rastro.domain.recipe_bundle import (
     EXPECTED_FILE,
     MANIFEST_FILE,
@@ -81,7 +81,10 @@ class _Budget:
         if self.files >= MAX_PACKAGE_FILES or self.remaining <= 0:
             raise RegistryError("Registry download budget exceeded; nothing was installed")
         self.files += 1
-        data = await fetcher.fetch(url, max_bytes=min(cap, self.remaining))
+        limit = min(cap, self.remaining)
+        data = await fetcher.fetch(url, max_bytes=limit)
+        if len(data) > limit:  # a custom transport may ignore max_bytes
+            raise RegistryError("Registry fetch failed: body_too_large")
         self.remaining -= len(data)
         return data
 
@@ -96,9 +99,7 @@ def _fetcher(
         except ModuleNotFoundError as error:
             if error.name not in {"curl_cffi", "protego"}:
                 raise
-            raise ImportError(
-                "A registry URL requires: pip install 'rastro-engine[http]'"
-            ) from None
+            raise ConfigurationError("Install rastro-engine[http] to use --registry-url") from None
         transport, resolver = transport or CurlTransport(), resolver or SystemResolver()
     acquirer = WebAcquirer(registry_policy(location), transport=transport, resolver=resolver)
     return WebRegistryFetcher(acquirer)

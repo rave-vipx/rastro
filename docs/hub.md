@@ -114,7 +114,8 @@ HTML, and declarative selector data are read.
 ### Install from a registry URL
 
 A hosted registry is any `https` URL that serves the same directory: `index.json` and
-`recipes/<id>/<version>/` (a static host or the web view of a Git repository). There is no
+`recipes/<id>/<version>/` (a static host such as GitHub Pages, or a raw-file URL such as
+`raw.githubusercontent.com`; not the HTML web view of a repository). There is no
 account system and no Rastro-operated server. Install the `http` extra first
 (`pip install 'rastro-engine[http]'`).
 

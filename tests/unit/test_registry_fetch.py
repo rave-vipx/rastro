@@ -9,6 +9,8 @@ from __future__ import annotations
 import json
 import shutil
 import sqlite3
+import sys
+from contextlib import closing
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -210,7 +212,7 @@ def test_bad_digest_writes_nothing(served: Path, tmp_path: Path) -> None:
 
 
 def _recipe_count(store: Path) -> int:
-    with sqlite3.connect(store) as db:
+    with closing(sqlite3.connect(store)) as db:
         tables = [
             row[0]
             for row in db.execute("select name from sqlite_master where type='table'")
@@ -296,3 +298,25 @@ def test_a_manifest_without_a_known_representation_is_refused(served: Path, tmp_
         _install(site, tmp_path)
     assert not any(url.endswith(("recipe.json", "x")) for url in site.requests)
     assert _recipe_count(tmp_path / "store.sqlite") == 0
+
+
+def test_a_transport_that_ignores_max_bytes_is_still_bounded(served: Path) -> None:
+    class Greedy(Site):
+        async def get(self, target, *, headers, timeout, max_bytes, proxy):
+            if target.url.endswith("index.json"):
+                body = b"[" + b" " * (3 * 1024 * 1024) + b"]"
+                return HttpResponse(200, {"content-type": "application/json"}, body, len(body))
+            return await super().get(
+                target, headers=headers, timeout=timeout, max_bytes=max_bytes, proxy=proxy
+            )
+
+    with pytest.raises(RegistryError, match="body_too_large"):
+        _search(Greedy(served))
+
+
+def test_a_missing_http_extra_is_a_configuration_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delitem(sys.modules, "rastro.adapters.http", raising=False)
+    monkeypatch.delitem(sys.modules, "rastro.adapters.dns", raising=False)
+    monkeypatch.setitem(sys.modules, "curl_cffi", None)
+    with pytest.raises(ConfigurationError, match=r"rastro-engine\[http\].*--registry-url"):
+        search_registry_url(BASE, "sodre")
