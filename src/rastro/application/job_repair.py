@@ -16,6 +16,7 @@ from rastro.application.operator_trust import operator_trust
 from rastro.application.recipe_repair import repair_candidates
 from rastro.application.repair_context import RepairContext
 from rastro.application.repair_evidence import gather_evidence
+from rastro.application.robots_cache import robots_cache
 from rastro.domain.intelligence import InferencePolicy
 from rastro.domain.lifecycle import RecipeState
 from rastro.domain.models import ConfigurationError, Limits
@@ -165,7 +166,8 @@ def job_policy(context: RepairContext, overrides: dict[str, Any]) -> RepairPolic
 
 
 def run_sync[T](coroutine: Coroutine[Any, Any, T]) -> T:
-    with asyncio.Runner(loop_factory=asyncio.SelectorEventLoop) as runner:
+    """Run one repair operation; its evidence fetches share one robots.txt answer per origin."""
+    with robots_cache(), asyncio.Runner(loop_factory=asyncio.SelectorEventLoop) as runner:
         return runner.run(coroutine)
 
 
