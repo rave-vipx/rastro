@@ -17,18 +17,22 @@ An imported or URL-installed bundle cannot set `auto_promote`. Install stays a c
 
 ### Stealth
 
-The job may request `acquisition.engine = "stealth"`. The run uses it only when the operator grants `--allow-stealth`, `RASTRO_ALLOW_STEALTH=1`, or the Studio session switch. The switch grants the running Studio process. It does not write a grant into the job file.
+The job key is `render`, already shipped. Values are `http`, `browser`, and `stealth`, on `[acquisition]` or on a source. Do not rename it to `engine`. That would be a job-format migration for no change in behavior.
 
-Choosing browser or scroll does not check that switch and does not solve challenges. `solve_challenges` stays a separate job request and still needs the stealth grant. No proxy rotation and no external CAPTCHA service.
+`render = "stealth"` runs only when the operator grants `--allow-stealth`, `RASTRO_ALLOW_STEALTH=1`, or the Studio session switch. The switch grants the running Studio process. It does not write a grant into the job file.
 
-### Code and other people's HTML
+Choosing `browser` or scroll does not check that switch and does not solve challenges. `solve_challenges` stays a separate job request and still needs the stealth grant. No proxy rotation and no external CAPTCHA service.
+
+Reusing one browser context across pages of the same source (N2) does not change this key. A fresh context per page is what N2 replaces, for one source, for one run.
+
+### Code and other people's pages
 
 Shared recipes stay data. There is no flag that lets a bundle run Python. Extra logic lives in the operator's own job or SDK code, which is the activation: they wrote it, a registry did not.
 
-Exporting a sample stays explicit (`--sample` or the Studio file the operator picks). The repository does not gain Amazon, Mercado Libre, or news HTML. Publishing that sample is the operator's choice, on their registry.
+A run scrapes a URL and keeps the recipe. A bundle sample is optional replay evidence, not the next scrape target.
 
 There is no account server to turn on. Hosting a registry is publishing the directory or its HTTPS URL (ADR 0033).
 
 ## Consequences
 
-Studio shows both switches off, with one sentence each on what they do and what they refuse. Tests cover: bundle install leaves `auto_promote` untouched; a stealth engine without the grant does not launch the stealth browser; with the grant, it may.
+Studio shows both switches off, with one sentence each on what they do and what they refuse. Tests cover: bundle install leaves `auto_promote` untouched; `render = "stealth"` without the grant does not launch the stealth browser; with the grant, it may.
