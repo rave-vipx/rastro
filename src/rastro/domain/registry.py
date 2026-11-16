@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from datetime import date
 from typing import Literal
+from urllib.parse import urlsplit
 
 from pydantic import Field, field_validator
 
@@ -15,6 +16,7 @@ from rastro.domain.recipe_bundle import (
     SPDX_PATTERN,
     BundleAuthor,
     BundleCompatibility,
+    BundleManifest,
     RecipeBundleError,
 )
 
@@ -97,3 +99,36 @@ def matches_query(entry: RegistryEntry, query: str) -> bool:
         or needle in entry.id.lower()
         or any(needle in pattern.lower() for pattern in entry.source_patterns)
     )
+
+
+def source_matches(url: str, patterns: tuple[str, ...]) -> bool:
+    """Whether ``url`` is on a pattern's host (and port) and inside its path prefix, if any."""
+    parts = urlsplit(url)
+    try:
+        port = parts.port
+    except ValueError:
+        return False
+    host = f"{parts.hostname or ''}:{port}" if port else parts.hostname or ""
+    path = parts.path.rstrip("/")
+    for pattern in patterns:
+        pattern_host, _, pattern_path = pattern.partition("/")
+        if pattern_host.lower() != host:
+            continue
+        prefix = f"/{pattern_path}" if pattern_path else ""
+        if path == prefix or path.startswith(f"{prefix}/"):
+            return True
+    return False
+
+
+def check_compatibility(manifest: BundleManifest, *, engine_version: str) -> None:
+    """Refuse a package that needs a newer engine or does not cover its own source (HUB-002)."""
+    compatibility = manifest.compatibility
+    if compatibility is None:
+        return
+    if semver_key(engine_version) < semver_key(compatibility.min_rastro):
+        raise RegistryError(
+            f"Package requires rastro-engine >= {compatibility.min_rastro}, "
+            f"but this is {engine_version}; upgrade rastro-engine"
+        )
+    if not source_matches(manifest.source.url, compatibility.source_patterns):
+        raise RegistryError("Bundle source does not match any of its compatibility source_patterns")
