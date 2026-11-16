@@ -14,6 +14,7 @@ from starlette.responses import Response
 from starlette.routing import Route
 
 from rastro.adapters.sqlite import SQLiteRecipeRepository
+from rastro.application.operator_trust import operator_trust
 from rastro.application.recipe_registry import (
     install_from_registry,
     publish_to_registry,
@@ -66,11 +67,16 @@ def _registry(studio: Studio, data: dict[str, Any], *, publish: bool = False) ->
     return path
 
 
-def _url_call(operation: str, *args: Any, **kwargs: Any) -> Any:
+def _url_call(studio: Studio, operation: str, *args: Any, **kwargs: Any) -> Any:
     # The acquisition owner supplies all fetching and SSRF checks (ADR 0033).
     try:
         module = import_module("rastro.application.registry_fetch")
-        return getattr(module, operation)(*args, **kwargs)
+        with operator_trust(
+            allow_private_network=studio.trust.get("allow_private_network", False),
+            allow_ports=studio.trust.get("allow_ports", ()),
+            ignore_robots=studio.trust.get("ignore_robots", ()),
+        ):
+            return getattr(module, operation)(*args, **kwargs)
     except ImportError:
         raise Refused(503, "registry_url_unavailable_install_http_extra") from None
 
@@ -93,7 +99,7 @@ def _install(studio: Studio, data: dict[str, Any]) -> dict[str, Any]:
         install_from_registry(registry, spec, repository, _parser_for, **options)
         if isinstance(registry, Path)
         else _url_call(
-            "install_from_registry_url", registry, spec, repository, _parser_for, **options
+            studio, "install_from_registry_url", registry, spec, repository, _parser_for, **options
         )
     )
     stored = installed.imported.stored
@@ -119,7 +125,7 @@ def routes(studio: Studio) -> list[Route]:
             entries = (
                 search_registry(registry, query)
                 if isinstance(registry, Path)
-                else _url_call("search_registry_url", registry, query)
+                else _url_call(studio, "search_registry_url", registry, query)
             )
             return {"ok": True, "entries": [plain(entry) for entry in entries]}
 

@@ -133,7 +133,8 @@ The page has two views, **Jobs** and **New scraper**, switched with the buttons 
 
 These controls sit in the Jobs view and call the existing services. URL-first job
 creation (N1) and the acquisition schema for spider and scroll (N2, N3, N9) are
-integrated from their own branches. A visible control is not a grant.
+integrated. Jobs with `[spider]` and `[scroll]` list and validate normally; editors for
+those policies are a follow-up. A visible control is not a grant.
 
 - **Next page and repair settings.** Pick the job recipe or a source's recipe, type
   the next-link selector (for example `a.next::attr(href)`) and a page cap from 1 to 50,
@@ -170,9 +171,9 @@ integrated from their own branches. A visible control is not a grant.
   Studio root, install a result as a candidate into the open job's `recipe_memory`, or
   publish an exported public bundle into a local registry directory. Install never
   promotes and never edits the job. Publishing does not run Git or push. An `https://`
-  registry address is accepted only after the HTTPS fetcher (`rastro.application.registry_fetch`)
-  is integrated; until then Studio answers `503 registry_url_unavailable_install_http_extra`
-  and local registries keep working. See [sharing](hub.md#host-a-static-registry-n10).
+  registry address uses the same policy-bound fetcher as `--registry-url`: public addresses
+  and robots rules apply unless the operator grants private networking, an extra port
+  or a robots override. Request data and bundles cannot grant those permissions. See [sharing](hub.md#host-a-static-registry-n10).
   No account or Rastro-operated server is involved.
 
 ## Security model

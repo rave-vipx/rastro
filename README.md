@@ -212,7 +212,7 @@ Repeat installs reuse the recipe. The included file-source job is an offline dem
 for a real site use your own URL job with matching source, schema and context, no
 embedded recipe, and the same recipe store. Promote re-checks your current source.
 See [the registry examples](https://github.com/rave-vipx/rastro/tree/main/examples/registry) and [sharing](https://rave-vipx.github.io/rastro/hub/)
-for export/publish and the pending HTTPS `--registry-url` path. There is no
+for export/publish and the HTTPS `--registry-url` path. There is no
 Rastro-operated registry or account server, and shared recipes cannot execute code.
 
 ## Notify on failure

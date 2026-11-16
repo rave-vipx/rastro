@@ -38,11 +38,15 @@ min_length = 1
 
 
 @pytest.fixture
-def client(tmp_path: Path) -> Iterator[TestClient]:
+def studio(tmp_path: Path) -> Studio:
     (tmp_path / "job.toml").write_text(JOB)
     (tmp_path / "page.html").write_text("<article class='item'><h2>Evento</h2></article>")
     _write_sample_bundle(tmp_path / "bundle", tmp_path)
-    studio = Studio(tmp_path)
+    return Studio(tmp_path)
+
+
+@pytest.fixture
+def client(studio: Studio) -> Iterator[TestClient]:
     with serving(Starlette(routes=routes(studio)), "http://127.0.0.1:8765") as http:
         http.headers["X-Studio-Token"] = studio.token
         yield http
