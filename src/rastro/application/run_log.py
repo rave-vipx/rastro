@@ -28,7 +28,7 @@ def host(url: str) -> str | None:
 
 def log_failures(report: JobRunResult[Any]) -> None:
     for index, result in enumerate(report.results, start=1):
-        if result.status == Outcome.SUCCESS:
+        if result.status in (Outcome.SUCCESS, Outcome.UNCHANGED):
             continue
         _LOG.warning(
             "source_failed",

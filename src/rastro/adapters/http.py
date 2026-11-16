@@ -115,9 +115,12 @@ class CurlTransport:
                     raise AcquisitionError("destination_mismatch", Outcome.ACCESS_RESTRICTION)
                 selected_headers = {
                     key: response.headers[key]
-                    for key in ("location", "retry-after", "content-type")
+                    for key in ("location", "retry-after", "content-type", "etag", "last-modified")
                     if key in response.headers
                 }
+                cookies = response.headers.get_list("set-cookie")
+                if cookies:
+                    selected_headers["set-cookie"] = "\n".join(cookies)
                 return HttpResponse(
                     status=response.status_code,
                     headers=selected_headers,
