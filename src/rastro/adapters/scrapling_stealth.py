@@ -82,7 +82,9 @@ class ScraplingStealth:
             raise
         except Exception:
             raise AcquisitionError(
-                guard.issue or "browser_navigation_failed", Outcome.TRANSIENT_FAILURE
+                guard.issue or "browser_navigation_failed",
+                Outcome.TRANSIENT_FAILURE,
+                requests=guard.requests,
             ) from None
         finally:
             _active.reset(token)
@@ -131,7 +133,9 @@ class StealthSession:
             raise
         except Exception:
             raise AcquisitionError(
-                self._guard.issue or "browser_navigation_failed", Outcome.TRANSIENT_FAILURE
+                self._guard.issue or "browser_navigation_failed",
+                Outcome.TRANSIENT_FAILURE,
+                requests=self._guard.requests,
             ) from None
         finally:
             self._guard.end()  # Scrapling keeps the page pooled: nothing runs between fetches

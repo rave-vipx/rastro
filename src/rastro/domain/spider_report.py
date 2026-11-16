@@ -31,7 +31,7 @@ class SpiderPage(Contract):
     """One discovered URL and what became of it: host and path only, never a query."""
 
     ordinal: int = Field(ge=1)
-    depth: int = Field(ge=0, le=4)
+    depth: int = Field(ge=0, le=5)  # max_depth + 1: the refusal of a link past the limit
     host: str = Field(max_length=253)
     path: str = Field(max_length=256)
     outcome: SpiderOutcome

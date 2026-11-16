@@ -165,3 +165,35 @@ async def test_an_acquirer_that_does_not_charge_the_scope_is_counted_by_delta():
     site.fetch = fetch
     await crawl(site, max_pages=30)
     assert min(remaining) == 30 - 2 * 11
+
+
+@pytest.mark.asyncio
+async def test_max_depth_four_records_the_depth_limit_refusal_and_keeps_the_records():
+    chain = {"/": page("P0", "/1")}
+    chain.update({f"/{i}": page(f"P{i}", f"/{i + 1}") for i in range(1, 5)})
+    chain["/5"] = page("never fetched")
+    result = await crawl(Site(chain), max_depth=4)
+    assert [item.name for item in result.items] == ["P0", "P1", "P2", "P3", "P4"]
+    assert result.status == Outcome.PARTIAL_SUCCESS
+    assert "spider_depth_limit" in [issue.code for issue in result.issues]
+    refused = result.spider.pages[-1]
+    assert (refused.path, refused.depth, refused.outcome) == ("/5", 5, "depth_limit")
+
+
+@pytest.mark.asyncio
+async def test_a_long_deny_prefix_is_enforced_on_the_whole_path():
+    long_prefix = "/" + "x" * 270
+    site = Site({"/": page("Root", long_prefix + "/a"), long_prefix + "/a": page("Hostile")})
+    result = await crawl(site, deny=[long_prefix])
+    assert [item.name for item in result.items] == ["Root"]
+    refused = result.spider.pages[-1]
+    assert refused.outcome == "path_denied"
+    assert len(refused.path) <= 256  # only the report field is shortened
+
+
+@pytest.mark.asyncio
+async def test_a_long_allow_prefix_still_admits_its_pages():
+    long_prefix = "/" + "y" * 270
+    site = Site({"/": page("Root", long_prefix + "/a"), long_prefix + "/a": page("Kept")})
+    result = await crawl(site, allow=["/", long_prefix])
+    assert [item.name for item in result.items] == ["Root", "Kept"]

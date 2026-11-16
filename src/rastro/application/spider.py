@@ -28,6 +28,7 @@ from rastro.application.spider_links import (
     classify_link,
     describe_url,
     path_matches,
+    report_path,
 )
 from rastro.application.spider_outcome import PAGE_FAILURES, page_outcome
 from rastro.domain.acquisition import AcquisitionError, AcquisitionPolicy
@@ -200,7 +201,7 @@ class _Crawl[T: BaseModel]:
             ordinal=ordinal,
             depth=depth,
             host=link.host,
-            path=link.path,
+            path=report_path(link),
             outcome=outcome,
             records=len(result.records),
         )
@@ -255,7 +256,7 @@ class _Crawl[T: BaseModel]:
             self.unreported += 1
             return
         self.rows[ordinal] = SpiderPage(
-            ordinal=ordinal, depth=depth, host=link.host, path=link.path, outcome=outcome
+            ordinal=ordinal, depth=depth, host=link.host, path=report_path(link), outcome=outcome
         )
 
     def _finish(self) -> ExtractionResult[T]:

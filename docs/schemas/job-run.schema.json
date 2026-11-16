@@ -1002,7 +1002,7 @@
       "description": "One discovered URL and what became of it: host and path only, never a query.",
       "properties": {
         "depth": {
-          "maximum": 4,
+          "maximum": 5,
           "minimum": 0,
           "title": "Depth",
           "type": "integer"

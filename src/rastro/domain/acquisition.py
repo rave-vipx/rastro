@@ -185,11 +185,15 @@ class AcquisitionResult:
 class AcquisitionError(Exception):
     """A safe failure category; never contains a raw URL or transport exception.
 
-    ``connect_failure`` proves connection setup failed before an HTTP exchange.
+    ``connect_failure`` proves connection setup failed before an HTTP exchange. ``requests``
+    is how many transfers a browser let through before it failed (they still spend the budget).
     """
 
-    def __init__(self, code: str, outcome: Outcome, *, connect_failure: bool = False) -> None:
+    def __init__(
+        self, code: str, outcome: Outcome, *, connect_failure: bool = False, requests: int = 0
+    ) -> None:
         self.code = code
         self.outcome = outcome
         self.connect_failure = connect_failure
+        self.requests = requests
         super().__init__(code)

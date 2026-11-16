@@ -6,15 +6,16 @@ import asyncio
 from contextvars import ContextVar
 from dataclasses import replace
 from time import perf_counter
-from urllib.parse import urlsplit
 
 from rastro.application.acquisition import WebAcquirer
 from rastro.application.acquisition_state import (
     PAGINATION_SCOPE,
     _Host,
     _Operation,
+    charge_extra_requests,
     check_page_request,
 )
+from rastro.application.browser_policy import canonical_url, page_policy, scroll_failure
 from rastro.application.browser_sessions import SOURCE_SESSIONS
 from rastro.application.destinations import permitted_url, pin_destination
 from rastro.application.operator_trust import current_trust
@@ -115,7 +116,6 @@ class BrowserAcquirer(WebAcquirer):
                         raise AcquisitionError("response_too_large", Outcome.PERMANENT_FAILURE)
                     if not body:
                         raise AcquisitionError("empty_document", Outcome.INVALID_DATA)
-                    operation.requests += max(0, result.requests - 1)
                     return HttpResponse(
                         result.http_status or 0,
                         {"content-type": "text/html; charset=utf-8"},
@@ -133,21 +133,45 @@ class BrowserAcquirer(WebAcquirer):
         url: str,
         max_bytes: int,
     ) -> AcquisitionResult:
+        """Render under what is left of the shared budget, charging what the browser did."""
+        policy = page_policy(operation.policy, url)
+        allowance = self.policy.max_requests - operation.requests + 1
+        scope = PAGINATION_SCOPE.get()
+        if scope is not None:  # the navigation is already charged: it stays inside the allowance
+            allowance = min(allowance, scope.remaining + 1)
+        policy = policy.model_copy(update={"max_requests": allowance})
+        try:
+            result = await self._render_once(target, targets, policy, max_bytes)
+        except AcquisitionError as error:
+            self._charge(operation, error.requests)
+            raise
+        self._charge(operation, result.requests)
+        return result
+
+    @staticmethod
+    def _charge(operation: _Operation, requests: int) -> None:
+        extra = max(0, requests - 1)  # the navigation itself was charged before the render
+        operation.requests += extra
+        charge_extra_requests(extra)
+
+    async def _render_once(
+        self,
+        target: PinnedTarget,
+        targets: tuple[PinnedTarget, ...],
+        policy: AcquisitionPolicy,
+        max_bytes: int,
+    ) -> AcquisitionResult:
         """Render in the source's open context when there is one, else in a fresh one."""
-        policy = operation.policy.model_copy(
-            update={
-                "allow_http": operation.policy.allow_http and urlsplit(url).scheme == "http",
-                "max_requests": self.policy.max_requests - operation.requests + 1,
-            }
-        )
         scope = SOURCE_SESSIONS.get()
         if scope is not None and isinstance(self._renderer, BrowserSessions):
             session = await scope.reuse(self._renderer, target, targets, policy)
             if session is not None:
                 scope.mark_rendered(self._renderer, None)  # unknown until this render returns
                 result = await session.render(target, policy=policy, max_bytes=max_bytes)
+                if await scope.leave_foreign(self._renderer, result.url):
+                    return result  # a redirect carried the context to another host: drop it
                 if result.status == Outcome.SUCCESS:
-                    scope.mark_rendered(self._renderer, _canonical(result.url, policy))
+                    scope.mark_rendered(self._renderer, canonical_url(result.url, policy))
                 return result
         return await self._renderer.render(
             target, policy=policy, max_bytes=max_bytes, targets=targets
@@ -174,6 +198,7 @@ class BrowserAcquirer(WebAcquirer):
         started = perf_counter()
         try:
             canonical, hostname, _ = permitted_url(source.url, policy)
+            policy = page_policy(policy, canonical)  # the page's own scheme bounds every step
             session = scope.showing(self._renderer, host=hostname, url=canonical)
             if session is None:  # a page rendered outside the session has no page to scroll
                 raise ConfigurationError("This page is not the one the session last rendered")
@@ -194,7 +219,12 @@ class BrowserAcquirer(WebAcquirer):
                         )
                 finally:
                     host.next_request = perf_counter() + host.interval
-            permitted_url(result.url, policy)
+            if await scope.leave_foreign(self._renderer, result.url):
+                raise AcquisitionError("scroll_navigated", Outcome.PERMANENT_FAILURE)
+            if permitted_url(result.url, policy)[0] != canonical:
+                # Another document was never checked against robots: refuse it, keep the rest.
+                scope.mark_rendered(self._renderer, None)
+                raise AcquisitionError("scroll_navigated", Outcome.PERMANENT_FAILURE)
             if result.status != Outcome.SUCCESS or not result.body:
                 raise AcquisitionError(
                     result.issue_code or "empty_document",
@@ -204,18 +234,6 @@ class BrowserAcquirer(WebAcquirer):
                 raise AcquisitionError("response_too_large", Outcome.PERMANENT_FAILURE)
             return replace(result, acquisition_seconds=perf_counter() - started)
         except TimeoutError:
-            return _scroll_failure(source, Outcome.TRANSIENT_FAILURE, "operation_timeout")
+            return scroll_failure(source, Outcome.TRANSIENT_FAILURE, "operation_timeout")
         except AcquisitionError as error:
-            return _scroll_failure(source, error.outcome, error.code)
-
-
-def _canonical(url: str, policy: AcquisitionPolicy) -> str:
-    """The form ``scroll`` compares: what ``permitted_url`` makes of the rendered URL."""
-    try:
-        return permitted_url(url, policy)[0]
-    except AcquisitionError:
-        return ""  # never equals a permitted URL, so no scroll follows it
-
-
-def _scroll_failure(source: Source, status: Outcome, code: str) -> AcquisitionResult:
-    return AcquisitionResult(source.url, None, status, code, egress=source.egress)
+            return scroll_failure(source, error.outcome, error.code, error.requests)

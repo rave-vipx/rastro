@@ -324,6 +324,7 @@ async def test_network_guard_checks_redirects_and_budget():
     with pytest.raises(AcquisitionError) as error:
         guard.result("https://example.com/", "<p>x</p>", 200, 100)
     assert (error.value.code, error.value.outcome) == ("request_limit", Outcome.PERMANENT_FAILURE)
+    assert error.value.requests == 1  # the transfer it let through still spends the budget
     route = AsyncMock()
     route.request = SimpleNamespace(
         url="https://evil.test/x", resource_type="script", frame=SimpleNamespace(page=page)
@@ -515,3 +516,14 @@ async def test_guard_sets_up_each_page_once():
     other.context.new_cdp_session.return_value = session
     await guard.setup(other)
     assert other.context.new_cdp_session.await_count == 1
+
+
+def test_network_guard_reports_its_transfers_when_the_final_url_is_refused():
+    from rastro.adapters.playwright_browser import NetworkGuard
+    from rastro.domain.acquisition import AcquisitionError
+
+    guard = NetworkGuard(AcquisitionPolicy(allowed_hosts=("example.com",)))
+    guard.requests = 3
+    with pytest.raises(AcquisitionError) as error:
+        guard.result("https://evil.test/", "<p>x</p>", 200, 100)
+    assert error.value.requests == 3

@@ -12,6 +12,7 @@ from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack, asynccontextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
+from urllib.parse import urlsplit
 
 from rastro.domain.acquisition import AcquisitionPolicy, PinnedTarget
 from rastro.ports.browser import BrowserSession, BrowserSessions
@@ -21,6 +22,7 @@ from rastro.ports.browser import BrowserSession, BrowserSessions
 class _Entry:
     host: str
     session: BrowserSession
+    stack: AsyncExitStack
     rendered: str | None = None  # the URL the session's page shows; ``None`` while unknown
 
 
@@ -28,7 +30,6 @@ class SourceSessions:
     """The sessions one source opened, keyed by renderer and bound to the first host."""
 
     def __init__(self) -> None:
-        self._stack = AsyncExitStack()
         self._open: dict[int, _Entry] = {}
 
     async def reuse(
@@ -41,12 +42,28 @@ class SourceSessions:
         """The renderer's session for ``target``'s host; ``None`` for any other host."""
         entry = self._open.get(id(renderer))
         if entry is None:
-            session = await self._stack.enter_async_context(
-                renderer.session(targets, policy=policy)
-            )
-            self._open[id(renderer)] = _Entry(target.host, session)
+            stack = AsyncExitStack()
+            try:
+                session = await stack.enter_async_context(renderer.session(targets, policy=policy))
+            except BaseException:
+                await stack.aclose()
+                raise
+            self._open[id(renderer)] = _Entry(target.host, session, stack)
             return session
         return entry.session if entry.host == target.host else None
+
+    async def leave_foreign(self, renderer: object, url: str) -> bool:
+        """Close the renderer's context when its page shows another host than the bound one.
+
+        A context that held another host's document (a redirect) never serves the bound
+        host again: the next page of that host opens a fresh one.
+        """
+        entry = self._open.get(id(renderer))
+        if entry is None or _hostname(url) == _hostname(entry.host):
+            return False
+        del self._open[id(renderer)]
+        await entry.stack.aclose()
+        return True
 
     def mark_rendered(self, renderer: object, url: str | None) -> None:
         """Record what the renderer's session page shows now (``None``: unknown, mid-render)."""
@@ -66,8 +83,14 @@ class SourceSessions:
         return entry.session
 
     async def close(self) -> None:
-        self._open.clear()
-        await self._stack.aclose()
+        entries, self._open = list(self._open.values()), {}
+        for entry in reversed(entries):
+            await entry.stack.aclose()
+
+
+def _hostname(url_or_host: str) -> str:
+    host = urlsplit(url_or_host).hostname if "/" in url_or_host else url_or_host
+    return (host or "").lower().rstrip(".")
 
 
 SOURCE_SESSIONS: ContextVar[SourceSessions | None] = ContextVar("source_sessions", default=None)

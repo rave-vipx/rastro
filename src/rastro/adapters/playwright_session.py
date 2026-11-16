@@ -46,7 +46,9 @@ class PlaywrightSession:
             raise
         except Exception:
             raise AcquisitionError(
-                self._guard.issue or "browser_navigation_failed", Outcome.TRANSIENT_FAILURE
+                self._guard.issue or "browser_navigation_failed",
+                Outcome.TRANSIENT_FAILURE,
+                requests=self._guard.requests,
             ) from None
         finally:
             self._guard.end()
@@ -65,7 +67,9 @@ class PlaywrightSession:
             raise
         except Exception:
             raise AcquisitionError(
-                self._guard.issue or "browser_navigation_failed", Outcome.TRANSIENT_FAILURE
+                self._guard.issue or "browser_navigation_failed",
+                Outcome.TRANSIENT_FAILURE,
+                requests=self._guard.requests,
             ) from None
         finally:
             self._guard.end()

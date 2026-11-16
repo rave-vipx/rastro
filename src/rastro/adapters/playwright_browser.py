@@ -121,7 +121,10 @@ class NetworkGuard:
 
     def result(self, url: str, body: str, status: int, max_bytes: int) -> AcquisitionResult:
         self.end()  # the step is over, whatever the outcome
-        permitted_url(url, self.policy)
+        try:
+            permitted_url(url, self.policy)
+        except AcquisitionError as error:
+            raise AcquisitionError(error.code, error.outcome, requests=self.requests) from None
         if self.issue:
             # Same outcome as the HTTP path's exhausted request budget.
             outcome = (
@@ -129,7 +132,7 @@ class NetworkGuard:
                 if self.issue == "request_limit"
                 else Outcome.ACCESS_RESTRICTION
             )
-            raise AcquisitionError(self.issue, outcome)
+            raise AcquisitionError(self.issue, outcome, requests=self.requests)
         if len(body.encode("utf-8")) > max_bytes:
             raise AcquisitionError("response_too_large", Outcome.PERMANENT_FAILURE)
         if any(
@@ -187,7 +190,9 @@ class PlaywrightBrowser:
             raise
         except Exception:
             raise AcquisitionError(
-                guard.issue or "browser_navigation_failed", Outcome.TRANSIENT_FAILURE
+                guard.issue or "browser_navigation_failed",
+                Outcome.TRANSIENT_FAILURE,
+                requests=guard.requests,
             ) from None
 
     @asynccontextmanager

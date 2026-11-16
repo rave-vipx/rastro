@@ -74,6 +74,16 @@ def check_page_request(url: str) -> None:
     scope.secure |= urlsplit(url).scheme == "https"
 
 
+def charge_extra_requests(count: int) -> None:
+    """Charge transfers a browser made on a page's behalf beyond the one already charged."""
+    scope = PAGINATION_SCOPE.get()
+    if scope is None or count <= 0:
+        return
+    scope.remaining -= count
+    if (charges := PAGE_CHARGES.get()) is not None:
+        charges[0] += count
+
+
 def _host(name: str | None) -> str | None:
     """Compare hosts case-insensitively, treating one trailing root dot as the same name."""
     return name.lower().removesuffix(".") if name else name

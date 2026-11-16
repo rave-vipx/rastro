@@ -27,7 +27,7 @@ class Link:
 
     url: str
     host: str
-    path: str
+    path: str  # whole, for allow/deny; ``report_path`` shortens it for the report
     refusal: SpiderOutcome | None = None
 
 
@@ -47,9 +47,11 @@ def describe_url(url: str) -> Link:
     name = f"[{host}]" if ":" in host else host
     netloc = name if port in (None, _DEFAULT_PORTS[parts.scheme]) else f"{name}:{port}"
     path = parts.path or "/"
-    return Link(
-        urlunsplit((parts.scheme, netloc, path, parts.query, "")), host, tidy_path(path)[:256]
-    )
+    return Link(urlunsplit((parts.scheme, netloc, path, parts.query, "")), host, tidy_path(path))
+
+
+def report_path(link: Link) -> str:
+    return link.path[:256]
 
 
 def classify_link(base: str, href: str) -> Link:
