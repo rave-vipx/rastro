@@ -240,7 +240,7 @@ def _commit_validators(
     """Save validators only for the ``ran`` sources that loaded cleanly (a stopped or resumed run
     ran a subset of the job); storage failures are explicit."""
     try:
-        for item, result, source in zip(ran, report.results, loaded.sources, strict=False):
+        for item, result, source in zip(ran, report.results, loaded.sources, strict=True):
             if (
                 isinstance(item, UrlJobSource)
                 and source.status == Outcome.SUCCESS
