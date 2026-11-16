@@ -1,6 +1,6 @@
-# Product needs N1–N11
+# Product needs N1–N12
 
-Owner request, 2026-11-16, updated the same day: finish the product in this cut, including what the first draft had postponed (bounded scroll, a registry others can host, and a spec that matches). This file is the planning source. It overrides conflicting product bans in `RASTRO_MASTER_SPEC.md`, the README comparison table, and ADR 0020. It does **not** override the security model in `SECURITY.md`.
+Owner request, 2026-11-16, updated the same day: finish the product in this cut, including bounded scroll, a registry others can host, a spec that matches, and opt-in promote and stealth (ADR 0034). This file is the planning source. It overrides conflicting product bans in `RASTRO_MASTER_SPEC.md`, the README comparison table, and ADR 0020. It does **not** override the security model in `SECURITY.md`.
 
 `docs/roadmap.md` stays the history of what already shipped. This file is what to build next.
 
@@ -12,7 +12,7 @@ Rastro is the scraper a person with little scraping experience can keep running.
 2. They name the fields they want, in plain language.
 3. A model looks at the page **once**, proposes a recipe, and Rastro keeps that recipe only if it extracts valid records.
 4. Later runs use the recipe and do not call a model.
-5. When the site changes, Rastro says so, calls the model again, and adapts the recipe only after the same gates as today.
+5. When the site changes, Rastro says so, calls the model again, and adapts the recipe only after the same gates as today. If the operator turned auto-promote on, a candidate that passes those gates and the semantic judge becomes active without another click. If they did not, Rastro asks.
 6. Other people can publish a recipe (a store, a classifieds site, a news list) and someone else can install it as a candidate from a Git directory or from an HTTPS URL of that directory.
 7. The person can watch this from Studio, including drift and failures, not from a TOML file and an exit code.
 
@@ -23,16 +23,17 @@ A hand-written Scrapling + Pydantic script can extract one page. Rastro's job is
 | ID | Need | Done when |
 | --- | --- | --- |
 | N1 | URL-first Studio | Studio accepts a URL, fetches it, and builds a job. Saving HTML by hand is no longer required. |
-| N2 | JavaScript as a normal path | If the HTTP body has no records, Studio offers browser rendering. Stealth stays an operator opt-in. Pages of one source reuse one browser context. |
+| N2 | JavaScript as a normal path | If the HTTP body has no records, Studio offers browser rendering. Pages of one source reuse one browser context. |
 | N3 | Bounded spider | A job can follow links (same host by default) up to a depth and a page cap, concurrently, while extracting with the recipe. |
 | N4 | Pagination a non-expert can turn on | Studio can mark a next link and a page cap. The existing bounded pagination (ADR 0026) is the engine. |
-| N5 | Notifications a person understands | When a run ends in drift, failure, quarantine, or a cap, Studio shows that in words without opening a log. The existing `--on-failure` hook still runs, and the README shows a copy-paste hook. The job file still cannot set that hook. |
+| N5 | Notifications a person understands | When a run ends in drift, failure, quarantine, a refused promote, or a cap, Studio shows that in words without opening a log. The existing `--on-failure` hook still runs, and the README shows a copy-paste hook. The job file still cannot set that hook. |
 | N6 | Recipes people can share | `examples/registry/` has at least three synthetic public bundles (listing, news card, product card), and the README shows install, promote, load. |
-| N7 | Repair without silent corruption | Studio has one "Fix this site" action: propose, show old vs new values, promote only through the existing gates. `auto_promote` stays off unless the job already sets it. |
-| N8 | A README a newcomer can finish | The first screen is the five-minute Studio path, not the specification. No unsupported accuracy claims. |
-| N9 | Bounded scroll | A browser source can scroll until no new records or a step cap. Scroll is not stealth. See ADR 0033. |
+| N7 | Repair without silent corruption | Studio has "Fix this site" and a separate auto-promote switch, default off. On means the existing gates plus the semantic judge. Off means a person promotes with a reason. See ADR 0034. |
+| N8 | A README a newcomer can finish | The first screen is the five-minute Studio path, not the specification. No unsupported accuracy claims. The two opt-in switches are explained in one sentence each. |
+| N9 | Bounded scroll | A browser source can scroll until no new records or a step cap. Scroll does not enable stealth. See ADR 0033. |
 | N10 | A registry someone else can host | Search and install work from a local registry or an HTTPS URL of the same layout. Studio can search, install as a candidate, and publish into a local registry. No accounts and no Rastro-operated server. See ADR 0033. |
-| N11 | The spec matches the product | The master spec Amendment Log records ADR 0032 and ADR 0033. Sentences that still ban crawling, URL-first Studio, or a hostable registry are marked superseded. The file is not rewritten. |
+| N11 | The spec matches the product | The master spec Amendment Log records ADR 0032, ADR 0033, and ADR 0034. Sentences that still ban crawling, URL-first Studio, a hostable registry, or opt-in stealth are marked superseded. The file is not rewritten. |
+| N12 | Opt-in promote and stealth | Studio shows both switches off. Auto-promote writes `[repair] auto_promote` on the operator's job. Stealth grants the Studio process only (`--allow-stealth` / `RASTRO_ALLOW_STEALTH`). A bundle cannot set either. See ADR 0034. |
 
 ## Product bans this cut repeals
 
@@ -45,25 +46,36 @@ These were self-imposed. They are no longer requirements:
 - A browser context must be thrown away between pages of the **same** source during one pagination, scroll, or spider run. A fresh context per source is still the default across sources.
 - "There is no hosted registry" as a permanent boundary. A hostable static registry is in scope. A multi-tenant website is not.
 - "Infinite scroll is out of scope" as a permanent boundary. Unbounded scroll stays out.
+- "Stealth is forbidden." It is allowed when the operator grants it (ADR 0024, ADR 0034). It is not the default.
 
-Do not rewrite `RASTRO_MASTER_SPEC.md` to match. ADR 0032 and ADR 0033 are the amendments. Where the master spec disagrees with this file on the rows above, this file wins.
+Do not rewrite `RASTRO_MASTER_SPEC.md` to match. ADR 0032, ADR 0033, and ADR 0034 are the amendments. Where the master spec disagrees with this file on the rows above, this file wins.
 
 ## Security that stays
 
-Do not weaken these to make N1–N11 easier:
+Do not weaken these to make N1–N12 easier:
 
-- Recipes are data. No executable recipe code. Imported, installed, and model recipes stay candidates until a person promotes them.
-- A model proposes selectors or a judgement. It never writes records. `auto_promote` is not turned on by this cut.
+- Recipes are data. No flag turns on executable recipe code. Code the operator writes in their own job or SDK is theirs. Code from a bundle, a model, or a registry is refused.
+- A model proposes selectors or a judgement. It never writes records. `auto_promote` defaults off. When the operator turns it on, a failed gate still does not promote.
 - Invalid or missing data is never a successful empty result.
 - SSRF checks, the public-address default, private-network opt-in, extra ports, and ignore-robots stay operator grants. A job file, a bundle, a registry URL, or a model cannot grant them.
-- Stealth and challenge-solving stay operator grants (`--allow-stealth`). Scroll and browser mode do not imply stealth. No proxy rotation and no external CAPTCHA service.
+- Stealth and challenge-solving stay operator grants. The job may request `engine = "stealth"`; without the grant the stealth browser does not start. Scroll and plain browser mode do not imply stealth. No proxy rotation and no external CAPTCHA service.
 - Untrusted recipes (Hub, registry URL, MCP, Studio edits, model proposals) keep the selector cost policy (`:has()`, sibling combinators, and the depth limits).
 - Logs, hooks, and repair reports do not include page bodies, query strings, or secrets.
 - Studio stays loopback-only, with the per-run token, origin check, and path containment.
 - Spider, pagination, and scroll cannot reset the per-source request budget on every page or step.
-- Default tests stay offline. Fixtures are synthetic. Never commit a captured third-party page, credential, or personal data. Amazon, Mercado Libre, and news sites are recipes a user exports, not samples in this repository.
+- Default tests stay offline. Fixtures are synthetic. Never commit a captured third-party page, credential, or personal data. A sample leaves the machine only when the operator exports one they choose.
 - Do not open, read, or edit `benchmarks/recovery/sealed/`.
 - Do not replace Studio with a Node, React, Vite, or Tailwind toolchain. The loopback page is the GUI.
+
+## Opt-in strategy (N12)
+
+See ADR 0034.
+
+- **Auto-promote, default off.** Studio switch or `[repair] auto_promote = true` on the job the operator owns. Gates and the semantic judge still have to pass. Install from a registry does not change this key and does not promote.
+- **Stealth, default off.** Studio session switch, `--allow-stealth`, or `RASTRO_ALLOW_STEALTH=1`. The switch does not write the grant into the job. Browser and scroll leave it off.
+- **Someone else's HTML.** Export stays an explicit sample the operator picks. This repository keeps synthetic bundles.
+- **Code.** Not an opt-in on a shared recipe. Local job or SDK code only.
+- **Accounts.** Not an opt-in server. Sharing is the registry directory or its URL.
 
 ## Spider policy (N3)
 
@@ -98,19 +110,21 @@ See ADR 0033. Studio shows the step cap only after the `[scroll]` schema exists.
 ## JavaScript (N2)
 
 - HTTP first. Browser only when the job asks (`acquisition.engine = "browser"`) or when Studio offers it because the HTTP extract returned no records.
-- Stealth is never implied by "use a browser" or by scroll.
+- Stealth is a third choice, off until the operator grants it (N12).
 - One browser context per source per run, reused across that source's pages and scroll steps, then closed. No cookie jar shared across hosts.
 - Images, media, fonts, and WebSockets stay blocked.
 
-## Studio (N1, N4, N5, N7, N10)
+## Studio (N1, N4, N5, N7, N10, N12)
 
 Keep the loopback Starlette app.
 
 - **New scraper:** URL, field names, optional example values, Ask AI if a model was configured, preview, create job.
 - **Progress:** a live line for the current source, page or scroll ordinal, and outcome. No page body in that line.
 - **Next link:** the person clicks an element in the preview or types a selector; Studio writes the existing pagination fields.
-- **Fix this site:** calls the existing repair service and requires a reason to promote.
-- **Health:** last success, why it is stale, open drift, quarantined recipes, the exact command for `--on-failure`, and the same alert when the run just finished in one of those states.
+- **Fix this site:** calls the existing repair service and requires a reason to promote when auto-promote is off.
+- **Auto-promote:** switch, default off, writes `[repair] auto_promote` only. Copy says the gates still apply.
+- **Stealth:** session switch, default off. It grants the process. It does not persist a grant in the job. Engine `stealth` without that grant shows a refusal, not a plain browser fallback that pretends stealth ran.
+- **Health:** last success, why it is stale, open drift, quarantined recipes, a refused auto-promote, the exact command for `--on-failure`, and the same alert when the run just finished in one of those states.
 - **Registry:** search and install from a directory or HTTPS URL; publish into a local registry directory. Install stays a candidate.
 
 ## Sharing (N6, N10)
@@ -123,16 +137,16 @@ Two agents, two branches cut from `docs/product-needs-n1-n8`, pull requests into
 
 | Agent | Owns | Does not touch |
 | --- | --- | --- |
-| Claude | N2, N3, N9. Spider, scroll, shared request budget, same-source browser reuse, job schema, acquisition tests. N10 fetch only: new `src/rastro/application/registry_fetch.py` plus the CLI flag, using existing SSRF checks. | `src/rastro/studio/**`, `README.md`, `RASTRO_MASTER_SPEC.md`, `examples/registry/**` |
-| Codex | N1, N4, N5, N6, N7, N8, N10 Studio and docs, N11. URL-first Studio, progress, next-link editor, Fix and Health, registry search/install/publish UI, README, three synthetic bundles, Amendment Log row and superseded sentences. | `src/rastro/acquisition*`, `src/rastro/application/registry_fetch.py`, parser internals, `SECURITY.md` |
+| Claude | N2, N3, N9, the enforcement half of N12. Spider, scroll, shared request budget, same-source browser reuse, job schema, acquisition tests. N10 fetch only: new `src/rastro/application/registry_fetch.py` plus the CLI flag. A stealth request without the grant must not launch the stealth browser. Registry install must not change `auto_promote`. | `src/rastro/studio/**`, `README.md`, `RASTRO_MASTER_SPEC.md`, `examples/registry/**` |
+| Codex | N1, N4, N5, N6, N7, N8, N10 Studio and docs, N11, the Studio half of N12. URL-first Studio, progress, next-link editor, Fix, Health, both switches, registry search/install/publish UI, README, three synthetic bundles, Amendment Log rows for ADR 0032, 0033, and 0034. | `src/rastro/acquisition*`, `src/rastro/application/registry_fetch.py`, parser internals, `SECURITY.md` |
 
 Claude reviews Codex's PR. Codex reviews Claude's PR. Network and security changes need that cross-review (see `AGENTS.md`).
 
 ## Acceptance for the cut
 
-- Offline tests cover spider caps, off-host refusal, shared budget, browser-context reuse, scroll stop-on-no-new-records, and a registry URL that fails SSRF or a bad digest without writing a recipe.
-- Studio tests cover URL create, a pagination field write, a repair promote that still refuses a rejected candidate, and an install that stays a candidate.
-- `README.md` leads with Studio. The comparison table says crawling, pagination, and scroll are bounded and opt-in.
-- The master spec Amendment Log cites ADR 0032 and ADR 0033. No historical section is deleted.
+- Offline tests cover spider caps, off-host refusal, shared budget, browser-context reuse, scroll stop-on-no-new-records, a registry URL that fails SSRF or a bad digest without writing a recipe, install leaving `auto_promote` untouched, and stealth requested without a grant not launching the stealth browser.
+- Studio tests cover URL create, a pagination field write, a repair promote that still refuses a rejected candidate, an install that stays a candidate, and both switches rendering off.
+- `README.md` leads with Studio. The comparison table says crawling, pagination, and scroll are bounded and opt-in, and that stealth and auto-promote are off until the operator turns them on.
+- The master spec Amendment Log cites ADR 0032, ADR 0033, and ADR 0034. No historical section is deleted.
 - No new dependency in the core install. Browser and HTTP stay extras. No Node toolchain.
-- Known limits are written down: no unbounded crawl, no Rastro-operated accounts server, no automatic promote, no stealth implied by a browser or a scroll.
+- Known limits are written down: no unbounded crawl, no Rastro-operated accounts server, no executable shared recipes, no stealth implied by a browser or a scroll.
