@@ -49,9 +49,13 @@ class PaginationScope:
     host: str | None
     secure: bool
     remaining: int
+    hosts: frozenset[str] = frozenset()  # further hosts a spider may reach (all allowed_hosts)
+    documents: int | None = None  # documents left for the source; None = the recipe's own cap
 
 
 PAGINATION_SCOPE: ContextVar[PaginationScope | None] = ContextVar("pagination_scope", default=None)
+# One counter per spider page fetch: what ``check_page_request`` charged on that page's behalf.
+PAGE_CHARGES: ContextVar[list[int] | None] = ContextVar("page_charges", default=None)
 
 
 def check_page_request(url: str) -> None:
@@ -59,12 +63,14 @@ def check_page_request(url: str) -> None:
     scope = PAGINATION_SCOPE.get()
     if scope is None:
         return
-    reason = pagination_boundary(url, scope.host, scope.secure)
+    reason = pagination_boundary(url, scope.host, scope.secure, scope.hosts)
     if reason:
         raise AcquisitionError(reason, Outcome.PERMANENT_FAILURE)
     if scope.remaining <= 0:
         raise AcquisitionError("request_limit", Outcome.PERMANENT_FAILURE)
     scope.remaining -= 1
+    if (charges := PAGE_CHARGES.get()) is not None:
+        charges[0] += 1
     scope.secure |= urlsplit(url).scheme == "https"
 
 
@@ -73,12 +79,14 @@ def _host(name: str | None) -> str | None:
     return name.lower().removesuffix(".") if name else name
 
 
-def pagination_boundary(url: str, host: str | None, secure: bool) -> str | None:
+def pagination_boundary(
+    url: str, host: str | None, secure: bool, hosts: frozenset[str] = frozenset()
+) -> str | None:
     try:
         parts = urlsplit(url)
         if parts.scheme not in {"http", "https"} or parts.username or parts.password:
             return "invalid_next"
-        if _host(parts.hostname) != _host(host):
+        if _host(parts.hostname) != _host(host) and _host(parts.hostname) not in hosts:
             return "off_host"
         if secure and parts.scheme == "http":
             return "https_downgrade"

@@ -7,7 +7,7 @@ from rastro.domain.job_dataset import DatasetSpec
 from rastro.domain.models import ExtractionRecord, ExtractionResult, Issue, Limits, Metrics, Outcome
 
 # A normal end of the list is a complete snapshot; every other stop is partial.
-COMPLETE_STOPS = frozenset({"no_next", "repeat"})
+COMPLETE_STOPS = frozenset({"no_next", "repeat", "spider_complete"})
 # An empty later page succeeds, but page one alone measures drift, so it cannot mark
 # unseen records missing.
 SUCCESS_STOPS = COMPLETE_STOPS | {"empty_page"}
@@ -95,7 +95,7 @@ def combine_pages[T: BaseModel](
         offset += len(page.records) + page.metrics.rejected
     succeeded = stop in SUCCESS_STOPS
     if not succeeded:
-        issues.append(Issue(code=f"pagination_{stop}"))
+        issues.append(Issue(code=stop if stop.startswith("spider_") else f"pagination_{stop}"))
     status = (
         Outcome.SUCCESS if succeeded else (Outcome.PARTIAL_SUCCESS if records else first.status)
     )
