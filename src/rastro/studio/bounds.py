@@ -16,7 +16,9 @@ from rastro.studio.settings import _commit, _format, _read
 
 def controls(job: Job) -> dict[str, Any]:
     modes = [
-        getattr(source, "render", None) or (job.acquisition.render if job.acquisition else "http")
+        getattr(source, "render", "http")
+        if "render" in source.model_fields_set
+        else (job.acquisition.render if job.acquisition else "http")
         for source in job.sources
     ]
     return {
@@ -68,5 +70,5 @@ def save_bounds(path: Path, expected: str, kind: str, raw: Any) -> str:
             data.pop(kind, None)
         else:
             data[kind] = values
-        changed = json.dumps(data, indent=2) + "\n"
+        changed = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
     return _commit(path, expected, changed, wanted)

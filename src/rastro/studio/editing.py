@@ -106,7 +106,10 @@ def edit_policy_table(text: str, name: str, values: dict[str, Any] | None) -> st
             + "\n["
             + name
             + "]\n"
-            + "".join(f"{key} = {json.dumps(value)}\n" for key, value in values.items())
+            + "".join(
+                f"{key} = {json.dumps(value, ensure_ascii=False)}\n"
+                for key, value in values.items()
+            )
         )
     following = re.search(r"(?m)^[ \t]*\[", text[header.end() :])
     stop = header.end() + following.start() if following else len(text)
@@ -117,18 +120,18 @@ def edit_policy_table(text: str, name: str, values: dict[str, Any] | None) -> st
         pattern = re.compile(rf"(?m)^([ \t]*{key}[ \t]*=[ \t]*)({literal})([ \t]*(?:#.*)?)$")
         if pattern.search(section):
 
-            def replace(match: re.Match[str], encoded: str = json.dumps(value)) -> str:
-                return match[1] + encoded + " " + match[3]
+            def replace(
+                match: re.Match[str], encoded: str = json.dumps(value, ensure_ascii=False)
+            ) -> str:
+                spacing = match[2][len(match[2].rstrip()) :]
+                return match[1] + encoded + spacing + match[3]
 
             section = pattern.sub(replace, section, count=1)
         else:
-            section += f"\n{key} = {json.dumps(value)}\n"
+            section += f"\n{key} = {json.dumps(value, ensure_ascii=False)}\n"
     if values is None:
-        # Disabling scroll removes its table, retaining standalone comments.
-        section = (
-            "\n"
-            + "\n".join(line for line in section.splitlines() if line.lstrip().startswith("#"))
-            + "\n"
-        )
+        # Keep real comment tails, not hashes inside quoted policy values.
+        comments = re.findall(rf"(?m)^{literal}(#.*)$", text[header.start() : stop])
+        section = "\n".join(comments) + "\n"
         return text[: header.start()] + section + text[stop:]
     return text[: header.end()] + section + text[stop:]

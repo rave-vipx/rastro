@@ -13,7 +13,8 @@ pytestmark = pytest.mark.usefixtures("offline_cli_loop")
 
 
 @pytest.mark.parametrize(
-    ("elapsed", "different", "count"), [(599, False, 1), (601, False, 2), (1, True, 2)]
+    ("elapsed", "different", "count"),
+    [(599, False, 1), (600, False, 2), (601, False, 2), (1, True, 2)],
 )
 def test_preview_expiry(tmp_path: Path, elapsed: int, different: bool, count: int) -> None:
     now = [0.0]
@@ -81,7 +82,7 @@ def test_disable_scroll_and_reject_malformed_policy(tmp_path: Path) -> None:
     from tests.integration.test_job_api import JOB
 
     path = tmp_path / "job.toml"
-    path.write_text(JOB + "\n[scroll]\nmax_steps = 2\n")
+    path.write_text(JOB + "\n# standalone\n[scroll] # header comment\nmax_steps = 2 # steps\n")
     app, token = create_app(tmp_path)
     with serving(app, "http://127.0.0.1:8765") as client:
         client.headers["X-Studio-Token"] = token
@@ -100,6 +101,8 @@ def test_disable_scroll_and_reject_malformed_policy(tmp_path: Path) -> None:
             assert path.read_bytes() == before
         assert post(client, "/api/bounds", {**data, "policy": None}).status_code == 200
         assert load_job(path).scroll is None
+        for comment in ("# standalone", "# header comment", "# steps"):
+            assert comment in path.read_text()
 
 
 def test_spider_result_line_only_uses_report_fields() -> None:
