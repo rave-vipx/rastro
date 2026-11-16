@@ -4,6 +4,8 @@ Owner request, 2026-11-16, updated the same day: finish the product in this cut,
 
 `docs/roadmap.md` stays the history of what already shipped. This file is what to build next.
 
+The job key for plain HTTP, browser, and stealth is `render`, already shipped on `[acquisition]` and on each source (`http`, `browser`, `stealth`). Do not rename it to `engine`.
+
 ## What Rastro is for
 
 Rastro is the scraper a person with little scraping experience can keep running.
@@ -39,7 +41,7 @@ Saving HTML by hand is not the product path. A bundle may include a `sample.html
 | N9 | Bounded scroll | A browser source can scroll until no new records or a step cap. Scroll does not enable stealth. See ADR 0033. |
 | N10 | A registry someone else can host | Search and install work from a local registry or an HTTPS URL of the same layout. Studio can search, install as a candidate, and publish into a local registry. No accounts and no Rastro-operated server. See ADR 0033. |
 | N11 | The spec matches the product | The master spec Amendment Log records ADR 0032, ADR 0033, and ADR 0034. Sentences that still ban crawling, URL-first Studio, a hostable registry, or opt-in stealth are marked superseded. The file is not rewritten. |
-| N12 | Opt-in promote and stealth | Studio shows both switches off. Auto-promote writes `[repair] auto_promote` on the operator's job. Stealth grants the Studio process only (`--allow-stealth` / `RASTRO_ALLOW_STEALTH`). A bundle cannot set either. See ADR 0034. |
+| N12 | Opt-in promote and stealth | Studio shows both switches off. Auto-promote writes `[repair] auto_promote` on the operator's job. Stealth grants the Studio process only (`--allow-stealth` / `RASTRO_ALLOW_STEALTH`). A bundle cannot set either. The job key stays `render`. See ADR 0034. |
 
 ## Product bans this cut repeals
 
@@ -64,7 +66,7 @@ Do not weaken these to make N1–N12 easier:
 - A model proposes selectors or a judgement. It never writes records. `auto_promote` defaults off. When the operator turns it on, a failed gate still does not promote.
 - Invalid or missing data is never a successful empty result.
 - SSRF checks, the public-address default, private-network opt-in, extra ports, and ignore-robots stay operator grants. A job file, a bundle, a registry URL, or a model cannot grant them.
-- Stealth and challenge-solving stay operator grants. The job may request `engine = "stealth"`; without the grant the stealth browser does not start. Scroll and plain browser mode do not imply stealth. No proxy rotation and no external CAPTCHA service.
+- Stealth and challenge-solving stay operator grants. The job may set `render = "stealth"` on `[acquisition]` or on a source. Without the grant the stealth browser does not start. `render = "browser"` and scroll do not imply stealth. No proxy rotation and no external CAPTCHA service. Do not rename `render` to `engine`.
 - Untrusted recipes (Hub, registry URL, MCP, Studio edits, model proposals) keep the selector cost policy (`:has()`, sibling combinators, and the depth limits).
 - Logs, hooks, and repair reports do not include page bodies, query strings, or secrets.
 - Studio stays loopback-only, with the per-run token, origin check, and path containment.
@@ -78,7 +80,7 @@ Do not weaken these to make N1–N12 easier:
 See ADR 0034.
 
 - **Auto-promote, default off.** Studio switch or `[repair] auto_promote = true` on the job the operator owns. Gates and the semantic judge still have to pass. Install from a registry does not change this key and does not promote.
-- **Stealth, default off.** Studio session switch, `--allow-stealth`, or `RASTRO_ALLOW_STEALTH=1`. The switch does not write the grant into the job. Browser and scroll leave it off.
+- **Stealth, default off.** Studio session switch, `--allow-stealth`, or `RASTRO_ALLOW_STEALTH=1`. The switch does not write the grant into the job. `render = "browser"` and scroll leave it off.
 - **Code.** Not an opt-in on a shared recipe. Local job or SDK code only.
 - **Accounts.** Not an opt-in server. Sharing is the registry directory or its URL.
 
@@ -114,9 +116,9 @@ See ADR 0033. Studio shows the step cap only after the `[scroll]` schema exists.
 
 ## JavaScript (N2)
 
-- HTTP first. Browser only when the job asks (`acquisition.engine = "browser"`) or when Studio offers it because the HTTP extract returned no records.
-- Stealth is a third choice, off until the operator grants it (N12).
-- One browser context per source per run, reused across that source's pages and scroll steps, then closed. No cookie jar shared across hosts.
+- HTTP first. Browser only when `render = "browser"` on `[acquisition]` or on that source, or when Studio offers it because the HTTP extract returned no records. Studio writes `render`, not a new key.
+- Stealth is `render = "stealth"`, off until the operator grants it (N12).
+- One browser context per source per run, reused across that source's pages and scroll steps, then closed. No cookie jar shared across hosts. This replaces the per-page context in ADR 0024 for pages of the same source. It does not rename `render`.
 - Images, media, fonts, and WebSockets stay blocked.
 
 ## Studio (N1, N4, N5, N7, N10, N12)
@@ -128,7 +130,7 @@ Keep the loopback Starlette app.
 - **Next link:** the person clicks an element in the preview or types a selector; Studio writes the existing pagination fields.
 - **Fix this site:** calls the existing repair service and requires a reason to promote when auto-promote is off.
 - **Auto-promote:** switch, default off, writes `[repair] auto_promote` only. Copy says the gates still apply.
-- **Stealth:** session switch, default off. It grants the process. It does not persist a grant in the job. Engine `stealth` without that grant shows a refusal, not a plain browser fallback that pretends stealth ran.
+- **Stealth:** session switch, default off. It grants the process. It does not persist a grant in the job. `render = "stealth"` without that grant shows a refusal, not a plain browser fallback that pretends stealth ran.
 - **Health:** last success, why it is stale, open drift, quarantined recipes, a refused auto-promote, the exact command for `--on-failure`, and the same alert when the run just finished in one of those states.
 - **Registry:** search and install from a directory or HTTPS URL; publish into a local registry directory. Install stays a candidate. Publish the recipe. Do not require a saved page to run the job afterwards.
 

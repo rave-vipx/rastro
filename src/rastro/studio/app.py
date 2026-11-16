@@ -14,6 +14,7 @@ from starlette.middleware import Middleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from rastro.domain.models import ConfigurationError
+from rastro.ports.acquisition import AcquisitionPort
 from rastro.ports.model import ModelPort
 from rastro.studio import (
     routes_ai,
@@ -39,6 +40,7 @@ def create_app(
     allow_egress: bool = False,
     allow_stealth: bool = False,
     allow_env: Iterable[str] = (),
+    acquisition: AcquisitionPort | None = None,
 ) -> tuple[Starlette, str]:
     """Build the app for ``root``; returns it with this run's token (for tests and the CLI).
 
@@ -48,6 +50,7 @@ def create_app(
     ``allow_egress`` and ``allow_env`` are the operator opt-ins for job-declared proxies.
     ``allow_stealth`` (``--allow-stealth``) grants stealth to this process only; the page's
     session switch can change it later, and neither writes the grant into a job (N12).
+    ``acquisition`` replaces the default HTTP acquirer (tests inject a fake; N1 URL create).
     """
     folder = Path(root)
     if not folder.is_dir():
@@ -59,6 +62,7 @@ def create_app(
         allow_egress=allow_egress,
         allow_stealth=allow_stealth,
         allow_env=allow_env,
+        acquisition=acquisition,
     )
     routes = [
         *routes_jobs.routes(studio),
