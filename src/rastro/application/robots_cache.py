@@ -50,11 +50,11 @@ def current_robots_cache() -> RobotsCache:
 
 @contextmanager
 def robots_cache() -> Iterator[RobotsCache]:
-    """Share robots answers inside the block; a nested block reuses the outer cache."""
-    existing = _SCOPED.get()
-    if existing is not None:
-        yield existing
-        return
+    """A fresh cache for one public operation, even inside a task that inherited another's.
+
+    A child task copies the parent's context, so an inherited cache may belong to a run that
+    already ended; reusing it would carry that run's robots answer into this one.
+    """
     cache = RobotsCache()
     token = _SCOPED.set(cache)
     try:

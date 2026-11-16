@@ -149,3 +149,8 @@ def test_concurrent_sources_share_one_fetch(sources):
     with robots_cache():
         run_async(run())
     assert transport.robots_requests == 1
+
+
+def test_a_nested_scope_never_reuses_the_outer_cache():
+    with robots_cache() as outer, robots_cache() as inner:
+        assert inner is not outer
