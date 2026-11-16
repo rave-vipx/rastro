@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 from urllib.parse import urlsplit
 
-from rastro.domain.acquisition import AcquisitionError, ProxyRoute
+from rastro.domain.acquisition import AcquisitionError, AcquisitionPolicy, ProxyRoute
 from rastro.domain.models import Outcome
 
 if TYPE_CHECKING:
@@ -27,6 +27,7 @@ class _Host:
 @dataclass
 class _Operation:
     url: str
+    policy: AcquisitionPolicy  # the job's policy plus the operator's grants for this operation
     cookie_host: str | None = None
     headers: dict[str, str] = field(default_factory=dict)
     requests: int = 0
@@ -38,6 +39,9 @@ class _Operation:
     retry_after_seconds: float | None = None
     robots: dict[str, Protego | None] = field(default_factory=dict)
     proxy: ProxyRoute | None = None
+    auth: dict[str, dict[str, str]] = field(default_factory=dict, repr=False)
+    robots_fetch: bool = False  # robots.txt is fetched without credentials
+    overridden: set[str] = field(default_factory=set)
 
 
 @dataclass

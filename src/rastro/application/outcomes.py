@@ -107,6 +107,7 @@ def stamp_acquired[T: BaseModel](
         update={
             "acquisition_method": "http",
             "egress": fetched.egress,
+            "robots_overridden": fetched.robots_overridden,
             "acquisition_seconds": fetched.acquisition_seconds,
             "network_seconds": fetched.network_seconds,
             "request_count": fetched.requests,

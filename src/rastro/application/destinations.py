@@ -15,21 +15,40 @@ _TRANSITION_NETWORKS = tuple(
 )
 
 
-def public_address(value: str) -> str:
+# What the operator's private-network grant adds. Link-local (cloud metadata), unspecified,
+# multicast, reserved and mapped/transition forms are never reachable (SEC-001).
+_PRIVATE_NETWORKS = tuple(
+    ipaddress.ip_network(network)
+    for network in (
+        "10.0.0.0/8",
+        "172.16.0.0/12",
+        "192.168.0.0/16",
+        "127.0.0.0/8",
+        "100.64.0.0/10",
+        "::1/128",
+        "fc00::/7",
+    )
+)
+
+
+def public_address(value: str, *, allow_private: bool = False) -> str:
     try:
         address = ipaddress.ip_address(value)
     except ValueError:
         raise AcquisitionError("destination_denied", Outcome.ACCESS_RESTRICTION) from None
-    if (
-        not address.is_global
-        or address.is_multicast
-        or address.is_reserved
+    never = (
+        address.is_multicast
+        or address.is_unspecified
+        or address.is_link_local
         or "%" in value
         or (
             isinstance(address, ipaddress.IPv6Address)
             and (address.ipv4_mapped is not None or any(address in n for n in _TRANSITION_NETWORKS))
         )
-    ):
+    )
+    public = address.is_global and not address.is_reserved
+    local = allow_private and any(address in network for network in _PRIVATE_NETWORKS)
+    if never or not (public or local):
         raise AcquisitionError("destination_denied", Outcome.ACCESS_RESTRICTION)
     return str(address)
 
@@ -45,10 +64,13 @@ def permitted_url(url: str, policy: AcquisitionPolicy) -> tuple[str, str, int]:
         raise AcquisitionError("host_not_allowed", Outcome.ACCESS_RESTRICTION)
     if parsed.scheme != "https" and not policy.allow_http:
         raise AcquisitionError("https_required", Outcome.ACCESS_RESTRICTION)
-    port = parsed.port or (443 if parsed.scheme == "https" else 80)
-    if port != (443 if parsed.scheme == "https" else 80):
+    standard = 443 if parsed.scheme == "https" else 80
+    port = parsed.port or standard
+    if port != standard and port not in policy.grants.ports:
         raise AcquisitionError("port_not_allowed", Outcome.ACCESS_RESTRICTION)
     netloc = f"[{host}]" if ":" in host else host
+    if port != standard:
+        netloc = f"{netloc}:{port}"  # a granted port must reach the transport and robots
     return urlunsplit((parsed.scheme, netloc, parsed.path, parsed.query, "")), host, port
 
 
@@ -63,5 +85,10 @@ async def pin_destination(url: str, policy: AcquisitionPolicy, resolver: Resolve
     if not addresses:
         raise AcquisitionError("dns_failure", Outcome.TRANSIENT_FAILURE)
     # A mixed public/private DNS answer is rejected in its entirety.
-    validated = tuple(dict.fromkeys(public_address(value) for value in addresses))
+    validated = tuple(
+        dict.fromkeys(
+            public_address(value, allow_private=policy.grants.private_network)
+            for value in addresses
+        )
+    )
     return PinnedTarget(canonical, host, port, validated[0], validated[1:])
