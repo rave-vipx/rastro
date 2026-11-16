@@ -91,6 +91,23 @@ def parse_package_spec(spec: str) -> tuple[str, str | None]:
     return pkg_id, (version if sep else None)
 
 
+def select_entry(
+    entries: tuple[RegistryEntry, ...], pkg_id: str, pinned: str | None
+) -> RegistryEntry:
+    """The pinned version, or the highest semver, of ``pkg_id``; otherwise ``RegistryError``."""
+    candidates = [item for item in entries if item.id == pkg_id]
+    if not candidates:
+        raise RegistryError(f"Package {pkg_id!r} was not found in the registry")
+    selected = (
+        next((item for item in candidates if item.version == pinned), None)
+        if pinned is not None
+        else max(candidates, key=lambda item: semver_key(item.version))
+    )
+    if selected is None:
+        raise RegistryError(f"Package {pkg_id}@{pinned} was not found in the registry")
+    return selected
+
+
 def matches_query(entry: RegistryEntry, query: str) -> bool:
     """Case-insensitive substring match against ``id`` or ``source_patterns``."""
     needle = query.strip().lower()
