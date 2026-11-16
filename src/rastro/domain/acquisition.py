@@ -179,6 +179,7 @@ class AcquisitionResult:
     egress: str = "direct"
     render_seconds: float = 0
     robots_overridden: bool = False
+    raw_body: bytes | None = field(default=None, repr=False)  # set only by acquire_raw
 
 
 class AcquisitionError(Exception):
