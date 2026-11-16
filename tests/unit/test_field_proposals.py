@@ -151,11 +151,18 @@ def _hostile_page(parents: int) -> str:
 
 def test_many_distinct_candidate_selectors_fail_fast_with_a_reported_limit():
     """SEC-008, DISC-003: candidate record selectors are capped; no quadratic scan."""
-    html = _hostile_page(5000)
-    started = time.perf_counter()
-    with pytest.raises(ResourceLimitError, match="candidate record selectors"):
-        propose_fields(html)
-    assert time.perf_counter() - started < 1.5
+
+    def elapsed(parents: int) -> float:
+        html = _hostile_page(parents)
+        started = time.perf_counter()
+        with pytest.raises(ResourceLimitError, match="candidate record selectors"):
+            propose_fields(html)
+        return time.perf_counter() - started
+
+    small, large = elapsed(500), elapsed(5000)
+    # 10x input: linear work grows ~10x, a quadratic scan ~100x. A ratio, not a wall-clock
+    # bound, so slow CI runners do not fail it.
+    assert large < max(small, 0.02) * 40
 
 
 def test_candidate_cap_boundary_still_proposes_below_the_cap():
