@@ -1,4 +1,4 @@
-// New scraper wizard: saved page + example values -> suggested recipe -> new job file.
+// New scraper wizard: URL + example values -> suggested recipe -> new job file (N1).
 // All source-derived text is set as plain text content; markup is never parsed.
 import { $, api, bind, el, show, table } from "./dom.js";
 
@@ -35,6 +35,12 @@ function input(id, label, value, placeholder) {
   return node;
 }
 
+function pageUrl() {
+  const url = $("page-url").value.trim();
+  if (!url) throw new Error("enter a page URL");
+  return url;
+}
+
 function collect() {
   const example = {};
   const identity = [];
@@ -48,8 +54,7 @@ function collect() {
     if (key.checked) identity.push(field);
   }
   if (!Object.keys(example).length) throw new Error("add at least one field with an example");
-  if (!$("page").value) throw new Error("pick a saved page first");
-  return { page: $("page").value, url: $("page-url").value.trim(), examples: [example], identity };
+  return { url: pageUrl(), examples: [example], identity };
 }
 
 function confidenceText(note) {
@@ -58,6 +63,22 @@ function confidenceText(note) {
   parts.push(`${note.records_with_value} records with a value`);
   if (note.note) parts.push(note.note);
   return parts.join("; ");
+}
+
+function defaultJobName(url) {
+  try {
+    const parsed = new URL(url);
+    const leaf = parsed.pathname.split("/").filter(Boolean).pop() || parsed.hostname;
+    return `${leaf.replace(/[^\w.-]+/g, "_")}.toml`;
+  } catch {
+    return "job.toml";
+  }
+}
+
+function httpNotice(allowHttp) {
+  return allowHttp
+    ? el("p", "This job will allow plain HTTP (allow_http = true) because the URL uses unencrypted HTTP.", "warn")
+    : null;
 }
 
 async function suggestRecipe() {
@@ -76,10 +97,9 @@ async function suggestRecipe() {
     table(names, data.preview.map((row) => names.map((n) => row[n]))),
   );
   if (data.truncated) out.append(el("p", "Only the first 50 records are shown.", "muted"));
-  if (!$("new-file").value) {
-    const page = body.page.replace(/\.html?$/i, ".toml");
-    $("new-file").value = page;
-  }
+  const notice = httpNotice(data.allow_http);
+  if (notice) out.append(notice);
+  if (!$("new-file").value) $("new-file").value = defaultJobName(body.url);
   if (identity.length === 0) out.append(el("p", "Tick a record key to store records in a dataset.", "muted"));
 }
 
@@ -93,17 +113,13 @@ async function createJob(app) {
     ...body, file, dataset: dataset || null, identity: dataset ? body.identity : [],
     recipe_memory: memory || null,
   });
-  show("create-status", `Created ${made.file}. Opening it…`, "good");
+  const note = made.allow_http
+    ? `Created ${made.file} with allow_http = true. Opening it…`
+    : `Created ${made.file}. Opening it…`;
+  show("create-status", note, made.allow_http ? "warn" : "good");
   await app.refreshJobs(made.file);
   app.switchView("jobs");
   await app.openJob(made.file);
-}
-
-async function loadPages() {
-  const data = await api("/api/pages");
-  $("page").replaceChildren(...data.files.map((name) => new Option(name, name)));
-  if (!data.files.length) show("suggest-status", "No saved .html pages in this folder yet.", "warn");
-  else if (data.truncated) show("suggest-status", "Only the first 500 pages are listed.", "muted");
 }
 
 export function initWizard(app) {
@@ -112,5 +128,4 @@ export function initWizard(app) {
   bind("add-field", "suggest-status", () => addRow().focus());
   bind("suggest", "suggest-status", suggestRecipe);
   bind("create", "create-status", () => createJob(app));
-  loadPages().catch((error) => show("suggest-status", `Error: ${error.message}`, "bad"));
 }

@@ -18,6 +18,7 @@ from starlette.requests import Request
 from starlette.responses import Response
 from starlette.routing import Route
 
+from rastro.application.job_from_url import html_from_url
 from rastro.application.job_loader import _read_local_source
 from rastro.application.job_repair import repair_job_source
 from rastro.application.model_recipes import ModelAnswer, recipe_for_page
@@ -72,10 +73,21 @@ def routes(studio: Studio) -> list[Route]:
     async def suggest(request: Request) -> Response:
         data = await body(request)
         port = model()
-        page = files.resolve_in_root(studio.root, text(data, "page"), files.PAGE_SUFFIXES)
         schema = build_job_schema(_fields([dict.fromkeys(_names(data), "")]))
-        html = _read_local_source(page, Limits().max_html_bytes, "html")
-        answer = await recipe_for_page(port, html, schema, url=optional_text(data, "url"))
+        page = optional_text(data, "page")
+        url = optional_text(data, "url")
+        if page is not None:
+            path = files.resolve_in_root(studio.root, page, files.PAGE_SUFFIXES)
+            html = _read_local_source(path, Limits().max_html_bytes, "html")
+            answer = await recipe_for_page(port, html, schema, url=url)
+        elif url is not None:
+            fetched = await run_in_threadpool(
+                lambda: html_from_url(url, acquisition=studio.acquisition)
+            )
+            studio.url_preview = fetched
+            answer = await recipe_for_page(port, fetched.html, schema, url=fetched.final_url)
+        else:
+            raise Refused(400, "missing_url")
         return reply({**_page_answer(answer), "remote": studio.model_remote})
 
     async def repair(request: Request) -> Response:

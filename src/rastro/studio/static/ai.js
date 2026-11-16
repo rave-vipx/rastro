@@ -11,7 +11,7 @@ function fieldNames() {
     if (name && !names.includes(name)) names.push(name);
   }
   if (!names.length) throw new Error("name at least one field");
-  if (!$("page").value) throw new Error("pick a saved page first");
+  if (!$("page-url").value.trim()) throw new Error("enter a page URL");
   return names;
 }
 
@@ -26,7 +26,7 @@ function fillExamples(row) {
 async function askRecipe() {
   show("suggest-status", "Asking the model for a recipe…", "muted");
   const data = await api("/api/ai/suggest", {
-    page: $("page").value, url: $("page-url").value.trim(), fields: fieldNames(),
+    url: $("page-url").value.trim(), fields: fieldNames(),
   });
   const out = $("suggest-result");
   if (!data.found) {
