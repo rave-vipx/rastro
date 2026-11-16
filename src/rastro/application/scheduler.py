@@ -2,24 +2,37 @@
 
 from __future__ import annotations
 
+import logging
 import signal
 import threading
-import time
 from collections.abc import Callable, Iterable, Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 
+import structlog
+
 from rastro.application.egress_trust import check_job_egress
+from rastro.application.errors import RunInProgressError
 from rastro.application.job_dataset import dataset_location, load_job_file, open_dataset
 from rastro.application.job_loader import load_job
-from rastro.application.run_lock import clear_checkpoint, dataset_lock, read_checkpoint
+from rastro.application.run_lock import (
+    clear_checkpoint,
+    dataset_lock,
+    read_checkpoint,
+    source_key,
+)
 from rastro.domain.dataset import SourceStatus
 from rastro.domain.job_load import JobLoadResult
 from rastro.domain.job_results import JobExitCode
 from rastro.domain.jobs import Job
 from rastro.domain.models import ConfigurationError, Outcome
 from rastro.domain.schedule import due_sources, next_sleep_seconds, source_evidence_url
+
+_LOG = structlog.wrap_logger(
+    logging.getLogger("rastro"), processors=[structlog.processors.JSONRenderer()]
+)
+_BUSY_RETRY_SECONDS = 30.0  # wait before retrying a tick whose dataset another run holds
 
 
 @contextmanager
@@ -68,6 +81,7 @@ def _run_tick(
     allow_absolute_paths: bool,
     allow_remote: bool,
     allow_egress: bool,
+    allow_stealth: bool,
     allow_env: tuple[str, ...],
     should_stop: Callable[[], bool],
     on_tick: Callable[[JobLoadResult], None] | None,
@@ -79,7 +93,7 @@ def _run_tick(
     )
     ckpt = read_checkpoint(raw_path, dataset=job.dataset.name)
     due = (
-        tuple(s for s in job.sources if source_evidence_url(job, s) not in set(ckpt[1]))
+        tuple(s for i, s in enumerate(job.sources) if source_key(job, i, s) not in set(ckpt[1]))
         if ckpt is not None
         else ()
     ) or due_sources(job, statuses, now)
@@ -102,6 +116,7 @@ def _run_tick(
         allow_absolute_paths=allow_absolute_paths,
         allow_remote=allow_remote,
         allow_egress=allow_egress,
+        allow_stealth=allow_stealth,
         allow_env=allow_env,
         sources=due,
         should_stop=should_stop,
@@ -128,10 +143,11 @@ def watch_job(
     allow_absolute_paths: bool = False,
     allow_remote: bool = False,
     allow_egress: bool = False,
+    allow_stealth: bool = False,
     allow_env: Iterable[str] = (),
     on_tick: Callable[[JobLoadResult], None] | None = None,
     clock: Callable[[], datetime] | None = None,
-    sleep: Callable[[float], None] | None = None,
+    sleep: Callable[[float], object] | None = None,
     load_runner: Callable[[Path, Job], JobLoadResult | int] | None = None,
     max_ticks: int | None = None,
 ) -> int:
@@ -144,43 +160,47 @@ def watch_job(
         missing = "schedule" if job.schedule is None else "dataset"
         raise ConfigurationError(f"job watch requires a [{missing}] block", location=missing)
     raw_path = dataset_location(file, job, allow_absolute_paths=allow_absolute_paths)
-    clock_fn, sleep_fn = clock or (lambda: datetime.now(UTC)), sleep or time.sleep
+    stop = threading.Event()
+    clock_fn, sleep_fn = clock or (lambda: datetime.now(UTC)), sleep or stop.wait
     timeout = job.acquisition.operation_timeout_seconds if job.acquisition is not None else 60.0
     attempted: dict[str, SourceStatus] = {}
-    stopped, ticks = False, 0
-
-    def _stop() -> None:
-        nonlocal stopped
-        stopped = True
-
-    with _signal_guard(_stop):
-        while not stopped:
-            now = clock_fn()
-            with dataset_lock(
-                raw_path, timeout_seconds=timeout, source_count=len(job.sources), clock=clock_fn
-            ):
-                exit_code = _run_tick(
-                    file,
-                    raw_path,
-                    job,
-                    now,
-                    attempted,
-                    drift=drift,
-                    allow_absolute_paths=allow_absolute_paths,
-                    allow_remote=allow_remote,
-                    allow_egress=allow_egress,
-                    allow_env=allow_env_tuple,
-                    should_stop=lambda: stopped,
-                    on_tick=on_tick,
-                    load_runner=load_runner,
-                )
+    ticks = 0
+    with _signal_guard(stop.set):
+        while not stop.is_set():
+            now, skipped = clock_fn(), False
+            try:
+                with dataset_lock(
+                    raw_path, timeout_seconds=timeout, source_count=len(job.sources), clock=clock_fn
+                ):
+                    exit_code = _run_tick(
+                        file,
+                        raw_path,
+                        job,
+                        now,
+                        attempted,
+                        drift=drift,
+                        allow_absolute_paths=allow_absolute_paths,
+                        allow_remote=allow_remote,
+                        allow_egress=allow_egress,
+                        allow_stealth=allow_stealth,
+                        allow_env=allow_env_tuple,
+                        should_stop=stop.is_set,
+                        on_tick=on_tick,
+                        load_runner=load_runner,
+                    )
+            except RunInProgressError:
+                if once:
+                    raise
+                _LOG.warning("watch_tick_skipped", reason="run_in_progress")
+                exit_code, skipped = int(JobExitCode.NEEDS_ATTENTION), True
             ticks += 1
-            if stopped:
+            if stop.is_set():
                 return int(JobExitCode.SUCCESS)
             if once or (max_ticks is not None and ticks >= max_ticks):
                 return exit_code
             statuses = _merged_statuses(
                 raw_path, job, attempted, allow_remote=allow_remote, allow_env=allow_env_tuple
             )
-            sleep_fn(next_sleep_seconds(job, statuses, clock_fn(), job_path=file))
+            wait = next_sleep_seconds(job, statuses, clock_fn(), job_path=file)
+            sleep_fn(max(wait, _BUSY_RETRY_SECONDS) if skipped else wait)
     return int(JobExitCode.SUCCESS)

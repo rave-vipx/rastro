@@ -254,15 +254,23 @@ def test_lock_held_and_stale_lock_replacement(
 def test_checkpoint_roundtrip_and_permissions(tmp_path: Path) -> None:
     """SCHED-004: .run.json is written atomically with mode 0600 and cleared on completion."""
     db_path = tmp_path / "items.sqlite"
-    cpath = write_checkpoint(db_path, "run-1", ("https://a.example/items",), dataset="items")
+    cpath = write_checkpoint(db_path, "run-1", ((0, "https://a.example/items"),), dataset="items")
     assert cpath == checkpoint_path(db_path)
     assert cpath.is_file()
     if os.name != "nt":
         assert stat.S_IMODE(cpath.stat().st_mode) == 0o600
     assert read_checkpoint(db_path, dataset="items") == (
         "run-1",
-        ("https://a.example/items",),
+        ((0, "https://a.example/items"),),
     )
     clear_checkpoint(db_path)
     assert not cpath.exists()
     assert read_checkpoint(db_path, dataset="items") is None
+
+
+def test_checkpoint_keys_same_url_sources_by_index(tmp_path: Path) -> None:
+    """SCHED-004: two sources sharing one URL (other regions) complete independently."""
+    db_path = tmp_path / "items.sqlite"
+    url = "https://a.example/items"
+    write_checkpoint(db_path, "run-1", ((0, url), (2, url), (0, url)), dataset="items")
+    assert read_checkpoint(db_path, dataset="items") == ("run-1", ((0, url), (2, url)))

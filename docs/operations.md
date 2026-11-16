@@ -34,17 +34,27 @@ rastro job watch job.toml --once --on-failure 'notify-send "Rastro needs attenti
 - `--once` runs a single tick and exits with that load's exit code (`0` when no source is
   due), so cron or CI (`0 * * * * rastro job watch /path/to/job.toml --once`) can trigger
   due sources without a separate config file (see also [Daily dataset and agenda](scheduling.md)).
-- `SIGINT` and `SIGTERM` finish the current source, release the lock, and exit `0`.
+- `SIGINT` and `SIGTERM` finish the current source, release the lock, and exit `0`. They
+  also wake the wait for the next due time at once.
 - **Overlap protection (SCHED-003):** every `rastro job load` and each `watch` tick creates
-  an owner-only lock `<dataset file>.lock` (`O_CREAT|O_EXCL`, mode `0600`) holding the PID
-  and start time. If another live process holds the lock, the command does no work, prints
-  `{"error": "run_in_progress", ...}` on stderr, and exits `4`. A stale lock (dead PID or
-  older than `operation_timeout_seconds × sources + 1h`) is replaced with a `WARNING` log.
+  an owner-only lock `<dataset file>.lock` (`O_CREAT|O_EXCL`, mode `0600`) holding the PID,
+  a random start token and the start time. If another live process holds the lock,
+  `job load` and `watch --once` do no work, print `{"error": "run_in_progress", ...}` on
+  stderr, and exit `4`. A running `watch` instead logs a `WARNING` (`watch_tick_skipped`),
+  skips that tick and retries after at least 30 seconds. A stale lock (dead PID or older
+  than `operation_timeout_seconds × sources + 1h`) is replaced with a `WARNING` log: the
+  starter moves the stale file aside, checks it is still the file it judged stale, and
+  creates the new lock exclusively, so two starters cannot both take over. A holder only
+  deletes the lock while it still holds its own PID and token, never a successor's. PID
+  liveness uses `OpenProcess` on Windows and signal `0` elsewhere.
 - **Checkpoint and recovery (SCHED-004):** during a load Rastro atomically writes
-  `<dataset file>.run.json` (`0600`) with the completed source URLs for the current run. If
-  a load is interrupted, the next load of the same job resumes with the remaining sources
-  first and then clears the checkpoint; already-completed sources keep their records and
-  status.
+  `<dataset file>.run.json` (`0600`) with the completed sources of the current run, each
+  keyed by its position in the job file and its URL, so two sources with one URL in
+  different regions stay distinct. If a load is interrupted, the next load of the same job
+  resumes with the remaining sources first and then clears the checkpoint;
+  already-completed sources keep their records and status. One load uses one acquisition
+  client for all its sources, so host pacing (`min_interval_seconds`) and run-local
+  sessions carry over from one source to the next.
 
 ## Exit codes
 

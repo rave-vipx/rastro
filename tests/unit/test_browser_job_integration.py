@@ -57,12 +57,16 @@ def test_load_job_file_forwards_allow_stealth(tmp_path, monkeypatch):
         raise _Stop
 
     monkeypatch.setattr(module, "run_job", fake_run_job)
-    for flag in (False, True):
-        with pytest.raises(_Stop):
-            module.load_job_file(_job(tmp_path), allow_stealth=flag)
+    # The load's one shared acquisition port is built up front, so a refusal is early.
+    for kwargs in ({"allow_stealth": False}, {}):
+        with pytest.raises(ConfigurationError, match="Stealth requires"):
+            module.load_job_file(_job(tmp_path), **kwargs)
+    assert seen == []
+    # With consent the port needs the browser extra; this test only follows the flag.
+    monkeypatch.setattr(module, "load_acquisition", lambda job: None)
     with pytest.raises(_Stop):
-        module.load_job_file(_job(tmp_path))
-    assert seen == [False, True, False]
+        module.load_job_file(_job(tmp_path), allow_stealth=True)
+    assert seen == [True]
 
 
 @pytest.mark.parametrize("entry", ["repair_job_source", "repair_job_sources", "promote_job_recipe"])

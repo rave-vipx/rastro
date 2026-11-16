@@ -11,22 +11,26 @@ from typing import TYPE_CHECKING
 
 from rastro.adapters.sqlite_dataset import SQLiteDatasetStore
 from rastro.adapters.sqlite_drift import SQLiteDriftMonitor
+from rastro.application.checkpointed_load import run_checkpointed_load
 from rastro.application.drift import collect_snapshots
 from rastro.application.egress_trust import allowed_env_names, check_job_egress
 from rastro.application.job_loader import load_job, resolve_job_path
 from rastro.application.jobs import run_job
-from rastro.application.operator_trust import current_trust
-from rastro.application.run_lock import dataset_lock, run_checkpointed_load
+from rastro.application.operator_trust import current_trust, operator_trust
+from rastro.application.run_lock import dataset_lock
 from rastro.application.success_samples import collect_successes
 from rastro.domain.job_load import JobLoadResult
+from rastro.domain.jobs import UrlJobSource
 from rastro.domain.models import ConfigurationError
 from rastro.domain.secret_env import check_secret_env_name
 from rastro.ports.dataset import DatasetStore
+from rastro.scrape_target import web_acquirer
 
 if TYPE_CHECKING:
     from rastro.domain.drift import StructuralSnapshot
     from rastro.domain.job_sources import JobSource
     from rastro.domain.jobs import Job
+    from rastro.ports.acquisition import AcquisitionPort
 
 
 def dataset_location(file: Path, job: Job, *, allow_absolute_paths: bool) -> Path:
@@ -51,6 +55,31 @@ def dataset_location(file: Path, job: Job, *, allow_absolute_paths: bool) -> Pat
     return Path(spec.path) if Path(spec.path).is_absolute() else file.parent.resolve() / spec.path
 
 
+def _positions(job: Job, sources: Sequence[JobSource]) -> tuple[int, ...]:
+    """Where each of `sources` sits in the job file, so checkpoints name them stably."""
+    try:
+        return tuple(job.sources.index(source) for source in sources)
+    except ValueError:
+        raise ConfigurationError("Sources to load must come from the job file") from None
+
+
+def load_acquisition(job: Job) -> AcquisitionPort | None:
+    """One acquisition port for the whole load: host pacing, robots and sessions span sources.
+
+    Call inside the operator's trust scope; browser modes need it (``allow_stealth``).
+    """
+    from rastro.browser import job_acquisition
+
+    if job.acquisition is None or not any(isinstance(s, UrlJobSource) for s in job.sources):
+        return None
+    if (shared := job_acquisition(job, None)) is not None:
+        return shared
+    try:
+        return web_acquirer(job.acquisition)
+    except ImportError:
+        raise ConfigurationError("Install rastro-engine[http] for HTTP acquisition") from None
+
+
 def load_job_file(
     path: str | Path,
     *,
@@ -73,7 +102,9 @@ def load_job_file(
     """
     file = Path(path)
     job = load_job(file, allow_absolute_paths=allow_absolute_paths)
+    positions = tuple(range(len(job.sources)))
     if sources is not None:
+        positions = _positions(job, sources)
         job = job.model_copy(update={"sources": tuple(sources)})
     allow_env = tuple(allow_env)
     check_job_egress(job, allow_egress=allow_egress, allow_env=allow_env)
@@ -91,6 +122,10 @@ def load_job_file(
         capture = collect_snapshots(ScraplingDriftProbe())
     else:
         capture = nullcontext({})
+    with operator_trust(
+        allow_remote=allow_remote, allow_stealth=allow_stealth, allow_env=allow_env
+    ):
+        acquisition = load_acquisition(job)
     with (
         dataset_lock(
             raw_path, timeout_seconds=timeout, source_count=len(job.sources), held=_lock_held
@@ -111,7 +146,9 @@ def load_job_file(
                 allow_egress=allow_egress,
                 allow_stealth=allow_stealth,
                 allow_env=allow_env,
+                acquisition=acquisition,
             ),
+            positions=positions,
             monitor=monitor,
             snapshots=snapshots,
             drift_state=drift_state,
