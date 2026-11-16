@@ -26,6 +26,7 @@ from rastro.application.job_new import (
 )
 from rastro.application.model_choice import ModelChoice
 from rastro.application.operator_trust import current_trust
+from rastro.application.robots_cache import robots_cache
 from rastro.application.source_proposals import default_acquirer
 from rastro.application.suggest import suggest
 from rastro.domain.acquisition import AcquisitionError, AcquisitionPolicy
@@ -107,7 +108,7 @@ def html_from_url(url: str, *, acquisition: AcquisitionPort | None = None) -> Fe
         outcome = result.status if result.status is not None else Outcome.INSUFFICIENT_EVIDENCE
         raise ConfigurationError(f"Could not fetch the URL (outcome: {outcome})")
 
-    with asyncio.Runner(loop_factory=asyncio.SelectorEventLoop) as runner:
+    with robots_cache(), asyncio.Runner(loop_factory=asyncio.SelectorEventLoop) as runner:
         return runner.run(_fetch())
 
 

@@ -54,28 +54,30 @@
         <select id="pagination-source"></select>
         <label for="pagination-next">Next-link selector</label>
         <input id="pagination-next" type="text" maxlength="1024" size="32" spellcheck="false" placeholder="a.next::attr(href)">
-        <label for="pagination-cap">Page cap (1–50)</label>
-        <input id="pagination-cap" type="number" min="1" max="50" value="5">
+        <label for="pagination-cap">Page cap <span id="pagination-cap-range"></span></label>
+        <input id="pagination-cap" type="number">
         <button type="button" id="save-pagination">Save next page</button>
       </div>
-      <h3>Follow links</h3>
-      <label><input id="spider-enabled" type="checkbox"> Follow links from the starting URLs</label>
-      <label>Link depth (1–4) <input id="spider-depth" type="number" min="1" max="4" value="2"></label>
-      <label>Page cap (1–100) <input id="spider-pages" type="number" min="1" max="100" value="25"></label>
-      <label for="spider-links" id="spider-link-label">Link selector</label>
-      <input id="spider-links" type="text" value="a::attr(href)">
-      <label><input id="spider-same-host" type="checkbox" checked> Stay on the same host</label>
-      <p class="muted">Other hosts still require the job's allowed hosts.</p>
-      <label>Allowed path prefixes (one per line)<textarea id="spider-allow"></textarea></label>
-      <label>Denied path prefixes (one per line)<textarea id="spider-deny"></textarea></label>
-      <button type="button" id="save-spider">Save link following</button>
+      <fieldset class="bound-controls">
+        <legend>Follow links</legend>
+        <label><input id="spider-enabled" type="checkbox"> Follow links from the starting URLs</label>
+        <label>Link depth <span id="spider-depth-range"></span> <input id="spider-depth" type="number"></label>
+        <label>Page cap <span id="spider-pages-range"></span> <input id="spider-pages" type="number"></label>
+        <label for="spider-links" id="spider-link-label">Link selector</label>
+        <input id="spider-links" type="text" value="a::attr(href)">
+        <label><input id="spider-same-host" type="checkbox" checked> Stay on the same host</label>
+        <p class="muted">Other hosts still require the job's allowed hosts.</p>
+        <label>Allowed path prefixes (one per line)<textarea id="spider-allow"></textarea></label>
+        <label>Denied path prefixes (one per line)<textarea id="spider-deny"></textarea></label>
+        <button type="button" id="save-spider">Save link following</button>
+      </fieldset>
       <h3>Scroll for more records</h3>
       <p id="scroll-reason"></p>
-      <fieldset id="scroll-controls" disabled>
+      <fieldset id="scroll-controls" class="bound-controls" disabled>
         <legend>Bounded browser scroll</legend>
         <label><input id="scroll-enabled" type="checkbox"> Scroll for more records</label>
-        <label>Step cap (1–30)<input id="scroll-steps" type="number" min="1" max="30" value="10"></label>
-        <label>Wait after each step (100–3000 ms)<input id="scroll-settle" type="number" min="100" max="3000" value="500"></label>
+        <label>Step cap <span id="scroll-steps-range"></span> <input id="scroll-steps" type="number"></label>
+        <label>Wait after each step (ms) <span id="scroll-settle-range"></span> <input id="scroll-settle" type="number"></label>
         <button type="button" id="save-scroll">Save scroll</button>
       </fieldset>
       <label class="check"><input type="checkbox" id="auto-promote"> Auto-promote repairs for this job</label>
