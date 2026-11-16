@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from collections.abc import Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from contextlib import AbstractContextManager, contextmanager, nullcontext
 from datetime import timedelta
 from pathlib import Path
@@ -12,14 +12,15 @@ from typing import TYPE_CHECKING, Any
 from rastro.adapters.sqlite_dataset import SQLiteDatasetStore
 from rastro.adapters.sqlite_drift import SQLiteDriftMonitor
 from rastro.application.auth_headers import check_job_auth
+from rastro.application.checkpointed_load import run_checkpointed_load
 from rastro.application.conditional import ConditionalRequests
 from rastro.application.conditional_inputs import extraction_inputs
-from rastro.application.dataset_load import load_results
 from rastro.application.drift import collect_snapshots
 from rastro.application.egress_trust import allowed_env_names, check_job_egress
 from rastro.application.job_loader import load_job, resolve_job_path
 from rastro.application.jobs import run_job
 from rastro.application.operator_trust import current_trust, operator_trust
+from rastro.application.run_lock import dataset_lock
 from rastro.application.success_samples import collect_successes
 from rastro.domain.dataset import DatasetStorageError
 from rastro.domain.job_load import JobLoadResult
@@ -31,6 +32,7 @@ from rastro.ports.dataset import DatasetStore, DatasetValidators
 
 if TYPE_CHECKING:
     from rastro.domain.drift import StructuralSnapshot
+    from rastro.domain.job_sources import JobSource
     from rastro.domain.jobs import Job
     from rastro.ports.acquisition import AcquisitionPort
 
@@ -57,6 +59,14 @@ def dataset_location(file: Path, job: Job, *, allow_absolute_paths: bool) -> Pat
     return Path(spec.path) if Path(spec.path).is_absolute() else file.parent.resolve() / spec.path
 
 
+def _positions(job: Job, sources: Sequence[JobSource]) -> tuple[int, ...]:
+    """Where each of `sources` sits in the job file, so checkpoints name them stably."""
+    try:
+        return tuple(job.sources.index(source) for source in sources)
+    except ValueError:
+        raise ConfigurationError("Sources to load must come from the job file") from None
+
+
 def load_job_file(
     path: str | Path,
     *,
@@ -69,6 +79,9 @@ def load_job_file(
     allow_private_network: bool = False,
     allow_ports: Iterable[int] = (),
     ignore_robots: Iterable[str] = (),
+    sources: Sequence[JobSource] | None = None,
+    should_stop: Callable[[], bool] | None = None,
+    _lock_held: bool = False,
 ) -> JobLoadResult:
     """Run a job file and load its approved fields into the job's ``[dataset]``.
 
@@ -79,6 +92,10 @@ def load_job_file(
     """
     file = Path(path)
     job = load_job(file, allow_absolute_paths=allow_absolute_paths)
+    positions = tuple(range(len(job.sources)))
+    if sources is not None:
+        positions = _positions(job, sources)
+        job = job.model_copy(update={"sources": tuple(sources)})
     allow_env = tuple(allow_env)
     check_job_egress(job, allow_egress=allow_egress, allow_env=allow_env)
     check_job_auth(job, allow_env=allow_env, allow_private_network=allow_private_network)
@@ -86,6 +103,7 @@ def load_job_file(
     if spec is None:
         raise ConfigurationError("job load requires a [dataset] block in the job file")
     raw_path = dataset_location(file, job, allow_absolute_paths=allow_absolute_paths)
+    timeout = job.acquisition.operation_timeout_seconds if job.acquisition is not None else 60.0
     drift_state = SQLiteDriftMonitor(raw_path, limits=job.limits)
     monitor = drift_state if drift else None
     capture: AbstractContextManager[dict[str, StructuralSnapshot]]
@@ -95,7 +113,12 @@ def load_job_file(
         capture = collect_snapshots(ScraplingDriftProbe())
     else:
         capture = nullcontext({})
-    with open_dataset(job, raw_path, allow_remote=allow_remote, allow_env=allow_env) as store:
+    with (
+        dataset_lock(
+            raw_path, timeout_seconds=timeout, source_count=len(job.sources), held=_lock_held
+        ),
+        open_dataset(job, raw_path, allow_remote=allow_remote, allow_env=allow_env) as store,
+    ):
         conditional = (
             ConditionalRequests(
                 store,
@@ -109,34 +132,34 @@ def load_job_file(
         )
         with operator_trust(
             allow_remote=allow_remote, allow_stealth=allow_stealth, allow_env=allow_env
-        ):  # the render-mode consent check runs here, as it would inside run_job
-            acquisition = _web_acquirer(job, conditional) if job.acquisition is not None else None
+        ):  # the render-mode consent check runs here, before any source is run
+            acquisition = _load_acquirer(job, conditional)
         with capture as snapshots, collect_successes() as successes:
-            report = run_job(
+            report, loaded, ran = run_checkpointed_load(
+                raw_path,
                 job,
-                base_dir=file.parent,
-                allow_absolute_paths=allow_absolute_paths,
-                allow_remote=allow_remote,
-                allow_egress=allow_egress,
-                allow_stealth=allow_stealth,
-                allow_env=allow_env,
-                allow_private_network=allow_private_network,
-                allow_ports=allow_ports,
-                ignore_robots=ignore_robots,
-                acquisition=acquisition,
+                store,
+                extract_fn=lambda sub_job: run_job(
+                    sub_job,
+                    base_dir=file.parent,
+                    allow_absolute_paths=allow_absolute_paths,
+                    allow_remote=allow_remote,
+                    allow_egress=allow_egress,
+                    allow_stealth=allow_stealth,
+                    allow_env=allow_env,
+                    allow_private_network=allow_private_network,
+                    allow_ports=allow_ports,
+                    ignore_robots=ignore_robots,
+                    acquisition=acquisition,
+                ),
+                positions=positions,
+                monitor=monitor,
+                snapshots=snapshots,
+                drift_state=drift_state,
+                should_stop=should_stop,
             )
-        loaded = load_results(
-            spec,
-            [f.name for f in job.fields],
-            report,
-            store,
-            rules=job.consistency,
-            monitor=monitor,
-            snapshots=snapshots,
-            drift_state=drift_state,
-        )
         if conditional is not None:
-            loaded = _commit_validators(conditional, job, report, loaded)
+            loaded = _commit_validators(conditional, ran, report, loaded)
     from rastro.application.repair_storage import retain_successes
 
     held_urls = {
@@ -165,6 +188,16 @@ def load_job_file(
     )
 
 
+def _load_acquirer(job: Job, conditional: ConditionalRequests | None) -> AcquisitionPort | None:
+    """The load's one acquisition port: host pacing, robots and the cookie session span sources.
+
+    Built inside the operator's trust scope; browser modes need it (``allow_stealth``).
+    """
+    if job.acquisition is None or not any(isinstance(s, UrlJobSource) for s in job.sources):
+        return None
+    return _web_acquirer(job, conditional)
+
+
 def _web_acquirer(job: Job, conditional: ConditionalRequests | None) -> AcquisitionPort:
     """HTTP acquisition, or the browser composition when a source renders (SCR-003)."""
     try:
@@ -188,13 +221,14 @@ def _web_acquirer(job: Job, conditional: ConditionalRequests | None) -> Acquisit
 
 def _commit_validators(
     conditional: ConditionalRequests,
-    job: Job,
+    ran: Sequence[JobSource],
     report: JobRunResult[Any],
     loaded: JobLoadResult,
 ) -> JobLoadResult:
-    """Save validators only for sources that loaded cleanly; storage failures are explicit."""
+    """Save validators only for the ``ran`` sources that loaded cleanly (a stopped or resumed run
+    ran a subset of the job); storage failures are explicit."""
     try:
-        for item, result, source in zip(job.sources, report.results, loaded.sources, strict=True):
+        for item, result, source in zip(ran, report.results, loaded.sources, strict=False):
             if (
                 isinstance(item, UrlJobSource)
                 and source.status == Outcome.SUCCESS

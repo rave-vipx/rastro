@@ -6,7 +6,13 @@ with an optional ``"hint"``.
 
 import re
 
+from rastro.domain.models import RastroError
+
 _EXTRA = re.compile(r"^[a-z][a-z0-9-]{0,31}$")
+
+
+class RunInProgressError(RastroError):
+    """Another job load or watch tick already holds the dataset lock (SCHED-003)."""
 
 
 def missing_extra_error(extra: str) -> dict[str, str | None]:

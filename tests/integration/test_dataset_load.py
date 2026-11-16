@@ -520,3 +520,47 @@ def test_upcoming_rejects_non_date_and_requires_sort_field(sample, capsys):
     assert json.loads(capsys.readouterr().err)["error"] == "invalid_input"
     assert main(["dataset", "export", path, "--sort-field", "title", "--upcoming"]) == 2
     assert json.loads(capsys.readouterr().err)["error"] == "invalid_input"
+
+
+def test_load_results_reports_each_committed_source_to_the_hook(sample):
+    job = load_job(sample / "job.toml")
+    report = run_job(job, base_dir=sample)
+    store = SQLiteDatasetStore(sample / "agenda.sqlite")
+    seen = []
+    loaded = load_results(
+        job.dataset,
+        [f.name for f in job.fields],
+        report,
+        store,
+        on_source=lambda index, result, source: seen.append((index, result.source_url, source)),
+    )
+    assert [(i, url) for i, url, _ in seen] == [
+        (0, report.results[0].source_url),
+        (1, report.results[1].source_url),
+    ]
+    assert tuple(s for *_, s in seen) == loaded.sources
+
+
+def test_hook_skips_sources_after_a_storage_failure(sample):
+    job = load_job(sample / "job.toml")
+    report = run_job(job, base_dir=sample)
+    store = SQLiteDatasetStore(sample / "agenda.sqlite")
+    real, calls = store.apply_snapshot, []
+
+    def second_fails(*args, **kwargs):
+        calls.append(args)
+        if len(calls) == 2:
+            raise DatasetStorageError("disk full")
+        return real(*args, **kwargs)
+
+    store.apply_snapshot = second_fails
+    seen = []
+    loaded = load_results(
+        job.dataset,
+        [f.name for f in job.fields],
+        report,
+        store,
+        on_source=lambda index, result, source: seen.append(index),
+    )
+    assert seen == [0]
+    assert loaded.status == "storage_error"
