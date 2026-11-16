@@ -12,6 +12,7 @@ pytest.importorskip("httpx2")
 from starlette.testclient import TestClient
 
 from rastro.application.job_loader import load_job
+from rastro.application.operator_trust import operator_trust
 from rastro.domain.acquisition import AcquisitionResult
 from rastro.domain.job_sources import UrlJobSource
 from rastro.domain.models import Outcome, Representation, Source
@@ -23,6 +24,8 @@ pytestmark = pytest.mark.usefixtures("offline_cli_loop")
 
 EXAMPLES = [{"title": "Tango", "venue": "Sala Verdi"}]
 URL = "https://agenda.example.com/events"
+QUERY_URL = "https://shop.example/search?q=lamp&page=2"
+HTTP_URL = "http://agenda.example.com/events"
 
 
 class FakeAcquirer:
@@ -95,17 +98,72 @@ def test_create_from_url_fetches_and_writes_a_url_job(tmp_path: Path) -> None:
         body = {"file": "agenda.toml", "url": URL, "examples": EXAMPLES}
         found = post(http, "/api/suggest", body).json()
         assert found["ok"] and found["records"] == 3
+        assert found["allow_http"] is False
         made = post(
             http, "/api/create", {**body, "dataset": "agenda.sqlite", "identity": ["title"]}
         )
     assert made.status_code == 200, made.text
-    assert acquirer.fetched == [URL, URL]
+    assert made.json()["allow_http"] is False
+    assert acquirer.fetched == [URL]  # create reuses the suggest fetch
     job = load_job(tmp_path / "agenda.toml")
     assert isinstance(job.sources[0], UrlJobSource)
     assert job.sources[0].url == URL
     assert job.acquisition is not None
     assert job.acquisition.allowed_hosts == ("agenda.example.com",)
     assert not list(tmp_path.rglob("*.html"))
+
+
+def test_create_from_url_keeps_the_query_string(tmp_path: Path) -> None:
+    """N1: listing/search URLs keep ?q= so the job scrapes the same page the preview used."""
+    acquirer = FakeAcquirer({QUERY_URL: PAGE})
+    app, token = create_app(tmp_path, acquisition=acquirer)
+    with serving(app, "http://127.0.0.1:8765") as http:
+        http.headers["X-Studio-Token"] = token
+        body = {"file": "shop.toml", "url": QUERY_URL, "examples": EXAMPLES}
+        assert post(http, "/api/suggest", body).status_code == 200
+        made = post(http, "/api/create", body)
+    assert made.status_code == 200, made.text
+    assert acquirer.fetched == [QUERY_URL]
+    job = load_job(tmp_path / "shop.toml")
+    assert job.sources[0].url == QUERY_URL
+    text = (tmp_path / "shop.toml").read_text()
+    assert "q=lamp" in text
+    assert "Could not" not in text
+
+
+def test_create_from_http_url_reports_allow_http(tmp_path: Path) -> None:
+    """N1: an http:// source writes allow_http and Studio reports it."""
+    acquirer = FakeAcquirer({HTTP_URL: PAGE})
+    app, token = create_app(tmp_path, acquisition=acquirer)
+    with serving(app, "http://127.0.0.1:8765") as http:
+        http.headers["X-Studio-Token"] = token
+        body = {"file": "plain.toml", "url": HTTP_URL, "examples": EXAMPLES}
+        found = post(http, "/api/suggest", body).json()
+        assert found["allow_http"] is True
+        made = post(http, "/api/create", body).json()
+    assert made["allow_http"] is True
+    assert load_job(tmp_path / "plain.toml").acquisition.allow_http is True
+
+
+def test_create_from_url_respects_operator_port_and_private_grants(tmp_path: Path) -> None:
+    """N1: non-standard ports and private hosts need the operator's grants."""
+    private = "http://192.168.1.10/list"
+    custom = "https://shop.example:8443/list"
+    acquirer = FakeAcquirer({private: PAGE, custom: PAGE})
+    app, token = create_app(tmp_path, acquisition=acquirer)
+    with serving(app, "http://127.0.0.1:8765") as http:
+        http.headers["X-Studio-Token"] = token
+        denied = post(http, "/api/suggest", {"url": custom, "examples": EXAMPLES})
+        assert denied.status_code == 400
+        assert "8443" not in denied.text and "shop.example" not in denied.text
+        with operator_trust(allow_ports=[8443]):
+            ok = post(http, "/api/suggest", {"url": custom, "examples": EXAMPLES})
+        assert ok.status_code == 200, ok.text
+        private_denied = post(http, "/api/suggest", {"url": private, "examples": EXAMPLES})
+        assert private_denied.status_code == 400
+        with operator_trust(allow_private_network=True):
+            private_ok = post(http, "/api/suggest", {"url": private, "examples": EXAMPLES})
+        assert private_ok.status_code == 200, private_ok.text
 
 
 def test_create_from_url_refuses_without_a_url(tmp_path: Path) -> None:

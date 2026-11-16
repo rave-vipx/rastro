@@ -75,6 +75,12 @@ function defaultJobName(url) {
   }
 }
 
+function httpNotice(allowHttp) {
+  return allowHttp
+    ? el("p", "This job will allow plain HTTP (allow_http = true) because the URL is http://.", "warn")
+    : null;
+}
+
 async function suggestRecipe() {
   const { identity, ...body } = collect();
   const data = await api("/api/suggest", body);
@@ -91,6 +97,8 @@ async function suggestRecipe() {
     table(names, data.preview.map((row) => names.map((n) => row[n]))),
   );
   if (data.truncated) out.append(el("p", "Only the first 50 records are shown.", "muted"));
+  const notice = httpNotice(data.allow_http);
+  if (notice) out.append(notice);
   if (!$("new-file").value) $("new-file").value = defaultJobName(body.url);
   if (identity.length === 0) out.append(el("p", "Tick a record key to store records in a dataset.", "muted"));
 }
@@ -105,7 +113,10 @@ async function createJob(app) {
     ...body, file, dataset: dataset || null, identity: dataset ? body.identity : [],
     recipe_memory: memory || null,
   });
-  show("create-status", `Created ${made.file}. Opening it…`, "good");
+  const note = made.allow_http
+    ? `Created ${made.file} with allow_http = true. Opening it…`
+    : `Created ${made.file}. Opening it…`;
+  show("create-status", note, made.allow_http ? "warn" : "good");
   await app.refreshJobs(made.file);
   app.switchView("jobs");
   await app.openJob(made.file);

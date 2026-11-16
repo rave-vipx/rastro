@@ -20,6 +20,7 @@ from starlette.responses import JSONResponse, Response
 from starlette.routing import Route
 
 from rastro.application.atomic_files import FileChangedError
+from rastro.application.job_from_url import FetchedUrl
 from rastro.application.job_loader import load_job
 from rastro.cli_errors import classify
 from rastro.domain.jobs import Job
@@ -141,6 +142,8 @@ class Studio:
         self.trust: dict[str, Any] = {"allow_egress": allow_egress, "allow_env": tuple(allow_env)}
         # Tests inject a fake acquirer; production uses the default HTTP acquirer.
         self.acquisition = acquisition
+        # Last URL-first preview fetch for this Studio run; create reuses it when the URL matches.
+        self.url_preview: FetchedUrl | None = None
 
     def job_path(self, name: str) -> Path:
         return files.resolve_in_root(self.root, name)

@@ -2,6 +2,7 @@
 
 URL-first path fetches through the acquisition port and writes a ``kind = "url"`` job.
 A saved HTML page remains available for offline replay; it is not required.
+Suggest stores the fetched page on the Studio run so create reuses it.
 """
 
 from __future__ import annotations
@@ -56,7 +57,7 @@ def _cut(value: Any) -> Any:
     return value
 
 
-def _payload(found: Suggestion[Any]) -> dict[str, Any]:
+def _payload(found: Suggestion[Any], *, allow_http: bool = False) -> dict[str, Any]:
     rows = [record.data.model_dump(mode="json") for record in found.preview.records]
     return {
         "ok": True,
@@ -67,6 +68,7 @@ def _payload(found: Suggestion[Any]) -> dict[str, Any]:
         "confidence": {k: v.model_dump(mode="json") for k, v in found.confidence.items()},
         "preview": [{k: _cut(v) for k, v in row.items()} for row in rows[:MAX_ROWS]],
         "truncated": len(rows) > MAX_ROWS,
+        "allow_http": allow_http,
     }
 
 
@@ -86,16 +88,31 @@ def routes(studio: Studio) -> list[Route]:
         records_min = integer(data, "records_min", 1, 1000, default=2)
         page = optional_text(data, "page")
 
-        def run() -> Suggestion[Any]:
+        def run() -> tuple[Suggestion[Any], bool]:
             if page is not None:
+                studio.url_preview = None
                 html = _read_local_source(page_path(data), Limits().max_html_bytes, "html")
-                return suggest(html, fields, examples=examples, url=url, records_min=records_min)
+                return (
+                    suggest(html, fields, examples=examples, url=url, records_min=records_min),
+                    False,
+                )
             if url is None:
                 raise Refused(400, "missing_url")
-            final_url, html, _policy = html_from_url(url, acquisition=studio.acquisition)
-            return suggest(html, fields, examples=examples, url=final_url, records_min=records_min)
+            fetched = html_from_url(url, acquisition=studio.acquisition)
+            studio.url_preview = fetched
+            return (
+                suggest(
+                    fetched.html,
+                    fields,
+                    examples=examples,
+                    url=fetched.final_url,
+                    records_min=records_min,
+                ),
+                fetched.allow_http,
+            )
 
-        return reply(_payload(await run_in_threadpool(run)))
+        found, allow_http = await run_in_threadpool(run)
+        return reply(_payload(found, allow_http=allow_http))
 
     async def create(request: Request) -> Response:
         data = await body(request)
@@ -110,9 +127,10 @@ def routes(studio: Studio) -> list[Route]:
         page = optional_text(data, "page")
         records_min = integer(data, "records_min", 1, 1000, default=2)
 
-        def write() -> Path:
+        def write() -> tuple[Path, bool]:
             if page is not None:
-                return new_job(
+                studio.url_preview = None
+                written = new_job(
                     target,
                     page=page_path(data),
                     examples=examples,
@@ -122,9 +140,10 @@ def routes(studio: Studio) -> list[Route]:
                     identity=tuple(identity),
                     recipe_memory=memory,
                 )
+                return written, False
             if url is None:
                 raise Refused(400, "missing_url")
-            return new_job_from_url(
+            written, allow_http = new_job_from_url(
                 target,
                 url=url,
                 examples=examples,
@@ -133,12 +152,15 @@ def routes(studio: Studio) -> list[Route]:
                 identity=tuple(identity),
                 recipe_memory=memory,
                 acquisition=studio.acquisition,
+                fetched=studio.url_preview,
             )
+            studio.url_preview = None
+            return written, allow_http
 
-        written = await run_in_threadpool(write)
+        written, allow_http = await run_in_threadpool(write)
         rel = written.relative_to(studio.root).as_posix()
         sha = files.digest(files.read_job_bytes(written))
-        return reply({"ok": True, "file": rel, "sha256": sha})
+        return reply({"ok": True, "file": rel, "sha256": sha, "allow_http": allow_http})
 
     return [
         studio.route("/api/pages", pages),

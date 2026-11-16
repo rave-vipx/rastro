@@ -81,10 +81,11 @@ def routes(studio: Studio) -> list[Route]:
             html = _read_local_source(path, Limits().max_html_bytes, "html")
             answer = await recipe_for_page(port, html, schema, url=url)
         elif url is not None:
-            final_url, html, _policy = await run_in_threadpool(
+            fetched = await run_in_threadpool(
                 lambda: html_from_url(url, acquisition=studio.acquisition)
             )
-            answer = await recipe_for_page(port, html, schema, url=final_url)
+            studio.url_preview = fetched
+            answer = await recipe_for_page(port, fetched.html, schema, url=fetched.final_url)
         else:
             raise Refused(400, "missing_url")
         return reply({**_page_answer(answer), "remote": studio.model_remote})
