@@ -339,3 +339,21 @@ def test_trailing_dot_next_host_is_the_same_host(next):
 def test_other_host_with_trailing_dot_is_still_refused():
     report, _ = run(job(), {"/one": (200, page("A", next="https://other.test./two"))})
     assert report.results[0].pagination_stop == "off_host"
+
+
+def test_later_page_provenance_drops_query_and_fragment(tmp_path):
+    spec = job()
+    pages = {
+        "/one": (200, page("A", next="/two?page=2&token=abc#f")),
+        "/two": (200, page("B")),
+    }
+    report, transport = run(spec, pages)
+    result = report.results[0]
+    assert "https://agenda.test/two?page=2&token=abc" in transport.urls
+    assert result.records[0].evidence["name"].source_url == "https://agenda.test/one"
+    assert "page_url" not in result.records[0].evidence["name"].model_dump(mode="json")
+    assert result.records[-1].evidence["name"].page_url == "https://agenda.test/two"
+    assert "token=" not in result.model_dump_json()
+    store = SQLiteDatasetStore(tmp_path / "agenda.sqlite")
+    load_results(spec.dataset, ["name"], report, store)
+    assert "token=" not in repr([r.model_dump(mode="json") for r in store.records("agenda")])
