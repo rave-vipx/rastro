@@ -116,7 +116,7 @@ def test_invalid_pagination_writes_nothing(tmp_path: Path, extra: dict[str, obje
 def test_auto_promote_toml_keeps_comments_and_refuses_bad_input(tmp_path: Path) -> None:
     """N12: off/on round trip edits one key; non-boolean or missing values are refused."""
     path = tmp_path / "job.toml"
-    path.write_text(JOB + "\n[repair]\nmin_records = 1  # keep\n")
+    path.write_bytes((JOB + "\n[repair]\nmin_records = 1  # keep\n").encode())
     client_cm, token = _client(tmp_path, allow_stealth=True)
     with client_cm as client:
         client.headers["X-Studio-Token"] = token
@@ -193,3 +193,45 @@ def test_unusual_repair_layout_is_refused_by_the_reparse_check(tmp_path: Path) -
         assert refused.status_code == 400
         assert "edit the job by hand" in refused.json()["message"]
     assert path.read_text() == original
+
+
+@pytest.mark.parametrize("repair", ["", "\n[repair]\nmin_records = 1  # keep\n"])
+def test_crlf_job_settings_preserve_newlines_and_comments(tmp_path: Path, repair: str) -> None:
+    """N4/N12: Windows jobs keep CRLF and comments across both settings writers."""
+    path = tmp_path / "job.toml"
+    original = "# keep job comment\n" + JOB + repair
+    path.write_bytes(original.replace("\n", "\r\n").encode())
+    client_cm, token = _client(tmp_path)
+    with client_cm as client:
+        client.headers["X-Studio-Token"] = token
+        sha = post(client, "/api/validate", {"file": "job.toml"}).json()["sha256"]
+        for enabled in (True, False):
+            saved = post(
+                client, "/api/auto-promote", {"file": "job.toml", "sha256": sha, "enabled": enabled}
+            )
+            assert saved.status_code == 200, saved.text
+            sha = saved.json()["sha256"]
+            assert load_job(path).repair.auto_promote is enabled
+            raw = path.read_bytes()
+            assert b"\n" not in raw.replace(b"\r\n", b"")
+            assert b"# keep job comment\r\n" in raw
+            if repair:
+                assert b"min_records = 1  # keep\r\n" in raw
+        saved = post(
+            client,
+            "/api/pagination",
+            {
+                "file": "job.toml",
+                "sha256": sha,
+                "source": 0,
+                "next": "a::attr(href)",
+                "max_pages": 3,
+            },
+        )
+        assert saved.status_code == 200, saved.text
+    assert load_job(path).sources[0].recipe.pagination.max_pages == 3
+    raw = path.read_bytes()
+    assert b"\n" not in raw.replace(b"\r\n", b"")
+    assert b"# keep job comment\r\n" in raw
+    if repair:
+        assert b"min_records = 1  # keep\r\n" in raw

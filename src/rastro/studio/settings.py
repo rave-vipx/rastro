@@ -68,7 +68,9 @@ def save_pagination(path: Path, expected: str, source: int | None, pagination: P
     holder = wanted if source is None else wanted["sources"][source]
     holder["recipe"] = updated.model_dump(mode="json")
     if _format(path) == "toml":
-        changed = replace_recipe(text, updated, source=source)
+        newline = "\r\n" if "\r\n" in text else "\n"
+        changed = replace_recipe(text.replace("\r\n", "\n"), updated, source=source)
+        changed = changed.replace("\n", newline)
     else:
         data = json.loads(text)
         target = data if source is None else data["sources"][source]
@@ -85,7 +87,9 @@ def save_auto_promote(path: Path, expected: str, enabled: bool) -> str:
     policy = (job.repair or RepairPolicy()).model_copy(update={"auto_promote": enabled})
     wanted = {**job.model_dump(mode="json"), "repair": policy.model_dump(mode="json")}
     if _format(path) == "toml":
-        changed = _toml_auto_promote(text, enabled)
+        newline = "\r\n" if "\r\n" in text else "\n"
+        changed = _toml_auto_promote(text.replace("\r\n", "\n"), enabled)
+        changed = changed.replace("\n", newline)
     else:
         data = json.loads(text)
         repair = data.setdefault("repair", {})

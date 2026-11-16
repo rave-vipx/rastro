@@ -13,6 +13,10 @@ All notable user-facing changes are recorded here. The project follows [Semantic
 - Studio registry section: search a local registry directory, install a package as a candidate into the open job's recipe memory (never promotes, never edits the job), and publish an exported public bundle into a local registry without Git or push. An `https://` registry answers `503 registry_url_unavailable_install_http_extra` until the HTTPS fetcher is integrated (N10, HUB-002–006).
 - Three synthetic public registry bundles under `examples/registry/` (listing, news card, product card) with offline consumer jobs; the README leads with the five-minute Studio path and a copy-paste failure hook; the master spec Amendment Log cites ADR 0032–0034 (N6, N8, N11).
 
+### Fixed
+
+- Studio preserves CRLF line endings when saving pagination and auto-promote settings in Windows TOML jobs (N4, N12, SEC-005). Synthetic registry inputs and rebuilds keep identical bytes across platforms (N6).
+
 ### Changed
 
 - Studio no longer offers **Override failed gates**: `/api/promote` refuses `override_gates` with `gate_override_refused`. Operators who need it run `rastro recipe promote --override-gates` themselves (N7, ADR 0034).

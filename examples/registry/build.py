@@ -54,7 +54,7 @@ def build(registry: Path) -> None:
     for kind, (html, detail) in SAMPLES.items():
         with TemporaryDirectory() as scratch:
             sample = Path(scratch) / "sample.html"
-            sample.write_text(html, encoding="utf-8")
+            sample.write_bytes(html.encode("utf-8"))
             fields = (
                 StringField(name="title", min_length=1),
                 StringField(name=detail, min_length=1),
