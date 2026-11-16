@@ -150,7 +150,10 @@ class BrowserAcquirer(WebAcquirer):
         )
 
     def scrolls(self, url: str) -> bool:
-        return True
+        return self.policy.render != "stealth"  # Rastro does not drive scroll in a stealth page
+
+    def scroll_skip_code(self, url: str) -> str:
+        return "scroll_unsupported_stealth"
 
     async def scroll(self, source: Source, *, settle_ms: int, max_bytes: int) -> AcquisitionResult:
         """One scroll step in the source's open context, under the same budget and pacing."""

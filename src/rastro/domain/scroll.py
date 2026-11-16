@@ -13,7 +13,9 @@ class ScrollSpec(RedactedContract):
     """Scroll a rendered page until a step finds no new records, or a cap is reached.
 
     Scroll applies to ``render = "browser"``. It never enables stealth or challenge solving.
-    HTTP sources ignore it and say so; the stealth browser cannot scroll a live page yet.
+    HTTP sources ignore it and say so (``scroll_ignored_http``); so do stealth sources
+    (``scroll_unsupported_stealth``): Scrapling keeps the page pooled, but Rastro does not
+    drive scroll in it. Both stay successful runs.
     """
 
     max_steps: StrictInt = Field(default=10, ge=1, le=30)

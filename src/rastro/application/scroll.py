@@ -31,7 +31,7 @@ from rastro.domain.models import (
 )
 from rastro.domain.scroll import ScrollSpec
 from rastro.ports.acquisition import AcquisitionPort
-from rastro.ports.browser import ScrollingAcquisition
+from rastro.ports.browser import ScrollingAcquisition, ScrollSkipReason
 
 ExtractPage = Callable[[AcquisitionResult], Awaitable[ExtractionResult[BaseModel]]]
 # A normal end of the list; every other stop is a cap or a failure and is partial.
@@ -98,9 +98,12 @@ def scrolled[T: BaseModel](
             if noted:
                 return first
             noted = True
-            return first.model_copy(
-                update={"issues": (*first.issues, Issue(code="scroll_ignored_http"))}
+            code = (
+                acquisition.scroll_skip_code(fetched.url)
+                if isinstance(acquisition, ScrollSkipReason)
+                else "scroll_ignored_http"
             )
+            return first.model_copy(update={"issues": (*first.issues, Issue(code=code))})
         scope = PAGINATION_SCOPE.get()
         if owns_scope and scope is not None:
             scope.remaining = min(scope.remaining, scope.total - fetched.requests)

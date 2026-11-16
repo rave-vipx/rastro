@@ -66,11 +66,16 @@ class _JobAcquisition:
         )
 
     def scrolls(self, url: str) -> bool:
-        return self.mode(url) != "http"
+        """Only plain browser sources scroll: Rastro does not drive scroll in a stealth page."""
+        return self.mode(url) == "browser"
+
+    def scroll_skip_code(self, url: str) -> str:
+        return "scroll_unsupported_stealth" if self.mode(url) == "stealth" else "scroll_ignored_http"
 
     async def scroll(self, source: Source, *, settle_ms: int, max_bytes: int) -> AcquisitionResult:
         client = self.clients[self.mode(source.url)]
-        assert isinstance(client, ScrollingAcquisition)  # only browser clients are asked to scroll
+        if not isinstance(client, ScrollingAcquisition):
+            raise ConfigurationError("This source's acquisition cannot scroll")
         return await client.scroll(source, settle_ms=settle_ms, max_bytes=max_bytes)
 
 

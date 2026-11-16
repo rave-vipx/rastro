@@ -48,6 +48,8 @@ class PlaywrightSession:
             raise AcquisitionError(
                 self._guard.issue or "browser_navigation_failed", Outcome.TRANSIENT_FAILURE
             ) from None
+        finally:
+            self._guard.end()
 
     async def scroll(
         self, *, policy: AcquisitionPolicy, max_bytes: int, settle_ms: int
@@ -65,4 +67,6 @@ class PlaywrightSession:
             raise AcquisitionError(
                 self._guard.issue or "browser_navigation_failed", Outcome.TRANSIENT_FAILURE
             ) from None
+        finally:
+            self._guard.end()
         return replace(result, requests=max(1, result.requests))

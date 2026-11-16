@@ -134,10 +134,12 @@ class StealthSession:
                 self._guard.issue or "browser_navigation_failed", Outcome.TRANSIENT_FAILURE
             ) from None
         finally:
+            self._guard.end()  # Scrapling keeps the page pooled: nothing runs between fetches
             _active.reset(token)
 
     async def scroll(
         self, *, policy: AcquisitionPolicy, max_bytes: int, settle_ms: int
     ) -> AcquisitionResult:
-        # Scrapling closes each page when fetch returns; there is no live page to scroll.
+        # Scrapling keeps the page pooled but Rastro does not drive scroll in it (the job layer
+        # reports scroll_unsupported_stealth and never asks); this stays a hard stop.
         raise AcquisitionError("scroll_unsupported", Outcome.PERMANENT_FAILURE)

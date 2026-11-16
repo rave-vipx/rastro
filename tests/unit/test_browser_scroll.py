@@ -11,7 +11,7 @@ from rastro.application.browser_sessions import source_session
 from rastro.application.jobs import run_job
 from rastro.domain.acquisition import AcquisitionError, AcquisitionResult, HttpResponse
 from rastro.domain.jobs import Job
-from rastro.domain.models import Outcome, Source
+from rastro.domain.models import ConfigurationError, Outcome, Source
 
 pytestmark = pytest.mark.usefixtures("offline_cli_loop")
 
@@ -335,3 +335,35 @@ async def test_job_routing_scrolls_only_browser_sources():
     assert routed.scrolls("https://agenda.test/b") and not routed.scrolls("https://other.test/h")
     await routed.scroll(Source(url="https://agenda.test/b"), settle_ms=100, max_bytes=10)
     assert browser.steps == 1
+
+
+def test_job_routing_names_why_a_source_does_not_scroll():
+    from rastro.browser import _JobAcquisition
+
+    routed = _JobAcquisition(
+        {"https://agenda.test/s": "stealth", "https://other.test/h": "http"}, {}
+    )
+    assert not routed.scrolls("https://agenda.test/s")  # M1: stealth does not scroll
+    assert routed.scroll_skip_code("https://agenda.test/s") == "scroll_unsupported_stealth"
+    assert routed.scroll_skip_code("https://other.test/h") == "scroll_ignored_http"
+
+
+@pytest.mark.asyncio
+async def test_job_routing_refuses_to_scroll_a_client_that_cannot():
+    from rastro.browser import _JobAcquisition
+
+    routed = _JobAcquisition({"https://agenda.test/h": "http"}, {"http": object()})  # type: ignore[dict-item]
+    with pytest.raises(ConfigurationError):
+        await routed.scroll(Source(url="https://agenda.test/h"), settle_ms=100, max_bytes=10)
+
+
+def test_stealth_with_scroll_succeeds_and_says_scroll_is_unsupported(monkeypatch):
+    """M1: a permanent limitation is a note on a successful run, not a recurring partial."""
+    monkeypatch.setenv("RASTRO_ALLOW_STEALTH", "1")
+    browser = FakeBrowser({"/one": page("A", "B")}, [page("A", "B", "C")])
+    result = run(job(render="stealth", scroll={"max_steps": 3, "settle_ms": 100}), browser)
+    result = result.results[0]
+    assert result.status == Outcome.SUCCESS
+    assert [record.name for record in result.items] == ["A", "B"]
+    assert [issue.code for issue in result.issues] == ["scroll_unsupported_stealth"]
+    assert browser.scrolls == 0

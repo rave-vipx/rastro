@@ -172,3 +172,72 @@ async def test_stealth_session_shares_one_context_and_cannot_scroll(monkeypatch)
     assert (Manager.engine.entered, Manager.engine.exited) == (1, 1)
     assert Manager.engine.urls == [TARGET.url] * 2
     assert error.value.code == "scroll_unsupported"
+
+
+@pytest.mark.asyncio
+async def test_playwright_session_guard_is_active_only_during_a_step(browser, monkeypatch):
+    renderer, _ = browser
+    seen = {}
+
+    async def goto(self, url, **kwargs):
+        seen["goto"] = guard_of[0].active
+        self.url = url
+        return SimpleNamespace(status=200)
+
+    async def evaluate(self, script):
+        seen["scroll"] = guard_of[0].active
+
+    guard_of = []
+    from rastro.adapters.playwright_session import PlaywrightSession
+
+    original = PlaywrightSession.__init__
+
+    def init(self, context, guard):
+        guard_of.append(guard)
+        original(self, context, guard)
+
+    monkeypatch.setattr(PlaywrightSession, "__init__", init)
+    monkeypatch.setattr(Page, "goto", goto)
+    monkeypatch.setattr(Page, "evaluate", evaluate)
+    async with renderer.session((TARGET,), policy=POLICY) as session:
+        await session.render(TARGET, policy=POLICY, max_bytes=1000)
+        assert (seen["goto"], guard_of[0].active) == (True, False)
+        await session.scroll(policy=POLICY, max_bytes=1000, settle_ms=100)
+        assert (seen["scroll"], guard_of[0].active) == (True, False)
+
+        async def broken(self, url, **kwargs):
+            raise RuntimeError("synthetic")
+
+        monkeypatch.setattr(Page, "goto", broken)
+        with pytest.raises(AcquisitionError):
+            await session.render(TARGET, policy=POLICY, max_bytes=1000)
+        assert guard_of[0].active is False  # idle after a raised step too
+
+
+@pytest.mark.asyncio
+async def test_stealth_session_guard_is_idle_after_each_fetch(monkeypatch):
+    from rastro.adapters.scrapling_stealth import ScraplingStealth
+
+    monkeypatch.setattr(ScraplingStealth, "__init__", lambda self: None)
+    stealth = ScraplingStealth()
+    stealth.session_class = Manager
+    async with stealth.session((TARGET,), policy=POLICY) as session:
+        guard = session._guard
+        active_in_fetch = []
+        original = Engine.fetch
+
+        async def fetch(self, url):
+            active_in_fetch.append(guard.active)
+            return await original(self, url)
+
+        monkeypatch.setattr(Engine, "fetch", fetch)
+        await session.render(TARGET, policy=POLICY, max_bytes=1000)
+        assert (active_in_fetch, guard.active) == ([True], False)
+
+        async def broken(self, url):
+            raise RuntimeError("synthetic")
+
+        monkeypatch.setattr(Engine, "fetch", broken)
+        with pytest.raises(AcquisitionError):
+            await session.render(TARGET, policy=POLICY, max_bytes=1000)
+        assert guard.active is False

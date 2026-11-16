@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib
+import weakref
 from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack, asynccontextmanager
 from typing import TYPE_CHECKING, Any
@@ -57,18 +58,29 @@ class NetworkGuard:
         self.policy = policy
         self.requests = 0
         self.issue: str | None = None
+        # A reused page stays open between steps: only an active step may make requests.
+        self.active = True
+        self._guarded: weakref.WeakSet[Any] = weakref.WeakSet()
 
     def begin(self, policy: AcquisitionPolicy) -> None:
-        """Count the next navigation or scroll step on its own, under the budget left for it."""
-        self.policy, self.requests, self.issue = policy, 0, None
+        """Arm the guard for the next navigation or scroll step, under the budget left for it."""
+        self.policy, self.requests, self.issue, self.active = policy, 0, None, True
+
+    def end(self) -> None:
+        """Idle: every request of a page that stays open between steps fails and is not counted."""
+        self.active = False
 
     async def setup(self, page: Any) -> None:
+        if page in self._guarded:  # a pooled page is set up once; stacking would double-count
+            return
         try:
 
             async def route(route: Any) -> None:
                 request = route.request
-                if request.frame.page != page or not route_allowed(
-                    request.url, request.resource_type, self.policy
+                if (
+                    not self.active
+                    or request.frame.page != page
+                    or not route_allowed(request.url, request.resource_type, self.policy)
                 ):
                     await route.abort()
                 else:
@@ -79,16 +91,16 @@ class NetworkGuard:
             session = await page.context.new_cdp_session(page)
 
             async def paused(event: dict[str, Any]) -> None:
-                allowed = route_allowed(
+                allowed = self.active and route_allowed(
                     event["request"]["url"], event.get("resourceType", ""), self.policy
                 )
-                if self.requests >= self.policy.max_requests:
-                    self.issue = "request_limit"
-                    allowed = False
-                if allowed:
-                    self.requests += 1
-                elif event.get("resourceType") == "Document":
-                    self.issue = self.issue or "destination_denied"
+                if self.active:
+                    if self.requests >= self.policy.max_requests:
+                        self.issue, allowed = "request_limit", False
+                    if allowed:
+                        self.requests += 1
+                    elif event.get("resourceType") == "Document":
+                        self.issue = self.issue or "destination_denied"
                 await session.send(
                     "Fetch.continueRequest" if allowed else "Fetch.failRequest",
                     {
@@ -101,12 +113,14 @@ class NetworkGuard:
             await session.send(
                 "Fetch.enable", {"patterns": [{"urlPattern": "*", "requestStage": "Request"}]}
             )
+            self._guarded.add(page)
         except Exception:
             # Scrapling catches setup errors; a closed page cannot navigate unguarded.
             await page.close()
             raise AcquisitionError("browser_guard_failed", Outcome.PERMANENT_FAILURE) from None
 
     def result(self, url: str, body: str, status: int, max_bytes: int) -> AcquisitionResult:
+        self.end()  # the step is over, whatever the outcome
         permitted_url(url, self.policy)
         if self.issue:
             # Same outcome as the HTTP path's exhausted request budget.

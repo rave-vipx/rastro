@@ -53,3 +53,10 @@ class ScrollingAcquisition(Protocol):
     async def scroll(self, source: Source, *, settle_ms: int, max_bytes: int) -> AcquisitionResult:
         """One scroll step inside the source's open context."""
         ...
+
+
+@runtime_checkable
+class ScrollSkipReason(Protocol):
+    """Optional: the issue code to report when ``scrolls(url)`` is false (a separate protocol)."""
+
+    def scroll_skip_code(self, url: str) -> str: ...

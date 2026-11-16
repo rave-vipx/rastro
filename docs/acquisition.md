@@ -432,7 +432,10 @@ page on a different host inside one run renders in its own fresh context, never 
 host's. This changes only how many contexts a source uses: the `render` key, the
 operator's stealth grant, robots, pacing and the request budget are as before. Every
 navigation still goes through the destination pin, the network guard and the shared
-request budget, and images, media, fonts and WebSockets stay blocked.
+request budget, and images, media, fonts and WebSockets stay blocked. The page stays open
+between steps, so the network guard is idle then: any request the page makes between a
+navigation or scroll step and the next one fails and is not charged, and only the next
+step re-arms it.
 
 A renderer opts in with the separate `BrowserSessions` protocol (`ports/browser.py`):
 `session(targets, *, policy)` returns an async context manager whose session has
@@ -460,5 +463,6 @@ ignored: the result stays successful and carries the issue `scroll_ignored_http`
 
 Scroll is a browser step, not a stealth feature: it builds no stealth browser, asks for no
 grant and never solves challenges. The stealth browser keeps pages of a source in one
-context, but Scrapling closes each page after a fetch, so it cannot scroll a live page yet:
-its first step ends as `scroll_step_failed`.
+context and Scrapling keeps the page pooled, but Rastro does not drive scroll in it. With
+`render = "stealth"` the table is therefore ignored like it is for HTTP: the run stays a
+success (no failure, not partial) and carries the issue `scroll_unsupported_stealth`.

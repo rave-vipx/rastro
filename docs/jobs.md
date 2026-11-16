@@ -607,7 +607,9 @@ stop_when = "no_new_records"
 
 The table is optional and applies to the whole job; unknown keys and out-of-range values
 are rejected. It needs `render = "browser"`: with `render = "http"` it is ignored and the
-source result carries the issue `scroll_ignored_http` (still a success). Scroll never
+source result carries the issue `scroll_ignored_http` (still a success); with
+`render = "stealth"` it is ignored the same way and the issue is `scroll_unsupported_stealth`
+(Rastro does not drive scroll in a stealth page). Scroll never
 turns on stealth or challenge solving, and a job file cannot grant either. Steps spend the
 per-source `max_requests` budget, shared with pagination; hitting `max_steps` or the budget
 is `partial_success` (`scroll_max_steps`, `scroll_budget`) and keeps every accepted record.
