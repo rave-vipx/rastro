@@ -130,7 +130,7 @@ def load_job_file(
         ):  # the render-mode consent check runs here, before any source is run
             acquisition = _load_acquirer(job, conditional)
         with capture as snapshots, collect_successes() as successes:
-            report, loaded = run_checkpointed_load(
+            report, loaded, ran = run_checkpointed_load(
                 raw_path,
                 job,
                 store,
@@ -151,7 +151,7 @@ def load_job_file(
                 should_stop=should_stop,
             )
         if conditional is not None:
-            loaded = _commit_validators(conditional, job, report, loaded)
+            loaded = _commit_validators(conditional, ran, report, loaded)
     from rastro.application.repair_storage import retain_successes
 
     held_urls = {
@@ -213,13 +213,14 @@ def _web_acquirer(job: Job, conditional: ConditionalRequests | None) -> Acquisit
 
 def _commit_validators(
     conditional: ConditionalRequests,
-    job: Job,
+    ran: Sequence[JobSource],
     report: JobRunResult[Any],
     loaded: JobLoadResult,
 ) -> JobLoadResult:
-    """Save validators only for sources that loaded cleanly; storage failures are explicit."""
+    """Save validators only for the ``ran`` sources that loaded cleanly (a stopped or resumed run
+    ran a subset of the job); storage failures are explicit."""
     try:
-        for item, result, source in zip(job.sources, report.results, loaded.sources, strict=True):
+        for item, result, source in zip(ran, report.results, loaded.sources, strict=False):
             if (
                 isinstance(item, UrlJobSource)
                 and source.status == Outcome.SUCCESS

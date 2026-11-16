@@ -21,6 +21,7 @@ from rastro.domain.models import ExtractionResult
 
 if TYPE_CHECKING:
     from rastro.domain.drift import StructuralSnapshot
+    from rastro.domain.job_sources import JobSource
     from rastro.domain.jobs import Job
     from rastro.ports.dataset import DatasetStore
     from rastro.ports.drift import DriftMonitor, OpenDriftReader
@@ -37,8 +38,11 @@ def run_checkpointed_load(
     snapshots: Mapping[str, StructuralSnapshot] | None = None,
     drift_state: OpenDriftReader | None = None,
     should_stop: Callable[[], bool] | None = None,
-) -> tuple[JobRunResult[Any], JobLoadResult]:
+) -> tuple[JobRunResult[Any], JobLoadResult, tuple[JobSource, ...]]:
     """Run and load `job` source by source, updating `.run.json` and clearing it when complete.
+
+    Returns the report, the load outcome and the sources this call actually ran, in order: they
+    line up with ``report.results``, so a stopped or resumed run is never paired with the whole job.
 
     ``positions`` are the sources' positions in the job file (default: their order here), so a
     run restricted to some sources checkpoints the same keys as a full run.
@@ -97,4 +101,4 @@ def run_checkpointed_load(
     )
     if loaded.status != "storage_error" and not stopped_early:
         clear_checkpoint(raw_path)
-    return report(), loaded
+    return report(), loaded, tuple(source for _, source in active[: len(results)])
