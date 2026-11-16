@@ -1,13 +1,13 @@
 # Local Studio
 
-Studio is Rastro in a browser. Without writing code you can create a scraper from a saved page,
+Studio is Rastro in a browser. Without writing code you can create a scraper from a URL,
 run it, look after its health, repair it when a site changes, and browse the records it stored.
 It calls the same services as the command line and the Python API; it adds no extraction logic.
 
 ## Install and start
 
 ```bash
-pip install "rastro-engine[studio]"
+pip install "rastro-engine[studio,http]"
 rastro studio --root path/to/jobs --port 8765
 ```
 
@@ -57,17 +57,18 @@ The page has two views, **Jobs** and **New scraper**, switched with the buttons 
 
 ### Create a scraper (New scraper)
 
-1. **Saved page.** Save the web page as HTML somewhere inside the Studio folder and pick it.
-   Studio lists `.html` and `.htm` files with the same rules as the job list below. Enter the
-   address the page came from, so links resolve and the job knows its source.
-2. **Fields and one example each.** Give each field a name (letters, digits and `_`, starting
-   with a letter) and copy one value exactly as the page shows it. Press **Suggest**: Studio
-   builds a CSS recipe, checks that it reproduces your examples on the page, and shows the
-   recipe, a confidence note per field (how it was matched and how many records carry a value)
-   and a preview table of up to 50 records. Nothing is fetched or written. If no recipe
-   reproduces your examples, the error names the examples it could not find.
+1. **URL.** Paste a page URL you have permission to scrape. Studio fetches the page
+   through the acquisition boundary; public-address checks, robots and the source
+   request budget apply. Saving HTML by hand is not required. A saved-page input,
+   when used, is an offline alternative. A URL job fetches its URL on every later run.
+2. **Fields and examples.** Name each field (letters, digits and `_`, starting with
+   a letter) and copy an example value exactly as the page shows it. Preview the
+   suggested recipe and up to 50 records. With a configured model, **Ask AI** can
+   propose selectors from names alone. Proposals must extract valid records; the
+   model does not supply the records. If HTTP yields no records, use the offered
+   browser path after installing the [browser extra and runtime](acquisition.md#javascript-pages).
 3. **Create the job.** Name the job file (for example `pages/events.toml`). It must be in an
-   existing folder, next to the page, and must not exist yet: Studio never overwrites a file.
+   existing folder under the Studio root, and must not exist yet: Studio never overwrites a file.
    To store records, give a dataset file name and tick at least one **Record key** field.
    To repair the recipe later, also give a **Recipe memory file** (for example
    `recipes.sqlite`).
@@ -104,8 +105,8 @@ The page has two views, **Jobs** and **New scraper**, switched with the buttons 
    - **Propose repair** runs `rastro recipe repair` for that source. Each candidate shows its
      old and new selectors side by side (changed fields in bold), the decision (`promote`,
      `quarantine` or `reject`), every gate with pass or fail, and the reasons. When the job's
-     `[repair]` block enables automatic promotion, a candidate that passes every gate starts
-     serving at once.
+     `[repair] auto_promote` is enabled, a candidate starts serving only after the gates
+     and semantic judge pass.
    - **Promote** a candidate with a reason (1 to 500 printable characters; it is recorded in
      the recipe history). Promotion re-checks the gates. **Override failed gates** activates a
      quarantined candidate anyway; the page warns first and the history records the reason
@@ -121,6 +122,35 @@ The page has two views, **Jobs** and **New scraper**, switched with the buttons 
    larger ones). Values come from the source pages: treat them as untrusted data.
 6. **Connect your app.** Shows the `rastro job run`, `job load` and `dataset export` commands and
    the `run_job_file` call for that job. Run them from the root directory.
+
+## Collection, alerts and sharing (N1, N4, N5, N7, N10, N12)
+
+The N1–N12 cut adds these controls on the existing services. Studio controls and
+the acquisition schema require integration with this documentation branch; HTTPS
+registry fetching is also pending here. Do not infer a grant from a visible control.
+
+- **Next link:** select a next-link element or enter its selector and a page cap.
+  This writes the existing recipe pagination fields. Spider depth/page controls and
+  scroll step controls use the acquisition schema when available; no front-end-only
+  scroller is provided. All collection is bounded and opt-in.
+- **Progress and alerts:** the current source/page outcome is shown without page
+  content. Drift, failed runs, quarantined candidates, refused promotion and caps
+  need attention even when some records loaded. Check Health for serving versions,
+  last success and stale reasons. The [README hook example](https://github.com/rave-vipx/rastro#notify-on-failure)
+  runs from the operator CLI; job files cannot install a hook.
+- **Fix this site:** proposes repair using the same gates. With auto-promote off,
+  review the candidate and supply a reason to promote. Rejected candidates cannot
+  be promoted. Automatic promotion still requires the semantic judge.
+- **Auto-promote:** off by default; its switch writes only `[repair] auto_promote`
+  on the operator's job. Installing a package cannot turn it on.
+- **Stealth:** off by default; its session switch grants the running process, like
+  `--allow-stealth` / `RASTRO_ALLOW_STEALTH=1`. It does not persist a grant in the
+  job. Browser and scroll do not enable stealth; challenge solving is a separate
+  request that still requires the grant.
+- **Registry:** search a local directory, install as a candidate, or publish into
+  a local directory. HTTPS search/install depend on the pending N10 fetcher;
+  see [sharing](hub.md#host-a-static-registry-n10). Publishing does not run Git or
+  push. No account or Rastro-operated server is involved.
 
 ## Security model
 
@@ -156,6 +186,6 @@ Studio is a local tool, not a server to expose.
 Studio edits one selector per save, and only recipe field mappings (not the field schema,
 dataset or acquisition blocks). The wizard takes one example record; use `rastro new` with
 several `--example` records when one is not enough. Repair needs `recipe_memory` and a
-`[dataset]` in the job. Long-running actions (a URL job, a repair) keep the button disabled
-until they finish; there is no progress bar. It is single-user and has no authentication beyond the
+`[dataset]` in the job. Long-running actions keep their button disabled until they finish; progress is a
+source/page status line, not an estimate of completion time. It is single-user and has no authentication beyond the
 per-run token.
