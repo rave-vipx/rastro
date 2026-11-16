@@ -49,6 +49,7 @@ class PaginationScope:
     host: str | None
     secure: bool
     remaining: int
+    total: int = 0  # the budget this traversal started with
 
 
 PAGINATION_SCOPE: ContextVar[PaginationScope | None] = ContextVar("pagination_scope", default=None)

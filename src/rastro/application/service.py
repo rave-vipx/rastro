@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from collections.abc import Mapping, Sequence
+from collections.abc import Awaitable, Callable, Mapping, Sequence
+from contextlib import nullcontext
 from datetime import UTC, datetime
 from time import perf_counter
 
@@ -12,10 +13,12 @@ import structlog
 from pydantic import BaseModel
 
 from rastro.application.batch import run_batch
+from rastro.application.browser_sessions import source_session
 from rastro.application.intelligence import RecipeLearner
 from rastro.application.memory import PreparedRecipe, RecipeMemory
 from rastro.application.outcomes import failure_result, stamp_acquired, stamp_provided
 from rastro.application.pagination import extract_paginated
+from rastro.application.scroll import scroll_scope, scrolled
 from rastro.domain.acquisition import AcquisitionPolicy, AcquisitionResult
 from rastro.domain.memory import RecipeContext
 from rastro.domain.models import (
@@ -28,6 +31,7 @@ from rastro.domain.models import (
     ResourceLimitError,
     Source,
 )
+from rastro.domain.scroll import ScrollSpec
 from rastro.ports.acquisition import AcquisitionPort
 from rastro.ports.parser import DocumentParser
 
@@ -49,6 +53,7 @@ class ExtractionService:
         discover_recipes: bool,
         acquisition: AcquisitionPort | None,
         policy: AcquisitionPolicy | None = None,
+        scroll: ScrollSpec | None = None,
     ) -> None:
         self._parsers = dict(parsers)
         self._memory = memory
@@ -56,6 +61,7 @@ class ExtractionService:
         self._limits = limits
         self._discover_recipes = discover_recipes
         self._acquisition = acquisition
+        self._scroll = scroll
         self._policy = policy
 
     def extract_provided[T: BaseModel](
@@ -117,27 +123,43 @@ class ExtractionService:
         prepared = await self._prepare(
             source, schema, recipe, context, recipe_version, representation
         )
-        if prepared.definition is not None and prepared.definition.pagination is not None:
-            return await extract_paginated(
-                source=source,
-                schema=schema,
-                recipe=prepared.definition,
-                parser=self._parsers[representation],
-                limits=self._limits,
-                acquisition=self._acquisition,
-                policy=self._policy,
-                extract_page=lambda fetched: self._extract_fetched(
-                    fetched, source, schema, prepared, representation, started_at
-                ),
+
+        async def extract_one(fetched: AcquisitionResult) -> ExtractionResult[T]:
+            return await self._extract_fetched(
+                fetched, source, schema, prepared, representation, started_at
             )
-        fetched = await self._acquisition.acquire(
-            source,
-            max_bytes=self._limits.max_input_bytes(representation),
-            representation=representation,
-        )
-        result = await self._extract_fetched(
-            fetched, source, schema, prepared, representation, started_at
-        )
+
+        extract_page: Callable[[AcquisitionResult], Awaitable[ExtractionResult[T]]] = extract_one
+
+        paginated = prepared.definition is not None and prepared.definition.pagination is not None
+        if self._scroll is not None:
+            extract_page = scrolled(
+                extract_page,
+                spec=self._scroll,
+                acquisition=self._acquisition,
+                limits=self._limits,
+                owns_scope=not paginated,
+            )
+        async with source_session():  # one browser context for this source, closed after it
+            if paginated:
+                assert prepared.definition is not None
+                return await extract_paginated(
+                    source=source,
+                    schema=schema,
+                    recipe=prepared.definition,
+                    parser=self._parsers[representation],
+                    limits=self._limits,
+                    acquisition=self._acquisition,
+                    policy=self._policy,
+                    extract_page=extract_page,
+                )
+            with scroll_scope(source, self._policy) if self._scroll else nullcontext():
+                fetched = await self._acquisition.acquire(
+                    source,
+                    max_bytes=self._limits.max_input_bytes(representation),
+                    representation=representation,
+                )
+                result = await extract_page(fetched)
         stamped = stamp_acquired(
             result, source=source, fetched=fetched, started=started, started_at=started_at
         )

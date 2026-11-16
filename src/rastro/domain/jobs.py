@@ -39,6 +39,7 @@ from rastro.domain.memory import RecipeContext
 from rastro.domain.models import Limits, Recipe, ResourceLimitError
 from rastro.domain.recipe_compare import RepairPolicy
 from rastro.domain.schedule import ScheduleSpec
+from rastro.domain.scroll import ScrollSpec
 from rastro.domain.selector_policy import check_untrusted_recipe
 
 JOB_SCHEMA_ID = "https://rave-vipx.github.io/rastro/schemas/job.schema.json"
@@ -83,6 +84,7 @@ class Job(RedactedContract):
     )
     repair: RepairPolicy | None = Field(default=None, exclude_if=lambda value: value is None)
     schedule: ScheduleSpec | None = Field(default=None, exclude_if=lambda value: value is None)
+    scroll: ScrollSpec | None = Field(default=None, exclude_if=lambda value: value is None)
 
     @field_validator("format_version", mode="before")
     @classmethod

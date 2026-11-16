@@ -179,4 +179,8 @@ def _page_stop[T: BaseModel](fetched: AcquisitionResult, result: ExtractionResul
         return "budget"
     if fetched.issue_code in {"off_host", "https_downgrade", "invalid_next"}:
         return fetched.issue_code
-    return None if result.status == Outcome.SUCCESS else "page_failure"
+    # A page whose scroll hit a cap is partial but real: later pages are still collected.
+    scrolled = result.status == Outcome.PARTIAL_SUCCESS and all(
+        issue.code.startswith("scroll_") for issue in result.issues
+    )
+    return None if result.status == Outcome.SUCCESS or scrolled else "page_failure"
