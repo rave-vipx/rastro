@@ -3,10 +3,14 @@
 Each action calls the public job API (``repair_job_source``, ``promote_job_recipe``,
 ``write_serving_recipe``); Studio adds only the selector diff and the digest check
 (REPAIR-002-005, REC-006, P-008).
+
+"Fix this site" uses the Studio model when one is configured (N7). Studio cannot override
+failed gates: promotion re-runs them and a refusal is shown as an alert (N5, N7, ADR 0034).
 """
 
 from __future__ import annotations
 
+import shlex
 from pathlib import Path
 from typing import Any
 
@@ -27,7 +31,8 @@ from rastro.application.recipe_diff import with_diffs
 from rastro.domain.jobs import Job
 from rastro.domain.lifecycle_history import check_reason
 from rastro.studio import files
-from rastro.studio.web import Studio, body, flag, integer, plain, reply, text
+from rastro.studio.operations import alerts, operation, remembered
+from rastro.studio.web import Refused, Studio, body, flag, integer, plain, reply, text
 
 MAX_SOURCES = 1000
 MAX_VERSION = 2_147_483_647
@@ -75,14 +80,24 @@ def health(job: Job, base: Path) -> dict[str, Any]:
                 "open_drift": drift.get(url),
             }
         )
-    return {"ok": True, "has_memory": job.recipe_memory is not None, "sources": sources}
+    payload = {"ok": True, "has_memory": job.recipe_memory is not None, "sources": sources}
+    return {**payload, "alerts": alerts(payload)}
+
+
+def failure_command(rel: str) -> str:
+    """The exact command that runs the operator's hook on failure (the job cannot set it)."""
+    hook = shlex.quote("python notify.py")  # The README's copy-paste hook script.
+    return f"rastro job load {shlex.quote(rel)} --drift --on-failure {hook}"
 
 
 def routes(studio: Studio) -> list[Route]:
     async def checked(request: Request) -> Response:
         data = await body(request)
         path, _, job = studio.load(text(data, "file"))
-        return reply(await run_in_threadpool(health, job, path.parent))
+        payload = await run_in_threadpool(health, job, path.parent)
+        payload["alerts"] = list(dict.fromkeys([*remembered(studio, path), *payload["alerts"]]))
+        payload["on_failure_command"] = failure_command(path.relative_to(studio.root).as_posix())
+        return reply(payload)
 
     async def repair(request: Request) -> Response:
         data = await body(request)
@@ -90,10 +105,16 @@ def routes(studio: Studio) -> list[Route]:
         index = integer(data, "source", 1, MAX_SOURCES)
 
         def run() -> dict[str, Any]:
-            report = repair_job_source(path, index, **studio.trust)
-            return {"ok": True, "report": with_diffs(job, path.parent, index, plain(report))}
+            report = repair_job_source(path, index, model=studio.model, **studio.trust)
+            payload = with_diffs(job, path.parent, index, plain(report))
+            return {"ok": True, "report": payload, "alerts": alerts(payload)}
 
-        return reply(await run_in_threadpool(run))
+        with operation(studio, "repair", path) as outcome:
+            payload = await run_in_threadpool(run)
+            promoted = any(s.get("promoted_version") for s in payload["report"]["sources"])
+            status = "promoted" if promoted else "candidates"
+            outcome.update(status=status, alerts=payload["alerts"])
+        return reply(payload)
 
     async def promote(request: Request) -> Response:
         data = await body(request)
@@ -101,15 +122,19 @@ def routes(studio: Studio) -> list[Route]:
         index = integer(data, "source", 1, MAX_SOURCES)
         version = integer(data, "version", 1, MAX_VERSION)
         reason = check_reason(text(data, "reason"))
-        override = flag(data, "override_gates")
+        if flag(data, "override_gates"):  # The CLI keeps that operator choice; Studio does not.
+            raise Refused(400, "gate_override_refused")
 
         def run() -> dict[str, Any]:
-            report = promote_job_recipe(
-                path, index, version, reason=reason, override_gates=override, **studio.trust
-            )
-            return {"ok": True, "report": with_diffs(job, path.parent, index, plain(report))}
+            report = promote_job_recipe(path, index, version, reason=reason, **studio.trust)
+            payload = with_diffs(job, path.parent, index, plain(report))
+            return {"ok": True, "report": payload, "alerts": alerts(payload)}
 
-        return reply(await run_in_threadpool(run))
+        with operation(studio, "promote", path) as outcome:
+            payload = await run_in_threadpool(run)
+            promoted = any(s.get("promoted_version") for s in payload["report"]["sources"])
+            outcome.update(status="promoted" if promoted else "refused", alerts=payload["alerts"])
+        return reply(payload)
 
     async def apply(request: Request) -> Response:
         data = await body(request)

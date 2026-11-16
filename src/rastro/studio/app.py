@@ -19,8 +19,10 @@ from rastro.studio import (
     routes_ai,
     routes_dataset,
     routes_jobs,
+    routes_registry,
     routes_repair,
     routes_run,
+    routes_settings,
     routes_wizard,
 )
 from rastro.studio.web import MAX_BODY, Studio
@@ -35,6 +37,7 @@ def create_app(
     model: ModelPort | None = None,
     model_remote: bool = False,
     allow_egress: bool = False,
+    allow_stealth: bool = False,
     allow_env: Iterable[str] = (),
 ) -> tuple[Starlette, str]:
     """Build the app for ``root``; returns it with this run's token (for tests and the CLI).
@@ -43,6 +46,8 @@ def create_app(
     this machine from the built model itself (``rastro.model_factory.is_remote``);
     ``model_remote`` (``--allow-remote``) is used only for a ``ModelPort`` that does not say.
     ``allow_egress`` and ``allow_env`` are the operator opt-ins for job-declared proxies.
+    ``allow_stealth`` (``--allow-stealth``) grants stealth to this process only; the page's
+    session switch can change it later, and neither writes the grant into a job (N12).
     """
     folder = Path(root)
     if not folder.is_dir():
@@ -52,10 +57,13 @@ def create_app(
         model=model,
         model_remote=model_remote,
         allow_egress=allow_egress,
+        allow_stealth=allow_stealth,
         allow_env=allow_env,
     )
     routes = [
         *routes_jobs.routes(studio),
+        *routes_settings.routes(studio),
+        *routes_registry.routes(studio),
         *routes_wizard.routes(studio),
         *routes_run.routes(studio),
         *routes_repair.routes(studio),

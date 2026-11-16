@@ -127,6 +127,7 @@ class Studio:
         model: ModelPort | None = None,
         model_remote: bool = False,
         allow_egress: bool = False,
+        allow_stealth: bool = False,
         allow_env: Iterable[str] = (),
     ) -> None:
         self.root = root.resolve()
@@ -135,8 +136,16 @@ class Studio:
         # Whether Ask AI page content may leave this machine, read from the built model;
         # ``model_remote`` (--allow-remote) only speaks for a ModelPort that does not say.
         self.model_remote = model is not None and is_remote(model, model_remote)
-        # Operator opt-ins from `rastro studio`, passed to every job run (audit H1).
-        self.trust: dict[str, Any] = {"allow_egress": allow_egress, "allow_env": tuple(allow_env)}
+        # Operator opt-ins from `rastro studio`, passed to every job run (audit H1). The
+        # stealth switch changes this process grant only, never a job file (N12, ADR 0034).
+        self.trust: dict[str, Any] = {
+            "allow_egress": allow_egress,
+            "allow_env": tuple(allow_env),
+            "allow_stealth": allow_stealth is True,
+        }
+        # N5: the last observed operation and the alerts of the last run, per job file.
+        self.progress: dict[str, Any] = {"state": "idle"}
+        self.attention: tuple[Path, list[str]] | None = None
 
     def job_path(self, name: str) -> Path:
         return files.resolve_in_root(self.root, name)

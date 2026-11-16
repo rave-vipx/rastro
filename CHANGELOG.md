@@ -2,6 +2,21 @@
 
 All notable user-facing changes are recorded here. The project follows [Semantic Versioning](docs/stability.md) from 0.6.0. Versions before 0.6.0 were never published to a package registry.
 
+## Unreleased — N1–N12 product cut (Studio half)
+
+### Added
+
+- Studio **Next page** setting: pick a recipe, type a next-link selector and a page cap (1–50); Studio writes the existing `pagination` fields (ADR 0026) after the untrusted selector policy, a digest check and a reparse that must show only that change. TOML and JSON jobs (N4, P-008).
+- Studio alerts and progress: extract, load, repair and promote answer with plain-language alerts for failure, open drift, stale sources, quarantine, a refused promotion and pagination caps; Health adds last success, why a source is stale, open drift, the last run's alerts and the exact `rastro job load ... --on-failure 'python notify.py'` command for the README hook. `GET /api/progress` reports the running operation, its job file and its real outcome; no page or scroll ordinal is invented and no body, query or secret is included. One operation at a time (`operation_in_progress`) (N5, OBS-002).
+- **Fix this site** (formerly **Propose repair**) passes the configured Studio model to `repair_job_source`; promotion still needs a reason when auto-promote is off (N7, REPAIR-005).
+- Two switches, both off: **Auto-promote** writes only `[repair] auto_promote` on the opened job (digest and reparse checked); **Allow stealth for this Studio session** changes the process grant passed to preview, extract, load, repair and promote, is never written to a job, and is locked on when the process was started with `--allow-stealth` or `RASTRO_ALLOW_STEALTH`. `create_app(..., allow_stealth=)` and `rastro studio --allow-stealth` pass it; `preview_job` accepts `allow_stealth` (N12, ADR 0034, SEC-005).
+- Studio registry section: search a local registry directory, install a package as a candidate into the open job's recipe memory (never promotes, never edits the job), and publish an exported public bundle into a local registry without Git or push. An `https://` registry answers `503 registry_url_unavailable_install_http_extra` until the HTTPS fetcher is integrated (N10, HUB-002–006).
+- Three synthetic public registry bundles under `examples/registry/` (listing, news card, product card) with offline consumer jobs; the README leads with the five-minute Studio path and a copy-paste failure hook; the master spec Amendment Log cites ADR 0032–0034 (N6, N8, N11).
+
+### Changed
+
+- Studio no longer offers **Override failed gates**: `/api/promote` refuses `override_gates` with `gate_override_refused`. Operators who need it run `rastro recipe promote --override-gates` themselves (N7, ADR 0034).
+
 ## 0.7.0 — 2026-11-15
 
 Bring your own AI: any model or agent proposes recipes and repairs while Rastro verifies. Operators also hear about drift and stuck state, not only hard failures; see [Monitoring and alerts](docs/operations.md) and ADR 0023. The release also completes the v0.3–v0.5 roadmap: JavaScript pages, sessions, pagination, scheduling, PostgreSQL, start-from-a-goal, run metrics and cost limits, Hub phase 2 and operator network permissions.

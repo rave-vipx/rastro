@@ -189,7 +189,9 @@ Rastro-operated service is needed. Publishing remains a local write; commit/push
 or upload the directory yourself after reviewing it.
 
 **Pending in this branch:** the registry fetcher and CLI integration must land
-before these commands work; this checkout's help exposes only `--registry`:
+before these commands work; this checkout's help exposes only `--registry`. Until
+then Studio's registry section answers an `https://` address with
+`503 registry_url_unavailable_install_http_extra`; local registry directories work:
 
 ```sh
 # Planned N10 flags; replace this reserved example host with your static host.

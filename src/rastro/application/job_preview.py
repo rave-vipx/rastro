@@ -104,9 +104,11 @@ def preview_job(
     model: ModelPort | None = None,
     allow_egress: bool = False,
     allow_env: Iterable[str] = (),
+    allow_stealth: bool = False,
 ) -> JobPreview:
     """Preview an already loaded job with a ``[dataset]`` block. Writes no file: recipe
-    memory, when declared, is read through a read-only connection and never created."""
+    memory, when declared, is read through a read-only connection and never created.
+    ``allow_stealth`` is the operator's grant for a job requesting stealth (N12)."""
     if job.dataset is None:
         raise ConfigurationError("job preview requires a [dataset] block in the job file")
     report = run_job(
@@ -117,6 +119,7 @@ def preview_job(
         model=model,
         allow_egress=allow_egress,
         allow_env=allow_env,
+        allow_stealth=allow_stealth,
     )
     return build_preview(job.dataset, [item.name for item in job.fields], report)
 

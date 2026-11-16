@@ -44,8 +44,8 @@ classes and short text, at most 6,000 characters), never the whole page, keys or
   retrying within the model budget. The verified recipe and preview are shown and the example
   values are filled from the first record, so **Create job** re-checks the recipe the usual
   deterministic way.
-- **Health and repair:** when **Propose repair** finds no usable candidate, **Ask AI for a
-  repair** runs repair with the model (`repair_job_source(..., model=...)`): relocation first,
+- **Health and repair:** **Fix this site** already passes the configured model to repair.
+  When it finds no usable candidate, **Ask AI for a repair** runs repair with the model (`repair_job_source(..., model=...)`): relocation first,
   then model proposals composed with the serving selectors, the same gates, and the semantic
   judge. A candidate becomes active on its own only when the job sets
   `[repair] auto_promote = true` and the judge agrees the values kept their meaning; otherwise
@@ -100,17 +100,23 @@ The page has two views, **Jobs** and **New scraper**, switched with the buttons 
    source, the recipe used and any stale sources. Tick **Measure drift** to also compare each
    page's structure with its last good run.
 4. **Health and repair.** **Check health** shows, per source, the serving recipe, whether the
-   source is stale in the dataset (and why), and the stored recipe versions. With
-   `recipe_memory` in the job, two actions appear:
-   - **Propose repair** runs `rastro recipe repair` for that source. Each candidate shows its
+   source is stale in the dataset, its last success, why it is stale, open drift and the
+   stored recipe versions. Above the table, plain-language alerts name failed or stale
+   sources, open drift, quarantined recipes and the alerts of the last run of this job in
+   this Studio session. Below them is the exact `rastro job load ... --on-failure` command
+   for the README hook. With `recipe_memory` in the job, two actions appear:
+   - **Fix this site** runs `rastro recipe repair` for that source, with the Studio model
+     when one is configured (`--model` or `RASTRO_MODEL`). Each candidate shows its
      old and new selectors side by side (changed fields in bold), the decision (`promote`,
      `quarantine` or `reject`), every gate with pass or fail, and the reasons. When the job's
      `[repair] auto_promote` is enabled, a candidate starts serving only after the gates
      and semantic judge pass.
    - **Promote** a candidate with a reason (1 to 500 printable characters; it is recorded in
-     the recipe history). Promotion re-checks the gates. **Override failed gates** activates a
-     quarantined candidate anyway; the page warns first and the history records the reason
-     with a `gates overridden:` prefix. A rejected candidate is never activated.
+     the recipe history). Promotion re-checks the gates. Studio cannot override a failed
+     gate: a request with `override_gates` is refused with `gate_override_refused`, and a
+     candidate that fails is reported as refused while the current recipe keeps serving.
+     A rejected candidate is never activated. The operator's own
+     `rastro recipe promote --override-gates` stays available on the command line.
    - **Write to job file** copies the serving recipe from recipe memory into the job file,
      as `rastro recipe apply` does, keeping the rest of the file. It carries the file digest
      like saving a selector.
@@ -123,34 +129,48 @@ The page has two views, **Jobs** and **New scraper**, switched with the buttons 
 6. **Connect your app.** Shows the `rastro job run`, `job load` and `dataset export` commands and
    the `run_job_file` call for that job. Run them from the root directory.
 
-## Collection, alerts and sharing (N1, N4, N5, N7, N10, N12)
+## Collection, alerts and sharing (N4, N5, N7, N10, N12)
 
-The N1–N12 cut adds these controls on the existing services. Studio controls and
-the acquisition schema require integration with this documentation branch; HTTPS
-registry fetching is also pending here. Do not infer a grant from a visible control.
+These controls sit in the Jobs view and call the existing services. URL-first job
+creation (N1) and the acquisition schema for spider and scroll (N2, N3, N9) are
+integrated from their own branches. A visible control is not a grant.
 
-- **Next link:** select a next-link element or enter its selector and a page cap.
-  This writes the existing recipe pagination fields. Spider depth/page controls and
-  scroll step controls use the acquisition schema when available; no front-end-only
-  scroller is provided. All collection is bounded and opt-in.
-- **Progress and alerts:** the current source/page outcome is shown without page
-  content. Drift, failed runs, quarantined candidates, refused promotion and caps
-  need attention even when some records loaded. Check Health for serving versions,
-  last success and stale reasons. The [README hook example](https://github.com/rave-vipx/rastro#notify-on-failure)
-  runs from the operator CLI; job files cannot install a hook.
-- **Fix this site:** proposes repair using the same gates. With auto-promote off,
-  review the candidate and supply a reason to promote. Rejected candidates cannot
-  be promoted. Automatic promotion still requires the semantic judge.
-- **Auto-promote:** off by default; its switch writes only `[repair] auto_promote`
-  on the operator's job. Installing a package cannot turn it on.
-- **Stealth:** off by default; its session switch grants the running process, like
-  `--allow-stealth` / `RASTRO_ALLOW_STEALTH=1`. It does not persist a grant in the
-  job. Browser and scroll do not enable stealth; challenge solving is a separate
-  request that still requires the grant.
-- **Registry:** search a local directory, install as a candidate, or publish into
-  a local directory. HTTPS search/install depend on the pending N10 fetcher;
-  see [sharing](hub.md#host-a-static-registry-n10). Publishing does not run Git or
-  push. No account or Rastro-operated server is involved.
+- **Next page and repair settings.** Pick the job recipe or a source's recipe, type
+  the next-link selector (for example `a.next::attr(href)`) and a page cap from 1 to 50,
+  then **Save next page**. Studio writes the recipe's existing `pagination` fields
+  ([ADR 0026](decisions/0026-bounded-recipe-pagination.md)); there is no second paginator. The
+  selector passes the untrusted selector policy, the request carries the file digest,
+  and the reparsed job must differ from the old one only in that recipe's pagination, or
+  nothing is written. TOML keeps the rest of the file; JSON is rewritten with the same data.
+  Clicking an element in the preview to pick it is not available yet: type the selector.
+- **Auto-promote** (a switch, off by default) writes only `[repair] auto_promote` on the
+  job you opened, with the same digest and reparse check. On, a repair candidate starts
+  serving only after every gate and the semantic judge pass. Off, you promote with a
+  reason. Installing a registry package never changes it.
+- **Allow stealth for this Studio session** (a switch, off by default) grants the running
+  Studio process, like `--allow-stealth` or `RASTRO_ALLOW_STEALTH=1`, and applies to
+  preview, extract, load, repair and promote. It is never written to a job or a bundle.
+  When the process was started with that grant the switch shows on and is locked. A job
+  asking for `render = "stealth"` without the grant fails with a refusal; Studio does not
+  fall back to a plain browser. Browser rendering and scroll do not enable stealth.
+- **Progress.** While an extract, load, repair or promote runs, the Run card shows which
+  operation is running for which job file, then its real outcome. The engine does not
+  report source, page or scroll steps yet, so Studio shows none and does not estimate
+  them. The line never contains page content, URL queries or secrets. One operation runs
+  at a time; a second one is refused with `operation_in_progress`. The responses stay
+  synchronous.
+- **Alerts.** When a run, repair or promotion ends in failure, open drift, a stale source,
+  a quarantined candidate, a refused promotion or a pagination cap (`max_pages`, budget
+  or record limit), Studio says so in a sentence above the result. Accepted records are
+  kept; a cap means the run is incomplete, not empty.
+- **Registry.** At the bottom of the Jobs view: search a registry directory under the
+  Studio root, install a result as a candidate into the open job's `recipe_memory`, or
+  publish an exported public bundle into a local registry directory. Install never
+  promotes and never edits the job. Publishing does not run Git or push. An `https://`
+  registry address is accepted only after the HTTPS fetcher (`rastro.application.registry_fetch`)
+  is integrated; until then Studio answers `503 registry_url_unavailable_install_http_extra`
+  and local registries keep working. See [sharing](hub.md#host-a-static-registry-n10).
+  No account or Rastro-operated server is involved.
 
 ## Security model
 
@@ -166,8 +186,10 @@ Studio is a local tool, not a server to expose.
   `X-Studio-Token`; only the page itself and its scripts and stylesheet load without it. The token
   stops other local users only as long as the terminal output stays private. Without it the page
   asks you to open the URL printed in the terminal. Reloading the tab drops the token; reopen that URL.
-- Every action that changes something (create, save, load, repair, promote, write) is a `POST`
-  with the token and this Studio's exact origin. Actions that edit a job file carry its digest.
+- Every action that changes something (create, save, load, repair, promote, write, the
+  pagination and auto-promote settings, the session stealth switch, registry install and
+  publish) is a `POST` with the token and this Studio's exact origin. Actions that edit a
+  job file carry its digest.
 - Paths are relative to the root, may not contain `..`, backslashes or NUL, must end in `.toml`
   or `.json` (job files) or `.html`/`.htm` (saved pages), and may not pass through symlinks.
   New job names use only letters, digits, `_`, `.` and `-` per folder name. Files the job itself references follow the same
@@ -186,6 +208,6 @@ Studio is a local tool, not a server to expose.
 Studio edits one selector per save, and only recipe field mappings (not the field schema,
 dataset or acquisition blocks). The wizard takes one example record; use `rastro new` with
 several `--example` records when one is not enough. Repair needs `recipe_memory` and a
-`[dataset]` in the job. Long-running actions keep their button disabled until they finish; progress is a
-source/page status line, not an estimate of completion time. It is single-user and has no authentication beyond the
+`[dataset]` in the job. Long-running actions keep their button disabled until they finish; progress names the
+running operation and its outcome, not a page count or an estimate of completion time. It is single-user and has no authentication beyond the
 per-run token.

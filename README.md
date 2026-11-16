@@ -19,8 +19,10 @@
 **Paste a URL, name the fields, and keep a database up to date.** Rastro saves a
 verified recipe, fetches the URL again on later runs, and reports when a site changes.
 
-> **Beta — 0.7.0.** This documentation accompanies the N1–N12 product cut;
-> Studio/acquisition integration and HTTPS registry fetching are pending in this branch. See the [stability policy](https://rave-vipx.github.io/rastro/stability/).
+> **Beta — 0.7.0.** This documentation accompanies the N1–N12 product cut. Studio's
+> next-page, alert, repair, switch and registry controls are in this branch; URL-first
+> creation (N1), spider, scroll and HTTPS registry fetching are integrated from their own
+> branches. See the [stability policy](https://rave-vipx.github.io/rastro/stability/).
 
 ## Five minutes with Studio
 
@@ -44,15 +46,16 @@ rastro studio --root my-scrapers
    stored records and lets you download them. Run **Load into dataset** again to
    update the same records; URL jobs fetch the page again each time.
 
-**Auto-promote defaults off:** enabling it on your job still requires the repair
-gates and semantic judge to pass; otherwise review and promote with a reason.
-**Stealth defaults off:** it needs a Studio process grant (`--allow-stealth` or
-`RASTRO_ALLOW_STEALTH=1`); choosing browser rendering or scroll does not grant it.
+**Auto-promote defaults off:** Studio's switch writes `[repair] auto_promote` on your
+job, and a repair still serves only after the gates and the semantic judge pass.
+**Stealth defaults off:** Studio's session switch, `--allow-stealth` or
+`RASTRO_ALLOW_STEALTH=1` grants the running process only, never the job, and choosing
+browser rendering or scroll does not grant it.
 
 HTTP is the first path. If the page needs JavaScript, install the `browser` extra
 and its browser runtime as described in the [browser guide](https://rave-vipx.github.io/rastro/acquisition/#javascript-pages), then
-choose browser rendering. Bounded next-link pagination, spider and scroll are
-opt-in; the latter controls depend on the acquisition integration for this cut.
+choose browser rendering. Bounded next-link pagination (Studio's **Next page** setting),
+spider and scroll are opt-in; spider and scroll come with the acquisition integration.
 See [Studio](https://rave-vipx.github.io/rastro/studio/) for the workflow and limits. No account is required.
 
 ## Install

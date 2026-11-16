@@ -2,7 +2,9 @@
 // All source-derived text is set as plain text content; markup is never parsed.
 import { $, api, bind, el, requireFile, show, state, table } from "./dom.js";
 import { initAI } from "./ai.js";
+import { fillControls, initControls } from "./controls.js";
 import { initOperate, resetOperate } from "./operate.js";
+import { initRegistry } from "./registry.js";
 import { initWizard } from "./wizard.js";
 
 // The token arrives in the URL fragment (never sent to the server); keep it in memory only.
@@ -65,6 +67,7 @@ export async function openJob(name) {
   state.file = name;
   state.sha = data.sha256;
   fillSelectors(data.selectors);
+  fillControls(data);
   resetOperate();
   const notes = [`${data.sources} source(s)`];
   if (!data.has_dataset) notes.push("no [dataset] block: preview and load need one");
@@ -127,7 +130,9 @@ async function start() {
   $("selector-pick").addEventListener("change", showSelector);
   initOperate();
   initWizard({ openJob, refreshJobs, switchView });
+  initRegistry();
   await initAI();
+  await initControls();
 }
 
 start().catch((error) => show("listing", `Error: ${error.message}`, "bad"));
