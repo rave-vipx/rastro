@@ -6,21 +6,30 @@ import asyncio
 from contextvars import ContextVar
 from dataclasses import replace
 from time import perf_counter
-from urllib.parse import urlsplit
 
 from rastro.application.acquisition import WebAcquirer
-from rastro.application.acquisition_state import _Host, _Operation, check_page_request
+from rastro.application.acquisition_state import (
+    PAGINATION_SCOPE,
+    _Host,
+    _Operation,
+    charge_extra_requests,
+    check_page_request,
+)
+from rastro.application.browser_policy import canonical_url, page_policy
+from rastro.application.browser_scroll_step import scroll_step
+from rastro.application.browser_sessions import SOURCE_SESSIONS
 from rastro.application.destinations import permitted_url, pin_destination
-from rastro.application.operator_trust import current_trust
+from rastro.application.stealth_grant import require_stealth_grant
 from rastro.domain.acquisition import (
     AcquisitionError,
     AcquisitionPolicy,
     AcquisitionResult,
     HttpResponse,
+    PinnedTarget,
 )
 from rastro.domain.models import ConfigurationError, Outcome, Representation, Source
 from rastro.ports.acquisition import HttpTransport, Resolver
-from rastro.ports.browser import BrowserRenderer
+from rastro.ports.browser import BrowserRenderer, BrowserSessions
 
 _render_seconds: ContextVar[float] = ContextVar("render_seconds", default=0)
 
@@ -35,12 +44,12 @@ class BrowserAcquirer(WebAcquirer):
         resolver: Resolver,
         allow_stealth: bool = False,
     ):
-        if (policy.render == "stealth" or policy.solve_challenges) and not (
-            allow_stealth is True or current_trust().allow_stealth
-        ):
-            raise ConfigurationError(
-                "Stealth requires --allow-stealth, allow_stealth=True or RASTRO_ALLOW_STEALTH=1"
-            )
+        # First, before the renderer is looked at: no grant, no stealth browser (ADR 0034).
+        require_stealth_grant(
+            stealth=policy.render == "stealth",
+            solve_challenges=policy.solve_challenges,
+            allow=allow_stealth,
+        )
         if policy.egress_profiles:
             raise ConfigurationError("Browser modes do not support egress profiles")
         if policy.auth:
@@ -89,19 +98,8 @@ class BrowserAcquirer(WebAcquirer):
                             )
                     started = perf_counter()
                     try:
-                        result = await self._renderer.render(
-                            target,
-                            policy=operation.policy.model_copy(
-                                update={
-                                    "allow_http": operation.policy.allow_http
-                                    and urlsplit(url).scheme == "http",
-                                    "max_requests": self.policy.max_requests
-                                    - operation.requests
-                                    + 1,
-                                }
-                            ),
-                            max_bytes=max_bytes,
-                            targets=tuple(targets),
+                        result = await self._render(
+                            target, tuple(targets), operation, url, max_bytes
                         )
                     finally:
                         _render_seconds.set(perf_counter() - started)
@@ -118,7 +116,6 @@ class BrowserAcquirer(WebAcquirer):
                         raise AcquisitionError("response_too_large", Outcome.PERMANENT_FAILURE)
                     if not body:
                         raise AcquisitionError("empty_document", Outcome.INVALID_DATA)
-                    operation.requests += max(0, result.requests - 1)
                     return HttpResponse(
                         result.http_status or 0,
                         {"content-type": "text/html; charset=utf-8"},
@@ -127,3 +124,86 @@ class BrowserAcquirer(WebAcquirer):
                     )
             finally:
                 host.next_request = perf_counter() + host.interval
+
+    async def _render(
+        self,
+        target: PinnedTarget,
+        targets: tuple[PinnedTarget, ...],
+        operation: _Operation,
+        url: str,
+        max_bytes: int,
+    ) -> AcquisitionResult:
+        """Render under what is left of the shared budget, charging what the browser did."""
+        policy = page_policy(operation.policy, url)
+        allowance = self.policy.max_requests - operation.requests + 1
+        scope = PAGINATION_SCOPE.get()
+        if scope is not None:  # the navigation is already charged: it stays inside the allowance
+            allowance = min(allowance, scope.remaining + 1)
+        policy = policy.model_copy(update={"max_requests": allowance})
+        try:
+            result = await self._render_once(target, targets, policy, max_bytes)
+        except AcquisitionError as error:
+            self._charge(operation, error.requests)
+            raise
+        except BaseException:  # a timeout or crash lost the browser's count: charge the allowance
+            self._charge(operation, allowance)
+            raise
+        self._charge(operation, result.requests)
+        return result
+
+    @staticmethod
+    def _charge(operation: _Operation, requests: int) -> None:
+        extra = max(0, requests - 1)  # the navigation itself was charged before the render
+        operation.requests += extra
+        charge_extra_requests(extra)
+
+    async def _render_once(
+        self,
+        target: PinnedTarget,
+        targets: tuple[PinnedTarget, ...],
+        policy: AcquisitionPolicy,
+        max_bytes: int,
+    ) -> AcquisitionResult:
+        """Render in the source's open context when there is one, else in a fresh one."""
+        scope = SOURCE_SESSIONS.get()
+        if scope is not None and isinstance(self._renderer, BrowserSessions):
+            session = await scope.reuse(self._renderer, target, targets, policy)
+            if session is not None:
+                scope.mark_rendered(self._renderer, None)  # unknown until this render returns
+                try:
+                    result = await session.render(target, policy=policy, max_bytes=max_bytes)
+                except BaseException:
+                    await scope.discard(self._renderer)  # its final host is unknown: never reuse
+                    raise
+                if await scope.leave_foreign(self._renderer, result.url):
+                    return result  # a redirect carried the context to another host: drop it
+                if result.status == Outcome.SUCCESS:
+                    scope.mark_rendered(self._renderer, canonical_url(result.url, policy))
+                return result
+        return await self._renderer.render(
+            target, policy=policy, max_bytes=max_bytes, targets=targets
+        )
+
+    def renders_in_browser(self, url: str) -> bool:
+        return True
+
+    def may_render_in_browser(self, url: str) -> bool:
+        return True
+
+    def scrolls(self, url: str) -> bool:
+        return self.policy.render != "stealth"  # Rastro does not drive scroll in a stealth page
+
+    def scroll_skip_code(self, url: str) -> str:
+        return "scroll_unsupported_stealth"
+
+    async def scroll(self, source: Source, *, settle_ms: int, max_bytes: int) -> AcquisitionResult:
+        """One scroll step in the source's open context, under the same budget and pacing."""
+        return await scroll_step(
+            self._renderer,
+            self.policy,
+            self._hosts,
+            self._slots,
+            source,
+            settle_ms=settle_ms,
+            max_bytes=max_bytes,
+        )

@@ -341,6 +341,32 @@ including attributes. Oversized, malformed and excess cookies are dropped; the j
 counts drops without echoing their contents. curl's own cookie handling remains
 disabled, and separate `Set-Cookie` response headers are preserved.
 
+## Spider
+
+A job's `[spider]` table (`mode = "spider"`, see [Spider in jobs](jobs.md#spider)) follows
+links from the job's own sources. It adds no acquisition path and no grant (N3, SEC-001,
+SEC-003, SEC-008):
+
+- **One entry point.** Every page, including pagination pages, is fetched by one
+  function, `fetch_spider_page`, through the normal `AcquisitionPort`. Anything that
+  scopes acquisition per source, such as a reused browser context, applies to spider
+  pages unchanged.
+- **One budget per start source.** The request budget (`max_requests`) and the document
+  cap (`max_pages`) live in the same per-source scope pagination uses. Robots lookups,
+  redirects and retries spend it; pagination inside a spider page does not get a new one.
+  Robots rules are reused only within one operation, so each page also pays for its own
+  `robots.txt` lookup.
+- **Same host by default.** Redirects and links stay on the start host. With
+  `same_host = false`, only hosts already in `allowed_hosts` are reachable; private
+  networks, extra ports and robots overrides remain operator grants.
+- **Bounded and ordered.** Breadth-first, depth-capped, deduplicated by normalised URL,
+  with at most `max_concurrency` pages in flight and per-host pacing as always. Results
+  are combined in discovery order whatever the completion order.
+- **Visible.** Each discovered URL gets an outcome in the result's `spider` report (host
+  and path only, never a query), and a robots denial is an issue, not a silent skip.
+
+Hitting a cap ends the run as `partial_success` with the accepted records kept.
+
 ## Conditional requests
 
 `rastro job load` automatically revalidates HTTP sources when the job declares a
@@ -412,12 +438,57 @@ default therefore needs consent whenever the job renders at all.
 
 Robots, pacing, public DNS checks and request budgets still apply. Robots are checked
 again for the final URL when the browser was redirected to another path. A spent
-request budget fails as `request_limit` (permanent failure), as in HTTP mode. Each page uses a
-fresh context; images, media, fonts, WebSockets, downloads, permissions and service
-workers are blocked. Navigation uses `request_timeout_seconds`; the entire operation
+request budget fails as `request_limit` (permanent failure), as in HTTP mode. Images, media,
+fonts, WebSockets, downloads, permissions and service workers are blocked in every context
+(see [Browser contexts](#browser-contexts)). Navigation uses `request_timeout_seconds`; the entire operation
 uses `operation_timeout_seconds`. Oversized rendered HTML fails explicitly.
 `AcquisitionResult.render_seconds` includes browser startup and rendering. Known
 unsolved challenge pages and HTTP 401/403/429/451 remain restrictions.
 
 See [ADR 0024](decisions/0024-browser-rendering-and-stealth-opt-in.md) for security
 boundaries and limitations. Live browser tests require `RASTRO_LIVE_BROWSER=1`.
+
+### Browser contexts
+
+Pages of one source share one browser context for one run (N2,
+[ADR 0034](decisions/0034-opt-in-promote-and-stealth.md)). The source's first rendered page
+opens the context; its pagination pages and scroll steps reuse it, then it is closed. The
+next source starts a fresh context, so two sources never share cookies or storage, and a
+page on a different host inside one run renders in its own fresh context, never in the first
+host's. This changes only how many contexts a source uses: the `render` key, the
+operator's stealth grant, robots, pacing and the request budget are as before. Every
+navigation still goes through the destination pin, the network guard and the shared
+request budget, and images, media, fonts and WebSockets stay blocked. The page stays open
+between steps, so the network guard is idle then: any request the page makes between a
+navigation or scroll step and the next one fails and is not charged, and only the next
+step re-arms it.
+
+A renderer opts in with the separate `BrowserSessions` protocol (`ports/browser.py`):
+`session(targets, *, policy)` returns an async context manager whose session has
+`render(...)` and `scroll(...)`. `PlaywrightBrowser` and `ScraplingStealth` implement it. A
+renderer that only has `render(...)` keeps the old behavior of one fresh context per page.
+`rastro.application.browser_sessions.source_session()` is the scope; nested scopes reuse the
+outer one, so a crawl can wrap its whole start source in one.
+
+### Scroll
+
+A job can scroll a rendered page to load more records (N9,
+[ADR 0033](decisions/0033-scroll-registry-url-and-spec-amendments.md)); see the
+[`[scroll]` reference](jobs.md#scroll). Each step scrolls the source's open context once,
+waits at most `settle_ms`, and extracts again with the recipe. The first extraction must
+find records; a step that finds no new record (by record equality) ends the scroll normally.
+
+Steps spend the same per-source request budget as pagination, and the tighter cap
+wins. A scrolled source follows the pagination boundary too: its redirects cannot leave the
+source host or downgrade HTTPS. Reaching `max_steps` (`scroll_max_steps`), the request budget (`scroll_budget`), the
+record limit (`scroll_record_limit`), a step that rejects new records
+(`scroll_records_rejected`) or a failing step (`scroll_step_failed`) ends as
+`partial_success` with every accepted record kept and the issue code on the result, so a
+dataset load does not mark unseen rows missing. With `render = "http"` the table is
+ignored: the result stays successful and carries the issue `scroll_ignored_http`.
+
+Scroll is a browser step, not a stealth feature: it builds no stealth browser, asks for no
+grant and never solves challenges. The stealth browser keeps pages of a source in one
+context and Scrapling keeps the page pooled, but Rastro does not drive scroll in it. With
+`render = "stealth"` the table is therefore ignored like it is for HTTP: the run stays a
+success (no failure, not partial) and carries the issue `scroll_unsupported_stealth`.

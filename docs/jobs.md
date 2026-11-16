@@ -551,7 +551,8 @@ same acquisition port, permission allowlist, robots rules, pacing, DNS checks an
 egress policy. One `max_requests` budget covers the whole source, including robots,
 redirects, retries and address fallbacks when using `WebAcquirer`. Redirects cannot
 escape the exact source hostname or downgrade HTTPS. There are no JavaScript clicks,
-infinite scroll, URL templates, guessed page numbers or cross-host traversal.
+URL templates, guessed page numbers or cross-host traversal; scrolling a rendered page
+is a separate, bounded [`[scroll]`](#scroll) table.
 
 The source result combines records in page order and reports `pagination_stop`:
 `no_next`, `repeat`, `empty_page`, `max_pages`, `off_host`, `https_downgrade`,
@@ -581,6 +582,109 @@ source in `source_url`; `page_url` records a different contributing page, with q
 and fragments removed. Drift measurement and repair evidence remain focused on
 page 1. Repair candidates keep the declared pagination block and strategy.
 Supplied-file extraction does not follow links.
+
+## Scroll
+
+A browser source can scroll to load more records (N9,
+[ADR 0033](decisions/0033-scroll-registry-url-and-spec-amendments.md)):
+
+```toml
+[acquisition]
+allowed_hosts = ["example.com"]
+render = "browser"
+
+[scroll]
+max_steps = 10          # 1 to 30
+settle_ms = 500         # 100 to 3000
+stop_when = "no_new_records"
+```
+
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `max_steps` | `10` | Scroll steps per page, from 1 through 30. |
+| `settle_ms` | `500` | The longest a step waits after scrolling before it reads the page, from 100 through 3000. |
+| `stop_when` | `"no_new_records"` | The only value: a step with no new accepted record ends the scroll. |
+
+The table is optional and applies to the whole job; unknown keys and out-of-range values
+are rejected. It needs `render = "browser"`: with `render = "http"` it is ignored and the
+source result carries the issue `scroll_ignored_http` (still a success); with
+`render = "stealth"` it is ignored the same way and the issue is `scroll_unsupported_stealth`
+(Rastro does not drive scroll in a stealth page). Scroll never
+turns on stealth or challenge solving, and a job file cannot grant either. Steps spend the
+per-source `max_requests` budget, shared with pagination; hitting `max_steps` or the budget
+is `partial_success` (`scroll_max_steps`, `scroll_budget`) and keeps every accepted record.
+See [Scroll](acquisition.md#scroll) for the full behavior and
+[Browser contexts](acquisition.md#browser-contexts) for how a source's context is reused.
+## Spider
+
+A job can follow links from the pages it names (N3;
+[ADR 0032](decisions/0032-vibe-coder-spider-and-studio.md)). The start URLs are the job's
+`[[sources]]`; nothing else starts a crawl, and a model or bundle cannot supply a bare
+domain.
+
+```toml
+[spider]
+mode = "spider"                  # absent or "list" keeps today's named sources
+links = "a.item::attr(href)"     # or link_field = "url": one declared field holds the link
+max_depth = 2                    # 1 to 4; depth 0 is the start URL
+max_pages = 25                   # 1 to 100 documents per start source
+same_host = true                 # default; false still needs the host in allowed_hosts
+allow = ["/item"]                # optional path prefixes, whole segments
+deny = ["/login", "/cart"]
+```
+
+| Key | Meaning |
+| --- | --- |
+| `mode` | `"list"` (default) reads each source once; `"spider"` follows links. |
+| `links` | A CSS expression ending in `::attr(name)`; every match is a link. It follows the selector cost policy of any job recipe. HTML sources only. |
+| `link_field` | The name of a declared field whose value in each accepted record is a link. Works for JSON too. Exactly one of `links` or `link_field` is required in spider mode. |
+| `max_depth` | Link hops from the start URL, 1 to 4 (default 2). |
+| `max_pages` | Fetched documents per start source, 1 to 100 (default 25). Pagination pages count. |
+| `same_host` | Default `true`. With `false`, a link is followed only when its host is in `[acquisition].allowed_hosts`. |
+| `allow`, `deny` | Path prefixes matched on whole segments: `/item` covers `/item` and `/item/1`, never `/items`. `deny` wins; with `allow`, a path outside it is skipped. The start URL is always fetched. |
+
+The table grants nothing and rejects unknown keys, so a job file cannot add
+`ignore_robots`, private-network or stealth permissions here. They stay operator flags
+([Operator opt-in](#operator-opt-in)).
+
+Rules:
+
+- Links resolve against the acquired page. Fragments are dropped, hosts are lowercased,
+  the query is kept for the fetch but never logged or reported, and a URL is fetched
+  once. `javascript:`, `mailto:`, userinfo, encoded slashes and dot segments are refused.
+- Every page uses the normal acquisition port: allowlist, robots, pacing, DNS checks,
+  egress and the concurrency cap. Robots are enforced per page unless the operator passed
+  `--ignore-robots` for that host.
+- Pages of one start source share **one** request budget (`max_requests`, robots and
+  redirects included). With pagination, the tighter of the two caps wins and
+  neither resets per page. Pagination inside a spider page costs from the same budget.
+  A recipe with `pagination` makes the crawl sequential so the caps are deterministic.
+- With `render = "browser"` (or `"stealth"`), a start source's pages share **one** browser
+  context, closed when the source finishes, and the crawl fetches one page at a time
+  (HTTP spiders keep `max_concurrency`). With `[scroll]`, every scroll step also spends
+  `max_pages` and `max_requests`: the tighter cap wins, and a page reached after the caps
+  are spent is not scrolled and is `partial` (`scroll_budget`). Records already collected
+  are kept.
+- A spider needs an explicit recipe or a stored one (`recipe`, `[sources.recipe]` or
+  `recipe_memory`); a learned recipe is not reused across pages yet and reports
+  `spider_needs_recipe`.
+
+The source result combines records from all pages in discovery order (identity dedupe
+as for pagination, with `page_index` up to 100) and adds `spider`: every discovered URL as
+`{ordinal, depth, host, path, outcome, records}` and no query. Outcomes: `fetched`,
+`no_records` (a links-only page), `partial`, `failed`, `robots_denied`, `off_host`,
+`https_downgrade`, `path_denied`, `port_not_allowed` (a port only the operator can grant;
+it never takes a page slot), `invalid_url`, `depth_limit`, `page_limit`, `budget`.
+Reported paths drop `;params` and repeated slashes, and `allow`/`deny` match the same way,
+so `//login` and `/login;x=1` are denied by `deny = ["/login"]`.
+At most 600 pages are listed; `unreported` counts the rest.
+
+`pagination_stop` ends with `spider_complete` (success, a complete snapshot),
+`spider_depth_limit`, `spider_page_limit`, `spider_budget` or `spider_page_failed`.
+Hitting a cap, a robots denial or a failed page is `partial_success` with the records
+already accepted (exit 3); it never deletes dataset rows. Skipped links that match a
+filter (`off_host`, `path_denied`, ...) are reported but do not make the run partial.
+If no page yields a record the result is `missing_data`, not an empty success.
 
 ## Your own PostgreSQL
 

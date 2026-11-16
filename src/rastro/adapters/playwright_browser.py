@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import importlib
-from typing import Any
+import weakref
+from collections.abc import AsyncIterator
+from contextlib import AsyncExitStack, asynccontextmanager
+from typing import TYPE_CHECKING, Any
 
 from rastro.application.destinations import permitted_url
 from rastro.application.http_policy import USER_AGENT
@@ -14,6 +17,9 @@ from rastro.domain.acquisition import (
     PinnedTarget,
 )
 from rastro.domain.models import ConfigurationError, Outcome
+
+if TYPE_CHECKING:
+    from rastro.adapters.playwright_session import PlaywrightSession
 
 INSTALL = (
     "Install pip install 'rastro-engine[browser]' then playwright install chromium "
@@ -52,14 +58,29 @@ class NetworkGuard:
         self.policy = policy
         self.requests = 0
         self.issue: str | None = None
+        # A reused page stays open between steps: only an active step may make requests.
+        self.active = True
+        self._guarded: weakref.WeakSet[Any] = weakref.WeakSet()
+
+    def begin(self, policy: AcquisitionPolicy) -> None:
+        """Arm the guard for the next navigation or scroll step, under the budget left for it."""
+        self.policy, self.requests, self.issue, self.active = policy, 0, None, True
+
+    def end(self) -> None:
+        """Idle: every request of a page that stays open between steps fails and is not counted."""
+        self.active = False
 
     async def setup(self, page: Any) -> None:
+        if page in self._guarded:  # a pooled page is set up once; stacking would double-count
+            return
         try:
 
             async def route(route: Any) -> None:
                 request = route.request
-                if request.frame.page != page or not route_allowed(
-                    request.url, request.resource_type, self.policy
+                if (
+                    not self.active
+                    or request.frame.page != page
+                    or not route_allowed(request.url, request.resource_type, self.policy)
                 ):
                     await route.abort()
                 else:
@@ -70,16 +91,16 @@ class NetworkGuard:
             session = await page.context.new_cdp_session(page)
 
             async def paused(event: dict[str, Any]) -> None:
-                allowed = route_allowed(
+                allowed = self.active and route_allowed(
                     event["request"]["url"], event.get("resourceType", ""), self.policy
                 )
-                if self.requests >= self.policy.max_requests:
-                    self.issue = "request_limit"
-                    allowed = False
-                if allowed:
-                    self.requests += 1
-                elif event.get("resourceType") == "Document":
-                    self.issue = self.issue or "destination_denied"
+                if self.active:
+                    if self.requests >= self.policy.max_requests:
+                        self.issue, allowed = "request_limit", False
+                    if allowed:
+                        self.requests += 1
+                    elif event.get("resourceType") == "Document":
+                        self.issue = self.issue or "destination_denied"
                 await session.send(
                     "Fetch.continueRequest" if allowed else "Fetch.failRequest",
                     {
@@ -92,13 +113,18 @@ class NetworkGuard:
             await session.send(
                 "Fetch.enable", {"patterns": [{"urlPattern": "*", "requestStage": "Request"}]}
             )
+            self._guarded.add(page)
         except Exception:
             # Scrapling catches setup errors; a closed page cannot navigate unguarded.
             await page.close()
             raise AcquisitionError("browser_guard_failed", Outcome.PERMANENT_FAILURE) from None
 
     def result(self, url: str, body: str, status: int, max_bytes: int) -> AcquisitionResult:
-        permitted_url(url, self.policy)
+        self.end()  # the step is over, whatever the outcome
+        try:
+            permitted_url(url, self.policy)
+        except AcquisitionError as error:
+            raise AcquisitionError(error.code, error.outcome, requests=self.requests) from None
         if self.issue:
             # Same outcome as the HTTP path's exhausted request budget.
             outcome = (
@@ -106,14 +132,18 @@ class NetworkGuard:
                 if self.issue == "request_limit"
                 else Outcome.ACCESS_RESTRICTION
             )
-            raise AcquisitionError(self.issue, outcome)
+            raise AcquisitionError(self.issue, outcome, requests=self.requests)
         if len(body.encode("utf-8")) > max_bytes:
-            raise AcquisitionError("response_too_large", Outcome.PERMANENT_FAILURE)
+            raise AcquisitionError(
+                "response_too_large", Outcome.PERMANENT_FAILURE, requests=self.requests
+            )
         if any(
             marker in body.lower()
             for marker in ("cf-chl-", "cf-turnstile", "g-recaptcha", "hcaptcha")
         ):
-            raise AcquisitionError("challenge_unsolved", Outcome.ACCESS_RESTRICTION)
+            raise AcquisitionError(
+                "challenge_unsolved", Outcome.ACCESS_RESTRICTION, requests=self.requests
+            )
         return AcquisitionResult(
             url, body, Outcome.SUCCESS, None, http_status=status, requests=self.requests
         )
@@ -164,5 +194,32 @@ class PlaywrightBrowser:
             raise
         except Exception:
             raise AcquisitionError(
-                guard.issue or "browser_navigation_failed", Outcome.TRANSIENT_FAILURE
+                guard.issue or "browser_navigation_failed",
+                Outcome.TRANSIENT_FAILURE,
+                requests=guard.requests,
             ) from None
+
+    @asynccontextmanager
+    async def session(
+        self, targets: tuple[PinnedTarget, ...], *, policy: AcquisitionPolicy
+    ) -> AsyncIterator[PlaywrightSession]:
+        """One Chromium context for one source: same guard, flags and blocks as ``render``."""
+        guard = NetworkGuard(policy)
+        async with AsyncExitStack() as stack:
+            try:
+                driver = await stack.enter_async_context(self.api.async_playwright())
+                browser = await driver.chromium.launch(args=browser_flags(targets))
+                stack.push_async_callback(browser.close)
+                context = await browser.new_context(
+                    user_agent=USER_AGENT,
+                    accept_downloads=False,
+                    permissions=[],
+                    service_workers="block",
+                )
+            except Exception:
+                raise AcquisitionError(
+                    "browser_navigation_failed", Outcome.TRANSIENT_FAILURE
+                ) from None
+            from rastro.adapters.playwright_session import PlaywrightSession
+
+            yield PlaywrightSession(context, guard)
