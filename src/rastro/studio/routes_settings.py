@@ -14,12 +14,11 @@ from starlette.routing import Route
 
 from rastro.application.operator_trust import current_trust
 from rastro.domain.recipes import Pagination
-from rastro.studio.bounds import save_bounds
+from rastro.studio.bounds import numeric_limits, save_bounds
 from rastro.studio.settings import save_auto_promote, save_pagination
 from rastro.studio.web import Refused, Studio, body, flag, integer, reply, text
 
 MAX_SOURCE = 999
-MAX_PAGES = 50  # The Pagination contract's own cap (ADR 0026).
 
 
 def routes(studio: Studio) -> list[Route]:
@@ -47,8 +46,10 @@ def routes(studio: Studio) -> list[Route]:
         studio.check_digest(path, data)
         raw_source = data.get("source")
         source = None if raw_source is None else integer(data, "source", 0, MAX_SOURCE)
+        limits = numeric_limits(Pagination)["max_pages"]
         wanted = Pagination(
-            next=text(data, "next").strip(), max_pages=integer(data, "max_pages", 1, MAX_PAGES)
+            next=text(data, "next").strip(),
+            max_pages=integer(data, "max_pages", limits["min"], limits["max"]),
         )
         sha = await run_in_threadpool(save_pagination, path, text(data, "sha256"), source, wanted)
         return reply({"ok": True, "sha256": sha, "pagination": wanted.model_dump()})

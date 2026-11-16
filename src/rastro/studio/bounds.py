@@ -1,4 +1,4 @@
-"""N3/N9: domain-validated bounded acquisition settings for Studio."""
+"""N3/N4/N9: domain-validated bounded acquisition settings for Studio."""
 
 import json
 from pathlib import Path
@@ -8,6 +8,7 @@ from pydantic import BaseModel, ValidationError
 
 from rastro.domain.jobs import Job
 from rastro.domain.models import ConfigurationError
+from rastro.domain.recipes import Pagination
 from rastro.domain.scroll import ScrollSpec
 from rastro.domain.spider import SpiderPolicy
 from rastro.studio.editing import edit_policy_table
@@ -18,10 +19,10 @@ def numeric_limits(model: type[BaseModel]) -> dict[str, Any]:
     """Expose integer controls directly from the domain's JSON Schema."""
     return {
         name: {
-            "min": field["minimum"],
-            "max": field["maximum"],
+            "min": field.get("minimum"),
+            "max": field.get("maximum"),
             "step": field.get("multipleOf", 1),
-            "default": field["default"],
+            "default": field.get("default"),
         }
         for name, field in model.model_json_schema()["properties"].items()
         if field.get("type") == "integer"
@@ -39,7 +40,11 @@ def controls(job: Job) -> dict[str, Any]:
         "spider": job.spider.model_dump(mode="json", exclude_none=True) if job.spider else {},
         "scroll": job.scroll.model_dump() if job.scroll else None,
         "scroll_disabled": "browser" not in modes,
-        "limits": {"spider": numeric_limits(SpiderPolicy), "scroll": numeric_limits(ScrollSpec)},
+        "limits": {
+            "pagination": numeric_limits(Pagination),
+            "spider": numeric_limits(SpiderPolicy),
+            "scroll": numeric_limits(ScrollSpec),
+        },
     }
 
 

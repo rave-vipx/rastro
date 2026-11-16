@@ -4,16 +4,18 @@ let spider = {};
 
 export function fillBounds(data) {
   for (const [kind, name, id] of [
+    ["pagination", "max_pages", "pagination-cap"],
     ["spider", "max_depth", "spider-depth"], ["spider", "max_pages", "spider-pages"],
     ["scroll", "max_steps", "scroll-steps"], ["scroll", "settle_ms", "scroll-settle"],
   ]) {
     const limit = data.limits[kind][name];
     const input = $(id);
-    input.min = limit.min;
-    input.max = limit.max;
+    input.min = limit.min ?? "";
+    input.max = limit.max ?? "";
     input.step = limit.step;
-    input.value = data[kind]?.[name] ?? limit.default;
-    show(id + "-range", `(${limit.min}–${limit.max}, step ${limit.step})`);
+    input.value = data[kind]?.[name] ?? limit.default ?? "";
+    show(id + "-range", limit.min != null && limit.max != null
+      ? `(${limit.min}–${limit.max}, step ${limit.step})` : "");
   }
   spider = data.spider || {};
   $("spider-enabled").checked = spider.mode === "spider";
