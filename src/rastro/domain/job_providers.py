@@ -9,6 +9,7 @@ from urllib.parse import urlsplit
 
 from pydantic import Field, StrictBool, field_validator, model_validator
 
+from rastro.domain.intelligence import ModelBudget
 from rastro.domain.job_contract import ENV_REFERENCE, RedactedContract
 
 _OLLAMA_MODEL = r"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,199}$"
@@ -51,7 +52,23 @@ def _validate_endpoint(url: str, *, allow_path: bool, allow_remote: bool, model:
     return url
 
 
-class OllamaProvider(RedactedContract):
+class PricedProvider(RedactedContract):
+    """Optional USD price and per-run limit for a model's calls (COST-002)."""
+
+    cost_per_call: float | None = Field(default=None, ge=0, le=1000, allow_inf_nan=False)
+    max_cost: float | None = Field(default=None, gt=0, le=1_000_000, allow_inf_nan=False)
+
+    @model_validator(mode="after")
+    def check_priced(self) -> Self:
+        ModelBudget(cost_per_call=self.cost_per_call, max_cost=self.max_cost)
+        return self
+
+    @property
+    def budget(self) -> ModelBudget:
+        return ModelBudget(cost_per_call=self.cost_per_call, max_cost=self.max_cost)
+
+
+class OllamaProvider(PricedProvider):
     """Local Ollama model configuration; never accepts remote hosts or inline secrets."""
 
     provider: Literal["ollama"] = "ollama"
@@ -67,7 +84,7 @@ class OllamaProvider(RedactedContract):
         return self
 
 
-class OpenAICompatibleProvider(RedactedContract):
+class OpenAICompatibleProvider(PricedProvider):
     """Chat Completions model configuration; credentials are env variable names only.
 
     ``provider = "http"`` is the documented name; ``"openai_compatible"`` stays accepted.
@@ -107,7 +124,7 @@ class OpenAICompatibleProvider(RedactedContract):
         return self
 
 
-class CommandProvider(RedactedContract):
+class CommandProvider(PricedProvider):
     """A local model command run without a shell; the prompt goes to stdin.
 
     The command may forward page content to a hosted service, so it needs either

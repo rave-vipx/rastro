@@ -7,6 +7,7 @@ from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import TYPE_CHECKING
 
 import rastro
+from rastro.domain.intelligence import InferencePolicy
 from rastro.domain.job_providers import JobModelProvider
 from rastro.domain.jobs import (
     MAX_JOB_BYTES,
@@ -147,13 +148,17 @@ def _read_local_source(path: Path, max_bytes: int, representation: Representatio
         raise ConfigurationError("Local source file must be valid UTF-8") from None
 
 
-def _build_model_provider(spec: JobModelProvider) -> ModelPort:
+def _build_model_provider(
+    spec: JobModelProvider, policy: InferencePolicy | None = None
+) -> ModelPort:
     """A job file's model, only as far as the operator allows (never the job alone)."""
+    from rastro.application.model_budget import with_budget
     from rastro.application.operator_trust import current_trust
-    from rastro.model_factory import build_model
+    from rastro.model_factory import build_model, is_remote
 
     check_job_model(spec, current_trust())
-    return build_model(spec)
+    model = build_model(spec)
+    return with_budget(model, spec, policy, remote=is_remote(model))
 
 
 def prepare_job(
@@ -180,7 +185,9 @@ def prepare_job(
         for idx, path in file_paths.items()
     }
     schema = job.build_schema()
-    active_model = model or (_build_model_provider(job.model) if job.model is not None else None)
+    active_model = model or (
+        _build_model_provider(job.model, job.inference_policy) if job.model is not None else None
+    )
     repository = rastro.SQLiteRecipeRepository(memory_path) if memory_path is not None else None
     aliases = job.discovery_aliases or None
     if any(isinstance(item, UrlJobSource) for item in job.sources):

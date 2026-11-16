@@ -126,6 +126,7 @@ def load_job_file(
             monitor=monitor,
             snapshots=snapshots,
             drift_state=drift_state,
+            required=[f.name for f in job.fields if f.required],
         )
         if conditional is not None:
             loaded = _commit_validators(conditional, job, report, loaded)

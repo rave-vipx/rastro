@@ -1,4 +1,4 @@
-"""Dataset schema 2, deliberately separate from recipe memory (ADR 0017)."""
+"""Dataset schema 3, deliberately separate from recipe memory (ADR 0017)."""
 
 import os
 import sqlite3
@@ -39,7 +39,20 @@ def safe[**P, T](operation: Callable[P, T]) -> Callable[P, T]:
 
 
 APPLICATION_ID = 0x52534453  # RSDS
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
+KNOWN_VERSIONS = (1, 2, SCHEMA_VERSION)
+
+CREATE_TABLE = (
+    "CREATE TABLE IF NOT EXISTS run_metrics (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+    "dataset TEXT NOT NULL, run_id TEXT NOT NULL, source_url TEXT NOT NULL, host TEXT NOT NULL, "
+    "strategy TEXT NOT NULL, started_at TEXT NOT NULL, finished_at TEXT NOT NULL, "
+    "outcome TEXT NOT NULL, http_status INTEGER, requests INTEGER NOT NULL, "
+    "retries INTEGER NOT NULL, bytes INTEGER NOT NULL, network_seconds REAL NOT NULL, "
+    "processing_seconds REAL NOT NULL, render_seconds REAL NOT NULL, model_calls INTEGER NOT NULL, "
+    "model_tokens INTEGER NOT NULL, records INTEGER NOT NULL, required_fields_ok INTEGER NOT NULL, "
+    "fields_validated INTEGER NOT NULL)"
+)
+CREATE_INDEX = "CREATE INDEX IF NOT EXISTS run_metrics_dataset ON run_metrics (dataset, id)"
 
 
 class ConcurrentDatasetCreation(Exception):
@@ -54,8 +67,8 @@ def _markers(db: sqlite3.Connection) -> tuple[int, int]:
 
 
 def check_schema(db: sqlite3.Connection) -> None:
-    """Reads accept schema 1 or 2 as they are; only the write path migrates 1 to 2."""
-    if _markers(db) not in {(1, APPLICATION_ID), (SCHEMA_VERSION, APPLICATION_ID)}:
+    """Reads accept schema 1, 2 or 3 as they are; only the write path migrates forward."""
+    if _markers(db) not in {(v, APPLICATION_ID) for v in KNOWN_VERSIONS}:
         raise DatasetStorageError("Foreign or newer database; dataset read refused")
 
 
@@ -72,7 +85,7 @@ def migrate(db: sqlite3.Connection) -> None:
     version, app = _markers(db)
     if (version, app) == (SCHEMA_VERSION, APPLICATION_ID):
         return
-    if (version, app) != (1, APPLICATION_ID):
+    if app != APPLICATION_ID or version not in KNOWN_VERSIONS:
         if version or app or db.execute("SELECT 1 FROM sqlite_master LIMIT 1").fetchone():
             raise DatasetStorageError("Foreign or newer database; dataset migration refused")
         db.execute(
@@ -83,11 +96,15 @@ def migrate(db: sqlite3.Connection) -> None:
             "CREATE TABLE dataset_sources (dataset TEXT, source TEXT, payload TEXT NOT NULL, "
             "PRIMARY KEY(dataset, source)) WITHOUT ROWID"
         )
-    db.execute(
-        "CREATE TABLE dataset_validators (dataset TEXT, source TEXT, origin TEXT NOT NULL, "
-        "observed_at TEXT NOT NULL, payload TEXT NOT NULL, "
-        "PRIMARY KEY(dataset, source)) WITHOUT ROWID"
-    )
+        version = 0
+    if version < 2:
+        db.execute(
+            "CREATE TABLE dataset_validators (dataset TEXT, source TEXT, origin TEXT NOT NULL, "
+            "observed_at TEXT NOT NULL, payload TEXT NOT NULL, "
+            "PRIMARY KEY(dataset, source)) WITHOUT ROWID"
+        )
+    db.execute(CREATE_TABLE)  # schema 3 (OBS-003)
+    db.execute(CREATE_INDEX)
     db.execute(f"PRAGMA application_id = {APPLICATION_ID}")
     db.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
 

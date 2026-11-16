@@ -25,6 +25,7 @@ from rastro import (
 )
 from rastro.application.job_preview import preview_job_file, render_preview_table
 from rastro.application.job_summary import job_validation_summary
+from rastro.application.model_budget import model_cost_override
 from rastro.application.operator_trust import set_process_trust
 from rastro.cli_dataset import add_commands, dataset_command, load_job_command
 from rastro.cli_errors import UsageError, classify, missing_extra_error
@@ -35,6 +36,7 @@ from rastro.cli_ops import add_job_commands as add_ops_job_commands
 from rastro.cli_ops import job_command as ops_job_command
 from rastro.cli_recipe import add_commands as add_recipe_commands
 from rastro.cli_recipe import recipe_command
+from rastro.cli_stats import add_stats_command, stats_command
 from rastro.cli_studio import add_command as add_studio_command
 from rastro.cli_studio import studio_command
 from rastro.cli_suggest import add_commands as add_suggest_commands
@@ -131,6 +133,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     add_commands(subcommands, job_commands)
     add_ops_job_commands(job_commands)
+    add_stats_command(job_commands)
     add_health_command(subcommands)
     add_recipe_commands(subcommands)
     add_studio_command(subcommands)
@@ -149,6 +152,8 @@ def _run_job_command(args: argparse.Namespace) -> int:
         }[args.target]()
         print(json.dumps(payload, indent=2, sort_keys=True))
         return int(JobExitCode.SUCCESS)
+    if args.job_command == "stats":
+        return stats_command(args)
     if args.job_command == "load":
         return load_job_command(args)
     if args.job_command in OPS_JOB_COMMANDS:
@@ -232,7 +237,8 @@ def _dispatch(args: argparse.Namespace) -> int:
         print(Recipe.model_validate_json(raw).model_dump_json())
         return int(JobExitCode.SUCCESS)
     if args.command == "job":
-        return _run_job_command(args)
+        with model_cost_override(getattr(args, "max_model_cost", None)):
+            return _run_job_command(args)
     from rastro.cli_demo import demo_command
 
     return demo_command()

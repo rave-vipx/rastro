@@ -7,6 +7,7 @@ from typing import Any, Literal
 from rastro.application.consistency import History, evaluate_consistency, history_from_store
 from rastro.application.drift import snapshot_result
 from rastro.application.pagination_records import is_complete_snapshot
+from rastro.application.run_metrics import record_run_metrics
 from rastro.domain.consistency import ConsistencyRule
 from rastro.domain.dataset import ChangeKind, DatasetRecordKey, DatasetStorageError, ObservedRecord
 from rastro.domain.drift import StructuralSnapshot
@@ -30,12 +31,15 @@ def load_results(
     monitor: DriftMonitor | None = None,
     snapshots: Mapping[str, StructuralSnapshot] | None = None,
     drift_state: OpenDriftReader | None = None,
+    required: Sequence[str] = (),
 ) -> JobLoadResult:
     """Only observed approved fields enter snapshots; failed sources retain their old origins.
 
     Stale sources and open drift cover only this job's sources. A dataset storage failure
     stops further writes: committed sources keep their counts, the rest report
     ``storage_error`` and the result's ``status`` is ``storage_error`` (exit code 5).
+    One ``run_metrics`` row per source is recorded when the store supports it (OBS-003);
+    ``required`` names the job's required fields for the coverage count.
     """
     sources: list[LoadedSource] = []
     assessments = []
@@ -67,6 +71,7 @@ def load_results(
                 sources[-1] = source.model_copy(
                     update={"issues": (*source.issues, Issue(code="drift_storage_error"))}
                 )
+    failed = failed or record_run_metrics(store, spec.name, report, required)
     current = {result.source_url for result in report.results}
     stale: tuple[StaleSource, ...] = ()
     open_drift: tuple[OpenDrift, ...] = ()
