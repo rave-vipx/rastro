@@ -1,10 +1,11 @@
-"""`rastro job stats` and the `--max-model-cost` option (OBS-003..006, COST-002)."""
+"""`rastro job stats`; the model cost options live in `cli_model` (OBS-003..006, COST-002)."""
 
 import argparse
 import json
 from pathlib import Path
 
 from rastro.application.job_stats import GROUPINGS, job_stats
+from rastro.cli_model import add_cost_argument
 from rastro.domain.job_results import JobExitCode
 
 
@@ -21,16 +22,6 @@ def add_stats_command(jobs: argparse._SubParsersAction) -> None:  # type: ignore
         "--by", choices=GROUPINGS, default="source", help="Grouping (default source)"
     )
     stats.add_argument("--allow-absolute-paths", action="store_true")
-
-
-def add_cost_argument(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument(
-        "--max-model-cost",
-        type=float,
-        metavar="USD",
-        help="Stop calling the model once this cost would be exceeded (needs the job's "
-        "[model] cost_per_call; overrides the job's max_cost)",
-    )
 
 
 def stats_command(args: argparse.Namespace) -> int:

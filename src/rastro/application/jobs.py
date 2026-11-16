@@ -16,6 +16,7 @@ from rastro.application.job_loader import (
     resolve_job_path,
     validate_job_paths,
 )
+from rastro.application.model_budget import model_cost_override
 from rastro.application.operator_trust import operator_trust
 from rastro.application.pagination_records import deduplicate_pages
 from rastro.application.run_log import log_failures
@@ -68,6 +69,8 @@ async def run_job_async(
     allow_egress: bool = False,
     allow_stealth: bool = False,
     allow_env: Iterable[str] = (),
+    max_model_cost: float | None = None,
+    model_cost_per_call: float | None = None,
 ) -> JobRunResult[Any]:
     """Execute a validated job asynchronously through the public Rastro SDK.
 
@@ -75,11 +78,13 @@ async def run_job_async(
     ``JobRunResult.recipes`` reports the recipe each source used. The operator, not the
     job file, allows a remote model endpoint (``allow_remote``), a job-declared egress
     proxy (``allow_egress``) and extra secret variable names (``allow_env``). A job file
-    can never make Rastro start a model command.
+    can never make Rastro start a model command. ``max_model_cost`` (USD) caps every model
+    call and needs a price, ``model_cost_per_call`` or the job's ``[model] cost_per_call``.
     """
     allow_env = tuple(allow_env)
-    with operator_trust(
-        allow_remote=allow_remote, allow_stealth=allow_stealth, allow_env=allow_env
+    with (
+        operator_trust(allow_remote=allow_remote, allow_stealth=allow_stealth, allow_env=allow_env),
+        model_cost_override(max_model_cost, model_cost_per_call),
     ):
         check_job_egress(job, allow_egress=allow_egress, allow_env=allow_env)
         active, selections = active_job(
@@ -152,6 +157,8 @@ def run_job(
     allow_egress: bool = False,
     allow_stealth: bool = False,
     allow_env: Iterable[str] = (),
+    max_model_cost: float | None = None,
+    model_cost_per_call: float | None = None,
 ) -> JobRunResult[Any]:
     """Run a validated job; uses synchronous extraction when offline and model-free.
 
@@ -159,11 +166,13 @@ def run_job(
     ``JobRunResult.recipes`` reports the recipe each source used. The operator, not the
     job file, allows a remote model endpoint (``allow_remote``), a job-declared egress
     proxy (``allow_egress``) and extra secret variable names (``allow_env``). A job file
-    can never make Rastro start a model command.
+    can never make Rastro start a model command. ``max_model_cost`` (USD) caps every model
+    call and needs a price, ``model_cost_per_call`` or the job's ``[model] cost_per_call``.
     """
     allow_env = tuple(allow_env)
-    with operator_trust(
-        allow_remote=allow_remote, allow_stealth=allow_stealth, allow_env=allow_env
+    with (
+        operator_trust(allow_remote=allow_remote, allow_stealth=allow_stealth, allow_env=allow_env),
+        model_cost_override(max_model_cost, model_cost_per_call),
     ):
         check_job_egress(job, allow_egress=allow_egress, allow_env=allow_env)
         active, selections = active_job(
@@ -245,6 +254,8 @@ def run_job_file(
     allow_egress: bool = False,
     allow_stealth: bool = False,
     allow_env: Iterable[str] = (),
+    max_model_cost: float | None = None,
+    model_cost_per_call: float | None = None,
 ) -> JobRunResult[Any]:
     """Load and execute a declarative job file; see ``run_job`` for the ``allow_*`` options."""
     file_path = Path(path)
@@ -259,6 +270,8 @@ def run_job_file(
         allow_egress=allow_egress,
         allow_stealth=allow_stealth,
         allow_env=allow_env,
+        max_model_cost=max_model_cost,
+        model_cost_per_call=model_cost_per_call,
     )
 
 

@@ -155,11 +155,20 @@ cost_per_call = 0.002
 max_cost = 1.0
 ```
 
-`rastro job run job.toml --max-model-cost 0.5` overrides `max_cost` (it needs
-`cost_per_call`; `rastro job load` accepts it too). Before the first call to a remote model,
-Rastro prints one line to stderr with the operation, model name, maximum calls, estimated
-maximum cost and the limit. Once the next call would exceed the limit, Rastro stops calling
-the model: that source ends as `insufficient_evidence` with the issue code
-`model_budget_exhausted`, and recipes found without the model still apply. Local models print
-no notice, and honor a limit if you set one. The limit covers the job's recipe proposal and
-repair calls in one run; each `job run` or `job load` starts at zero.
+`rastro job run job.toml --max-model-cost 0.5` overrides `max_cost`, and
+`--model-cost-per-call 0.002` overrides `cost_per_call`. Both flags work on `job run`,
+`job load`, `recipe repair`, `suggest` and `new`; the SDK takes `max_model_cost=` and
+`model_cost_per_call=` on `run_job*` and `repair_job_source(s)`.
+
+The cap covers every model Rastro calls, whoever supplied it: the job's `[model]`, an SDK
+`model=`, `--model SPEC` and `RASTRO_MODEL`. An operator model is priced by
+`--model-cost-per-call`, else by the job's `[model] cost_per_call`. A limit with no known
+price is a `ConfigurationError`; it is never ignored.
+
+Before the first call to a remote model, Rastro prints one line to stderr with the operation,
+model name, maximum calls, estimated maximum cost and the limit. Once the next call would
+exceed the limit, Rastro stops calling the model: that source ends as `insufficient_evidence`
+with the issue code `model_budget_exhausted`, and recipes found without the model still apply.
+Local models print no notice, and honor a limit if you set one. A custom `ModelPort` counts as
+remote only if it has `remote = True`. The limit covers the recipe proposal, repair and
+judgement calls in one run; each `job run`, `job load` or `recipe repair` starts at zero.

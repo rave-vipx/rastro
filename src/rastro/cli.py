@@ -194,6 +194,13 @@ def _mcp_command(args: argparse.Namespace) -> int:
 
 
 def _dispatch(args: argparse.Namespace) -> int:
+    with model_cost_override(
+        getattr(args, "max_model_cost", None), getattr(args, "model_cost_per_call", None)
+    ):
+        return _run_command(args)
+
+
+def _run_command(args: argparse.Namespace) -> int:
     if args.command == "mcp":
         return _mcp_command(args)
     if args.command == "recipe":
@@ -237,8 +244,7 @@ def _dispatch(args: argparse.Namespace) -> int:
         print(Recipe.model_validate_json(raw).model_dump_json())
         return int(JobExitCode.SUCCESS)
     if args.command == "job":
-        with model_cost_override(getattr(args, "max_model_cost", None)):
-            return _run_job_command(args)
+        return _run_job_command(args)
     from rastro.cli_demo import demo_command
 
     return demo_command()

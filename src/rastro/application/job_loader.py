@@ -161,6 +161,15 @@ def _build_model_provider(
     return with_budget(model, spec, policy, remote=is_remote(model))
 
 
+def _active_model(job: Job, model: ModelPort | None) -> ModelPort | None:
+    """The operator's model (budgeted like any other), else the job's own ``[model]``."""
+    if model is not None:
+        from rastro.application.model_budget import budget_operator_model
+
+        return budget_operator_model(model, job_model=job.model, policy=job.inference_policy)
+    return _build_model_provider(job.model, job.inference_policy) if job.model else None
+
+
 def prepare_job(
     job: Job,
     *,
@@ -185,9 +194,7 @@ def prepare_job(
         for idx, path in file_paths.items()
     }
     schema = job.build_schema()
-    active_model = model or (
-        _build_model_provider(job.model, job.inference_policy) if job.model is not None else None
-    )
+    active_model = _active_model(job, model)
     repository = rastro.SQLiteRecipeRepository(memory_path) if memory_path is not None else None
     aliases = job.discovery_aliases or None
     if any(isinstance(item, UrlJobSource) for item in job.sources):

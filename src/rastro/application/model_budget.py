@@ -20,29 +20,47 @@ from rastro.domain.models import ConfigurationError
 from rastro.ports.model import ModelPort
 
 _OVERRIDE: ContextVar[float | None] = ContextVar("rastro_max_model_cost", default=None)
+_PRICE: ContextVar[float | None] = ContextVar("rastro_model_cost_per_call", default=None)
 
 
 @contextmanager
-def model_cost_override(max_cost: float | None) -> Iterator[None]:
-    """The operator's ``--max-model-cost``; it beats the job file's ``max_cost``."""
-    token = _OVERRIDE.set(max_cost)
+def model_cost_override(
+    max_cost: float | None, cost_per_call: float | None = None
+) -> Iterator[None]:
+    """The operator's ``--max-model-cost`` and ``--model-cost-per-call``.
+
+    They beat the job file's ``max_cost`` and ``cost_per_call``; ``None`` keeps the value
+    an enclosing override already set.
+    """
+    tokens = [
+        (var, var.set(value))
+        for var, value in ((_OVERRIDE, max_cost), (_PRICE, cost_per_call))
+        if value is not None
+    ]
     try:
         yield
     finally:
-        _OVERRIDE.reset(token)
+        for var, token in reversed(tokens):
+            var.reset(token)
+
+
+def _budget(price: float | None, limit: float | None) -> ModelBudget:
+    price = _PRICE.get() if _PRICE.get() is not None else price
+    limit = _OVERRIDE.get() if _OVERRIDE.get() is not None else limit
+    try:
+        return ModelBudget(cost_per_call=price, max_cost=limit)
+    except ValidationError:
+        raise ConfigurationError(
+            "A model cost limit must be a positive number and needs a price: "
+            "--model-cost-per-call or the job's [model] cost_per_call",
+            location="model.cost_per_call",
+        ) from None
 
 
 def budget_for(spec: JobModelProvider, override: float | None = None) -> ModelBudget:
-    limit = override if override is not None else _OVERRIDE.get()
-    if limit is None:
-        return spec.budget
-    try:
-        return ModelBudget(cost_per_call=spec.cost_per_call, max_cost=limit)
-    except ValidationError:
-        raise ConfigurationError(
-            "--max-model-cost must be a positive number and needs [model] cost_per_call",
-            location="model.cost_per_call",
-        ) from None
+    if override is not None:
+        return ModelBudget(cost_per_call=spec.cost_per_call, max_cost=override)
+    return _budget(spec.cost_per_call, spec.max_cost)
 
 
 def _usd(value: float) -> str:
@@ -106,6 +124,43 @@ def with_budget(
         budget,
         name=getattr(spec, "model", "command"),
         operation="recipe proposal and repair",
+        remote=remote,
+        calls_per_source=(policy or InferencePolicy()).max_calls,
+    )
+
+
+def _name(model: object) -> str:
+    name = getattr(model, "model", None)
+    return name if isinstance(name, str) and name.isprintable() else type(model).__name__
+
+
+def budget_operator_model(
+    model: ModelPort,
+    *,
+    job_model: JobModelProvider | None = None,
+    policy: InferencePolicy | None = None,
+    operation: str = "model assistance",
+) -> ModelPort:
+    """Apply the cost limit and the remote notice to a model the operator supplied.
+
+    The price is ``--model-cost-per-call``, else the job's ``[model] cost_per_call``; a limit
+    without a price is a ``ConfigurationError``. A model already wrapped stays as it is.
+    """
+    from rastro.model_factory import is_remote
+
+    if isinstance(model, BudgetedModel):
+        return model
+    budget = _budget(
+        job_model.cost_per_call if job_model else None, job_model.max_cost if job_model else None
+    )
+    remote = is_remote(model)
+    if not remote and budget.max_cost is None:
+        return model
+    return BudgetedModel(
+        model,
+        budget,
+        name=_name(model),
+        operation=operation,
         remote=remote,
         calls_per_source=(policy or InferencePolicy()).max_calls,
     )

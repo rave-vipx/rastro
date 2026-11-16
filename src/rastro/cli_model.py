@@ -1,4 +1,4 @@
-"""Shared ``--model`` and ``--allow-remote`` options for CLI commands (AI-001, P-001)."""
+"""Shared ``--model``, ``--allow-remote`` and model cost options (AI-001, P-001, COST-002)."""
 
 from __future__ import annotations
 
@@ -15,4 +15,21 @@ def add_model_options(parser: argparse.ArgumentParser, purpose: str) -> None:
         "--allow-remote",
         action="store_true",
         help="Allow sending page content to a non-loopback or hosted model",
+    )
+    add_cost_argument(parser)
+
+
+def add_cost_argument(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--max-model-cost",
+        type=float,
+        metavar="USD",
+        help="Stop calling the model once this cost would be exceeded (needs "
+        "--model-cost-per-call or the job's [model] cost_per_call; overrides max_cost)",
+    )
+    parser.add_argument(
+        "--model-cost-per-call",
+        type=float,
+        metavar="USD",
+        help="Price of one model call; overrides the job's [model] cost_per_call",
     )
