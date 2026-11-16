@@ -37,6 +37,7 @@ PAGE = """<html><body>
 class Transport:
     def __init__(self) -> None:
         self.urls: list[str] = []
+        self.robots_body = b"User-agent: *\nAllow: /\n"
 
     @property
     def robots(self) -> list[str]:
@@ -53,7 +54,7 @@ class Transport:
     ) -> HttpResponse:
         self.urls.append(target.url)
         if urlsplit(target.url).path == "/robots.txt":
-            body = b"User-agent: *\nAllow: /\n"
+            body = self.robots_body
             return HttpResponse(200, {"content-type": "text/plain"}, body, len(body))
         body = PAGE.encode()
         return HttpResponse(200, {"content-type": "text/html"}, body, len(body))
@@ -119,6 +120,22 @@ def test_separate_operations_do_not_share_robots_answers() -> None:
     client = acquirer(transport, "events.example")
     html_from_url("https://events.example/a", acquisition=client)
     html_from_url("https://events.example/b", acquisition=client)
+    assert len(transport.robots) == 2
+
+
+def test_a_url_start_inside_an_outer_cache_asks_again_and_honours_a_new_denial() -> None:
+    """An inherited, already-populated cache must not carry an old allow into a new operation."""
+    from rastro.application.robots_cache import robots_cache
+    from rastro.domain.models import ConfigurationError
+
+    transport = Transport()
+    client = acquirer(transport, "events.example")
+    with robots_cache():
+        html_from_url("https://events.example/a", acquisition=client)  # outer allow is cached
+        assert len(transport.robots) == 1
+        transport.robots_body = b"User-agent: *\nDisallow: /\n"
+        with pytest.raises(ConfigurationError, match="Could not fetch"):
+            html_from_url("https://events.example/b", acquisition=client)
     assert len(transport.robots) == 2
 
 
