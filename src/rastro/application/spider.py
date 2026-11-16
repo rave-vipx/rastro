@@ -15,23 +15,20 @@ from pydantic import BaseModel
 from rastro.application.acquisition_state import (
     PAGINATION_SCOPE,
     PaginationScope,
-    pagination_boundary,
 )
-from rastro.application.destinations import permitted_url
-from rastro.application.operator_trust import current_trust
 from rastro.application.outcomes import failure_result
 from rastro.application.pagination_records import combine_pages
 from rastro.application.scroll import PAGE_COUNTER, PageCounter, pages_left, spend_page
+from rastro.application.spider_filter import link_refusal
 from rastro.application.spider_links import (
     Link,
     LinkHarvest,
     classify_link,
     describe_url,
-    path_matches,
     report_path,
 )
 from rastro.application.spider_outcome import PAGE_FAILURES, page_outcome
-from rastro.domain.acquisition import AcquisitionError, AcquisitionPolicy
+from rastro.domain.acquisition import AcquisitionPolicy
 from rastro.domain.models import (
     ConfigurationError,
     ExtractionResult,
@@ -45,17 +42,6 @@ from rastro.domain.spider import SpiderPolicy
 from rastro.domain.spider_report import SpiderOutcome, SpiderPage, SpiderReport
 from rastro.ports.parser import DocumentParser
 
-_FILTERS: dict[str, SpiderOutcome] = {
-    "invalid_next": "invalid_url",
-    "off_host": "off_host",
-    "https_downgrade": "https_downgrade",
-}
-_DESTINATION: dict[str, SpiderOutcome] = {
-    "invalid_url": "invalid_url",
-    "host_not_allowed": "off_host",
-    "https_required": "https_downgrade",
-    "port_not_allowed": "port_not_allowed",
-}
 _NOTE_CAP = 500  # discovered-but-not-fetched rows; fetched pages (max 100) always have a row
 _LIMITS = ("budget", "page_limit", "depth_limit")  # a hit cap: partial, in this order
 
@@ -213,7 +199,9 @@ class _Crawl[T: BaseModel]:
             if not link.refusal and link.url in self.seen:
                 continue
             self.ordinal += 1
-            refusal: SpiderOutcome | None = link.refusal or self._filter(link)
+            refusal: SpiderOutcome | None = link.refusal or link_refusal(
+                link, self.scope, self.spider, self.policy
+            )
             if refusal is None and depth + 1 > self.spider.max_depth:
                 refusal = "depth_limit"
                 self.hit.add("depth_limit")
@@ -223,31 +211,6 @@ class _Crawl[T: BaseModel]:
                 frontier.append((self.ordinal, link))
             if not link.refusal:
                 self.seen.add(link.url)
-
-    def _filter(self, link: Link) -> SpiderOutcome | None:
-        boundary = pagination_boundary(
-            link.url, self.scope.host, self.scope.secure, self.scope.hosts
-        )
-        if boundary:
-            return _FILTERS[boundary]
-        refusal = self._destination_refusal(link)
-        if refusal:
-            return refusal
-        if path_matches(link.path, self.spider.deny) or (
-            self.spider.allow and not path_matches(link.path, self.spider.allow)
-        ):
-            return "path_denied"
-        return None
-
-    def _destination_refusal(self, link: Link) -> SpiderOutcome | None:
-        """What the fetch would refuse anyway, decided before a page slot is spent."""
-        if self.policy is None:
-            return None
-        try:
-            permitted_url(link.url, self.policy.with_grants(current_trust().network_grants()))
-        except AcquisitionError as error:
-            return _DESTINATION.get(error.code, "failed")
-        return None
 
     def _note(self, ordinal: int, depth: int, link: Link, outcome: SpiderOutcome) -> None:
         if outcome in ("budget", "page_limit"):
