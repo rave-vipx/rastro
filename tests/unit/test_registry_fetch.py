@@ -320,3 +320,28 @@ def test_a_missing_http_extra_is_a_configuration_error(monkeypatch: pytest.Monke
     monkeypatch.setitem(sys.modules, "curl_cffi", None)
     with pytest.raises(ConfigurationError, match=r"rastro-engine\[http\].*--registry-url"):
         search_registry_url(BASE, "sodre")
+
+
+def _robots_requests(site: Site) -> int:
+    return sum(url.endswith("/robots.txt") for url in site.requests)
+
+
+def test_one_install_fetches_robots_txt_once(served: Path, tmp_path: Path) -> None:
+    site = Site(served)
+    _install(site, tmp_path)
+    assert len(site.requests) == 7  # six package files and one robots.txt (N10, SEC-008)
+    assert _robots_requests(site) == 1
+
+
+def test_separate_installs_do_not_share_robots_answers(served: Path, tmp_path: Path) -> None:
+    site = Site(served)
+    _install(site, tmp_path)
+    _install(site, tmp_path)
+    assert _robots_requests(site) == 2
+
+
+def test_ignored_robots_host_is_never_asked(served: Path, tmp_path: Path) -> None:
+    site = Site(served)
+    with operator_trust(ignore_robots=["registry.example.org"]):
+        _install(site, tmp_path)
+    assert _robots_requests(site) == 0
