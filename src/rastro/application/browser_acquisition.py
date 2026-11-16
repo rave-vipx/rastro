@@ -15,7 +15,12 @@ from rastro.application.acquisition_state import (
     charge_extra_requests,
     check_page_request,
 )
-from rastro.application.browser_policy import canonical_url, page_policy, scroll_failure
+from rastro.application.browser_policy import (
+    canonical_url,
+    page_policy,
+    refused_step,
+    scroll_failure,
+)
 from rastro.application.browser_sessions import SOURCE_SESSIONS
 from rastro.application.destinations import permitted_url, pin_destination
 from rastro.application.operator_trust import current_trust
@@ -167,7 +172,11 @@ class BrowserAcquirer(WebAcquirer):
             session = await scope.reuse(self._renderer, target, targets, policy)
             if session is not None:
                 scope.mark_rendered(self._renderer, None)  # unknown until this render returns
-                result = await session.render(target, policy=policy, max_bytes=max_bytes)
+                try:
+                    result = await session.render(target, policy=policy, max_bytes=max_bytes)
+                except BaseException:
+                    await scope.discard(self._renderer)  # its final host is unknown: never reuse
+                    raise
                 if await scope.leave_foreign(self._renderer, result.url):
                     return result  # a redirect carried the context to another host: drop it
                 if result.status == Outcome.SUCCESS:
@@ -217,21 +226,20 @@ class BrowserAcquirer(WebAcquirer):
                         result = await session.scroll(
                             policy=step, max_bytes=max_bytes, settle_ms=settle_ms
                         )
+                except BaseException:
+                    await scope.discard(self._renderer)  # the page's host is unknown now
+                    raise
                 finally:
                     host.next_request = perf_counter() + host.interval
+            refusal = refused_step(result, policy, max_bytes, page=canonical)
             if await scope.leave_foreign(self._renderer, result.url):
-                raise AcquisitionError("scroll_navigated", Outcome.PERMANENT_FAILURE)
-            if permitted_url(result.url, policy)[0] != canonical:
-                # Another document was never checked against robots: refuse it, keep the rest.
-                scope.mark_rendered(self._renderer, None)
-                raise AcquisitionError("scroll_navigated", Outcome.PERMANENT_FAILURE)
-            if result.status != Outcome.SUCCESS or not result.body:
-                raise AcquisitionError(
-                    result.issue_code or "empty_document",
-                    result.status if result.status != Outcome.SUCCESS else Outcome.INVALID_DATA,
+                refusal = refusal or AcquisitionError(
+                    "scroll_navigated", Outcome.PERMANENT_FAILURE, requests=result.requests
                 )
-            if len(result.body.encode("utf-8")) > max_bytes:
-                raise AcquisitionError("response_too_large", Outcome.PERMANENT_FAILURE)
+            elif refusal and refusal.code == "scroll_navigated":
+                scope.mark_rendered(self._renderer, None)  # keep the records; no page to scroll
+            if refusal:
+                raise refusal
             return replace(result, acquisition_seconds=perf_counter() - started)
         except TimeoutError:
             return scroll_failure(source, Outcome.TRANSIENT_FAILURE, "operation_timeout")

@@ -30,3 +30,23 @@ def scroll_failure(
     return AcquisitionResult(
         source.url, None, status, code, egress=source.egress, requests=requests
     )
+
+
+def refused_step(
+    result: AcquisitionResult, policy: AcquisitionPolicy, max_bytes: int, *, page: str | None = None
+) -> AcquisitionError | None:
+    """The error for a finished browser step that must not be used, else ``None``.
+
+    Every refusal carries ``result.requests``: the step's transfers happened, so the
+    caller charges them whatever becomes of the document.
+    """
+    code, outcome = None, Outcome.PERMANENT_FAILURE
+    if page is not None and canonical_url(result.url, policy) != page:
+        code = "scroll_navigated"  # another document was never checked against robots
+    elif result.status != Outcome.SUCCESS:
+        code, outcome = result.issue_code or "empty_document", result.status
+    elif not result.body:
+        code, outcome = "empty_document", Outcome.INVALID_DATA
+    elif len(result.body.encode("utf-8")) > max_bytes:
+        code = "response_too_large"
+    return None if code is None else AcquisitionError(code, outcome, requests=result.requests)

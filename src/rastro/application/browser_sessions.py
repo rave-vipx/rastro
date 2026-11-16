@@ -65,6 +65,12 @@ class SourceSessions:
         await entry.stack.aclose()
         return True
 
+    async def discard(self, renderer: object) -> None:
+        """Close the renderer's context: after a failed step its page's host is unknown."""
+        entry = self._open.pop(id(renderer), None)
+        if entry is not None:
+            await entry.stack.aclose()
+
     def mark_rendered(self, renderer: object, url: str | None) -> None:
         """Record what the renderer's session page shows now (``None``: unknown, mid-render)."""
         entry = self._open.get(id(renderer))

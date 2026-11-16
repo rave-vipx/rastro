@@ -134,12 +134,16 @@ class NetworkGuard:
             )
             raise AcquisitionError(self.issue, outcome, requests=self.requests)
         if len(body.encode("utf-8")) > max_bytes:
-            raise AcquisitionError("response_too_large", Outcome.PERMANENT_FAILURE)
+            raise AcquisitionError(
+                "response_too_large", Outcome.PERMANENT_FAILURE, requests=self.requests
+            )
         if any(
             marker in body.lower()
             for marker in ("cf-chl-", "cf-turnstile", "g-recaptcha", "hcaptcha")
         ):
-            raise AcquisitionError("challenge_unsolved", Outcome.ACCESS_RESTRICTION)
+            raise AcquisitionError(
+                "challenge_unsolved", Outcome.ACCESS_RESTRICTION, requests=self.requests
+            )
         return AcquisitionResult(
             url, body, Outcome.SUCCESS, None, http_status=status, requests=self.requests
         )
