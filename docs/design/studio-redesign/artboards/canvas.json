@@ -1,0 +1,30 @@
+{
+  "v": 3,
+  "createdOnFiles": {"v": 1, "at": "2026-11-17T18:30:00Z"},
+  "title": "Rastro Studio",
+  "launch": {"view": "canvas"},
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {"x": 0, "y": 0, "w": 1440, "h": 1060, "title": "Inicio · proyectos", "expand": "fill", "is_interactive": true},
+    "Estados.dc.html": {"x": 1520, "y": 0, "w": 1440, "h": 1300, "title": "Inicio · vacío, base no reconocida y carga", "expand": "fill", "is_interactive": true},
+    "Resultados.dc.html": {"x": 0, "y": 1700, "w": 1440, "h": 1200, "title": "Resultados + procedencia", "expand": "fill", "is_interactive": true},
+    "Fuentes.dc.html": {"x": 1520, "y": 1700, "w": 1440, "h": 1080, "title": "Fuentes (cobertura)", "expand": "fill", "is_interactive": true},
+    "Alertas.dc.html": {"x": 3040, "y": 1700, "w": 1440, "h": 1000, "title": "Alertas", "expand": "fill", "is_interactive": true},
+    "Reparar.dc.html": {"x": 4560, "y": 1700, "w": 1440, "h": 1120, "title": "Arreglar un sitio", "expand": "fill", "is_interactive": true},
+    "Nuevo.dc.html": {"x": 0, "y": 3320, "w": 1440, "h": 1340, "title": "Nuevo scraper · origen, bloques, vista previa, guardar", "expand": "fill", "is_interactive": true},
+    "Recetas.dc.html": {"x": 1520, "y": 3320, "w": 1440, "h": 1240, "title": "Recetas, colecciones y Hub", "expand": "fill", "is_interactive": true},
+    "Ajustes.dc.html": {"x": 3040, "y": 3320, "w": 1440, "h": 1460, "title": "Ajustes del proyecto (avanzado)", "expand": "fill", "is_interactive": true},
+    "Tokens.dc.html": {"x": 0, "y": 5180, "w": 1440, "h": 1960, "title": "Tokens y componentes", "expand": "fill", "is_interactive": true},
+    "HomeEN.dc.html": {"x": 1520, "y": 5180, "w": 1440, "h": 1060, "title": "Home (English)", "expand": "fill", "is_interactive": true},
+    "ResultsEN.dc.html": {"x": 3040, "y": 5180, "w": 1440, "h": 1200, "title": "Results (English)", "expand": "fill", "is_interactive": true},
+    "Movil.dc.html": {"x": 4560, "y": 5180, "w": 390, "h": 1500, "title": "Resultados en móvil (390 px)", "is_interactive": true}
+  },
+  "order": ["Main.dc.html", "Estados.dc.html", "Resultados.dc.html", "Fuentes.dc.html", "Alertas.dc.html", "Reparar.dc.html", "Nuevo.dc.html", "Recetas.dc.html", "Ajustes.dc.html", "Tokens.dc.html", "HomeEN.dc.html", "ResultsEN.dc.html", "Movil.dc.html"],
+  "notes": {
+    "t1": {"x": 0, "y": -280, "text": "Inicio: una carpeta, sus proyectos", "kind": "title1", "maxW": 2960},
+    "t2": {"x": 0, "y": 1420, "text": "Dentro de un proyecto: resultados, fuentes, alertas y arreglos", "kind": "title1", "maxW": 6000},
+    "t3": {"x": 0, "y": 3040, "text": "Crear y configurar: asistente con bloques, recetas, Hub y ajustes", "kind": "title1", "maxW": 4480},
+    "t4": {"x": 0, "y": 4900, "text": "Sistema visual, versión en inglés y móvil", "kind": "title1", "maxW": 4950}
+  },
+  "designSystems": []
+}

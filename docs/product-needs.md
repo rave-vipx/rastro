@@ -138,16 +138,9 @@ Keep the loopback Starlette app.
 
 Stay on the Git-directory registry. Add three synthetic bundles under `examples/registry/`. Document local install and `--registry-url` in the README. A shared package is the recipe. Scraping a real site is a URL in the job. Do not commit that site's HTML into this repository.
 
-## Who builds what
+## Review
 
-Two agents, two branches cut from `docs/product-needs-n1-n8`, pull requests into that branch.
-
-| Agent | Owns | Does not touch |
-| --- | --- | --- |
-| Claude | N2, N3, N9, the enforcement half of N12. Spider, scroll, shared request budget, same-source browser reuse, job schema, acquisition tests. N10 fetch only: new `src/rastro/application/registry_fetch.py` plus the CLI flag. A stealth request without the grant must not launch the stealth browser. Registry install must not change `auto_promote`. | `src/rastro/studio/**`, `README.md`, `RASTRO_MASTER_SPEC.md`, `examples/registry/**` |
-| Codex | N1, N4, N5, N6, N7, N8, N10 Studio and docs, N11, the Studio half of N12. URL-first Studio, progress, next-link editor, Fix, Health, both switches, registry search/install/publish UI, README, three synthetic bundles, Amendment Log rows for ADR 0032, 0033, and 0034. | `src/rastro/acquisition*`, `src/rastro/application/registry_fetch.py`, parser internals, `SECURITY.md` |
-
-Claude reviews Codex's PR. Codex reviews Claude's PR. Network and security changes need that cross-review (see `AGENTS.md`).
+Network, persistence, security and CI changes need a cross-model review before merge (see `AGENTS.md`).
 
 ## Acceptance for the cut
 
