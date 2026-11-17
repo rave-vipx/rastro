@@ -1,6 +1,8 @@
 """`rastro init --agent` writes the agent block or skill safely (N18, AGENT-001, SEC-008)."""
 
+import contextlib
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -8,6 +10,8 @@ import pytest
 from rastro.capabilities import GAP_REPORT_TEMPLATE, PUBLIC_IMPORT_RULE, UNTRUSTED_DATA_RULE
 from rastro.capabilities_render import render_snippet
 from rastro.cli import main
+from rastro.cli_agent import init_project
+from rastro.domain.models import ConfigurationError
 
 BEGIN, END = "<!-- rastro:begin -->", "<!-- rastro:end -->"
 
@@ -105,3 +109,65 @@ def test_refuses_a_missing_directory(tmp_path: Path, capsys: pytest.CaptureFixtu
     """N18: --path must be an existing directory."""
     code, error = _init(capsys, "--agent", "codex", "--path", str(tmp_path / "missing"))
     assert code == 2 and error["error"] == "configuration_error"
+
+
+def _swap_for_link(monkeypatch: pytest.MonkeyPatch, directory: Path, outside: Path) -> None:
+    """Swap ``directory`` for a symlink to ``outside`` just before the temporary file opens."""
+
+    def swap(_size: int) -> str:
+        directory.rename(directory.with_name(directory.name + "-moved"))
+        directory.symlink_to(outside, target_is_directory=True)
+        return "race"
+
+    monkeypatch.setattr("rastro.cli_agent.secrets.token_hex", swap)
+
+
+needs_dir_fd = pytest.mark.skipif(
+    os.open not in os.supports_dir_fd, reason="the race guard needs dir_fd (POSIX only)"
+)
+
+
+@needs_dir_fd
+def test_skill_directory_swap_cannot_write_outside(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """SEC-008: a parent swapped for a symlink mid-write never redirects the write outside."""
+    project, outside = tmp_path / "project", tmp_path / "outside"
+    target = project / ".agents" / "skills" / "rastro"
+    target.mkdir(parents=True)
+    outside.mkdir()
+    (outside / "SKILL.md").write_text("private\n", encoding="utf-8")
+    _swap_for_link(monkeypatch, target, outside)
+    with contextlib.suppress(ConfigurationError):
+        init_project(project, "codex", "skill")
+    assert (outside / "SKILL.md").read_text(encoding="utf-8") == "private\n"
+    assert sorted(p.name for p in outside.iterdir()) == ["SKILL.md"]
+
+
+@needs_dir_fd
+def test_block_root_swap_cannot_write_outside(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """SEC-008: --path swapped for a symlink mid-write never redirects the write outside."""
+    project, outside = tmp_path / "project", tmp_path / "outside"
+    project.mkdir()
+    outside.mkdir()
+    (outside / "AGENTS.md").write_text("private\n", encoding="utf-8")
+    _swap_for_link(monkeypatch, project, outside)
+    with contextlib.suppress(ConfigurationError):
+        init_project(project, "codex", "block")
+    assert (outside / "AGENTS.md").read_text(encoding="utf-8") == "private\n"
+    assert sorted(p.name for p in outside.iterdir()) == ["AGENTS.md"]
+
+
+def test_path_fallback_without_dir_fd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """SEC-008: without dir_fd (Windows) the path checks still write inside and refuse links."""
+    monkeypatch.setattr("rastro.cli_agent._ANCHORED", False)
+    project = tmp_path / "project"
+    project.mkdir()
+    assert init_project(project, "codex", "skill")["action"] == "created"
+    assert (project / ".agents/skills/rastro/SKILL.md").is_file()
+    (project / "CLAUDE.md").symlink_to(tmp_path / "outside.md")
+    with pytest.raises(ConfigurationError):
+        init_project(project, "claude", "block")
+    assert not (tmp_path / "outside.md").exists()
