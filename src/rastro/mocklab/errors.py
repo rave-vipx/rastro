@@ -8,7 +8,17 @@ class MockLabError(RastroError):
 
 
 class SanitizationError(MockLabError):
-    """Sanitization could not prove an artifact free of sensitive data (fail-closed)."""
+    """Sanitization could not prove an artifact free of sensitive data (fail-closed).
+
+    ``field`` and ``category`` (for example ``phone``) are value-free facts for diagnostics.
+    """
+
+    def __init__(
+        self, message: str, *, field: str | None = None, category: str | None = None
+    ) -> None:
+        super().__init__(message)
+        self.field = field
+        self.category = category
 
 
 class FixtureMismatchError(MockLabError):
