@@ -163,7 +163,8 @@
               "enum": [
                 "jsonld",
                 "css",
-                "json"
+                "json",
+                "embedded_json"
               ],
               "type": "string"
             },

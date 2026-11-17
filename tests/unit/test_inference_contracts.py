@@ -122,6 +122,9 @@ def test_proposal_schema_is_derived_from_html_recipe_variants_and_unchanged():
         (CssProposal, CssRecipe, "record_selector"),
         (JsonLdProposal, JsonLdRecipe, "item_type"),
     ):
+        if selector == "item_type":  # recipes also accept a tuple; proposals stay single-type
+            assert JsonLdProposal.model_fields[selector].annotation == (str | None)
+            continue
         assert repr(proposal.model_fields[selector]) == repr(recipe.model_fields[selector])
         # Proposals keep one expression per field; JSON-LD pointer lists are hand-written only.
         if recipe is CssRecipe:

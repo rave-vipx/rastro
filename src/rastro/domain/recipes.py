@@ -22,7 +22,9 @@ DOCUMENT_PREFIX = "document:"  # CSS field evaluated against the page root, not 
 EXPAND_PREFIX = "expand:"  # CSS field whose every match becomes its own record
 MAX_POINTERS = 4  # JSON-LD fields may list 1..4 fallback pointers
 PointerList = Annotated[tuple[str, ...], Field(min_length=1, max_length=MAX_POINTERS)]
-_SELECTORS = frozenset({"item_type", "record_selector", "record_path"})
+_SELECTORS = frozenset({"item_type", "record_selector", "record_path", "source"})
+MAX_ITEM_TYPES = 8  # JSON-LD item_type may list 1..8 accepted types
+ItemType = Annotated[str, Field(min_length=1, max_length=256)]
 
 
 class StrategyUnion(Contract):
@@ -88,10 +90,10 @@ class Recipe(StrategyUnion):
     """A declarative definition of scalar field mappings: what to extract, never history.
 
     ``Recipe(...)`` and ``Recipe.model_validate(...)`` return a ``CssRecipe``,
-    ``JsonLdRecipe`` or ``JsonRecipe`` selected by ``strategy``.
+    ``JsonLdRecipe``, ``EmbeddedJsonRecipe`` or ``JsonRecipe`` selected by ``strategy``.
     """
 
-    strategy: Literal["jsonld", "css", "json"]
+    strategy: Literal["jsonld", "css", "json", "embedded_json"]
     fields: dict[str, str] = Field(min_length=1, max_length=100)
     version: int = Field(default=1, ge=1, le=2_147_483_647)
     require_evidence: bool = False
@@ -132,6 +134,12 @@ def _check_pointer(expression: str) -> None:
         raise ValueError("JSON mappings must be valid absolute JSON pointers")
 
 
+def _check_record_path(value: str) -> str:
+    if POINTER.fullmatch(value) is None:
+        raise ValueError("JSON recipes require record_path as a JSON pointer")
+    return value
+
+
 class CssRecipe(Recipe):
     """Select HTML records with ``record_selector``; fields end in ::text or ::attr(name)."""
 
@@ -158,9 +166,11 @@ class CssRecipe(Recipe):
 
 
 class JsonLdRecipe(Recipe):
-    """Map JSON-LD objects, optionally of one ``item_type``, with absolute JSON pointers.
+    """Map JSON-LD objects, optionally of one or several ``item_type`` values, with pointers.
 
-    A field maps to one pointer or to 1..4 pointers; the first that resolves wins.
+    ``item_type`` is one type or 1..8 types; an object matches when any of its ``@type``
+    values is listed. A field maps to one pointer or to 1..4 pointers; the first that
+    resolves wins.
     """
 
     strategy: Literal["jsonld"] = "jsonld"
@@ -168,9 +178,20 @@ class JsonLdRecipe(Recipe):
         min_length=1, max_length=100
     )
     fallbacks: tuple[HtmlRecipe, ...] = Field(default=(), max_length=3)
-    item_type: str | None = Field(default=None, min_length=1, max_length=256)
+    item_type: (
+        ItemType
+        | Annotated[tuple[ItemType, ...], Field(min_length=1, max_length=MAX_ITEM_TYPES)]
+        | None
+    ) = None
     representation: ClassVar[Representation] = "html"
     check_expression = staticmethod(_check_pointer)
+
+    @property
+    def item_types(self) -> frozenset[str]:
+        """The accepted ``@type`` values; empty when any object matches."""
+        if self.item_type is None:
+            return frozenset()
+        return frozenset({self.item_type} if isinstance(self.item_type, str) else self.item_type)
 
 
 class JsonRecipe(Recipe):
@@ -182,15 +203,43 @@ class JsonRecipe(Recipe):
     representation: ClassVar[Representation] = "json"
     check_expression = staticmethod(_check_pointer)
 
-    @field_validator("record_path")
+    check_record_path = field_validator("record_path")(_check_record_path)
+
+
+class EmbeddedJsonRecipe(Recipe):
+    """Read JSON embedded in HTML: ``source`` selects one node, then ``record_path`` and fields
+    work as in ``JsonRecipe``.
+
+    ``source`` is a CSS selector ending in ``::attr(name)`` (``input[name=GXState]::attr(value)``)
+    or ``::text`` (``script#__NEXT_DATA__::text``); it must match exactly one node.
+    """
+
+    strategy: Literal["embedded_json"] = "embedded_json"
+    fallbacks: tuple[HtmlRecipe, ...] = Field(default=(), max_length=3)
+    source: str = Field(min_length=1, max_length=1024)
+    record_path: str = Field(max_length=1024)
+    representation: ClassVar[Representation] = "html"
+    check_expression = staticmethod(_check_pointer)
+    check_record_path = field_validator("record_path")(_check_record_path)
+
+    @field_validator("source")
     @classmethod
-    def check_record_path(cls, value: str) -> str:
-        if POINTER.fullmatch(value) is None:
-            raise ValueError("JSON recipes require record_path as a JSON pointer")
+    def check_source(cls, value: str) -> str:
+        CssRecipe.check_expression(value)
+        if value.startswith((EXPAND_PREFIX, DOCUMENT_PREFIX)):
+            raise ValueError("source is a plain CSS selector")
         return value
 
+    @model_validator(mode="after")
+    def check_no_pagination(self) -> Self:
+        if self.pagination is not None:
+            raise ConfigurationError("Embedded JSON recipes cannot declare pagination")
+        return self
 
-type HtmlRecipe = Annotated[CssRecipe | JsonLdRecipe, Field(discriminator="strategy")]
-for _variant in (CssRecipe, JsonLdRecipe, JsonRecipe):
+
+type HtmlRecipe = Annotated[
+    CssRecipe | JsonLdRecipe | EmbeddedJsonRecipe, Field(discriminator="strategy")
+]
+for _variant in (CssRecipe, JsonLdRecipe, EmbeddedJsonRecipe, JsonRecipe):
     _variant.model_rebuild()
-seal_union(Recipe, CssRecipe, JsonLdRecipe, JsonRecipe)
+seal_union(Recipe, CssRecipe, JsonLdRecipe, JsonRecipe, EmbeddedJsonRecipe)

@@ -48,7 +48,7 @@ class Evidence(Contract):
     page_url: str | None = Field(default=None, exclude_if=_absent)
     source_url: str
     observed_at: datetime
-    method: Literal["jsonld", "css", "json"]
+    method: Literal["jsonld", "css", "json", "embedded_json"]
     locator: str
     recipe_version: int
 
