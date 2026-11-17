@@ -24,6 +24,7 @@ from rastro.cli_dataset_export import html_export
 from rastro.domain.dataset import StoredRecord
 from rastro.domain.jobs import Job
 from rastro.domain.models import ConfigurationError
+from rastro.studio.record_extras import extras, is_adapter
 from rastro.studio.web import Refused, Studio, body, integer, reply, text
 
 MAX_PAGE = 100
@@ -90,7 +91,9 @@ def _dumped(record: StoredRecord) -> tuple[dict[str, Any], bool]:
     return data, cut
 
 
-def _row(record: StoredRecord, stale: set[str]) -> dict[str, Any]:
+def _row(
+    record: StoredRecord, stale: set[str], declared: list[str], urls: set[str]
+) -> dict[str, Any]:
     data, cut = _dumped(record)
     return {
         "identity": data["key"]["identity"],
@@ -98,13 +101,19 @@ def _row(record: StoredRecord, stale: set[str]) -> dict[str, Any]:
         "truncated": cut,
         "last_observed_at": record.last_observed_at.isoformat(),
         "stale": record.key.model_dump_json() in stale,
+        **extras(record, declared, urls),
     }
 
 
-def _page(store: SQLiteDatasetStore, name: str, offset: int, limit: int) -> dict[str, Any]:
+def _page(
+    store: SQLiteDatasetStore, name: str, offset: int, limit: int, declared: list[str]
+) -> dict[str, Any]:
     records = store.records(name)
     stale = _stale_keys(store, name)
+    urls = {s.source_url for s in stale_sources(store, name)}
     fields = list(dict.fromkeys(field for record in records for field in record.fields))
+    shown = records[offset : offset + limit]
+    imported = [r.observed_at for r in shown if is_adapter(r)]
     return {
         "ok": True,
         "data_trust": "untrusted_source_data",
@@ -112,8 +121,9 @@ def _page(store: SQLiteDatasetStore, name: str, offset: int, limit: int) -> dict
         "fields": fields,
         "total": len(records),
         "offset": offset,
-        "records": [_row(record, stale) for record in records[offset : offset + limit]],
-        "stale_sources": len(stale_sources(store, name)),
+        "records": [_row(record, stale, declared, urls) for record in shown],
+        "stale_sources": len(urls),
+        **({"imported_at": max(imported).isoformat()} if imported else {}),
     }
 
 
@@ -154,7 +164,8 @@ def routes(studio: Studio) -> list[Route]:
         offset = integer(data, "offset", 0, MAX_OFFSET, default=0)
         limit = integer(data, "limit", 1, MAX_PAGE, default=25)
         store, name = _store(studio, path, job)
-        return reply(await run_in_threadpool(_page, store, name, offset, limit))
+        declared = [field.name for field in job.fields]
+        return reply(await run_in_threadpool(_page, store, name, offset, limit, declared))
 
     async def export(request: Request) -> Response:
         data = await body(request)

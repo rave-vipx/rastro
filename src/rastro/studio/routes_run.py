@@ -6,6 +6,7 @@ load is ``load_job_file`` (DATA-001, REC-006, P-008).
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Any
 
 from starlette.concurrency import run_in_threadpool
@@ -18,6 +19,7 @@ from rastro.application.job_dataset import load_job_file
 from rastro.application.jobs import run_job
 from rastro.application.preview_recipes import read_only_job
 from rastro.domain.job_results import JobRunResult
+from rastro.studio import run_log
 from rastro.studio.operations import alerts, operation
 from rastro.studio.web import Studio, body, flag, plain, reply, text
 
@@ -71,6 +73,7 @@ def routes(studio: Studio) -> list[Route]:
                 lambda: load_job_file(path, drift=drift, **studio.trust)
             )
             result = plain(loaded)
+            run_log.remember(studio.root, path, run_log.from_load(loaded, datetime.now(UTC)))
             messages = alerts(result)
             outcome.update(status=loaded.status, alerts=messages)
         return reply({"ok": True, "result": result, "alerts": messages})
