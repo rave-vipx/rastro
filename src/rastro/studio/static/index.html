@@ -33,7 +33,7 @@
   </div>
   <p id="root" class="muted"></p>
   <p id="validation" role="status" aria-live="polite"></p>
-  <nav class="tabs" aria-label="Views" data-i18n-label="nav.label">
+  <nav id="project-nav" class="tabs" aria-label="Views" data-i18n-label="nav.label">
     <button type="button" class="tab" data-view="results" aria-pressed="true" data-i18n="nav.results">Results</button>
     <button type="button" class="tab" data-view="sources" aria-pressed="false" data-i18n="nav.sources">Sources</button>
     <button type="button" class="tab" data-view="alerts" aria-pressed="false" data-i18n="nav.alerts">Alerts</button>
@@ -109,8 +109,16 @@
   </div>
 
   <div id="view-sources" hidden>
-    <section class="card">
-      <h2 data-i18n="health.title">Source health</h2>
+    <section class="card" aria-labelledby="sources-heading">
+      <div class="card-head">
+        <h2 id="sources-heading" data-i18n="sources.title">Sites in this project</h2>
+        <button type="button" id="sources-refresh" class="small" data-i18n="sources.refresh">Refresh</button>
+      </div>
+      <p id="sources-status" role="status" aria-live="polite"></p>
+      <div id="sources-list"></div>
+    </section>
+    <details class="card fold">
+      <summary data-i18n="health.title">Technical detail: serving recipe and stored versions</summary>
       <button type="button" id="health" class="primary" data-i18n="health.check">Check health</button>
       <p id="health-status" role="status" aria-live="polite"></p>
       <div id="health-alerts" role="alert"></div>
@@ -119,13 +127,17 @@
       <div id="health-result"></div>
       <div id="repair-result"></div>
       <div id="ai-repair-result"></div>
-    </section>
+    </details>
   </div>
 
   <div id="view-alerts" hidden>
-    <section class="card empty">
-      <h2 data-i18n="alerts.title">Alerts</h2>
-      <p class="muted" data-i18n="alerts.empty">Alerts from the last run and health check appear here, with what to do next.</p>
+    <section class="card" aria-labelledby="alerts-heading">
+      <div class="card-head">
+        <h2 id="alerts-heading" data-i18n="alerts.title">Alerts</h2>
+        <button type="button" id="alerts-refresh" class="small" data-i18n="sources.refresh">Refresh</button>
+      </div>
+      <p id="alerts-status" role="status" aria-live="polite"></p>
+      <div id="alerts-list"></div>
     </section>
   </div>
 

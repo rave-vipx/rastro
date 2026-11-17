@@ -1,6 +1,6 @@
 // Run, health and repair for the open job; Results shows the stored records.
 // All source-derived text is set as plain text content; markup is never parsed.
-import { $, api, bind, el, pill, requireFile, show, state, table } from "./dom.js";
+import { $, api, bind, el, pill, request, requireFile, show, state, table } from "./dom.js";
 import { showAlerts, withProgress } from "./controls.js";
 import { loadRecords } from "./results.js";
 
@@ -53,6 +53,7 @@ async function load() {
   out.replaceChildren(table(["#", "source", "status", "changes", "recipe", "drift", "issues"], rows));
   if (result.stale_sources.length) out.append(el("p", `${result.stale_sources.length} source(s) are stale.`, "warn"));
   await loadRecords();
+  request("loaded", {});
 }
 
 async function health() {

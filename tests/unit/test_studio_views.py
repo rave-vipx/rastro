@@ -6,56 +6,12 @@ fake DOM and are skipped when Node is not installed.
 
 from __future__ import annotations
 
-import json
 import re
-import shutil
-import subprocess
-from pathlib import Path
 
-import pytest
 from lxml import html
 
 from rastro.studio.routes_jobs import ASSETS
-
-STATIC = Path(__file__).resolve().parents[2] / "src" / "rastro" / "studio" / "static"
-
-FAKE_DOM = """
-class Text { constructor(s) { this.text = String(s); } get textContent() { return this.text; } }
-class Node {
-  constructor(tag) {
-    Object.assign(this, { tagName: tag.toUpperCase(), children: [], attrs: {}, dataset: {},
-      className: "", listeners: {}, hidden: false, disabled: false, value: "" });
-  }
-  append(...items) {
-    for (const x of items) this.children.push(typeof x === "string" ? new Text(x) : x);
-  }
-  replaceChildren(...items) { this.children = []; this.append(...items); }
-  set textContent(v) { this.children = [new Text(v)]; }
-  get textContent() { return this.children.map((c) => c.textContent).join(""); }
-  setAttribute(k, v) { this.attrs[k] = String(v); }
-  getAttribute(k) { return this.attrs[k] ?? null; }
-  addEventListener(k, f) { this.listeners[k] = f; }
-  focus() { document.focused = this; }
-  get tHead() { return this.children.find((c) => c.tagName === "THEAD"); }
-  get tBodies() { return this.children.filter((c) => c.tagName === "TBODY"); }
-}
-const byId = {};
-globalThis.Node = Node;
-globalThis.document = {
-  createElement: (tag) => new Node(tag),
-  createTextNode: (s) => new Text(s),
-  getElementById: (id) => (byId[id] ??= new Node("div")),
-  querySelectorAll: () => [],
-  addEventListener() {},
-  documentElement: new Node("html"),
-};
-globalThis.window = { opened: [], open(...args) { this.opened.push(args); } };
-const walk = (n, out = []) => {
-  out.push(n); for (const c of n.children || []) walk(c, out); return out;
-};
-const tags = (n) => walk(n).map((x) => x.tagName).filter(Boolean);
-const classes = (n) => walk(n).map((x) => x.className || "").join(" ");
-"""
+from tests.unit.studio_js import STATIC, messages, run_node
 
 
 def _scripts() -> dict[str, str]:
@@ -63,17 +19,7 @@ def _scripts() -> dict[str, str]:
 
 
 def _messages() -> dict[str, dict[str, str]]:
-    source = (STATIC / "i18n.js").read_text(encoding="utf-8")
-    return json.loads(source.split("/* i18n:begin */", 1)[1].split("/* i18n:end */", 1)[0])
-
-
-def run_node(body: str) -> None:
-    node = shutil.which("node")
-    if node is None:
-        pytest.skip("Node is needed for the standalone JS assertion")
-    imports = "import assert from 'node:assert/strict';\n" + FAKE_DOM
-    script = imports + body.replace("STATIC/", STATIC.as_uri() + "/")
-    subprocess.run([node, "--input-type=module", "-e", script], check=True, timeout=60)
+    return messages()
 
 
 def test_every_script_and_stylesheet_is_served() -> None:
@@ -216,7 +162,8 @@ assert.ok(text.includes("Available") && text.includes("Sold out"));
 assert.ok(!tags(body).includes("IMG") && !tags(body).includes("A"));
 assert.equal(document.getElementById("provenance").hidden, false);
 assert.equal(document.focused, document.getElementById("prov-title"));
-""".replace("RECORD", json.dumps(SAMPLE_RECORD))
+""",
+        RECORD=SAMPLE_RECORD,
     )
 
 

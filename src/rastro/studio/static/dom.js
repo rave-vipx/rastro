@@ -12,9 +12,16 @@ export async function api(path, body) {
         body: JSON.stringify(body),
       };
   const response = await fetch(path, options);
-  const data = await response.json();
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    data = { ok: false, error: response.status === 404 ? "not_found" : `http_${response.status}` };
+  }
   if (!response.ok || data.ok === false) {
-    throw new Error(`${data.error || "error"}${data.message ? ": " + data.message : ""}`);
+    const failure = new Error(`${data.error || "error"}${data.message ? ": " + data.message : ""}`);
+    failure.code = data.error || "error";
+    throw failure;
   }
   return data;
 }
@@ -83,4 +90,18 @@ export function bind(buttonId, statusId, action) {
 export function requireFile() {
   if (!state.file) throw new Error("open a job file first");
   return state.file;
+}
+
+// Show one view; the project tabs mark the active one. "home" has no tab.
+export function switchView(name) {
+  for (const view of document.querySelectorAll("main > [id^='view-']")) view.hidden = view.id !== `view-${name}`;
+  for (const tab of document.querySelectorAll(".tab")) {
+    tab.setAttribute("aria-pressed", String(tab.dataset.view === name));
+  }
+  $("project-nav").hidden = name === "home";
+}
+
+// Ask another view to act, without importing it: e.g. "fix" with {source: 2}.
+export function request(kind, detail) {
+  document.dispatchEvent(new CustomEvent(`studio:${kind}`, { detail }));
 }

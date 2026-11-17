@@ -167,6 +167,23 @@ is shown as data and never executed. Records written with `rastro.load_records` 
 snapshot* with the import time and the original observation time, so they are not mistaken for a
 recent web check. **Close** or Esc returns focus to the record.
 
+### Sources and Alerts (N5)
+
+**Sources** lists every site of the project with its status in words (*Up to date*, *Up to date,
+with a warning*, *Cap reached*, *Access denied by the site (robots.txt)*, *The site returned
+something that can't be read*, *The site's structure changed*, *Last load failed; earlier records
+kept*, *Not read yet*), the last fetch, records read and rejected ("Read 20 records; cap 20. There
+may be more."), warnings that did not stop the save, and one next step: **Retry** (runs Load into
+dataset), **Fix this site**, **Raise the cap** (opens Settings) or **Run a load**. **Details**
+shows the address and each issue code with its plain explanation. The previous health table
+(serving recipe, stored versions, the `--on-failure` command) is folded below as *Technical detail*.
+
+**Alerts** lists what happened in the runs, newest first and grouped by day: failures, site
+changes, caps, warnings, quarantined fixes and refused fixes. Each one has a sentence written from
+its kind and issue code in the chosen language, and one action. Both views read their own
+endpoints (`/api/sources`, `/api/alerts`); when the endpoint is missing or fails, the view says so
+instead of showing an empty list.
+
 ### Design adaptations
 
 The redesign follows `docs/design/studio-redesign/IMPLEMENTATION.md`. Where the design and the
@@ -175,7 +192,9 @@ product differ, the interface adapts:
 | Design | Studio | Why |
 | --- | --- | --- |
 | Separate "Jobs" page with every card | Cards moved into Results, Sources, Fix and Settings; element ids unchanged | Stage 1 is layout only; behaviour stays the same |
-| Alerts view with a list | Explains where alerts appear until the alert list endpoint lands (stage 4) | No alert list route yet |
+| "Avisarme por notificación del sistema" in Alerts | Not offered; the Technical detail keeps the `--on-failure` command for the README hook | Studio has no notification permission and adds no background process |
+| "Agregar sitio" / "Quitar del proyecto" in Sources | Not offered | Sources are job data; Studio edits only bounded settings of a job |
+| "Ver apartados" for quarantined records | **See details** opens Sources | Records are rejected, not stored apart; quarantine applies to fixes |
 | Image placeholder with **Load** | **Open image** opens the address in a new tab, without a referrer | Studio's Content-Security-Policy blocks every third-party image inside the page; it stays that way |
 | Search and filters over the whole dataset | Over the first 2,000 records, with a note when a dataset is larger | `/api/records` is paged; export covers everything |
 

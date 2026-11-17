@@ -9,6 +9,7 @@ All notable user-facing changes are recorded here. The project follows [Semantic
 - Studio shell (stage 1): design tokens with system, light and dark themes, an English/Spanish dictionary (English default), and views for Results, Sources, Alerts, Fix, Settings and New scraper; every token pair meets AA contrast (N1, N5, N8).
 - Studio Results (stage 2): records load when a project opens, with search, source/status/date filters, 25/50/100 per page, JSON and HTML export; empty cells say why (not published, source failed, no reason reported), several prices show a summary with the tier count, and links or images from data never load on their own (N5, DATA-004).
 - Studio provenance panel (stage 3): each field's page, observation time, extraction and recipe version; per-tier prices with availability; an *Imported snapshot* line for adapter records; a *Looks like instructions* marker with its explanation for flagged values (N5, N19, DATA-004).
+- Studio Sources and Alerts (stage 4): per-source status in words with last fetch, read/rejected counts, caps, warnings and one next step; alerts newest first, grouped by day, each with a sentence from its kind and issue code and one action; a missing or failing endpoint is shown as an error, never as an empty list (N5).
 
 ## Unreleased — adoption cut (N15–N19)
 

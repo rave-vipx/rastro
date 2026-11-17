@@ -1,13 +1,15 @@
 // Studio entry: session token, views, job list, preview and selector correction.
 // All source-derived text is set as plain text content; markup is never parsed.
 import { initPrefs } from "./prefs.js";
-import { $, api, bind, el, requireFile, show, state, table } from "./dom.js";
+import { $, api, bind, el, requireFile, show, state, switchView, table } from "./dom.js";
 import { initAI } from "./ai.js";
 import { fillControls, initControls } from "./controls.js";
 import { initOperate, resetOperate } from "./operate.js";
 import { initProvenance } from "./provenance.js";
 import { initRegistry } from "./registry.js";
 import { initResults, loadRecords, resetResults } from "./results.js";
+import { initSources, loadSources, resetSources } from "./sources.js";
+import { initAlerts, loadAlerts, resetAlerts } from "./alerts.js";
 import { initWizard } from "./wizard.js";
 
 // The token arrives in the URL fragment (never sent to the server); keep it in memory only.
@@ -73,7 +75,9 @@ export async function openJob(name) {
   fillControls(data);
   resetOperate();
   resetResults();
-  if (data.has_dataset) await loadRecords();
+  resetSources();
+  resetAlerts();
+  await Promise.all([data.has_dataset ? loadRecords() : null, loadSources(), loadAlerts()]);
   const notes = [`${data.sources} source(s)`];
   if (!data.has_dataset) notes.push("no [dataset] block: preview and load need one");
   if (data.has_memory) notes.push("recipe memory on: repairs are available");
@@ -110,14 +114,6 @@ export async function refreshJobs(select) {
   if (select) list.value = select;
 }
 
-export function switchView(name) {
-  for (const tab of document.querySelectorAll(".tab")) {
-    const active = tab.dataset.view === name;
-    tab.setAttribute("aria-pressed", String(active));
-    $(`view-${tab.dataset.view}`).hidden = !active;
-  }
-}
-
 async function start() {
   initPrefs();
   if (!state.token) {
@@ -137,6 +133,15 @@ async function start() {
   initOperate();
   initResults();
   initProvenance();
+  initSources();
+  initAlerts();
+  document.addEventListener("studio:loaded", () => Promise.all([loadSources(), loadAlerts()]));
+  document.addEventListener("studio:settings", (event) => {
+    switchView("settings");
+    const target = event.detail && event.detail.focus ? $(event.detail.focus) : null;
+    if (target) target.focus();
+  });
+  document.addEventListener("studio:fix", () => switchView("repair"));
   initWizard({ openJob, refreshJobs, switchView });
   initRegistry();
   await initAI();

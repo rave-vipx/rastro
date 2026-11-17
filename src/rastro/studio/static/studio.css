@@ -179,6 +179,21 @@ table.results tbody tr:hover, table.results tbody tr.selected { background: var(
 .note-warn { background: var(--warn-soft); color: var(--warn); }
 .note-warn .ico { margin-right: var(--s-1); }
 
+/* Sources and alerts. */
+.summary { font-weight: 600; color: var(--text-2); }
+.source-list, .alert-list { list-style: none; padding: 0; margin: 0; }
+.source-row { display: grid; grid-template-columns: minmax(10rem, 1.2fr) minmax(10rem, 1fr) minmax(10rem, 1fr) auto;
+  gap: var(--s-2) var(--s-4); align-items: start; padding: var(--s-3) 0; border-top: 1px solid var(--border); }
+.source-row .row { margin: 0; justify-content: flex-end; }
+.source-details { grid-column: 1 / -1; background: var(--surface-2); border-radius: var(--r-md); padding: var(--s-2) var(--s-3); }
+.source-details p { margin: var(--s-1) 0; }
+.small-text { font-size: 12px; margin: var(--s-1) 0 0; }
+.alert-item { border-top: 1px solid var(--border); padding: var(--s-3) 0; }
+.alert-item p { margin: var(--s-1) 0 var(--s-2); }
+.alert-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); }
+details.fold > summary { cursor: pointer; font-weight: 600; min-height: 36px; display: flex; align-items: center; }
+details.fold[open] > summary { margin-bottom: var(--s-2); }
+
 .skip, .sr { position: absolute; left: -9999px; }
 .skip:focus { left: var(--s-4); top: var(--s-2); z-index: 20; background: var(--surface); padding: var(--s-2) var(--s-3); }
 
