@@ -2,13 +2,17 @@
 
 All notable user-facing changes are recorded here. The project follows [Semantic Versioning](docs/stability.md) from 0.6.0. Versions before 0.6.0 were never published to a package registry.
 
-## Unreleased — Studio redesign
+## 0.9.0 — 2026-11-17
 
-### Added
+Studio redesign, the agent configuration reference, the adoption cut (N15–N19) and the N1–N12 product cut. 0.8.0 was never tagged; its work ships here.
+
+### Studio redesign
+
+#### Added
 
 - Configuration reference (N18, AGENT-001): `rastro config [--output json|markdown]`, the generated `docs/configuration.md` and the MCP resource `rastro://configuration` list every job key, Python keyword argument, operator grant, environment variable and CLI flag with type, default, bounds, description and docs link, introspected from the models, signatures and parser. `rastro job template [--all]` prints an annotated job file that validates as printed. `rastro init --agent` snippets gain a configuration map and the rule to check the reference before writing an option; `rastro job validate` names the closest valid key for an unknown one. Tests fail when a field or flag lacks a description or the page is stale.
 
-### Changed
+#### Changed
 
 - Studio shell (stage 1): design tokens with system, light and dark themes, an English/Spanish dictionary (English default), and views for Results, Sources, Alerts, Fix, Settings and New scraper; every token pair meets AA contrast (N1, N5, N8).
 - Studio Results (stage 2): records load when a project opens, with search, source/status/date filters, 25/50/100 per page, JSON and HTML export; empty cells say why (not published, source failed, no reason reported), several prices show a summary with the tier count, and links or images from data never load on their own (N5, DATA-004).
@@ -19,11 +23,11 @@ All notable user-facing changes are recorded here. The project follows [Semantic
 - Studio Settings, registry, mobile and Spanish (stage 7): Settings are folded groups showing only real CLI commands and flags; the registry is **Registry (URL)** with local publish; at 40rem and below tables become labelled cards and the provenance panel a bottom sheet; every JS-built message now comes from the English/Spanish dictionary (N8, N10, N12).
 - Run metrics record per source `rejected` records and the collection cap reached (`cap`, `cap_value`: pagination, spider, scroll and record limits) for every `rastro job load` and `rastro.load_records`; `rastro job stats` adds `rejected` and `capped_runs`. Dataset files move to schema 4 on their first write (older files still read; their rows report `null`, not 0); Rastro 0.7 refuses a schema 4 file, so keep a copy before writing if you may downgrade. Studio's `/api/sources` reads `read`, `rejected`, `cap` and `capped` from these metrics, so command-line loads show caps and rejections too, and `/api/projects` adds a readable `name` and the raw `dataset` (N5, OBS-003..007, SYNC-002).
 
-## Unreleased — adoption cut (N15–N19)
+### adoption cut (N15–N19)
 
 Driven by the first real adoption report (Rave App). See `docs/action-plan-adoption.md`.
 
-### Added
+#### Added
 
 - Agent capability contract (N18): `rastro capabilities [--output json|markdown|llms]`, `rastro init --agent claude|codex|generic [--format block|skill]`, the MCP resource `rastro://capabilities`, and generated `llms.txt` and `docs/capabilities.md`. MCP server instructions are URL-first and list every capability; tests fail when they go stale.
 - Public adapter API (N15): `rastro.fetch` / `rastro.fetch_async` return a `Fetched` result for one URL under an `AcquisitionPolicy` (same acquirer, robots, egress, budgets and byte limit as jobs; refusals are explicit outcomes), and `rastro.load_records(job, records, *, source_url, observed_at=None)` writes caller-built records into the job's dataset with job-load validation, identity, snapshot semantics and provenance (`method = "json"`, `locator = "adapter"`, `recipe_version = 0`). See `examples/adapter.py`.
@@ -32,16 +36,16 @@ Driven by the first real adoption report (Rave App). See `docs/action-plan-adopt
 - Spider sitemap seed: `[spider] seed = "sitemap"` reads each source as a sitemap.xml (or .xml.gz) under the same allowlist, robots, budget and byte caps, parses it without DTDs or entities, follows a sitemap index one level, and fetches its locs in document order within `max_pages` (N16, N3, SEC-001).
 - `docs/issues.md` lists every issue code with its meaning and next step; a test keeps it complete (N17).
 
-### Changed
+#### Changed
 
 - `evidence_retention_failed` carries `field` and `message = "sensitive_data:<category>"` when the sanitizer refuses a value, so the cause is visible without the value (N17).
 - `llms.txt` no longer says Rastro does not crawl (bounded spider since N3).
 
-### Security
+#### Security
 
 - Prompt-injection defense (N19): hidden page content (hidden elements, comments, templates, invisible characters) is removed before a page reaches a model. Values that look like instructions are flagged `instruction_like_content` in model contexts and MCP record payloads, never altered. Automatic promotion is refused for such candidates, which stay quarantined until an operator promotes them with a reason and `--override-gates`. See `SECURITY.md` and ADR 0035.
 
-### Known limitations
+#### Known limitations
 
 - `embedded_json` is not produced by model proposals, discovery or repair relocation, and Mock Lab bundles do not support it yet.
 - Browser-rendered jobs report `sitemap_unsupported`; the sitemap URL is named as the source, not read from robots.txt.
@@ -49,9 +53,9 @@ Driven by the first real adoption report (Rave App). See `docs/action-plan-adopt
 - Injection detection is a pattern list; `job_extract` MCP payloads carry no flags yet.
 - `rastro init --agent` is POSIX-only: on Windows it fails closed (no race-free directory-relative writes); use `rastro capabilities --output markdown`.
 
-## Unreleased — N1–N12 product cut
+### N1–N12 product cut
 
-### Added
+#### Added
 
 - Bounded spider follows allowed links from URL sources with depth and page caps, same-host defaults, robots enforcement and a shared request budget (N3, SEC-001).
 - Bounded browser scroll stops when no new records appear or the step cap is reached; it does not enable stealth (N9).
@@ -66,13 +70,13 @@ Driven by the first real adoption report (Rave App). See `docs/action-plan-adopt
 - Three synthetic public registry bundles under `examples/registry/` (listing, news card, product card) with offline consumer jobs; the README leads with the five-minute Studio path and a copy-paste failure hook; the master spec Amendment Log cites ADR 0032–0034 (N6, N8, N11).
 - Studio job page controls for `[spider]` and `[scroll]`, bounded by the job models and written through the comment-preserving editor; scroll is shown disabled with its reason when the source renders over HTTP, and a run's spider outcome, host and path appear without page content (N3, N9, SEC-008).
 
-### Fixed
+#### Fixed
 
 - `records[].evidence.page_url` keeps only scheme, host, port and path; userinfo, `;params`, query and fragment are no longer stored for later pagination, spider or scroll pages (N3, SEC-008).
 - The Studio URL preview expires after 10 minutes and is reused only for the exact URL it was fetched for (N1).
 - Studio preserves CRLF line endings when saving pagination and auto-promote settings in Windows TOML jobs (N4, N12, SEC-005). Synthetic registry inputs and rebuilds keep identical bytes across platforms (N6).
 
-### Changed
+#### Changed
 
 - robots.txt is fetched once per origin for each user operation (run, registry search or install, Studio or SDK URL start, `rastro new --site/--goal`, repair, review and promotion) and cached only in memory for that operation; a registry install no longer fetches it once per file (N1, N10, SEC-008).
 - Studio reads the spider, scroll and next-page limits from the job models instead of copies in the page, and shows each link-following control on its own row (N3, N4, N9).

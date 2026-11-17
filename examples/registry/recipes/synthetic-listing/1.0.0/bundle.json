@@ -4,7 +4,7 @@
     "url": null
   },
   "compatibility": {
-    "min_rastro": "0.7.0",
+    "min_rastro": "0.9.0",
     "source_patterns": [
       "listing.example/cards"
     ]

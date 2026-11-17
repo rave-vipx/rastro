@@ -59,7 +59,8 @@ def test_cell_model_keeps_each_empty_reason_and_summarizes_tiers() -> None:
 const { cellModel, tiers } = await import("STATIC/cells.js");
 assert.deepEqual(cellModel(null, "not_published"), {kind: "not_published"});
 assert.deepEqual(cellModel(null, "source_failed"), {kind: "source_failed"});
-assert.deepEqual(cellModel("2026-11-22T19:00:00-03:00"), {kind: "date", text: "2026-11-22T19:00:00-03:00"});
+const iso = "2026-11-22T19:00:00-03:00";
+assert.deepEqual(cellModel(iso), {kind: "date", text: iso});
 assert.deepEqual(cellModel("2026-11-22 night"), {kind: "text", text: "2026-11-22 night"});
 assert.deepEqual(cellModel("", undefined), {kind: "empty"});
 assert.deepEqual(cellModel({state: "source_failed", text: null}), {kind: "source_failed"});
