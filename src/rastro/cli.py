@@ -27,6 +27,9 @@ from rastro.application.job_preview import preview_job_file, render_preview_tabl
 from rastro.application.job_summary import job_validation_summary
 from rastro.application.model_budget import model_cost_override
 from rastro.application.operator_trust import set_process_trust
+from rastro.cli_agent import COMMANDS as AGENT_COMMANDS
+from rastro.cli_agent import add_commands as add_agent_commands
+from rastro.cli_agent import agent_command
 from rastro.cli_dataset import add_commands, dataset_command, load_job_command
 from rastro.cli_errors import UsageError, classify, missing_extra_error
 from rastro.cli_hook import add_hook_argument, hook_argv, notify, run_summary
@@ -48,7 +51,7 @@ from rastro.domain.job_dataset import job_preview_json_schema
 from rastro.domain.job_load import job_load_json_schema
 
 # Commands whose errors are reported as one JSON object on stderr.
-_JSON_ERRORS = frozenset({"job", "recipe", "suggest", "new", "health"})
+_JSON_ERRORS = frozenset({"job", "recipe", "suggest", "new", "health", *AGENT_COMMANDS})
 
 
 class _ArgumentParser(argparse.ArgumentParser):
@@ -140,6 +143,7 @@ def _build_parser() -> argparse.ArgumentParser:
     add_recipe_commands(subcommands)
     add_studio_command(subcommands)
     add_suggest_commands(subcommands)
+    add_agent_commands(subcommands)
     return parser
 
 
@@ -219,6 +223,8 @@ def _run_command(args: argparse.Namespace) -> int:
         return suggest_command(args)
     if args.command == "new":
         return new_command(args)
+    if args.command in AGENT_COMMANDS:
+        return agent_command(args)
     if args.command == "doctor":
         print(
             json.dumps(
