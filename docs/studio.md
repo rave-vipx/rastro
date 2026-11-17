@@ -144,6 +144,20 @@ scroll, the two opt-in switches, connecting your app, the recipe registry) and *
 - **Accessibility:** controls are at least 36 px (44 px on narrow screens), focus is a 3 px accent
   outline, and every text/background token pair meets WCAG AA (a test computes the ratios).
 
+### Results (N5)
+
+Opening a project loads its stored records into a table, 25, 50 or 100 per page ("Records 1–25 of
+74"). Search matches any value; filters narrow by source (when there are several), status (upcoming,
+live now, or from a failed source) and date (when a field holds dates). Studio reads up to 2,000
+records in chunks of 100 for search and filters and says so when a dataset is larger; **JSON** and
+**HTML** export always cover the whole dataset (up to 5,000 records).
+
+An empty cell always says why: *Not published* (the source does not give it), *Source failed* (the
+source could not be read in the last load) or *Empty, no reason reported* when the server sent no
+reason. A value with several prices (a list, or text such as `Free / $ 160 / $ 199`) shows the first
+one and the number of tiers. Free entries are bold. A value that is a link or an image address is
+shown as text with an **Open** button; nothing from the data is loaded on its own.
+
 ### Design adaptations
 
 The redesign follows `docs/design/studio-redesign/IMPLEMENTATION.md`. Where the design and the
@@ -153,6 +167,8 @@ product differ, the interface adapts:
 | --- | --- | --- |
 | Separate "Jobs" page with every card | Cards moved into Results, Sources, Fix and Settings; element ids unchanged | Stage 1 is layout only; behaviour stays the same |
 | Alerts view with a list | Explains where alerts appear until the alert list endpoint lands (stage 4) | No alert list route yet |
+| Image placeholder with **Load** | **Open image** opens the address in a new tab, without a referrer | Studio's Content-Security-Policy blocks every third-party image inside the page; it stays that way |
+| Search and filters over the whole dataset | Over the first 2,000 records, with a note when a dataset is larger | `/api/records` is paged; export covers everything |
 
 ## Collection, alerts and sharing (N4, N5, N7, N10, N12)
 

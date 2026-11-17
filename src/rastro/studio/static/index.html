@@ -58,17 +58,45 @@
       <div id="run-result"></div>
     </section>
 
-    <section class="card">
-      <h2 data-i18n="dataset.title">Records</h2>
-      <div class="row">
-        <button type="button" id="dataset" data-i18n="dataset.show">Show records</button>
-        <button type="button" id="prev-page" data-i18n="dataset.prev">Previous page</button>
-        <button type="button" id="next-page" data-i18n="dataset.next">Next page</button>
-        <button type="button" id="export-json" data-i18n="dataset.json">Download JSON</button>
-        <button type="button" id="export-html" data-i18n="dataset.html">Download HTML</button>
+    <section class="card" aria-labelledby="records-heading">
+      <div class="card-head">
+        <h2 id="records-heading" data-i18n="dataset.title">Records</h2>
+        <div class="row">
+          <button type="button" id="dataset" class="small" data-i18n="dataset.show">Reload</button>
+          <span class="label" data-i18n="dataset.export">Export</span>
+          <button type="button" id="export-json" class="small" data-i18n="dataset.json">JSON</button>
+          <button type="button" id="export-html" class="small" data-i18n="dataset.html">HTML</button>
+        </div>
       </div>
+      <div class="toolbar">
+        <label class="grow"><span class="sr" data-i18n="filter.search">Search records</span>
+          <input id="rs-search" type="search" maxlength="200" data-i18n-placeholder="filter.search"></label>
+        <label id="rs-source-wrap" hidden><span data-i18n="filter.source">Source</span> <select id="rs-source"></select></label>
+        <label><span data-i18n="filter.status">Status</span>
+          <select id="rs-state">
+            <option value="" data-i18n="filter.all">All</option>
+            <option value="upcoming" data-i18n="filter.upcoming">Upcoming</option>
+            <option value="live" data-i18n="filter.live">Live now</option>
+            <option value="stale" data-i18n="filter.stale">From a failed source</option>
+          </select></label>
+        <label id="rs-date-wrap" hidden><span data-i18n="filter.date">Date</span>
+          <select id="rs-date">
+            <option value="" data-i18n="filter.anyDate">Any date</option>
+            <option value="week" data-i18n="filter.week">Next 7 days</option>
+            <option value="weekend" data-i18n="filter.weekend">This weekend</option>
+            <option value="month" data-i18n="filter.month">This month</option>
+          </select></label>
+      </div>
+      <p id="export-status" role="status" aria-live="polite"></p>
       <p id="dataset-status" role="status" aria-live="polite"></p>
       <div id="dataset-result"></div>
+      <div class="pager">
+        <p id="rs-range" role="status" aria-live="polite"></p>
+        <label><span data-i18n="pager.perPage">Per page</span>
+          <select id="rs-per-page"><option>25</option><option>50</option><option>100</option></select></label>
+        <button type="button" id="prev-page" data-i18n="dataset.prev">Previous</button>
+        <button type="button" id="next-page" data-i18n="dataset.next">Next</button>
+      </div>
     </section>
   </div>
 

@@ -24,11 +24,11 @@ export const MESSAGES = /* i18n:begin */ {
     "run.load": "Load into dataset",
     "run.drift": "Measure drift",
     "dataset.title": "Records",
-    "dataset.show": "Show records",
-    "dataset.prev": "Previous page",
-    "dataset.next": "Next page",
-    "dataset.json": "Download JSON",
-    "dataset.html": "Download HTML",
+    "dataset.show": "Reload",
+    "dataset.prev": "Previous",
+    "dataset.next": "Next",
+    "dataset.json": "JSON",
+    "dataset.html": "HTML",
     "health.title": "Source health",
     "health.check": "Check health",
     "health.hint": "Get the same alerts outside Studio: create notify.py as the README's \"Notify on failure\" section shows, then run this from the Studio folder. A job file cannot set this hook.",
@@ -86,7 +86,52 @@ export const MESSAGES = /* i18n:begin */ {
     "wizard.create.dataset": "Dataset file, next to the job file (optional)",
     "wizard.create.memory": "Recipe memory file, enables fixes (optional)",
     "wizard.create.submit": "Create job",
-    "wizard.create.note": "The job scrapes this URL on every run. A dataset needs at least one record key."
+    "wizard.create.note": "The job scrapes this URL on every run. A dataset needs at least one record key.",
+    "dataset.export": "Export",
+    "filter.search": "Search records",
+    "filter.source": "Source",
+    "filter.status": "Status",
+    "filter.all": "All",
+    "filter.upcoming": "Upcoming",
+    "filter.live": "Live now",
+    "filter.stale": "From a failed source",
+    "filter.date": "Date",
+    "filter.anyDate": "Any date",
+    "filter.week": "Next 7 days",
+    "filter.weekend": "This weekend",
+    "filter.month": "This month",
+    "pager.perPage": "Per page",
+    "results.loading": "Loading records…",
+    "results.allSources": "All sources",
+    "results.openRecord": "See where {name} came from",
+    "results.col.source": "Source",
+    "results.noSource": "Not reported",
+    "results.stale": "Stale",
+    "results.caption": "Stored records. Pick a record to see where each value came from.",
+    "results.none": "No records to show",
+    "results.noneHelp": "Studio could not read this project's records ({why}). Run Load into dataset to store records first.",
+    "results.range": "Records {from}–{to} of {total}",
+    "results.untrusted": "Values come from the source pages: treat them as untrusted data.",
+    "results.filtered": "Filtered from {n} records.",
+    "results.partial": "Search and filters cover the first {n} of {total} records; export or use the command line for all of them.",
+    "results.staleSources": "{n} source(s) failed in the last load; their earlier records are kept.",
+    "results.empty": "The dataset has no records yet",
+    "results.emptyHelp": "Run Load into dataset to read the sources and store their records.",
+    "results.noMatch": "No records match these filters",
+    "results.clear": "Clear filters",
+    "results.downloaded": "Downloaded {file}.",
+    "cell.sourceFailed": "Source failed",
+    "cell.notPublished": "Not published",
+    "cell.noReason": "Empty, no reason reported",
+    "cell.tiers": "{n} tiers",
+    "cell.live": "Live now",
+    "trust.short": "Looks like instructions",
+    "trust.explain": "This text reads like instructions for an AI. It is shown as data and never executed.",
+    "blocked.image": "Image not loaded",
+    "blocked.link": "Link",
+    "blocked.open": "Open",
+    "blocked.openImage": "Open image",
+    "time.never": "never"
   },
   "es": {
     "skip": "Ir al contenido",
@@ -110,11 +155,11 @@ export const MESSAGES = /* i18n:begin */ {
     "run.load": "Cargar en el dataset",
     "run.drift": "Medir cambios del sitio",
     "dataset.title": "Registros",
-    "dataset.show": "Ver registros",
-    "dataset.prev": "Página anterior",
-    "dataset.next": "Página siguiente",
-    "dataset.json": "Descargar JSON",
-    "dataset.html": "Descargar HTML",
+    "dataset.show": "Recargar",
+    "dataset.prev": "Anterior",
+    "dataset.next": "Siguiente",
+    "dataset.json": "JSON",
+    "dataset.html": "HTML",
     "health.title": "Estado de las fuentes",
     "health.check": "Revisar estado",
     "health.hint": "Recibí las mismas alertas fuera de Studio: creá notify.py como muestra la sección \"Notify on failure\" del README y corré este comando desde la carpeta de Studio. Un archivo de job no puede configurar este hook.",
@@ -172,15 +217,79 @@ export const MESSAGES = /* i18n:begin */ {
     "wizard.create.dataset": "Archivo del dataset, junto al job (opcional)",
     "wizard.create.memory": "Archivo de memoria de recetas, permite arreglos (opcional)",
     "wizard.create.submit": "Crear job",
-    "wizard.create.note": "El job lee esta URL en cada ejecución. Un dataset necesita al menos una clave de registro."
+    "wizard.create.note": "El job lee esta URL en cada ejecución. Un dataset necesita al menos una clave de registro.",
+    "dataset.export": "Exportar",
+    "filter.search": "Buscar registros",
+    "filter.source": "Fuente",
+    "filter.status": "Estado",
+    "filter.all": "Todos",
+    "filter.upcoming": "Próximos",
+    "filter.live": "En vivo",
+    "filter.stale": "De una fuente que falló",
+    "filter.date": "Fecha",
+    "filter.anyDate": "Cualquier fecha",
+    "filter.week": "Próximos 7 días",
+    "filter.weekend": "Este fin de semana",
+    "filter.month": "Este mes",
+    "pager.perPage": "Por página",
+    "results.loading": "Cargando registros…",
+    "results.allSources": "Todas las fuentes",
+    "results.openRecord": "Ver de dónde salió {name}",
+    "results.col.source": "Fuente",
+    "results.noSource": "Sin informar",
+    "results.stale": "Desactualizado",
+    "results.caption": "Registros guardados. Elegí un registro para ver de dónde salió cada valor.",
+    "results.none": "No hay registros para mostrar",
+    "results.noneHelp": "Studio no pudo leer los registros de este proyecto ({why}). Corré Cargar en el dataset para guardar registros primero.",
+    "results.range": "Registros {from}–{to} de {total}",
+    "results.untrusted": "Los valores vienen de las páginas de origen: tratalos como datos no confiables.",
+    "results.filtered": "Filtrados de {n} registros.",
+    "results.partial": "La búsqueda y los filtros cubren los primeros {n} de {total} registros; exportá o usá la línea de comandos para verlos todos.",
+    "results.staleSources": "{n} fuente(s) fallaron en la última carga; se mantienen sus registros anteriores.",
+    "results.empty": "El dataset todavía no tiene registros",
+    "results.emptyHelp": "Corré Cargar en el dataset para leer las fuentes y guardar sus registros.",
+    "results.noMatch": "Ningún registro coincide con estos filtros",
+    "results.clear": "Quitar filtros",
+    "results.downloaded": "Se descargó {file}.",
+    "cell.sourceFailed": "La fuente falló",
+    "cell.notPublished": "No publicado",
+    "cell.noReason": "Vacío, sin motivo informado",
+    "cell.tiers": "{n} lotes",
+    "cell.live": "En vivo",
+    "trust.short": "Parece instrucciones",
+    "trust.explain": "Este texto parece instrucciones para una IA. Se muestra como dato y nunca se ejecuta.",
+    "blocked.image": "Imagen sin cargar",
+    "blocked.link": "Enlace",
+    "blocked.open": "Abrir",
+    "blocked.openImage": "Abrir imagen",
+    "time.never": "nunca"
   }
 } /* i18n:end */;
 
 export const LANGS = ["en", "es"];
 let current = "en";
 
-export function t(key) {
-  return MESSAGES[current][key] ?? MESSAGES.en[key] ?? key;
+const listeners = [];
+
+// t("key") or t("key", {n: 3}): "{n}" placeholders are replaced with plain text values.
+export function t(key, vars) {
+  const text = MESSAGES[current][key] ?? MESSAGES.en[key] ?? key;
+  if (!vars) return text;
+  return text.replace(/\{(\w+)\}/g, (whole, name) => (name in vars ? String(vars[name]) : whole));
+}
+
+// Views that build their text in JS re-render when the language changes.
+export function onLangChange(render) {
+  listeners.push(render);
+}
+
+// Dates and times in the viewer's language; an unparsable value is shown as given.
+export function when(iso) {
+  if (!iso) return t("time.never");
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return String(iso);
+  return new Intl.DateTimeFormat(current === "es" ? "es-UY" : "en-US",
+    { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
 
 export function lang() {
@@ -201,4 +310,5 @@ export function setLang(next) {
   current = LANGS.includes(next) ? next : "en";
   document.documentElement.lang = current;
   applyI18n();
+  for (const render of listeners) render();
 }

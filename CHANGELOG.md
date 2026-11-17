@@ -7,6 +7,7 @@ All notable user-facing changes are recorded here. The project follows [Semantic
 ### Changed
 
 - Studio shell (stage 1): design tokens with system, light and dark themes, an English/Spanish dictionary (English default), and views for Results, Sources, Alerts, Fix, Settings and New scraper; every token pair meets AA contrast (N1, N5, N8).
+- Studio Results (stage 2): records load when a project opens, with search, source/status/date filters, 25/50/100 per page, JSON and HTML export; empty cells say why (not published, source failed, no reason reported), several prices show a summary with the tier count, and links or images from data never load on their own (N5, DATA-004).
 
 ## Unreleased — adoption cut (N15–N19)
 

@@ -33,6 +33,9 @@ ASSETS = frozenset(
         "bounds.js",
         "i18n.js",
         "prefs.js",
+        "ui.js",
+        "cells.js",
+        "results.js",
     }
 )
 

@@ -1,19 +1,16 @@
-// Run, health and repair, and the dataset browser for the open job.
+// Run, health and repair for the open job; Results shows the stored records.
 // All source-derived text is set as plain text content; markup is never parsed.
 import { $, api, bind, el, pill, requireFile, show, state, table } from "./dom.js";
 import { showAlerts, withProgress } from "./controls.js";
+import { loadRecords } from "./results.js";
 
 import { spiderLine } from "./bounds.js";
 
-const PAGE_SIZE = 25;
-let offset = 0;
-
 export function resetOperate() {
-  offset = 0;
-  for (const id of ["run-result", "health-result", "repair-result", "ai-repair-result", "dataset-result"]) {
+  for (const id of ["run-result", "health-result", "repair-result", "ai-repair-result"]) {
     $(id).replaceChildren();
   }
-  for (const id of ["run-status", "health-status", "dataset-status", "operation-progress", "failure-command"]) show(id, "");
+  for (const id of ["run-status", "health-status", "operation-progress", "failure-command"]) show(id, "");
   for (const id of ["run-alerts", "health-alerts"]) $(id).replaceChildren();
   $("failure-hint").hidden = true;
 }
@@ -55,6 +52,7 @@ async function load() {
   const out = $("run-result");
   out.replaceChildren(table(["#", "source", "status", "changes", "recipe", "drift", "issues"], rows));
   if (result.stale_sources.length) out.append(el("p", `${result.stale_sources.length} source(s) are stale.`, "warn"));
+  await loadRecords();
 }
 
 async function health() {
@@ -178,35 +176,8 @@ async function apply(source) {
   show("health-status", data.changed ? `Recipe v${data.recipe_version} written to the job file.` : "The job file already holds the serving recipe.", "good");
 }
 
-async function records(delta) {
-  offset = Math.max(0, offset + delta);
-  const data = await api("/api/records", { file: requireFile(), offset, limit: PAGE_SIZE });
-  if (data.total && offset >= data.total) offset = Math.max(0, data.total - PAGE_SIZE);
-  const last = Math.min(offset + data.records.length, data.total);
-  show("dataset-status", `Records ${data.total ? offset + 1 : 0}-${last} of ${data.total} in "${data.dataset}". ${data.stale_sources} stale source(s). Values come from the source pages.`, "muted");
-  const rows = data.records.map((r) => [
-    ...data.fields.map((name) => r.fields[name]), r.last_observed_at, r.stale ? pill("stale", false) : "",
-  ]);
-  $("dataset-result").replaceChildren(table([...data.fields, "last seen", "stale"], rows));
-}
-
-async function download(format) {
-  const data = await api("/api/export", { file: requireFile(), format });
-  const url = URL.createObjectURL(new Blob([data.content], { type: data.media_type }));
-  const link = el("a");
-  Object.assign(link, { href: url, download: data.filename });
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-  show("dataset-status", `Downloaded ${data.filename}.`, "good");
-}
-
 export function initOperate() {
   bind("extract", "run-status", extract);
   bind("load", "run-status", load);
   bind("health", "health-status", health);
-  bind("dataset", "dataset-status", () => records(-offset));
-  bind("prev-page", "dataset-status", () => records(-PAGE_SIZE));
-  bind("next-page", "dataset-status", () => records(PAGE_SIZE));
-  bind("export-json", "dataset-status", () => download("json"));
-  bind("export-html", "dataset-status", () => download("html"));
 }

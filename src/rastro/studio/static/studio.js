@@ -6,6 +6,7 @@ import { initAI } from "./ai.js";
 import { fillControls, initControls } from "./controls.js";
 import { initOperate, resetOperate } from "./operate.js";
 import { initRegistry } from "./registry.js";
+import { initResults, loadRecords, resetResults } from "./results.js";
 import { initWizard } from "./wizard.js";
 
 // The token arrives in the URL fragment (never sent to the server); keep it in memory only.
@@ -70,6 +71,8 @@ export async function openJob(name) {
   fillSelectors(data.selectors);
   fillControls(data);
   resetOperate();
+  resetResults();
+  if (data.has_dataset) await loadRecords();
   const notes = [`${data.sources} source(s)`];
   if (!data.has_dataset) notes.push("no [dataset] block: preview and load need one");
   if (data.has_memory) notes.push("recipe memory on: repairs are available");
@@ -131,6 +134,7 @@ async function start() {
   bind("connect", "commands", connect);
   $("selector-pick").addEventListener("change", showSelector);
   initOperate();
+  initResults();
   initWizard({ openJob, refreshJobs, switchView });
   initRegistry();
   await initAI();
