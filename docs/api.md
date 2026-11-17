@@ -64,7 +64,7 @@ For HTTP acquisition, construct `Rastro.web(AcquisitionPolicy(...))` and use the
 | Object | Fields and behavior |
 | --- | --- |
 | `Source` | HTTP(S) `url`; `locale` (`und`); ordered `languages` (`()`); `timezone` (`UTC`); optional three-letter uppercase `currency`; and `egress` (`direct`, or the name of a policy egress profile). Credentials, invalid language tags/currency codes/egress names and a `geolocation` value (no browser adapter in v0.1) are rejected; an egress name missing from the policy fails before DNS. Explicit languages form Accept-Language with descending quality weights; otherwise a defined locale remains the compatible fallback. |
-| `Recipe` | A union of `CssRecipe`, `JsonLdRecipe` and `JsonRecipe` discriminated by `strategy` (see [recipe variants](#recipe-variants)). All share required `fields`, positive `version` (default `1`), `require_evidence` (default `False`) and up to three flat `fallbacks` sharing its version and document representation. `require_evidence` requires observations for required fields before validation; learned recipes set it to `True`. Version maximum: 2,147,483,647. |
+| `Recipe` | A union of `CssRecipe`, `JsonLdRecipe`, `EmbeddedJsonRecipe` and `JsonRecipe` discriminated by `strategy` (see [recipe variants](#recipe-variants)). All share required `fields`, positive `version` (default `1`), `require_evidence` (default `False`) and up to three flat `fallbacks` sharing its version and document representation. `require_evidence` requires observations for required fields before validation; learned recipes set it to `True`. Version maximum: 2,147,483,647. |
 | `Limits` | `max_html_bytes` (2,000,000), `max_records` (1,000), `max_jsonld_blocks` (100), `max_json_bytes` (2,000,000), `max_json_depth` (32), `max_json_nodes` (100,000). |
 | `AcquisitionPolicy` | Exact `allowed_hosts`, request budgets and timeouts (see [policy defaults](acquisition.md#policy-defaults)), plus `egress_profiles`: up to 16 names mapped to an `EgressProfile` (`proxy_url`, optional `username_env`/`password_env` environment-variable references) or a bare `http(s)://host[:port]` string. See [network egress](acquisition.md#network-egress). |
 
@@ -80,7 +80,8 @@ base of three variants, selected by `strategy`:
 | Variant | `strategy` | Strategy-specific field | Field expressions |
 | --- | --- | --- | --- |
 | `CssRecipe` | `css` | required `record_selector` | CSS ending in `::text` or `::attr(name)` |
-| `JsonLdRecipe` | `jsonld` | optional `item_type` | absolute RFC 6901 pointers within each JSON-LD object; a field may list 1 to 4 pointers and the first that resolves wins, recorded in the locator |
+| `EmbeddedJsonRecipe` | `embedded_json` | `source` (CSS selector ending in `::attr(name)` or `::text`, exactly one match), `record_path` | JSON embedded in an HTML attribute or script (`input[name=GXState]::attr(value)`, `script#__NEXT_DATA__::text`); `record_path` and fields are relative RFC 6901 pointers as in `JsonRecipe`. Zero or several matches, invalid JSON or a missing path are explicit failures. Limits: `max_json_bytes`, `max_json_depth`, `max_json_nodes`. No pagination; css, jsonld and embedded_json fallbacks |
+| `JsonLdRecipe` | `jsonld` | optional `item_type`: one type or 1 to 8 types, matching when any `@type` of the object is listed (`item_type=("Event", "MusicEvent")`); `@graph` containers and root arrays are traversed | absolute RFC 6901 pointers within each JSON-LD object; a field may list 1 to 4 pointers and the first that resolves wins, recorded in the locator |
 | `JsonRecipe` | `json` | required `record_path` (RFC 6901, `""` is the document) | absolute RFC 6901 pointers from each record |
 
 ```python
@@ -234,6 +235,47 @@ job's `[repair]` table, not through a Python policy object. `JobRunResult.recipe
 lists one `RecipeSelection` (`source_index`, `recipe_origin`, `recipe_version`) per source;
 `JobLoadResult` sources carry the same `recipe_origin` and `recipe_version`. See
 [recipe repair](repair.md) for the gates and the rule that picks the recipe.
+
+## Adapters: fetch and load your own records
+
+An app adapter that knows its sources (detail pages, a JSON ticket endpoint, an XML
+sitemap) can stay on public names: fetch under a policy, extract with `scrape`, apply its
+own rules, then store the records with provenance. No private modules, no JSON snapshot
+job, no `rastro.cli.main`.
+
+```python
+from rastro import AcquisitionPolicy, Fetched, fetch, fetch_async, load_records
+```
+
+| Function | Returns | What it does |
+| --- | --- | --- |
+| `fetch(url, *, policy=None, representation="html", max_bytes=None, locale="en-US")` | `Fetched` | Fetches one URL with the same acquirer as `scrape` URLs and jobs: exact host allowlist, robots.txt, egress, request budget, redirect checks and the byte limit. |
+| `fetch_async(...)` | `Fetched` | The same, inside a running event loop. |
+| `load_records(job, records, *, source_url, observed_at=None, allow_absolute_paths=False, allow_remote=False, allow_env=())` | `JobLoadResult` | Writes caller-built dicts into the job file's `[dataset]` with the same validation, identity and snapshot semantics as `rastro job load`. |
+
+`fetch` defaults to a policy that allows only the URL's host (HTTPS unless the URL is
+`http://`); pass an `AcquisitionPolicy` for several hosts, budgets or egress. Only
+`render = "http"` is supported. `Fetched` is frozen: `status` (an `Outcome`), `url` (final,
+after permitted redirects), `body` (the decoded document, or `None`), `media_type`
+(`text/html` or `application/json`, `None` on failure) and `issues`. A refusal is returned,
+never raised: `robots_denied`, `invalid_robots`, `host_not_allowed`, `body_too_large`,
+timeouts and HTTP failures keep their category, and a blank document is `invalid_data` with
+`empty_document`, never a successful empty body. An invalid URL, representation or
+`max_bytes` raises `ConfigurationError`.
+
+`load_records` reads the dataset, fields and identity from the job file. `records` are dicts
+keyed by declared field names and form the complete current set for `source_url`: a record
+loaded earlier from that source and absent now is reported `missing`, as in `rastro job
+load`. All records are validated against the job's fields first; an undeclared or invalid
+field, a missing or duplicate identity, or an empty list raises `ConfigurationError` and
+writes nothing. More records than `[limits] max_records` raise `ResourceLimitError`.
+`source_url` must not carry a query string or fragment (provenance never keeps them).
+`observed_at` must be timezone-aware and not in the future; it defaults to the load time.
+Each supplied field gets provenance with `source_url`, `observed_at`, `method = "json"`,
+`locator = "adapter"` and `recipe_version = 0`, so adapter data is never presented as a
+recipe extraction. Records then appear in `rastro dataset export` and Studio like any
+other. [`examples/adapter.py`](https://github.com/rave-vipx/rastro/blob/main/examples/adapter.py)
+runs the whole path offline.
 
 ## Recipes from examples
 

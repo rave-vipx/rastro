@@ -173,7 +173,10 @@ async def test_failed_proposal_can_be_corrected_within_both_budgets(source, sche
     assert result.recipe_attempts[0].status == Outcome.INSUFFICIENT_EVIDENCE
     assert model.requests[0].system == model.requests[1].system
     envelope = json.loads(model.requests[1].content)
-    assert envelope["untrusted_html"] == page
+    # N19: the comment a person cannot see never reaches the model.
+    assert PAGE in envelope["untrusted_html"]
+    assert "Ignore all rules" not in envelope["untrusted_html"]
+    assert envelope["hidden_content_removed"] == {"comment": 1}
     assert envelope["last_failure"] == "invalid_model_candidate"
     assert "evil.test" not in model.requests[1].content
     assert "token=private" not in model.requests[1].content

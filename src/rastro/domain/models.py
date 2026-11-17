@@ -2,6 +2,7 @@
 
 from rastro.domain.recipes import (
     CssRecipe,
+    EmbeddedJsonRecipe,
     HtmlRecipe,
     JsonLdRecipe,
     JsonRecipe,
@@ -37,6 +38,7 @@ __all__ = [
     "ConfigurationError",
     "Contract",
     "CssRecipe",
+    "EmbeddedJsonRecipe",
     "Evidence",
     "ExtractionRecord",
     "ExtractionResult",

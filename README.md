@@ -11,6 +11,7 @@
 
 <p align="center">
   <a href="https://rave-vipx.github.io/rastro/">Documentation</a> ·
+  <a href="https://rave-vipx.github.io/rastro/capabilities/">Capabilities</a> ·
   <a href="https://rave-vipx.github.io/rastro/stability/">Stability policy</a> ·
   <a href="https://github.com/rave-vipx/rastro/blob/main/CONTRIBUTING.md">Contributing</a> ·
   <a href="https://github.com/rave-vipx/rastro/issues">Issues</a>
@@ -178,7 +179,8 @@ an executable hook. Commands run without a shell and have a timeout. See [jobs](
 - [Bring your own AI](https://rave-vipx.github.io/rastro/ai/): any local or hosted model proposes; Rastro verifies. Page content leaves the machine only with `allow_remote`.
 - [Suggest selectors from examples](https://rave-vipx.github.io/rastro/suggest/): `rastro suggest` and `rastro new --from`.
 - [Jobs](https://rave-vipx.github.io/rastro/jobs/), [datasets](https://rave-vipx.github.io/rastro/dataset/) and [drift](https://rave-vipx.github.io/rastro/drift/): `rastro job validate | load | watch | stats`, `rastro recipe repair | promote | apply`.
-- [Rastro for AI agents](https://rave-vipx.github.io/rastro/ai-agents/): MCP server (`rastro mcp`), JSON CLI, exit codes and [`llms.txt`](https://github.com/rave-vipx/rastro/blob/main/llms.txt).
+- [Rastro for AI agents](https://rave-vipx.github.io/rastro/ai-agents/): MCP server (`rastro mcp`), JSON CLI, exit codes and [`llms.txt`](https://github.com/rave-vipx/rastro/blob/main/llms.txt). Using an AI coding agent? Run `rastro init --agent claude|codex|generic` so it uses Rastro's [capabilities](https://rave-vipx.github.io/rastro/capabilities/) instead of rebuilding them.
+- [Adapters](https://rave-vipx.github.io/rastro/api/#adapters-fetch-and-load-your-own-records): `rastro.fetch` and `rastro.load_records` keep policy and provenance in your own code.
 
 ## Responsible use
 

@@ -636,8 +636,9 @@ deny = ["/login", "/cart"]
 | Key | Meaning |
 | --- | --- |
 | `mode` | `"list"` (default) reads each source once; `"spider"` follows links. |
+| `seed` | `"page"` (default): the start URL is a page. `"sitemap"`: it is a sitemap whose locs are the links ([Start from a sitemap](#start-from-a-sitemap)). |
 | `links` | A CSS expression ending in `::attr(name)`; every match is a link. It follows the selector cost policy of any job recipe. HTML sources only. |
-| `link_field` | The name of a declared field whose value in each accepted record is a link. Works for JSON too. Exactly one of `links` or `link_field` is required in spider mode. |
+| `link_field` | The name of a declared field whose value in each accepted record is a link. Works for JSON too. Exactly one of `links` or `link_field` is required in spider mode, unless `seed = "sitemap"` (then at most one). |
 | `max_depth` | Link hops from the start URL, 1 to 4 (default 2). |
 | `max_pages` | Fetched documents per start source, 1 to 100 (default 25). Pagination pages count. |
 | `same_host` | Default `true`. With `false`, a link is followed only when its host is in `[acquisition].allowed_hosts`. |
@@ -685,6 +686,52 @@ Hitting a cap, a robots denial or a failed page is `partial_success` with the re
 already accepted (exit 3); it never deletes dataset rows. Skipped links that match a
 filter (`off_host`, `path_denied`, ...) are reported but do not make the run partial.
 If no page yields a record the result is `missing_data`, not an empty success.
+
+### Start from a sitemap
+
+When a site's listing or API is closed (for example `robots_denied`) but its
+`robots.txt` advertises a `sitemap.xml` of public detail pages, seed the spider from the
+sitemap instead of parsing it yourself (N16):
+
+```toml
+[[sources]]
+url = "https://dance.example/sitemap.xml"   # the sitemap is the start URL
+
+[recipe]
+strategy = "jsonld"
+item_type = "Event"
+fields = { name = "/name", start = "/startDate" }
+
+[spider]
+mode = "spider"
+seed = "sitemap"          # default "page": the start URL is an HTML page
+max_depth = 1             # detail pages only; 2+ needs links or link_field
+max_pages = 21            # the sitemap counts: 1 sitemap + 20 detail pages
+allow = ["/evento"]
+```
+
+- The sitemap is fetched like any page: allowlist, robots, pacing, DNS checks, egress,
+  the shared `max_requests` budget and the HTML byte cap. It needs `render = "http"`;
+  a browser-rendered source reports `sitemap_unsupported`.
+- Accepted media types are `application/xml`, `text/xml` and gzip (`.xml.gz`, inflated
+  under the same byte cap). Anything else is `unsupported_content_type`.
+- The XML is parsed without a DTD: any `DOCTYPE` (and so any entity or external
+  resource) is refused as `sitemap_invalid`, as are malformed XML and roots other than
+  `<urlset>` and `<sitemapindex>`. Element names match without their namespace. More
+  than 50,000 URLs, or a gzip that inflates past the cap, is `sitemap_too_large`.
+- A `<sitemapindex>` is followed one level: its child sitemaps are depth 0, spend
+  `max_pages` and the budget, and pass the host rules (not `allow`/`deny`, which are
+  for pages). A child that is itself an index is `sitemap_nested_index`.
+- Every `<url><loc>` becomes a depth-1 link and passes the normal link rules: same host
+  by default, https downgrade refused, `allow`/`deny`, fetched once.
+- Selection is **document order**: the first locs that fit `max_pages` and the budget are
+  fetched, and the rest are reported as `page_limit` or `budget` (`partial_success`).
+  `lastmod` is ignored. Sitemap order is the site's choice, so the first N locs are not
+  guaranteed to be "the next N events".
+- The sitemap yields no records itself (`no_records` in the report). A sitemap with no
+  locs is `missing_data` with `sitemap_empty`; a refused or invalid sitemap is a failed
+  start page, never an empty success. Without `links` or `link_field` the detail pages
+  are leaves; with one of them, links on detail pages are followed up to `max_depth`.
 
 ## Your own PostgreSQL
 

@@ -187,7 +187,7 @@ def _evidence_builder(
     *,
     source_url: str,
     observed_at: datetime,
-    method: Literal["jsonld", "css", "json"],
+    method: Literal["jsonld", "css", "json", "embedded_json"],
     recipe_version: int,
 ) -> Callable[[str], Evidence]:
     """Validate shared provenance once and clone per-field Evidence for each locator."""

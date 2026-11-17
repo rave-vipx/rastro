@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Mapping
 from dataclasses import replace
+from email.message import Message
 from time import perf_counter
 from urllib.parse import urlsplit
 
@@ -42,6 +43,9 @@ from rastro.ports.acquisition import HttpTransport, Resolver
 
 __all__ = ["WebAcquirer", "retry_after"]
 
+# A sitemap is XML, plain or gzipped (`.xml.gz`); the caller inflates it under a cap (N16).
+XML_TYPES = ("application/xml", "text/xml", "application/gzip", "application/x-gzip")
+
 
 class WebAcquirer:
     """One client per event loop; limits and restriction cooldowns are shared by its jobs."""
@@ -76,8 +80,24 @@ class WebAcquirer:
         in ``raw_body`` for callers that verify them by digest (the registry fetch)."""
         return await self._acquire(source, max_bytes=max_bytes, representation="json", raw=True)
 
+    async def acquire_xml(self, source: Source, *, max_bytes: int) -> AcquisitionResult:
+        """A sitemap: same policy, redirects and robots; undecoded XML bytes in ``raw_body``."""
+        if self.policy.render != "http":  # a browser would render it, not hand back XML
+            return AcquisitionResult(
+                source.url, None, Outcome.PERMANENT_FAILURE, "sitemap_unsupported"
+            )
+        return await self._acquire(
+            source, max_bytes=max_bytes, representation="html", raw=True, media=XML_TYPES
+        )
+
     async def _acquire(
-        self, source: Source, *, max_bytes: int, representation: Representation, raw: bool = False
+        self,
+        source: Source,
+        *,
+        max_bytes: int,
+        representation: Representation,
+        raw: bool = False,
+        media: tuple[str, ...] = (),
     ) -> AcquisitionResult:
         started = perf_counter()
         policy = self.policy.with_grants(current_trust().network_grants())
@@ -96,10 +116,12 @@ class WebAcquirer:
                     url, _, _ = permitted_url(url, policy)
                     operation.url = url
                     operation.headers = request_headers(source, representation)
+                    if media:
+                        operation.headers["Accept"] = ", ".join(media)
                     await self._robots(url, operation)
                     conditional = (
                         await self._conditional.headers(source.url, url)
-                        if self._conditional is not None
+                        if self._conditional is not None and not raw
                         else {}
                     )
                     operation.headers.update(conditional)
@@ -110,10 +132,11 @@ class WebAcquirer:
                     if response.status not in REDIRECT_STATUSES:
                         check_status(response.status)
                         if raw:
+                            _check_media(response, media)
                             raw_body = response.body
                         else:
                             body = decode_body(response, representation)
-                        if self._conditional is not None:
+                        if self._conditional is not None and not raw:
                             self._conditional.remember(source.url, url, response)
                         break
                     if hop == self.policy.max_redirects:
@@ -233,3 +256,12 @@ class WebAcquirer:
             finally:
                 host.next_request = perf_counter() + host.interval
         raise AssertionError("Address loop must return or raise")  # pragma: no cover
+
+
+def _check_media(response: HttpResponse, media: tuple[str, ...]) -> None:
+    if not media:
+        return
+    parsed = Message()
+    parsed["content-type"] = response.headers.get("content-type", "")
+    if parsed.get_content_type() not in media:
+        raise AcquisitionError("unsupported_content_type", Outcome.PERMANENT_FAILURE)

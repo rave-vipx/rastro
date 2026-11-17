@@ -13,7 +13,10 @@ across patch releases, and get at least one minor release of warnings before a c
   (`from rastro import ...` or `rastro.<name>`), including their documented parameters, return
   types and result fields. The optional model providers `rastro.OllamaModel` and
   `rastro.OpenAICompatibleModel` are public too, although they are left out of `__all__` so a
-  star import never needs an extra.
+  star import never needs an extra. The adapter API (`fetch`, `fetch_async`, `Fetched` and
+  `load_records`, see [API](api.md#adapters-fetch-and-load-your-own-records)) is part of this
+  surface, including the provenance it writes (`method = "json"`, `locator = "adapter"`,
+  `recipe_version = 0`).
 - **CLI commands and flags** of the `rastro` executable, and its exit codes (`0` success,
   `1` failed, `2` configuration or usage error, `3` partial success, `4` needs attention,
   `5` storage error after the run).

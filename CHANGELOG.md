@@ -2,6 +2,36 @@
 
 All notable user-facing changes are recorded here. The project follows [Semantic Versioning](docs/stability.md) from 0.6.0. Versions before 0.6.0 were never published to a package registry.
 
+## Unreleased — adoption cut (N15–N19)
+
+Driven by the first real adoption report (Rave App). See `docs/action-plan-adoption.md`.
+
+### Added
+
+- Agent capability contract (N18): `rastro capabilities [--output json|markdown|llms]`, `rastro init --agent claude|codex|generic [--format block|skill]`, the MCP resource `rastro://capabilities`, and generated `llms.txt` and `docs/capabilities.md`. MCP server instructions are URL-first and list every capability; tests fail when they go stale.
+- Public adapter API (N15): `rastro.fetch` / `rastro.fetch_async` return a `Fetched` result for one URL under an `AcquisitionPolicy` (same acquirer, robots, egress, budgets and byte limit as jobs; refusals are explicit outcomes), and `rastro.load_records(job, records, *, source_url, observed_at=None)` writes caller-built records into the job's dataset with job-load validation, identity, snapshot semantics and provenance (`method = "json"`, `locator = "adapter"`, `recipe_version = 0`). See `examples/adapter.py`.
+- `JsonLdRecipe.item_type` accepts several types, e.g. `("Event", "MusicEvent")` (N16).
+- `embedded_json` recipe strategy (`EmbeddedJsonRecipe`) reads JSON from one HTML attribute or script, such as `input[name=GXState]::attr(value)` or `script#__NEXT_DATA__::text`, under the JSON limits and the untrusted-recipe selector policy; zero or several matches, invalid JSON or a missing path are explicit failures. Job JSON schemas regenerated (N16).
+- Spider sitemap seed: `[spider] seed = "sitemap"` reads each source as a sitemap.xml (or .xml.gz) under the same allowlist, robots, budget and byte caps, parses it without DTDs or entities, follows a sitemap index one level, and fetches its locs in document order within `max_pages` (N16, N3, SEC-001).
+- `docs/issues.md` lists every issue code with its meaning and next step; a test keeps it complete (N17).
+
+### Changed
+
+- `evidence_retention_failed` carries `field` and `message = "sensitive_data:<category>"` when the sanitizer refuses a value, so the cause is visible without the value (N17).
+- `llms.txt` no longer says Rastro does not crawl (bounded spider since N3).
+
+### Security
+
+- Prompt-injection defense (N19): hidden page content (hidden elements, comments, templates, invisible characters) is removed before a page reaches a model. Values that look like instructions are flagged `instruction_like_content` in model contexts and MCP record payloads, never altered. Automatic promotion is refused for such candidates, which stay quarantined until an operator promotes them with a reason and `--override-gates`. See `SECURITY.md` and ADR 0035.
+
+### Known limitations
+
+- `embedded_json` is not produced by model proposals, discovery or repair relocation, and Mock Lab bundles do not support it yet.
+- Browser-rendered jobs report `sitemap_unsupported`; the sitemap URL is named as the source, not read from robots.txt.
+- `fetch` supports plain HTTP only; provenance uses `locator = "adapter"` rather than a new `Evidence.method` (persisted-format change deferred).
+- Injection detection is a pattern list; `job_extract` MCP payloads carry no flags yet.
+- `rastro init --agent` is POSIX-only: on Windows it fails closed (no race-free directory-relative writes); use `rastro capabilities --output markdown`.
+
 ## Unreleased — N1–N12 product cut
 
 ### Added

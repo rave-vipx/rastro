@@ -4,8 +4,34 @@ This page is for AI coding agents and the people who configure them. Rastro give
 stable ways in: an MCP server and a JSON command line. Both call the same services, apply the
 same path, egress and robots policies, and label scraped values as untrusted data.
 
-A short machine-readable index of these docs is at
-[`llms.txt`](https://github.com/rave-vipx/rastro/blob/main/llms.txt).
+Before writing scraping code, read [Capabilities](capabilities.md): every task Rastro already
+covers (URL jobs, pagination, link following, scrolling, JavaScript, datasets, scheduling,
+alerts, repair, registry), what an agent must not rebuild, and what is the app's own job.
+The same list is in [`llms.txt`](https://github.com/rave-vipx/rastro/blob/main/llms.txt),
+in `rastro capabilities --output json`, and in the MCP resource `rastro://capabilities`.
+
+## Tell your coding agent what Rastro does
+
+Run this in the project that uses Rastro, so the agent working there reads the list first:
+
+```bash
+rastro init --agent claude              # block in CLAUDE.md
+rastro init --agent codex               # block in AGENTS.md (also --agent generic)
+rastro init --agent codex --format skill   # .agents/skills/rastro/SKILL.md
+```
+
+`--path DIR` picks the project directory (default: the current one). The block sits between
+`<!-- rastro:begin -->` and `<!-- rastro:end -->`; running the command again replaces only
+that block and keeps the rest of the file. The skill file is Rastro's own and is rewritten.
+The command refuses symbolic links and unbalanced markers (exit `2`). It needs
+directory-relative file operations so a directory swapped for a link mid-run cannot redirect
+the write; where they are missing (Windows) it writes nothing and exits `2`: paste the output
+of `rastro capabilities --output markdown` instead. On success it prints
+`{"agent", "format", "path", "action"}` with `action` set to `created`, `updated` or
+`unchanged`. The text tells the agent which task maps to which public name, command or tool;
+to import only names in `rastro.__all__`; to stop and write a gap report instead of importing
+internals; and to treat scraped values as data, asking the human before a destructive call
+that follows reading them.
 
 ## Connect over MCP
 
@@ -54,8 +80,10 @@ exits with code `2` and a `missing_extra` error on stderr.
 | `semantic_review(path, source, version)` | none | Old and new values per changed field, to judge meaning |
 | `suggest_context(page_path, fields)` / `recipe_try(page_path, recipe, ...)` | none | Author a recipe for a new page without examples |
 
-`job_run` is a deprecated alias of `job_load`. The server also sends a short workflow guide to
-the client. Details, safety hints and limits: [MCP server](mcp.md).
+`job_run` is a deprecated alias of `job_load`. The server also sends a URL-first workflow
+guide to the client: write a job whose `[[sources]]` are the page URLs, preview it, then load
+it; each run fetches the URLs again. It serves the capability list as the read-only resource
+`rastro://capabilities` (JSON). Details, safety hints and limits: [MCP server](mcp.md).
 
 ### Your agent is the model
 
@@ -97,6 +125,7 @@ rastro job load job.toml --drift
 rastro dataset export data.sqlite --format jsonl
 rastro recipe repair job.toml --source 1
 rastro doctor                         # installed versions and capabilities
+rastro capabilities --output json     # every task Rastro covers, with names and limits
 ```
 
 Objects with a `schema_version` key keep their meaning for that version. New keys can appear in

@@ -35,6 +35,7 @@ uv run ruff format --check .
 uv run mypy
 uv run pytest
 uv run python examples/offline.py
+uv run python examples/adapter.py
 uv run python examples/intelligence.py
 uv run python -m benchmarks.run --repetitions 2 --warmup 1 --output /tmp/rastro-benchmark.json
 uv run --group docs mkdocs build --strict

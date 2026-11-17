@@ -24,6 +24,7 @@ from typing import Any, Literal
 
 from benchmarks.ai_repair.cases import Case
 from benchmarks.ai_repair.layouts import RECORDS, render
+from rastro.adapters.html_hardening import harden_html
 from rastro.domain.intelligence import InferencePolicy, ModelError, ModelRequest
 
 Mode = Literal["correct", "wrong_recipe", "adversarial"]
@@ -57,7 +58,7 @@ class ScriptedOracle:
     def __init__(self, cases: Iterable[Case], mode: Mode = "correct") -> None:
         self._mode = mode
         self._answers = {
-            _digest(render(c.after)): swapped(c.correct_recipe())
+            _digest(harden_html(render(c.after)).html): swapped(c.correct_recipe())
             if mode != "correct"
             else c.correct_recipe()
             for c in cases

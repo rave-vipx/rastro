@@ -108,6 +108,7 @@ jobs:
       - run: uv sync --locked
       - run: uv run --no-sync pytest
       - run: uv run --no-sync python examples/offline.py
+      - run: uv run --no-sync python examples/adapter.py
 
   audit:
     name: Runtime dependency audit

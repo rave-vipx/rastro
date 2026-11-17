@@ -83,6 +83,8 @@ def _proposal(variant: type[Recipe]) -> type[RecipeProposal]:
         RecipeProposal.model_fields["fields"].annotation,
         RecipeProposal.model_fields["fields"],
     )
+    if "item_type" in fields:  # proposals keep the 0.1 single-type form; tuples are hand-written
+        fields["item_type"] = (str | None, Field(default=None, min_length=1, max_length=256))
     # A proposal names its strategy explicitly; the variant default only aids construction.
     fields["strategy"] = (variant.model_fields["strategy"].annotation, ...)
     name = variant.__name__.removesuffix("Recipe") + "Proposal"

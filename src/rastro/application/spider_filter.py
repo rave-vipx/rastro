@@ -24,7 +24,12 @@ _DESTINATION: dict[str, SpiderOutcome] = {
 
 
 def link_refusal(
-    link: Link, scope: PaginationScope, spider: SpiderPolicy, policy: AcquisitionPolicy | None
+    link: Link,
+    scope: PaginationScope,
+    spider: SpiderPolicy,
+    policy: AcquisitionPolicy | None,
+    *,
+    paths: bool = True,  # False for a child sitemap: allow/deny are for pages (N16)
 ) -> SpiderOutcome | None:
     boundary = pagination_boundary(link.url, scope.host, scope.secure, scope.hosts)
     if boundary:
@@ -32,8 +37,9 @@ def link_refusal(
     refusal = _destination_refusal(link, policy)
     if refusal:
         return refusal
-    if path_matches(link.path, spider.deny) or (
-        spider.allow and not path_matches(link.path, spider.allow)
+    if paths and (
+        path_matches(link.path, spider.deny)
+        or (spider.allow and not path_matches(link.path, spider.allow))
     ):
         return "path_denied"
     return None

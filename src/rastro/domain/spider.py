@@ -26,6 +26,8 @@ class SpiderPolicy(RedactedContract):
     """The job's ``[spider]`` table. ``mode = "list"`` (the default) is today's behaviour."""
 
     mode: Literal["list", "spider"] = "list"
+    # "sitemap": each start URL is a sitemap whose <loc>s are the depth-1 links (N16).
+    seed: Literal["page", "sitemap"] = "page"
     max_depth: StrictInt = Field(default=2, ge=1, le=4)
     max_pages: StrictInt = Field(default=25, ge=1, le=100)
     same_host: StrictBool = True
@@ -50,8 +52,10 @@ class SpiderPolicy(RedactedContract):
     def check_link_source(self) -> Self:
         if self.mode == "list":
             return self
-        if (self.links is None) == (self.link_field is None):
-            raise ValueError("Spider mode needs exactly one of links or link_field")
+        if self.links is not None and self.link_field is not None:
+            raise ValueError("Spider mode takes one of links or link_field, not both")
+        if self.seed == "page" and self.links is None and self.link_field is None:
+            raise ValueError("Spider mode needs links or link_field unless seed is sitemap")
         if self.links is not None:
             if not LINK_EXPRESSION.fullmatch(self.links):
                 raise ValueError("links must be a CSS expression ending in ::attr(name)")

@@ -4,11 +4,13 @@ from __future__ import annotations
 
 from pydantic import BaseModel
 
-from rastro.domain.models import ExtractionResult, Outcome
-from rastro.domain.spider_report import SpiderOutcome
+from rastro.application.pagination_records import combine_pages
+from rastro.domain.models import ExtractionResult, Issue, Limits, Outcome
+from rastro.domain.spider_report import SpiderOutcome, SpiderReport
 
 # For a page that was fetched, a boundary outcome means its redirect was refused.
 PAGE_FAILURES = frozenset({"failed", "partial", "robots_denied", "off_host", "https_downgrade"})
+_LIMITS = ("budget", "page_limit", "depth_limit")  # a hit cap: partial, in this order
 
 
 def page_outcome[T: BaseModel](result: ExtractionResult[T]) -> SpiderOutcome:
@@ -29,3 +31,24 @@ def page_outcome[T: BaseModel](result: ExtractionResult[T]) -> SpiderOutcome:
     if result.status == Outcome.MISSING_DATA and not result.records:
         return "no_records"
     return "failed"
+
+
+def finish_crawl[T: BaseModel](
+    pages: list[ExtractionResult[T]],
+    hit: set[str],
+    limits: Limits,
+    report: SpiderReport,
+    links_failed: bool,
+) -> ExtractionResult[T]:
+    """Combine the pages; the first cap hit, else a failed page, names the stop."""
+    stop = next((f"spider_{name}" for name in _LIMITS if name in hit), None)
+    if stop is None:
+        stop = "spider_page_failed" if "page_failed" in hit else "spider_complete"
+    combined = combine_pages(pages, stop, limits)
+    issues = combined.issues
+    if links_failed:
+        issues = (*issues, Issue(code="spider_links_failed"))
+    status = combined.status
+    if not combined.records and status == Outcome.SUCCESS:
+        status = Outcome.MISSING_DATA  # links alone are not a successful extraction
+    return combined.model_copy(update={"spider": report, "status": status, "issues": issues})

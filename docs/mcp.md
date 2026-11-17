@@ -24,18 +24,26 @@ Recipes and selectors passed to
 
 ## Workflow
 
-The server sends this order to the client as its `instructions`:
+The server sends this URL-first order to the client as its `instructions`, generated from the
+same list as [Capabilities](capabilities.md):
 
-1. `suggest_recipe`: build a CSS recipe from a saved page and a few example values.
-2. `job_new`: write a job file from the same page and examples.
-3. `job_extract`: run the job and inspect the records (`job_preview` shows which fields
-   would be loaded).
-4. `job_load`: run the job and load approved fields into its dataset.
-5. `drift_status`: see which sources are stale; `job_load` with `drift=true` measures
+1. Write a job file whose `[[sources]]` are the page URLs, with `[acquisition] allowed_hosts`
+   (`rastro job schema` prints the format; `rastro new --site URL` drafts one). For a page
+   saved in the workspace, `suggest_recipe` builds a recipe from example values (or
+   `suggest_context`, then `recipe_try`), and `job_new` writes the job.
+2. `job_validate`, then `job_preview` or `job_extract`: inspect the records; nothing is
+   loaded.
+3. `job_load`: load approved fields into the job's dataset. Each run fetches the URLs again.
+4. `drift_status`: see which sources are stale; `job_load` with `drift=true` measures
    structural drift.
-6. `recipe_repair`: propose and check repair candidates for a failing source.
-7. `recipe_history`, then `recipe_promote`: activate a reviewed candidate, with a reason.
-8. `recipe_apply`: write the serving recipe back into the job file.
+5. `recipe_repair`: propose and check repair candidates for a failing source.
+6. `recipe_history`, then `recipe_promote`: activate a reviewed candidate, with a reason.
+7. `recipe_apply`: write the serving recipe back into the job file.
+
+The instructions end with the untrusted-data rule and one line per capability, so the agent
+uses pagination, link following, scrolling or a dataset instead of rebuilding them. The full
+list, with public names, commands and limits, is the read-only resource
+`rastro://capabilities` (JSON, the same object as `rastro capabilities --output json`).
 
 `scrape_file` extracts once from a saved page without a job. When deterministic repair finds
 no passing candidate, or a page has no example values yet, the agent itself proposes the
