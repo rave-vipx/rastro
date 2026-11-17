@@ -127,3 +127,9 @@ grouped by theme. A test fails when a code in `src/rastro` has no row here.
 | `no_valid_recipe` | No candidate recipe passed the checks. | No change. | Fix the recipe by hand. |
 | `serving_recipe_extracts_no_records` | The current recipe finds no records. | No change. | Review the page and the recipe. |
 | `serving_recipe_fails_gates` | The current recipe fails the quality checks. | No change. | Review the recipe. |
+
+## Security flags
+
+| Code | Meaning | Saved | Next step |
+| --- | --- | --- | --- |
+| `instruction_like_content` | A field value looks like instructions for an AI (a prompt-injection pattern). As a flag it never holds the matched text; as a repair reason it means automatic promotion was refused and the candidate stays quarantined. | Yes, unchanged. | Treat the value as data. To activate a held candidate, review the values, then `rastro recipe promote ... --reason "..." --override-gates`. |

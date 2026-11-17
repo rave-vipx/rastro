@@ -33,7 +33,7 @@ The SDK and CLI call the same service. Public imports live in `rastro.__init__`;
 
 ## Implemented boundaries
 
-- `domain/sources.py`, `domain/recipes.py`, `domain/results.py`, `domain/models.py`: source origins, limits, schema fingerprints and domain errors; the `Recipe` strategy union (`CssRecipe`, `JsonLdRecipe`, `JsonRecipe`); outcomes, diagnostics, field provenance, metrics and extraction results; `domain/models.py` re-exports the domain contract surface.
+- `domain/sources.py`, `domain/recipes.py`, `domain/results.py`, `domain/models.py`: source origins, limits, schema fingerprints and domain errors; the `Recipe` strategy union (`CssRecipe`, `EmbeddedJsonRecipe`, `JsonLdRecipe`, `JsonRecipe`); outcomes, diagnostics, field provenance, metrics and extraction results; `domain/models.py` re-exports the domain contract surface.
 - `ports/parser.py`: candidate and parsed-document contracts independent of Scrapling.
 - `adapters/scrapling.py`, `adapters/structured.py`: deterministic HTML (JSON-LD, CSS) and strict JSON parsing/discovery without fetching.
 - `application/engine.py`: the public `Rastro` facade and default adapter wiring.
