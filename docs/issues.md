@@ -16,6 +16,7 @@ grouped by theme. A test fails when a code in `src/rastro` has no row here.
 | `ambiguous_match` | A selector matched more than one thing for a single field. | The record is rejected. | Make the selector more specific. |
 | `invalid_record` | One structured record is not an object. | That record is skipped. | Check the source data. |
 | `invalid_json` | The response is not valid JSON. | No. | Check the URL and the content type. |
+| `embedded_json_not_found` | An `embedded_json` recipe's `source` selector matched no node, or the node lacks the attribute. | No. | Fix `source`. The page may have moved the data. |
 | `invalid_jsonld` | A JSON-LD block could not be parsed. | The block is ignored. | Use another strategy or fix the page data. |
 | `record_path_not_found` | The recipe's `record_path` is not in the JSON. | No. | Fix `record_path`. The API may have changed. |
 | `invalid_record_path` | The `record_path` points at something that is not a list of records. | No. | Fix `record_path`. |
