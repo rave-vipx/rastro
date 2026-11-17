@@ -17,6 +17,7 @@ from rastro.capabilities import (
     UNTRUSTED_DATA_RULE,
     Capability,
 )
+from rastro.config_catalog import CONFIG_RULE, SECTIONS
 
 SITE = "https://rave-vipx.github.io/rastro/"
 REPO = "https://github.com/rave-vipx/rastro/blob/main/"
@@ -33,6 +34,8 @@ KEY_FACTS = (
     "`message`, `location`. Exit codes: 0 success, 1 failed, 2 configuration or usage error, "
     "3 partial success, 4 needs attention, 5 storage error.",
     'Scraped values are labelled `"data_trust": "untrusted_source_data"`.',
+    "`rastro config` lists every option (job keys, arguments, grants, variables, flags); "
+    "job files reject unknown keys.",
     "`rastro capabilities --output json` prints this list; "
     "`rastro init --agent claude|codex|generic` writes it into a project for its coding agent.",
 )
@@ -42,6 +45,11 @@ DOC_LINKS = (
         "Capabilities",
         "docs/capabilities.md",
         "every task Rastro covers, and what is your app's job",
+    ),
+    (
+        "Configuration reference",
+        "docs/configuration.md",
+        "every job key, keyword argument, grant, variable and CLI flag",
     ),
     ("Rastro for AI agents", "docs/ai-agents.md", "MCP setup, JSON CLI contract, safe use"),
     ("Quickstart", "docs/quickstart.md", "`rastro.scrape`, model selectors, memory and repair"),
@@ -168,6 +176,8 @@ def render_mcp_instructions() -> str:
             "",
             UNTRUSTED_DATA_RULE,
             "",
+            f"{CONFIG_RULE} Resource rastro://configuration has the same reference.",
+            "",
             MCP_AGENT_LOOP,
             "",
             "Rastro already covers these; do not rebuild them (resource rastro://capabilities "
@@ -192,8 +202,16 @@ def render_json(version: str | None = None) -> str:
     return json.dumps(payload, indent=2) + "\n"
 
 
+def _config_map() -> list[str]:
+    rows = ["| Job section | Controls |", "| --- | --- |"]
+    rows += [f"| `{name}` | {_cell(text)} |" for name, text in SECTIONS.items()]
+    link = doc_url("docs/configuration.md")
+    return ["### Configuration", "", f"{CONFIG_RULE} Full reference: {link}", "", *rows, ""]
+
+
 def render_snippet(version: str) -> str:
-    """Project instructions for a coding agent: tasks, public imports, gaps, untrusted data."""
+    """Project instructions for a coding agent: tasks, configuration map, public imports,
+    gaps, untrusted data."""
     table = ["| Task | Use | API | Do not build |", "| --- | --- | --- | --- |"]
     for cap in CAPABILITIES:
         api = _code(cap.python + cap.cli + tuple(f"MCP {name}" for name in cap.mcp))
@@ -208,6 +226,7 @@ def render_snippet(version: str) -> str:
             "",
             *table,
             "",
+            *_config_map(),
             *(line.replace("## ", "### ") for line in _rules()),
         ]
     )

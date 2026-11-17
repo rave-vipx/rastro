@@ -11,7 +11,13 @@ from rastro.domain.models import ConfigurationError
 def add_commands(commands: argparse._SubParsersAction) -> None:  # type: ignore[type-arg]
     prune = commands.add_parser("prune", help="Delete old recipe versions that are not serving")
     prune.add_argument("--store", type=Path, required=True, help="Recipe memory SQLite file")
-    prune.add_argument("--older-than", type=int, required=True, metavar="DAYS")
+    prune.add_argument(
+        "--older-than",
+        type=int,
+        required=True,
+        metavar="DAYS",
+        help="Delete versions older than this many days",
+    )
     prune.add_argument("--dry-run", action="store_true", help="Count without deleting")
 
 

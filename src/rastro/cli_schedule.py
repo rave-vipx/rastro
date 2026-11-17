@@ -18,13 +18,17 @@ from rastro.domain.job_results import JobExitCode
 
 def add_schedule_command(jobs: argparse._SubParsersAction) -> None:  # type: ignore[type-arg]
     watch = jobs.add_parser("watch", help="Run due job sources on their [schedule]")
-    watch.add_argument("file", type=Path)
+    watch.add_argument("file", type=Path, help="Job file (.toml or .json)")
     watch.add_argument(
         "--once", action="store_true", help="Run one scheduler tick and exit with its exit code"
     )
     watch.add_argument("--drift", action="store_true", help="Measure and report structural drift")
-    watch.add_argument("--output", choices=("json",), default="json")
-    watch.add_argument("--allow-absolute-paths", action="store_true")
+    watch.add_argument(
+        "--output", choices=("json",), default="json", help="Machine-readable output format"
+    )
+    watch.add_argument(
+        "--allow-absolute-paths", action="store_true", help="Allow absolute paths in the job file"
+    )
     add_trust_arguments(watch)
     add_hook_argument(watch)
 

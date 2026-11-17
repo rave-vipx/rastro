@@ -12,6 +12,7 @@
 <p align="center">
   <a href="https://rave-vipx.github.io/rastro/">Documentation</a> ·
   <a href="https://rave-vipx.github.io/rastro/capabilities/">Capabilities</a> ·
+  <a href="https://rave-vipx.github.io/rastro/configuration/">Configuration</a> ·
   <a href="https://rave-vipx.github.io/rastro/stability/">Stability policy</a> ·
   <a href="https://github.com/rave-vipx/rastro/blob/main/CONTRIBUTING.md">Contributing</a> ·
   <a href="https://github.com/rave-vipx/rastro/issues">Issues</a>

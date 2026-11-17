@@ -46,11 +46,23 @@ _SKILL_HEAD = (
 
 def add_commands(subcommands: argparse._SubParsersAction) -> None:  # type: ignore[type-arg]
     caps = subcommands.add_parser("capabilities", help="Print what Rastro can do, for agents")
-    caps.add_argument("--output", choices=("json", "markdown", "llms"), default="json")
+    caps.add_argument(
+        "--output",
+        choices=("json", "markdown", "llms"),
+        default="json",
+        help="JSON (default), the docs page, or llms.txt",
+    )
     init = subcommands.add_parser("init", help="Write Rastro instructions for a coding agent")
-    init.add_argument("--agent", choices=sorted(_BLOCK_FILES), required=True)
+    init.add_argument(
+        "--agent", choices=sorted(_BLOCK_FILES), required=True, help="Which coding agent reads it"
+    )
     init.add_argument("--path", type=Path, default=Path(), help="Project directory (default: cwd)")
-    init.add_argument("--format", choices=("block", "skill"), default="block")
+    init.add_argument(
+        "--format",
+        choices=("block", "skill"),
+        default="block",
+        help="A block in CLAUDE.md/AGENTS.md, or a skill file",
+    )
 
 
 def agent_command(args: argparse.Namespace) -> int:

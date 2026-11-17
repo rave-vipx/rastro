@@ -40,17 +40,21 @@ def add_commands(subcommands: argparse._SubParsersAction) -> None:  # type: igno
     add_prune_commands(commands)
     for name in ("repair", "promote", "rollback", "compare", "apply", "show"):
         command = commands.add_parser(name, help=_HELP[name], description=_HELP[name])
-        command.add_argument("file", type=Path)
+        command.add_argument("file", type=Path, help="Job file (.toml or .json)")
         command.add_argument(
             "--source",
             type=int,
             default=None if name == "repair" else 1,
             help="One-based source index; repair defaults to all sources",
         )
-        command.add_argument("--allow-absolute-paths", action="store_true")
+        command.add_argument(
+            "--allow-absolute-paths",
+            action="store_true",
+            help="Allow absolute paths in the job file",
+        )
         if name in ("promote", "rollback"):
-            command.add_argument("--version", type=int, required=True)
-            command.add_argument("--reason")
+            command.add_argument("--version", type=int, required=True, help="Stored version")
+            command.add_argument("--reason", help="Why, kept in the recipe history")
         if name in ("repair", "promote"):
             add_trust_arguments(command)
         if name == "promote":
@@ -62,8 +66,8 @@ def add_commands(subcommands: argparse._SubParsersAction) -> None:  # type: igno
         if name == "show":
             command.add_argument("--version", type=int, help="Stored version (default: serving)")
         if name == "compare":
-            command.add_argument("--from-version", type=int, required=True)
-            command.add_argument("--to-version", type=int, required=True)
+            command.add_argument("--from-version", type=int, required=True, help="Older version")
+            command.add_argument("--to-version", type=int, required=True, help="Newer version")
         if name == "repair":
             command.add_argument("--report", help="New report path inside the job directory")
             add_model_options(command, "propose repairs relocation cannot find and judge them")

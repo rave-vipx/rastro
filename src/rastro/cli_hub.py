@@ -37,12 +37,14 @@ def add_commands(commands: argparse._SubParsersAction) -> None:  # type: ignore[
     export.add_argument("--author-url", help="Optional package author URL")
     export.add_argument("--license", dest="spdx_license", help="SPDX license identifier")
     export.add_argument("--public", action="store_true", help="Mark bundle as public")
-    export.add_argument("--allow-absolute-paths", action="store_true")
+    export.add_argument(
+        "--allow-absolute-paths", action="store_true", help="Allow absolute paths in the job file"
+    )
 
     imported = commands.add_parser(
         "import", help="Verify a recipe bundle and store it as a candidate"
     )
-    imported.add_argument("directory", type=Path)
+    imported.add_argument("directory", type=Path, help="Bundle directory to import")
     imported.add_argument("--store", type=Path, required=True, help="Recipe SQLite file")
 
     publish = commands.add_parser(

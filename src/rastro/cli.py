@@ -30,6 +30,9 @@ from rastro.application.operator_trust import set_process_trust
 from rastro.cli_agent import COMMANDS as AGENT_COMMANDS
 from rastro.cli_agent import add_commands as add_agent_commands
 from rastro.cli_agent import agent_command
+from rastro.cli_config import COMMANDS as CONFIG_COMMANDS
+from rastro.cli_config import add_commands as add_config_commands
+from rastro.cli_config import config_command, template_command
 from rastro.cli_dataset import add_commands, dataset_command, load_job_command
 from rastro.cli_errors import UsageError, classify, missing_extra_error
 from rastro.cli_hook import add_hook_argument, hook_argv, notify, run_summary
@@ -51,7 +54,9 @@ from rastro.domain.job_dataset import job_preview_json_schema
 from rastro.domain.job_load import job_load_json_schema
 
 # Commands whose errors are reported as one JSON object on stderr.
-_JSON_ERRORS = frozenset({"job", "recipe", "suggest", "new", "health", *AGENT_COMMANDS})
+_JSON_ERRORS = frozenset(
+    {"job", "recipe", "suggest", "new", "health", *AGENT_COMMANDS, *CONFIG_COMMANDS}
+)
 
 
 class _ArgumentParser(argparse.ArgumentParser):
@@ -72,7 +77,7 @@ def _build_parser() -> argparse.ArgumentParser:
     subcommands.add_parser("demo", help="Run a synthetic JSON-LD extraction without network access")
     subcommands.add_parser("doctor", help="Report installed core versions and capabilities as JSON")
     validate = subcommands.add_parser("validate-recipe", help="Validate a local declarative recipe")
-    validate.add_argument("path", type=Path)
+    validate.add_argument("path", type=Path, help="Recipe JSON file (at most 64 KiB)")
 
     mcp = subcommands.add_parser("mcp", help="Serve jobs and datasets to an agent over stdio MCP")
     mcp.add_argument("--root", type=Path, default=Path(), help="Workspace root (default: cwd)")
@@ -88,7 +93,7 @@ def _build_parser() -> argparse.ArgumentParser:
     job_commands = job_parser.add_subparsers(dest="job_command", required=True)
 
     job_validate = job_commands.add_parser("validate", help="Validate a TOML or JSON job file")
-    job_validate.add_argument("file", type=Path)
+    job_validate.add_argument("file", type=Path, help="Job file (.toml or .json)")
     job_validate.add_argument(
         "--allow-absolute-paths",
         action="store_true",
@@ -96,7 +101,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
 
     job_run = job_commands.add_parser("run", help="Execute a TOML or JSON job file")
-    job_run.add_argument("file", type=Path)
+    job_run.add_argument("file", type=Path, help="Job file (.toml or .json)")
     job_run.add_argument(
         "--output",
         choices=("json",),
@@ -114,7 +119,7 @@ def _build_parser() -> argparse.ArgumentParser:
     job_preview = job_commands.add_parser(
         "preview", help="Preview what a job would load into its [dataset]; writes nothing"
     )
-    job_preview.add_argument("file", type=Path)
+    job_preview.add_argument("file", type=Path, help="Job file (.toml or .json)")
     job_preview.add_argument(
         "--output",
         choices=("table", "json"),
@@ -144,6 +149,7 @@ def _build_parser() -> argparse.ArgumentParser:
     add_studio_command(subcommands)
     add_suggest_commands(subcommands)
     add_agent_commands(subcommands)
+    add_config_commands(subcommands, job_commands)
     return parser
 
 
@@ -160,6 +166,8 @@ def _run_job_command(args: argparse.Namespace) -> int:
         return int(JobExitCode.SUCCESS)
     if args.job_command == "stats":
         return stats_command(args)
+    if args.job_command == "template":
+        return template_command(args)
     if args.job_command == "load":
         return load_job_command(args)
     if args.job_command == "watch":
@@ -225,6 +233,8 @@ def _run_command(args: argparse.Namespace) -> int:
         return new_command(args)
     if args.command in AGENT_COMMANDS:
         return agent_command(args)
+    if args.command in CONFIG_COMMANDS:
+        return config_command(args)
     if args.command == "doctor":
         print(
             json.dumps(

@@ -66,6 +66,13 @@ def build_server(
         """Every task Rastro covers, with public names, CLI, MCP tools and limits (N18)."""
         return render_json(__version__)
 
+    @server.resource("rastro://configuration", mime_type="application/json")
+    def configuration() -> str:
+        """Every job key, keyword argument, grant, variable and CLI flag, with bounds."""
+        from rastro.config_render import render_json as render_config
+
+        return render_config(__version__)
+
     return server
 
 
