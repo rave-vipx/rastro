@@ -101,6 +101,11 @@ grouped by theme. A test fails when a code in `src/rastro` has no row here.
 | `spider_page_limit` | The page cap was reached. | Partial. | Raise the page limit. |
 | `spider_depth_limit` | The depth cap was reached. | Partial. | Raise the depth limit. |
 | `spider_page_failed` | A crawled page failed. | Partial. | See the page's own issue. |
+| `sitemap_invalid` | The sitemap is not valid XML, declares a DOCTYPE or entities, or its root is not `urlset` or `sitemapindex`. | No. | Check the sitemap URL. Rastro never expands entities. |
+| `sitemap_too_large` | The sitemap lists more than 50,000 URLs, or its gzip inflates past the byte cap. | No. | Use a smaller child sitemap as the source. |
+| `sitemap_empty` | The sitemap lists no URLs. | No. | Check the sitemap URL or the site. |
+| `sitemap_nested_index` | A child of a sitemap index is itself an index; only one level is followed. | Partial. | Use the inner sitemap as the source. |
+| `sitemap_unsupported` | The sitemap seed needs plain HTTP acquisition. | No. | Use `render = "http"` for a sitemap job. |
 | `spider_links_failed` | Links could not be read from a page. | Partial. | Check the link selector. |
 | `spider_needs_recipe` | A spider needs a saved recipe. | No. | Create a recipe first. |
 
