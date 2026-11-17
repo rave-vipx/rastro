@@ -15,6 +15,7 @@ from urllib.parse import urlsplit
 from uuid import uuid4
 
 from pydantic import BaseModel, ValidationError
+from pydantic_core import PydanticSerializationError
 
 from rastro.application.dataset_load import load_stream
 from rastro.application.job_dataset import dataset_location, open_dataset
@@ -87,7 +88,15 @@ def load_records(
         dataset_lock(raw_path),
         open_dataset(parsed, raw_path, allow_remote=allow_remote, allow_env=allow_env) as store,
     ):
-        return load_stream(spec, names, [result], store, summary=lambda: summary, required=required)
+        return load_stream(
+            spec,
+            names,
+            [result],
+            store,
+            summary=lambda: summary,
+            rules=parsed.consistency,
+            required=required,
+        )
 
 
 def _source_url(value: str) -> str:
@@ -134,6 +143,10 @@ def _result(
     for index, item in enumerate(records):
         data = _validated(schema, item, index, identity)
         values = data.model_dump(mode="json")
+        try:
+            data.model_dump_json()  # e.g. a lone surrogate cannot be stored as UTF-8
+        except PydanticSerializationError:
+            raise ConfigurationError(f"Record {index} has a value that is not valid text") from None
         try:
             key = DatasetRecordKey.from_fields(job.dataset.name, values, identity)
         except DatasetStorageError:

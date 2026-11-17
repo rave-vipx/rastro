@@ -159,3 +159,25 @@ def test_a_job_without_a_dataset_is_rejected(tmp_path):
     path.write_text(JOB.split("[dataset]")[0], encoding="utf-8")
     with pytest.raises(ConfigurationError, match=r"\[dataset\]"):
         rastro.load_records(path, [party("a")], source_url=SOURCE)
+
+
+def test_a_declared_consistency_gate_keeps_the_last_valid_snapshot(job):
+    """N15, QUAL-005, SYNC-008: the job's [[consistency]] rules apply as in ``rastro job load``."""
+    rule = '\n[[consistency]]\nkind = "distinct_ratio"\nfield = "title"\nmin_ratio = 1.0\n'
+    job.write_text(JOB + rule + "min_records = 2\n", encoding="utf-8")
+    first = rastro.load_records(job, [party("a", "One"), party("b", "Two")], source_url=SOURCE)
+    assert first.status == "success"
+    repeated = [party("a", "Repeated"), party("b", "Repeated")]
+    result = rastro.load_records(job, repeated, source_url=SOURCE)
+    assert result.status != "success"
+    assert {r["title"] for r in stored(job).values()} == {"One", "Two"}
+
+
+@pytest.mark.parametrize("record", [party("\ud800"), party("a", title="\ud800")])
+def test_an_unencodable_value_is_a_safe_configuration_error(job, record):
+    """N15, SEC-005: a lone surrogate fails typed, is not echoed, and writes nothing."""
+    with pytest.raises(ConfigurationError, match="not valid text") as error:
+        rastro.load_records(job, [record], source_url=SOURCE)
+    assert "\ud800" not in str(error.value)
+    assert "ud800" not in str(error.value)
+    assert not (job.parent / "parties.sqlite").exists()
