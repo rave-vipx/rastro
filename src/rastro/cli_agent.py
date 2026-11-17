@@ -2,9 +2,10 @@
 AGENT-001, SEC-008). `init` writes only inside ``--path``, never follows symlinks and replaces
 files atomically; failures are ``ConfigurationError`` (JSON on stderr, exit 2).
 
-On POSIX every step is anchored to directory descriptors opened with ``O_NOFOLLOW``, so a
-directory swapped for a symlink mid-run cannot redirect the write. Where ``dir_fd`` is
-unsupported (Windows) the path checks remain but that race guard does not apply."""
+Every step is anchored to directory descriptors opened with ``O_NOFOLLOW``, so a directory
+swapped for a symlink mid-run cannot redirect the write. Where ``dir_fd`` is unsupported
+(Windows) ``init`` fails closed and points to ``rastro capabilities --output markdown``, which
+prints the same content to stdout."""
 
 from __future__ import annotations
 
@@ -65,31 +66,30 @@ def init_project(root: Path, agent: str, fmt: str) -> dict[str, str]:
     """Write the agent block or skill under ``root``; report the file and what changed."""
     if root.is_symlink() or not root.is_dir():
         raise ConfigurationError("--path must be an existing directory, not a symbolic link")
+    if not _ANCHORED:  # no race-free directory-relative writes on this platform (SEC-008)
+        raise ConfigurationError(
+            "rastro init needs directory-relative file operations, unavailable on this "
+            "platform; run `rastro capabilities --output markdown` and paste it instead"
+        )
     relative = _SKILL if fmt == "skill" else Path(_BLOCK_FILES[agent])
     snippet = render_snippet(__version__)
-    dir_fd, parent = _open_parent(root, relative)
+    dir_fd = _open_parent(root, relative)
     try:
-        old = _read(dir_fd, parent / relative.name)
+        old = _read(dir_fd, Path(relative.name))
         if fmt == "skill":
             new = _SKILL_HEAD + snippet.rstrip("\n") + "\n"
         else:
             new = _with_block(old or "", f"{BEGIN}\n## Rastro\n\n{snippet.rstrip()}\n{END}")
         action = "created" if old is None else "unchanged" if old == new else "updated"
         if action != "unchanged":
-            _write_atomic(dir_fd, parent / relative.name, new.encode("utf-8"))
+            _write_atomic(dir_fd, Path(relative.name), new.encode("utf-8"))
     finally:
-        if dir_fd is not None:
-            os.close(dir_fd)
+        os.close(dir_fd)
     return {"agent": agent, "format": fmt, "path": relative.as_posix(), "action": action}
 
 
-def _open_parent(root: Path, relative: Path) -> tuple[int | None, Path]:
-    """Return the target's parent as ``(dir_fd, Path())`` or, without dir_fd, ``(None, path)``."""
-    if not _ANCHORED:
-        _refuse_links(root, relative)
-        (root / relative).parent.mkdir(parents=True, exist_ok=True)
-        _refuse_links(root, relative)
-        return None, (root / relative).parent
+def _open_parent(root: Path, relative: Path) -> int:
+    """Open the target's parent directory, creating it, anchored at ``root``."""
     fd = _open_dir(root, None)
     try:
         for name in relative.parent.parts:
@@ -104,7 +104,7 @@ def _open_parent(root: Path, relative: Path) -> tuple[int | None, Path]:
     except BaseException:
         os.close(fd)
         raise
-    return fd, Path()
+    return fd
 
 
 def _open_dir(name: str | Path, dir_fd: int | None) -> int:
@@ -129,18 +129,8 @@ def _with_block(text: str, block: str) -> str:
     return text[:start] + block + text[stop + len(END) :]
 
 
-def _refuse_links(root: Path, relative: Path) -> None:
-    current = root
-    for part in relative.parts:
-        current = current / part
-        if current.is_symlink():
-            raise ConfigurationError("Symbolic links are not followed")
-        if current != root / relative and current.exists() and not current.is_dir():
-            raise ConfigurationError("A path component is not a directory")
-
-
-def _read(dir_fd: int | None, path: Path) -> str | None:
-    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+def _read(dir_fd: int, path: Path) -> str | None:
+    flags = os.O_RDONLY | os.O_NOFOLLOW
     try:
         with os.fdopen(os.open(path, flags, dir_fd=dir_fd), "rb") as handle:
             data = handle.read(MAX_FILE_BYTES + 1)
@@ -156,9 +146,9 @@ def _read(dir_fd: int | None, path: Path) -> str | None:
         raise ConfigurationError(f"{path.name} is not UTF-8") from None
 
 
-def _write_atomic(dir_fd: int | None, path: Path, data: bytes) -> None:
+def _write_atomic(dir_fd: int, path: Path, data: bytes) -> None:
     temp = path.with_name(f".{path.name}.{secrets.token_hex(6)}.tmp")
-    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW
     try:
         with os.fdopen(os.open(temp, flags, 0o644, dir_fd=dir_fd), "wb") as handle:
             handle.write(data)

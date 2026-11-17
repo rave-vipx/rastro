@@ -2,7 +2,6 @@
 
 import contextlib
 import json
-import os
 from pathlib import Path
 
 import pytest
@@ -10,8 +9,11 @@ import pytest
 from rastro.capabilities import GAP_REPORT_TEMPLATE, PUBLIC_IMPORT_RULE, UNTRUSTED_DATA_RULE
 from rastro.capabilities_render import render_snippet
 from rastro.cli import main
-from rastro.cli_agent import init_project
+from rastro.cli_agent import _ANCHORED, init_project
 from rastro.domain.models import ConfigurationError
+
+# init writes only where directory-relative operations exist (POSIX); elsewhere it fails closed.
+needs_dir_fd = pytest.mark.skipif(not _ANCHORED, reason="init needs dir_fd (POSIX only)")
 
 BEGIN, END = "<!-- rastro:begin -->", "<!-- rastro:end -->"
 
@@ -34,6 +36,7 @@ def test_snippet_carries_the_rules() -> None:
 
 
 @pytest.mark.parametrize(("agent", "name"), [("claude", "CLAUDE.md"), ("codex", "AGENTS.md")])
+@needs_dir_fd
 def test_block_is_idempotent_and_keeps_other_text(
     tmp_path: Path, capsys: pytest.CaptureFixture[str], agent: str, name: str
 ) -> None:
@@ -58,6 +61,7 @@ def test_block_is_idempotent_and_keeps_other_text(
     assert list(tmp_path.iterdir()) == [target]  # no temporary files left
 
 
+@needs_dir_fd
 def test_block_creates_a_missing_file(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """N18: generic agents get AGENTS.md, created when missing."""
     code, result = _init(capsys, "--agent", "generic", "--path", str(tmp_path))
@@ -65,6 +69,7 @@ def test_block_creates_a_missing_file(tmp_path: Path, capsys: pytest.CaptureFixt
     assert (tmp_path / "AGENTS.md").read_text(encoding="utf-8").startswith(BEGIN)
 
 
+@needs_dir_fd
 def test_skill_has_frontmatter(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """N18: --format skill writes .agents/skills/rastro/SKILL.md with name and description."""
     code, result = _init(capsys, "--agent", "codex", "--path", str(tmp_path), "--format", "skill")
@@ -74,6 +79,7 @@ def test_skill_has_frontmatter(tmp_path: Path, capsys: pytest.CaptureFixture[str
     assert PUBLIC_IMPORT_RULE in text
 
 
+@needs_dir_fd
 def test_refuses_symlink_targets(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """SEC-008: a symlinked file or directory is never followed; the outside file is unchanged."""
     outside = tmp_path / "outside.md"
@@ -93,6 +99,7 @@ def test_refuses_symlink_targets(tmp_path: Path, capsys: pytest.CaptureFixture[s
     "text",
     [BEGIN + "\nno end\n", END + "\n" + BEGIN + "\n", BEGIN + END + BEGIN + END, "x\0\xff"],
 )
+@needs_dir_fd
 def test_refuses_unbalanced_markers_and_bad_files(
     tmp_path: Path, capsys: pytest.CaptureFixture[str], text: str
 ) -> None:
@@ -120,11 +127,6 @@ def _swap_for_link(monkeypatch: pytest.MonkeyPatch, directory: Path, outside: Pa
         return "race"
 
     monkeypatch.setattr("rastro.cli_agent.secrets.token_hex", swap)
-
-
-needs_dir_fd = pytest.mark.skipif(
-    os.open not in os.supports_dir_fd, reason="the race guard needs dir_fd (POSIX only)"
-)
 
 
 @needs_dir_fd
@@ -160,14 +162,12 @@ def test_block_root_swap_cannot_write_outside(
     assert sorted(p.name for p in outside.iterdir()) == ["AGENTS.md"]
 
 
-def test_path_fallback_without_dir_fd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """SEC-008: without dir_fd (Windows) the path checks still write inside and refuse links."""
+def test_without_dir_fd_init_fails_closed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """PR #145 re-check, SEC-008: without dir_fd (Windows) init writes nothing and says why."""
     monkeypatch.setattr("rastro.cli_agent._ANCHORED", False)
     project = tmp_path / "project"
     project.mkdir()
-    assert init_project(project, "codex", "skill")["action"] == "created"
-    assert (project / ".agents/skills/rastro/SKILL.md").is_file()
-    (project / "CLAUDE.md").symlink_to(tmp_path / "outside.md")
-    with pytest.raises(ConfigurationError):
-        init_project(project, "claude", "block")
-    assert not (tmp_path / "outside.md").exists()
+    for agent, fmt in (("codex", "skill"), ("claude", "block")):
+        with pytest.raises(ConfigurationError, match="rastro capabilities --output markdown"):
+            init_project(project, agent, fmt)
+    assert list(project.iterdir()) == []

@@ -23,7 +23,10 @@ rastro init --agent codex --format skill   # .agents/skills/rastro/SKILL.md
 `--path DIR` picks the project directory (default: the current one). The block sits between
 `<!-- rastro:begin -->` and `<!-- rastro:end -->`; running the command again replaces only
 that block and keeps the rest of the file. The skill file is Rastro's own and is rewritten.
-The command refuses symbolic links and unbalanced markers (exit `2`) and prints
+The command refuses symbolic links and unbalanced markers (exit `2`). It needs
+directory-relative file operations so a directory swapped for a link mid-run cannot redirect
+the write; where they are missing (Windows) it writes nothing and exits `2`: paste the output
+of `rastro capabilities --output markdown` instead. On success it prints
 `{"agent", "format", "path", "action"}` with `action` set to `created`, `updated` or
 `unchanged`. The text tells the agent which task maps to which public name, command or tool;
 to import only names in `rastro.__all__`; to stop and write a gap report instead of importing

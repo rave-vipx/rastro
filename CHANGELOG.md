@@ -30,6 +30,7 @@ Driven by the first real adoption report (Rave App). See `docs/action-plan-adopt
 - Browser-rendered jobs report `sitemap_unsupported`; the sitemap URL is named as the source, not read from robots.txt.
 - `fetch` supports plain HTTP only; provenance uses `locator = "adapter"` rather than a new `Evidence.method` (persisted-format change deferred).
 - Injection detection is a pattern list; `job_extract` MCP payloads carry no flags yet.
+- `rastro init --agent` is POSIX-only: on Windows it fails closed (no race-free directory-relative writes); use `rastro capabilities --output markdown`.
 
 ## Unreleased — N1–N12 product cut
 
