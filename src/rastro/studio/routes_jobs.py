@@ -39,6 +39,8 @@ ASSETS = frozenset(
         "provenance.js",
         "sources.js",
         "alerts.js",
+        "fix.js",
+        "correct.js",
     }
 )
 

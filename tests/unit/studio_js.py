@@ -39,6 +39,9 @@ class Node {
 const byId = {};
 const events = [];
 globalThis.Node = Node;
+globalThis.Option = class extends Node {
+  constructor(text, value) { super("option"); this.textContent = text; this.value = value; }
+};
 globalThis.CustomEvent = class {
   constructor(type, init) { this.type = type; this.detail = init?.detail; }
 };
@@ -59,8 +62,10 @@ const tags = (n) => walk(n).map((x) => x.tagName).filter(Boolean);
 const classes = (n) => walk(n).map((x) => x.className || "").join(" ");
 const buttons = (n) => walk(n).filter((x) => x.tagName === "BUTTON");
 // fetch answers from a {path: [status, body-or-null]} table; null body = not JSON.
+const calls = [];
 const reply = (table) => {
-  globalThis.fetch = async (path) => {
+  globalThis.fetch = async (path, options) => {
+    calls.push({ path, body: options?.body ? JSON.parse(options.body) : undefined });
     const [status, body] = table[path.split("?")[0]] ?? [404, null];
     return { ok: status < 400, status,
       json: async () => { if (body === null) throw new SyntaxError("not json"); return body; } };

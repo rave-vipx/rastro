@@ -194,6 +194,14 @@ table.results tbody tr:hover, table.results tbody tr.selected { background: var(
 details.fold > summary { cursor: pointer; font-weight: 600; min-height: 36px; display: flex; align-items: center; }
 details.fold[open] > summary { margin-bottom: var(--s-2); }
 
+/* Fix a site: checks row, before/after table, decision. */
+.checks { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-3); margin: var(--s-2) 0; color: var(--text-2); }
+table.before-after tr.changed td { background: var(--warn-soft); }
+table.before-after tr.changed td, table.before-after tr.changed code { color: var(--text); }
+table.before-after tr.changed .chip-warn { background: var(--surface); }
+.decision { border-top: 1px solid var(--border); margin-top: var(--s-3); padding-top: var(--s-3); display: grid; gap: var(--s-2); }
+.decision input { width: 100%; }
+
 .skip, .sr { position: absolute; left: -9999px; }
 .skip:focus { left: var(--s-4); top: var(--s-2); z-index: 20; background: var(--surface); padding: var(--s-2) var(--s-3); }
 

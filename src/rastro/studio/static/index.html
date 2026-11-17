@@ -142,10 +142,29 @@
   </div>
 
   <div id="view-repair" hidden>
-    <section class="card">
-      <h2 data-i18n="fix.title">Preview and correct</h2>
+    <section class="card" aria-labelledby="fix-heading">
+      <h2 id="fix-heading" data-i18n="fix.heading">Fix a site</h2>
+      <p class="muted" data-i18n="fix.lead">When a site changes, Rastro proposes a new way to read it and checks it. Compare the fields, then apply it with a reason or discard it.</p>
+      <p id="fix-memory-note" class="note" hidden data-i18n="fix.needsMemory">Fixes need a recipe memory file in the job.</p>
+      <div class="row">
+        <label for="fix-source" data-i18n="fix.source">Site</label>
+        <select id="fix-source"></select>
+        <button type="button" id="fix-find" class="primary" data-i18n="fix.find">Find a fix</button>
+      </div>
+      <p id="fix-status" role="status" aria-live="polite"></p>
+      <div id="fix-alerts" role="alert"></div>
+      <div id="fix-result"></div>
+    </section>
+    <section class="card" aria-labelledby="auto-heading">
+      <h2 id="auto-heading" data-i18n="fix.autoTitle">Apply fixes automatically</h2>
+      <label class="check"><input type="checkbox" id="auto-promote"> <span data-i18n="switch.autoPromote">Apply fixes automatically for this job</span></label>
+      <p class="muted" data-i18n="switch.autoPromoteHelp">Off by default.</p>
+      <p id="auto-promote-status" role="status" aria-live="polite"></p>
+    </section>
+    <details class="card fold">
+      <summary data-i18n="fix.title">Correct a field by hand</summary>
       <p class="muted" data-i18n="fix.intro">Sample records with how each field was found. Nothing is written.</p>
-      <button type="button" id="preview" class="primary" data-i18n="fix.preview">Preview sample records</button>
+      <button type="button" id="preview" data-i18n="fix.preview">Preview sample records</button>
       <div class="row">
         <label for="selector-pick" data-i18n="fix.field">Field</label>
         <select id="selector-pick"></select>
@@ -156,7 +175,7 @@
       </div>
       <p id="accepted" role="status" aria-live="polite"></p>
       <div id="records"></div>
-    </section>
+    </details>
   </div>
 
   <div id="view-settings" hidden>
@@ -194,8 +213,6 @@
         <label><span data-i18n="scroll.settle">Wait after each step (ms)</span> <span id="scroll-settle-range"></span> <input id="scroll-settle" type="number"></label>
         <button type="button" id="save-scroll" data-i18n="scroll.save">Save scroll</button>
       </fieldset>
-      <label class="check"><input type="checkbox" id="auto-promote"> <span data-i18n="switch.autoPromote">Apply fixes automatically for this job</span></label>
-      <p class="muted" data-i18n="switch.autoPromoteHelp">Off by default.</p>
       <label class="check"><input type="checkbox" id="allow-stealth"> <span data-i18n="switch.stealth">Allow stealth for this Studio session</span></label>
       <p class="muted" data-i18n="switch.stealthHelp">Off by default.</p>
       <p id="controls-status" role="status" aria-live="polite"></p>

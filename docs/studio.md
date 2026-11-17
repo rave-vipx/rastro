@@ -184,6 +184,25 @@ its kind and issue code in the chosen language, and one action. Both views read 
 endpoints (`/api/sources`, `/api/alerts`); when the endpoint is missing or fails, the view says so
 instead of showing an empty list.
 
+### Fix a site (N7, N12)
+
+Pick a site and press **Find a fix** (this runs `rastro recipe repair` for that source; the job needs
+`recipe_memory`). Each proposal shows its checks in one row (the decision in words, records read
+now, past samples that pass, each gate with pass or fail) and a before/after table: for every field,
+how it is read now, how the proposal reads it, and whether that changed. Then decide:
+
+- **Apply fix** needs a reason (1 to 500 characters, kept in the recipe history) and calls
+  `/api/promote`, which re-runs every check. A failed check is reported as not applied and the
+  current recipe keeps serving; Studio cannot override it. After applying, **Also write it to the
+  job file** copies the serving recipe into the job file (`/api/apply`, digest-checked).
+- **Discard** writes nothing: the current recipe keeps serving and the proposal stays stored, unused.
+- A rejected proposal cannot be applied. With a configured model and no usable proposal, **Ask AI for
+  a fix** runs repair with the model, under the same checks.
+
+**Apply fixes automatically** is a separate switch in the same view, off by default; it writes only
+`[repair] auto_promote` for this job. **Correct a field by hand** (folded below) keeps the
+preview-and-save-a-selector flow.
+
 ### Design adaptations
 
 The redesign follows `docs/design/studio-redesign/IMPLEMENTATION.md`. Where the design and the
@@ -195,6 +214,8 @@ product differ, the interface adapts:
 | "Avisarme por notificación del sistema" in Alerts | Not offered; the Technical detail keeps the `--on-failure` command for the README hook | Studio has no notification permission and adds no background process |
 | "Agregar sitio" / "Quitar del proyecto" in Sources | Not offered | Sources are job data; Studio edits only bounded settings of a job |
 | "Ver apartados" for quarantined records | **See details** opens Sources | Records are rejected, not stored apart; quarantine applies to fixes |
+| Before/after of field *values* in Fix | Before/after of how each field is *read* (locator), with Changed/Same and the checks row | The repair report carries selectors and check results, not sample values; the checks (records read, past samples, gates) say whether values still validate |
+| "Ayer se rechazó otra propuesta" note | Not shown | The repair report has no history of earlier refusals; Alerts lists refused fixes |
 | Image placeholder with **Load** | **Open image** opens the address in a new tab, without a referrer | Studio's Content-Security-Policy blocks every third-party image inside the page; it stays that way |
 | Search and filters over the whole dataset | Over the first 2,000 records, with a note when a dataset is larger | `/api/records` is paged; export covers everything |
 
