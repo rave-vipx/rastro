@@ -18,14 +18,15 @@ from starlette.routing import Route
 from rastro.application.job_loader import load_job, resolve_job_path
 from rastro.studio import files
 from rastro.studio.overview_alerts import alerts
-from rastro.studio.overview_data import job_state, project, sources
+from rastro.studio.overview_data import display_name, job_state, project, sources
 from rastro.studio.web import HANDLED, Studio, body, reply, text
 
 
 def _unknown(rel: str) -> dict[str, Any]:
     return {
         "file": rel,
-        "name": Path(rel).stem,
+        "name": display_name(Path(rel).stem),
+        "dataset": None,
         "health": "unknown",
         "last_run": None,
         "records": 0,

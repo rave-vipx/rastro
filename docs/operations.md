@@ -168,13 +168,19 @@ repair, so keep them private. On Windows the folder's access rules apply.
 ## Metrics and cost
 
 Every `rastro job load` with a SQLite `[dataset]` appends one row per source to the dataset
-file's `run_metrics` table (schema 3; a schema 1 or 2 file migrates forward on its first
+file's `run_metrics` table (schema 4; a schema 1, 2 or 3 file migrates forward on its first
 write, and a newer file is refused). A row holds counts and timings only: the source URL
 without query, fragment or credentials, host, strategy (which recipe source produced the
 result), start and finish, outcome, HTTP status, requests, retries, bytes, remote latency
 (`network_seconds`), local work (`processing_seconds`: total minus network minus model
 time), `render_seconds` (0 without a browser), model calls, records, records that have every
-required field, and fields validated. Rastro keeps the newest 10,000 rows per dataset.
+required field, fields validated, `rejected` (records that failed validation or lacked a
+required field, plus every record of a source a consistency rule refused), and `cap` and
+`cap_value` when collection stopped at a cap: `pagination_max_pages`, `pagination_budget`,
+`pagination_record_limit`, `spider_page_limit`, `spider_depth_limit`, `spider_budget`,
+`scroll_max_steps`, `scroll_budget` or `scroll_record_limit`, with the job's configured limit
+(`null` when it is not known, for example a remembered recipe's page cap). Rows written before
+schema 4 read `rejected` and `cap` as `null` (not recorded), never 0. Rastro keeps the newest 10,000 rows per dataset.
 `model_tokens` is stored but stays 0: model adapters do not report tokens yet. PostgreSQL
 datasets record no metrics.
 
@@ -185,7 +191,8 @@ $ rastro job stats job.toml --since 7d --by host
 The JSON report (`schema_version` 1) has one group per source (default), `host`, `strategy`
 or `day`: `runs`, `pages` (requests), `records`, `success_rate`, `error_rate`, `retry_rate`,
 p50/p95 of `total_seconds`, `network_seconds` and `processing_seconds`, `records_per_minute`,
-`model_calls`, `freshness_seconds` (now minus the last success, `null` if never),
+`model_calls`, `rejected` (`null` when no row recorded it), `capped_runs` (runs that stopped at
+a cap), `freshness_seconds` (now minus the last success, `null` if never),
 `coverage` (records with every required field over records, `null` without records), a
 daily `trend` and `observed_interval_seconds` (median gap between successful runs, the
 input for adaptive schedules; Rastro reports it and does not change your schedule). Success

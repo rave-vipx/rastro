@@ -99,6 +99,7 @@ def run_checkpointed_load(
         snapshots=snapshots,
         drift_state=drift_state,
         on_source=checkpoint,
+        job=job,
     )
     if loaded.status != "storage_error" and not stopped_early:
         clear_checkpoint(raw_path)

@@ -1,8 +1,9 @@
 """The Alerts view (N5): dated, content-free alerts for one job, newest first.
 
 Failures come from run metrics and the dataset's source status (CLI runs included); open
-drift from the dataset; waiting candidates from recipe memory; warnings, caps and refused
-promotions from Studio's run log. Each alert is a kind and a Rastro code; the page writes
+caps from run metrics too; drift from the dataset; waiting candidates from recipe memory;
+warnings and refused promotions from Studio's run log (caps only for sources the engine has
+no metrics for). Each alert is a kind and a Rastro code; the page writes
 the sentence. A field name is shown only when the job declares it.
 """
 
@@ -51,8 +52,17 @@ def _failures(state: JobState) -> list[dict[str, Any]]:
     return found
 
 
+def _caps(state: JobState) -> list[dict[str, Any]]:
+    return [
+        _alert(m.finished_at, "cap", m.source_url, code(m.cap), "raise_cap")
+        for m in state.metrics
+        if m.cap is not None
+    ]
+
+
 def _logged(state: JobState) -> list[dict[str, Any]]:
     declared = {f.name for f in state.job.fields}
+    measured = {m.source_url for m in state.metrics}
     found = []
     for run in state.runs:
         for item in run.sources:
@@ -61,7 +71,7 @@ def _logged(state: JobState) -> list[dict[str, Any]]:
                     _alert(run.at, "promote_refused", item.url, "promotion_refused", "details")
                 )
                 continue
-            if capped(item):
+            if capped(item) and item.url not in measured:
                 found.append(_alert(run.at, "cap", item.url, "cap_reached", "raise_cap"))
             for issue in item.issues:
                 if issue.code.endswith(CAP_ENDINGS):
@@ -72,7 +82,7 @@ def _logged(state: JobState) -> list[dict[str, Any]]:
 
 
 def alerts(state: JobState) -> list[dict[str, Any]]:
-    items = _failures(state) + _logged(state)
+    items = _failures(state) + _caps(state) + _logged(state)
     items += [
         _alert(d.observed_at, "drift", url, code(d.verdict), "fix")
         for url, d in state.drift.items()

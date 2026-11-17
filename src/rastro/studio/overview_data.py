@@ -120,12 +120,19 @@ def capped(item: LoggedSource) -> bool:
 
 
 def _kind(
-    status: SourceStatus | None, item: LoggedSource | None, warnings: list[str]
+    status: SourceStatus | None,
+    metric: RunMetric | None,
+    item: LoggedSource | None,
+    warnings: list[str],
 ) -> tuple[str, str | None]:
-    if status is not None and status.stale:
+    # A reached cap leaves a partial snapshot, which the dataset marks stale: say "capped".
+    cap = metric.cap if metric is not None else None
+    if status is not None and status.stale and not (cap and status.reason == "partial_snapshot"):
         kind = "failed" if status.reason in FAILED else "stale"
         return kind, code(status.detail or status.reason) or "unknown"
-    if item is not None and capped(item):
+    if cap is not None:  # the engine records caps for every load, CLI runs included
+        return "capped", code(cap)
+    if metric is None and item is not None and capped(item):  # no metrics: PostgreSQL
         cap_codes = [i.code for i in item.issues if i.code.endswith(CAP_ENDINGS)]
         return "capped", (cap_codes or ["cap_reached"])[0]
     if warnings:
@@ -138,14 +145,14 @@ def source_row(state: JobState, url: str) -> dict[str, Any]:
     logged = _logged(state, url)
     item = logged[0] if logged else None
     metric = _latest_metric(state, url)
-    warnings = [i.code for i in item.issues] if item else []
+    warnings = [i.code for i in item.issues if not i.code.endswith(CAP_ENDINGS)] if item else []
     warnings += ["open_drift"] if url in state.drift else []
     warnings += ["quarantined_candidate"] if any(c.url == url for c in state.candidates) else []
     warnings = list(dict.fromkeys(warnings))[:MAX_WARNINGS]
     if status is None and item is None and metric is None:
         kind, issue = "never", None
     else:
-        kind, issue = _kind(status, item, warnings)
+        kind, issue = _kind(status, metric, item, warnings)
     moments = [
         status.last_attempt if status else None,
         logged[1] if logged else None,
@@ -157,11 +164,27 @@ def source_row(state: JobState, url: str) -> dict[str, Any]:
         "status": kind,
         "issue_code": issue,
         "last_fetch": last.isoformat() if last else None,
-        "read": item.read if item else (metric.records if metric else 0),
-        "rejected": item.rejected if item else 0,
-        "cap": item.cap if item else None,
+        **_counts(metric, item),
         "warnings": warnings,
     }
+
+
+def _counts(metric: RunMetric | None, item: LoggedSource | None) -> dict[str, int | None]:
+    """Engine counts first; ``None`` when nothing recorded them (never a made-up 0)."""
+    if metric is not None:
+        cap = metric.cap_value if metric.cap else None
+        return {"read": metric.records, "rejected": metric.rejected, "cap": cap}
+    return {
+        "read": item.read if item else None,
+        "rejected": None,  # Studio's run log never knew rejections
+        "cap": item.cap if item and capped(item) else None,
+    }
+
+
+def display_name(raw: str) -> str:
+    """``agenda_fiestas`` reads as ``Agenda fiestas``: a job has no display name of its own."""
+    text = " ".join(raw.replace("_", " ").replace("-", " ").split())
+    return text[:1].upper() + text[1:] if text else raw
 
 
 def sources(state: JobState) -> list[dict[str, Any]]:
@@ -184,7 +207,8 @@ def project(rel: str, state: JobState) -> dict[str, Any]:
     spec = state.job.dataset
     return {
         "file": rel,
-        "name": spec.name if spec else Path(rel).stem,
+        "name": display_name(spec.name if spec else Path(rel).stem),
+        "dataset": spec.name if spec else None,
         "health": health,
         "last_run": last,
         "records": state.records,

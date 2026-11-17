@@ -1,8 +1,9 @@
 """Build the synthetic Studio demo folder from docs/design/studio-sample-data.json.
 
 Three jobs with real SQLite datasets written through ``rastro.load_records``, plus source
-failures, run metrics and Studio run-log entries, so ``/api/projects``, ``/api/sources``,
-``/api/alerts`` and ``/api/records`` show the sample's states (ok, warning, capped, failed).
+failures, run metrics (one with a reached pagination cap) and Studio run-log entries, so
+``/api/projects``, ``/api/sources``, ``/api/alerts`` and ``/api/records`` show the
+sample's states (ok, warning, capped, failed).
 Every name and domain is invented. Sample times are shifted so the sample's ``now`` is the
 build time (``load_records`` refuses future observations).
 
@@ -51,7 +52,9 @@ class _Clock:
         return datetime.fromisoformat(value) + self.delta
 
 
-def _metric(url: str, at: datetime, outcome: str, records: int) -> RunMetric:
+def _metric(
+    url: str, at: datetime, outcome: str, records: int, cap: int | None = None
+) -> RunMetric:
     host = url.split("/")[2]
     return RunMetric(
         run_id="demo",
@@ -62,6 +65,9 @@ def _metric(url: str, at: datetime, outcome: str, records: int) -> RunMetric:
         finished_at=at,
         outcome=outcome,
         records=records,
+        rejected=0,
+        cap="pagination_max_pages" if cap else None,
+        cap_value=cap,
     )
 
 
@@ -111,15 +117,13 @@ def _agenda(root: Path, sample: dict[str, Any], at: _Clock) -> None:
             reason = source.get("issue_code")
             store.record_source_failure("agenda_fiestas", url, fetched, "permanent_failure", reason)
         outcome = "permanent_failure" if failed else "success"
-        metrics.append(_metric(url, fetched, outcome, source["read"]))
+        metrics.append(_metric(url, fetched, outcome, source["read"], source.get("cap")))
         issues = (
             (LoggedIssue(code="evidence_retention_failed", field="descripcion"),)
             if source["status"] == "warning"
             else ()
         )
-        logged.append(
-            LoggedSource(url=url, read=source["read"], cap=source.get("cap"), issues=issues)
-        )
+        logged.append(LoggedSource(url=url, read=source["read"], issues=issues))
     store.record_run_metrics("agenda_fiestas", metrics)
     last = max(at(s["last_fetch"]) for s in sources)
     append_run(root, job, LoggedRun(at=last, sources=tuple(logged)))

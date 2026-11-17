@@ -19,6 +19,20 @@ from rastro.domain.results import ExtractionResult, Outcome
 from rastro.domain.sources import Contract
 
 RETENTION_ROWS = 10_000
+# The issue codes of a reached collection cap: pagination, spider and scroll (N5, SYNC-002).
+CAP_CODES = frozenset(
+    {
+        "pagination_max_pages",
+        "pagination_budget",
+        "pagination_record_limit",
+        "spider_page_limit",
+        "spider_depth_limit",
+        "spider_budget",
+        "scroll_max_steps",
+        "scroll_budget",
+        "scroll_record_limit",
+    }
+)
 SUCCESS = frozenset({Outcome.SUCCESS.value, Outcome.UNCHANGED.value})
 type Grouping = Literal["source", "host", "strategy", "day"]
 
@@ -45,6 +59,17 @@ class RunMetric(Contract):
     records: int = Field(default=0, ge=0)
     required_fields_ok: int = Field(default=0, ge=0)
     fields_validated: int = Field(default=0, ge=0)
+    # None means not recorded (rows written before schema 4), never "none rejected".
+    rejected: int | None = Field(default=None, ge=0)
+    cap: str | None = Field(default=None, max_length=64)
+    cap_value: int | None = Field(default=None, ge=1)
+
+    @field_validator("cap")
+    @classmethod
+    def _known_cap(cls, value: str | None) -> str | None:
+        if value is not None and value not in CAP_CODES:
+            raise ValueError("unknown cap code")
+        return value
 
     @field_validator("source_url")
     @classmethod
@@ -59,12 +84,32 @@ class RunMetric(Contract):
         return max(0.0, (self.finished_at - self.started_at).total_seconds())
 
 
+def reached_cap(result: ExtractionResult[Any]) -> str | None:
+    """The cap that ended collection: the run's own stop first, then a page's scroll cap."""
+    stop = result.pagination_stop
+    if stop is not None:
+        code = stop if stop.startswith("spider_") else f"pagination_{stop}"
+        if code in CAP_CODES:
+            return code
+    return next((i.code for i in result.issues if i.code in CAP_CODES), None)
+
+
 def metric_from_result(
-    run_id: str, result: ExtractionResult[Any], required: Sequence[str]
+    run_id: str,
+    result: ExtractionResult[Any],
+    required: Sequence[str],
+    *,
+    inconsistent: bool = False,
+    cap_value: int | None = None,
 ) -> RunMetric:
-    """The row for one source result; ``required`` names the job's required fields."""
+    """The row for one source result; ``required`` names the job's required fields.
+
+    ``rejected`` counts records that failed validation, plus every record of a source whose
+    batch a consistency rule refused (``inconsistent``): none of them reached the dataset.
+    """
     m = result.metrics
     attempts = result.recipe_attempts
+    cap = reached_cap(result)
     return RunMetric(
         run_id=run_id,
         source_url=result.source_url,
@@ -83,6 +128,9 @@ def metric_from_result(
         records=len(result.records),
         required_fields_ok=sum(all(n in r.evidence for n in required) for r in result.records),
         fields_validated=m.fields_validated,
+        rejected=m.rejected + (len(result.records) if inconsistent else 0),
+        cap=cap,
+        cap_value=cap_value if cap else None,
     )
 
 
@@ -124,6 +172,7 @@ def _group(key: str, rows: list[RunMetric], now: datetime) -> dict[str, Any]:
     ok = [r for r in rows if r.outcome in SUCCESS]
     errors = [r for r in rows if r.outcome not in SUCCESS and r.outcome != "partial_success"]
     wins = sorted(r.finished_at for r in ok)
+    rejected = [r.rejected for r in rows if r.rejected is not None]
     days: dict[str, list[RunMetric]] = defaultdict(list)
     for r in rows:
         days[_KEYS["day"](r)].append(r)
@@ -140,6 +189,9 @@ def _group(key: str, rows: list[RunMetric], now: datetime) -> dict[str, Any]:
         "processing_seconds": _spread([r.processing_seconds for r in rows]),
         "records_per_minute": records / (seconds / 60) if seconds else 0.0,
         "model_calls": sum(r.model_calls for r in rows),
+        # Rows written before schema 4 do not know their rejections: null when none do.
+        "rejected": sum(rejected) if rejected else None,
+        "capped_runs": sum(r.cap is not None for r in rows),
         "freshness_seconds": (now - wins[-1]).total_seconds() if wins else None,
         "coverage": sum(r.required_fields_ok for r in rows) / records if records else None,
         # SYNC-007, report only: how often successful runs actually happened.
