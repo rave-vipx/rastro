@@ -21,6 +21,7 @@ from typing import Annotated, Literal
 from pydantic import AwareDatetime, Field, ValidationError
 
 from rastro.application.atomic_files import fsync_directory
+from rastro.domain.issue_codes import KNOWN_CODES
 from rastro.domain.job_load import JobLoadResult
 from rastro.domain.models import ConfigurationError
 from rastro.domain.sources import Contract
@@ -80,7 +81,10 @@ def read_runs(root: Path, job: Path) -> tuple[LoggedRun, ...]:
 
 
 def append_run(root: Path, job: Path, run: LoggedRun) -> None:
-    """Add ``run`` and keep the newest ``MAX_RUNS``; written atomically, links refused."""
+    """Add ``run`` and keep the newest ``MAX_RUNS`` that fit in ``MAX_LOG_BYTES``.
+
+    Written atomically, links refused; a run too large on its own is not logged.
+    """
     path = _file(root, job)
     for directory in (path.parent.parent, path.parent):
         if directory.is_symlink():
@@ -88,6 +92,11 @@ def append_run(root: Path, job: Path, run: LoggedRun) -> None:
         directory.mkdir(mode=0o700, exist_ok=True)
     runs = (*read_runs(root, job), run)[-MAX_RUNS:]
     data = RunLog(runs=runs).model_dump_json().encode()
+    while len(data) > MAX_LOG_BYTES and len(runs) > 1:  # the reader drops a larger file
+        runs = runs[1:]
+        data = RunLog(runs=runs).model_dump_json().encode()
+    if len(data) > MAX_LOG_BYTES:
+        return  # this run alone is too large: keep the readable log as it was
     temp = path.with_name(f".{path.name}.{secrets.token_hex(6)}.tmp")
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
     try:
@@ -110,10 +119,12 @@ def remember(root: Path, job: Path, run: LoggedRun) -> None:
 def _issues(raw: object) -> tuple[LoggedIssue, ...]:
     found = []
     for item in raw if isinstance(raw, list) else ():
-        try:
-            found.append(LoggedIssue(code=item.get("code"), field=item.get("field")))
-        except (ValidationError, AttributeError):
+        if not isinstance(item, dict) or item.get("code") not in KNOWN_CODES:
             continue  # not a Rastro issue code: never logged
+        try:
+            found.append(LoggedIssue(code=str(item["code"]), field=item.get("field")))
+        except ValidationError:
+            continue
     return tuple(dict.fromkeys(found))[:MAX_ISSUES]
 
 

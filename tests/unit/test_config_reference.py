@@ -246,3 +246,18 @@ def test_unknown_key_hint_never_echoes_unsafe_names(
         assert error["hint"] == (
             "Unknown key in [acquisition]; `rastro config` lists every valid key"
         )
+
+
+def test_the_reference_does_not_depend_on_the_working_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Review of #147: the studio --root default once embedded the checkout path."""
+    reference.cache_clear()
+    here = render_markdown()
+    monkeypatch.chdir(tmp_path)
+    reference.cache_clear()
+    try:
+        assert render_markdown() == here
+        assert str(tmp_path) not in render_markdown()
+    finally:
+        reference.cache_clear()

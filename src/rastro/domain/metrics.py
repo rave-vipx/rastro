@@ -13,7 +13,7 @@ from itertools import pairwise
 from typing import Any, Literal
 from urllib.parse import urlsplit, urlunsplit
 
-from pydantic import Field, field_validator
+from pydantic import Field, ValidationInfo, field_validator
 
 from rastro.domain.results import ExtractionResult, Outcome
 from rastro.domain.sources import Contract
@@ -63,6 +63,8 @@ class RunMetric(Contract):
     rejected: int | None = Field(default=None, ge=0)
     cap: str | None = Field(default=None, max_length=64)
     cap_value: int | None = Field(default=None, ge=1)
+    # The configured URL when a redirect stored the source under another one (schema 4).
+    requested_url: str | None = Field(default=None, max_length=8192, exclude_if=lambda v: v is None)
 
     @field_validator("cap")
     @classmethod
@@ -74,14 +76,24 @@ class RunMetric(Contract):
     @field_validator("source_url")
     @classmethod
     def _strip_url(cls, value: str) -> str:
-        parts = urlsplit(value)
-        host = parts.hostname or ""
-        netloc = f"{host}:{parts.port}" if parts.port else host
-        return urlunsplit((parts.scheme, netloc, parts.path, "", ""))
+        return _stripped(value)
+
+    @field_validator("requested_url")
+    @classmethod
+    def _strip_requested(cls, value: str | None, info: ValidationInfo) -> str | None:
+        stripped = None if value is None else _stripped(value)
+        return None if stripped == info.data.get("source_url") else stripped
 
     @property
     def total_seconds(self) -> float:
         return max(0.0, (self.finished_at - self.started_at).total_seconds())
+
+
+def _stripped(url: str) -> str:
+    parts = urlsplit(url)
+    host = parts.hostname or ""
+    netloc = f"{host}:{parts.port}" if parts.port else host
+    return urlunsplit((parts.scheme, netloc, parts.path, "", ""))
 
 
 def reached_cap(result: ExtractionResult[Any]) -> str | None:
@@ -131,6 +143,7 @@ def metric_from_result(
         rejected=m.rejected + (len(result.records) if inconsistent else 0),
         cap=cap,
         cap_value=cap_value if cap else None,
+        requested_url=result.requested_url,
     )
 
 

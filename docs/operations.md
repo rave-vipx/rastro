@@ -179,7 +179,9 @@ required field, plus every record of a source a consistency rule refused), and `
 `cap_value` when collection stopped at a cap: `pagination_max_pages`, `pagination_budget`,
 `pagination_record_limit`, `spider_page_limit`, `spider_depth_limit`, `spider_budget`,
 `scroll_max_steps`, `scroll_budget` or `scroll_record_limit`, with the job's configured limit
-(`null` when it is not known, for example a remembered recipe's page cap). Rows written before
+(`null` when it is not known, for example a remembered recipe's page cap), and
+`requested_url`, the configured URL (without query) when a redirect stored the source under
+another URL, so Studio can show the redirected source as fetched. Rows written before
 schema 4 read `rejected` and `cap` as `null` (not recorded), never 0. Rastro keeps the newest 10,000 rows per dataset.
 `model_tokens` is stored but stays 0: model adapters do not report tokens yet. PostgreSQL
 datasets record no metrics.

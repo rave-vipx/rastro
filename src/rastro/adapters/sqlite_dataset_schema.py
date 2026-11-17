@@ -50,10 +50,16 @@ CREATE_TABLE = (
     "retries INTEGER NOT NULL, bytes INTEGER NOT NULL, network_seconds REAL NOT NULL, "
     "processing_seconds REAL NOT NULL, render_seconds REAL NOT NULL, model_calls INTEGER NOT NULL, "
     "model_tokens INTEGER NOT NULL, records INTEGER NOT NULL, required_fields_ok INTEGER NOT NULL, "
-    "fields_validated INTEGER NOT NULL, rejected INTEGER, cap TEXT, cap_value INTEGER)"
+    "fields_validated INTEGER NOT NULL, rejected INTEGER, cap TEXT, cap_value INTEGER, "
+    "requested_url TEXT)"
 )
 # Schema 4 (N5): nullable, so schema 3 rows keep "not recorded" rather than a made-up 0.
-ADDED_COLUMNS = (("rejected", "INTEGER"), ("cap", "TEXT"), ("cap_value", "INTEGER"))
+ADDED_COLUMNS = (
+    ("rejected", "INTEGER"),
+    ("cap", "TEXT"),
+    ("cap_value", "INTEGER"),
+    ("requested_url", "TEXT"),  # the configured URL of a redirected source
+)
 CREATE_INDEX = "CREATE INDEX IF NOT EXISTS run_metrics_dataset ON run_metrics (dataset, id)"
 
 

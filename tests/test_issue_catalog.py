@@ -77,3 +77,10 @@ def test_the_check_fails_when_a_row_is_removed():
     text = DOC.read_text(encoding="utf-8")
     kept = "\n".join(line for line in text.splitlines() if not line.startswith("| `robots_denied`"))
     assert missing(kept) == ["robots_denied"]
+
+
+def test_the_runtime_allowlist_matches_the_documented_codes():
+    """Studio's code allowlist (review of #147) is exactly the documented vocabulary."""
+    from rastro.domain.issue_codes import ISSUE_CODES
+
+    assert documented(DOC.read_text(encoding="utf-8")) == ISSUE_CODES

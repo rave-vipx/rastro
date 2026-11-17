@@ -81,6 +81,21 @@ def test_untrusted_values_are_never_echoed(client: TestClient, root: Path) -> No
     assert UNTRUSTED not in shown.text and UNTRUSTED not in alerts.text
 
 
+def test_a_code_shaped_value_outside_the_vocabulary_is_unknown(
+    client: TestClient, root: Path
+) -> None:
+    """Review of #147: a persisted detail matching the code shape is still not a Rastro code."""
+    store = SQLiteDatasetStore(root / "agenda_fiestas.sqlite")
+    url = "https://cartelera-x.example/"
+    store.record_source_failure(
+        "agenda_fiestas", url, datetime.now(UTC), "permanent_failure", "synthetic_secret_token"
+    )
+    shown = post(client, "/api/sources", {"file": "agenda.toml"})
+    assert by_url(shown.json()["sources"], "cartelera")["issue_code"] == "unknown"
+    for route in ("/api/sources", "/api/alerts"):
+        assert "synthetic_secret_token" not in post(client, route, {"file": "agenda.toml"}).text
+
+
 def test_projects_report_health_counts_and_other_databases(client: TestClient) -> None:
     reply = client.get("/api/projects").json()
     shown = {p["file"]: p for p in reply["projects"]}
