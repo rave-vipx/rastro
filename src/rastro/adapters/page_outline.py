@@ -1,7 +1,8 @@
 """Outline a page's repeated structure for model prompts (AI-001, INT-002).
 
 Selectors are built only from safe tag names and stable class tokens (as in suggestion);
-texts and attribute values are clipped and stay untrusted. Deterministic and offline.
+texts and attribute values are clipped and stay untrusted. Content a person cannot see
+(hidden elements, comments, templates) is dropped first (N19). Deterministic and offline.
 """
 
 from __future__ import annotations
@@ -11,6 +12,7 @@ import re
 from collections import Counter
 from collections.abc import Iterator
 
+from rastro.adapters.html_hardening import harden_tree
 from rastro.adapters.scrapling import _parse_html
 from rastro.adapters.suggest_dom import Element, elements, stable_classes, tag_of
 from rastro.domain.models import Limits, ResourceLimitError
@@ -45,6 +47,7 @@ class LxmlPageOutliner:
         if len(html.encode()) > limits.max_html_bytes:
             raise ResourceLimitError("HTML input exceeds max_html_bytes")
         root = _parse_html(html)._root
+        harden_tree(root)
         nodes = elements(root)
         title = root.find(".//title")
         return PageOutline(

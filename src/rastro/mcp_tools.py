@@ -22,6 +22,7 @@ from rastro.application.job_preview import bounded_preview, preview_job_file
 from rastro.application.job_summary import job_validation_summary
 from rastro.application.repair_context import safe_path
 from rastro.cli_dataset_export import select_records
+from rastro.domain.injection import record_flags
 from rastro.domain.jobs import FileJobSource, Job, JobSource
 from rastro.domain.models import ConfigurationError
 
@@ -85,7 +86,11 @@ def job_preview(
     preview = preview_job_file(
         _existing(root, path), allow_egress=allow_egress, allow_env=allow_env
     )
-    return bounded_preview(preview)
+    payload = bounded_preview(preview)
+    for item, source in zip(payload["sources"], preview.sources, strict=True):
+        rows = [{f.name: f.value for f in record.fields} for record in source.records]
+        item["flags"] = record_flags(rows)[:50]
+    return payload
 
 
 def job_load(
@@ -140,6 +145,7 @@ def dataset_records(
             "total": len(records),
             "truncated": len(records) > limit,
             "records": [r.model_dump(mode="json") for r in records[:limit]],
+            "flags": record_flags([r.fields for r in records[:limit]]),
             "stale_sources": [s.model_dump(mode="json") for s in stale_sources(store, dataset)],
         }
     )
