@@ -96,8 +96,10 @@ def _check_values(candidate: Candidate) -> None:
     for field, value in candidate.values.items():
         text = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
         if contains_secret(text, include_opaque=False):
-            found = ", ".join(secret_categories(text, include_opaque=False))
+            categories = secret_categories(text, include_opaque=False)
             raise SanitizationError(
-                f"Extracted field {field!r} looks like sensitive data ({found}); "
-                "fixtures never retain it"
+                f"Extracted field {field!r} looks like sensitive data ({', '.join(categories)}); "
+                "fixtures never retain it",
+                field=field,
+                category="+".join(categories),
             )

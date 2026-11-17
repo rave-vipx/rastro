@@ -20,7 +20,7 @@ from rastro.domain.models import (
     ResourceLimitError,
     Source,
 )
-from rastro.mocklab.errors import FixtureMismatchError
+from rastro.mocklab.errors import FixtureMismatchError, SanitizationError
 from rastro.mocklab.fixtures import build_fixture
 
 FIXTURE_ORIGIN = "https://fixture.invalid/"
@@ -45,12 +45,23 @@ def retain_successes(
             continue
         try:
             skipped = retain_sample(path, dataset, schema, sample)
-        except RastroError:
-            issues[result.source_url] = (Issue(code="evidence_retention_failed"),)
+        except RastroError as error:
+            issues[result.source_url] = (retention_failure(error),)
             continue
         if skipped:
             issues[result.source_url] = (Issue(code="relocation_retention_skipped"),)
     return issues
+
+
+def retention_failure(error: RastroError) -> Issue:
+    """The ``evidence_retention_failed`` issue; a sanitizer refusal names field and category."""
+    if isinstance(error, SanitizationError) and error.category:
+        return Issue(
+            code="evidence_retention_failed",
+            field=error.field,
+            message=f"sensitive_data:{error.category}",
+        )
+    return Issue(code="evidence_retention_failed")
 
 
 def retain_sample(
