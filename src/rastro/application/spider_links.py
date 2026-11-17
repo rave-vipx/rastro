@@ -95,12 +95,15 @@ class LinkHarvest:
     def __init__(self, spider: SpiderPolicy, parser: DocumentParser, limits: Limits) -> None:
         self._spider, self._parser, self._limits = spider, parser, limits
         self.hrefs: list[str] = []
+        self.sitemaps: list[str] = []  # a sitemap index's child sitemaps (N16)
         self._known: set[str] = set()  # a scrolled page is added once per step
         self.failed = False
 
     def add[T: BaseModel](
         self, url: str, body: str | None, result: ExtractionResult[T], representation: str
     ) -> None:
+        if not (self._spider.links or self._spider.link_field):
+            return  # a sitemap seed without links: detail pages are leaves
         try:
             found = (
                 self._from_field(result)

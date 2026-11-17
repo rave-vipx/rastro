@@ -1877,6 +1877,15 @@
           "default": true,
           "title": "Same Host",
           "type": "boolean"
+        },
+        "seed": {
+          "default": "page",
+          "enum": [
+            "page",
+            "sitemap"
+          ],
+          "title": "Seed",
+          "type": "string"
         }
       },
       "title": "SpiderPolicy",
