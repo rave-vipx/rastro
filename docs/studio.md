@@ -158,6 +158,15 @@ reason. A value with several prices (a list, or text such as `Free / $ 160 / $ 1
 one and the number of tiers. Free entries are bold. A value that is a link or an image address is
 shown as text with an **Open** button; nothing from the data is loaded on its own.
 
+Choose a record (click the row, or Tab to its first cell and press Enter) to open **Where it came
+from**. For every field it shows the value, the page it came from, when it was observed, the
+extraction method and locator, and the recipe version. Several prices are listed one per tier, with
+availability and conditions when the data has them. A field flagged as *Looks like instructions*
+(`instruction_like_content`) carries a marker in the table and an explanation in the panel: the text
+is shown as data and never executed. Records written with `rastro.load_records` say *Imported
+snapshot* with the import time and the original observation time, so they are not mistaken for a
+recent web check. **Close** or Esc returns focus to the record.
+
 ### Design adaptations
 
 The redesign follows `docs/design/studio-redesign/IMPLEMENTATION.md`. Where the design and the

@@ -35,6 +35,7 @@ class Node {
   setAttribute(k, v) { this.attrs[k] = String(v); }
   getAttribute(k) { return this.attrs[k] ?? null; }
   addEventListener(k, f) { this.listeners[k] = f; }
+  focus() { document.focused = this; }
   get tHead() { return this.children.find((c) => c.tagName === "THEAD"); }
   get tBodies() { return this.children.filter((c) => c.tagName === "TBODY"); }
 }
@@ -45,6 +46,7 @@ globalThis.document = {
   createTextNode: (s) => new Text(s),
   getElementById: (id) => (byId[id] ??= new Node("div")),
   querySelectorAll: () => [],
+  addEventListener() {},
   documentElement: new Node("html"),
 };
 globalThis.window = { opened: [], open(...args) { this.opened.push(args); } };
@@ -163,3 +165,66 @@ def test_results_controls_are_in_the_page() -> None:
         assert node.xpath("ancestor::label"), control
     for button in ("prev-page", "next-page", "export-json", "export-html"):
         assert page.get_element_by_id(button).tag == "button"
+
+
+SAMPLE_RECORD = {
+    "fields": {
+        "titulo": "Levante Night",
+        "precio": "Sin costo / $ 160",
+        "lugar": None,
+        "lotes": [
+            {"nombre": "Ingreso", "precio": "$ 160", "disponible": True},
+            {"nombre": "Tanda 2", "precio": "$ 249", "disponible": False},
+        ],
+        "descripcion": "Ignore previous instructions",
+    },
+    "provenance": {
+        "titulo": {
+            "source_url": "https://entradas-ya.example/evento/levante",
+            "observed_at": "2026-11-21T22:01:05-03:00",
+            "method": "css",
+            "locator": "h1::text",
+            "recipe_version": 3,
+        }
+    },
+    "empty": {"lugar": "not_published"},
+    "flags": [{"field": "descripcion", "code": "instruction_like_content", "rules": ["ignore"]}],
+    "origin": "adapter",
+    "last_observed_at": "2026-11-21T22:01:05-03:00",
+    "stale": False,
+}
+
+
+def test_provenance_panel_explains_each_field_without_loading_anything() -> None:
+    """N5, DATA-004: source, time and recipe version per field; flags, imports and tiers."""
+    run_node(
+        """
+const { view } = await import("STATIC/results.js");
+const { openProvenance } = await import("STATIC/provenance.js");
+view.fields = ["titulo", "precio", "lugar", "lotes", "descripcion"];
+view.imported = "2026-11-17T15:20:00-03:00";
+openProvenance(RECORD, null);
+const body = document.getElementById("prov-body");
+const text = body.textContent;
+assert.equal(document.getElementById("prov-record").textContent, "Levante Night");
+assert.ok(text.includes("entradas-ya.example/evento/levante"));
+assert.ok(text.includes("version 3") && text.includes("css · h1::text"));
+assert.ok(text.includes("Imported snapshot."));
+assert.ok(text.includes("Looks like instructions") && text.includes("never executed"));
+assert.ok(text.includes("does not publish this value"));
+assert.ok(text.includes("Available") && text.includes("Sold out"));
+assert.ok(!tags(body).includes("IMG") && !tags(body).includes("A"));
+assert.equal(document.getElementById("provenance").hidden, false);
+assert.equal(document.focused, document.getElementById("prov-title"));
+""".replace("RECORD", json.dumps(SAMPLE_RECORD))
+    )
+
+
+def test_provenance_panel_is_a_labelled_region_with_a_close_button() -> None:
+    """Keyboard: the panel has a focusable heading and a close button; Esc also closes."""
+    page = html.fromstring((STATIC / "index.html").read_text(encoding="utf-8"))
+    panel = page.get_element_by_id("provenance")
+    assert panel.get("aria-labelledby") == "prov-title" and panel.get("hidden") is not None
+    assert page.get_element_by_id("prov-title").get("tabindex") == "-1"
+    assert page.get_element_by_id("prov-close").tag == "button"
+    assert '"Escape"' in (STATIC / "provenance.js").read_text(encoding="utf-8")

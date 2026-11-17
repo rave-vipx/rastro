@@ -158,6 +158,27 @@ table.results tbody tr:hover, table.results tbody tr.selected { background: var(
 .empty-state { text-align: center; padding: var(--s-6) var(--s-4); }
 .empty-state .row { justify-content: center; }
 
+/* Provenance side panel (a bottom sheet on narrow screens). */
+.panel { position: fixed; top: 0; right: 0; bottom: 0; z-index: 30; width: min(28rem, 100%); overflow-y: auto;
+  background: var(--surface); border-left: 1px solid var(--border); box-shadow: var(--shadow-2); padding: var(--s-5); }
+.panel[hidden] { display: none; }
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); }
+.panel-head h2 { margin: 0; }
+.prov-record { font-size: 20px; font-weight: 600; margin: var(--s-2) 0; }
+.prov-field { border-top: 1px solid var(--border); padding: var(--s-3) 0; }
+.prov-field h4 { margin: 0 0 var(--s-1); font-size: 12px; font-weight: 600; color: var(--text-2); }
+.prov-meta { margin: var(--s-2) 0 0; }
+.kv { display: grid; grid-template-columns: 7rem 1fr; gap: var(--s-2); font-size: 13px; }
+.kv dt { color: var(--text-3); }
+.kv dd { margin: 0; overflow-wrap: anywhere; }
+.tiers { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--s-2); }
+.tiers li { border: 1px solid var(--border); border-radius: var(--r-md); padding: var(--s-2) var(--s-3); }
+.block { display: block; }
+.note { border-radius: var(--r-md); background: var(--surface-2); padding: var(--s-2) var(--s-3); margin: var(--s-2) 0; }
+.note p { margin: var(--s-1) 0 0; }
+.note-warn { background: var(--warn-soft); color: var(--warn); }
+.note-warn .ico { margin-right: var(--s-1); }
+
 .skip, .sr { position: absolute; left: -9999px; }
 .skip:focus { left: var(--s-4); top: var(--s-2); z-index: 20; background: var(--surface); padding: var(--s-2) var(--s-3); }
 

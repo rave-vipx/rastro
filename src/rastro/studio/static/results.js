@@ -1,7 +1,7 @@
 // Results: the stored records with search, filters, pages and export (N5 partly).
 // Records are read in bounded chunks and filtered here; the page says when only part is covered.
 import { $, api, bind, el, requireFile, show } from "./dom.js";
-import { onLangChange, t } from "./i18n.js";
+import { onLangChange, t, when } from "./i18n.js";
 import { dateField, isLive, renderCell, sourceOf } from "./cells.js";
 import { chip, emptyState } from "./ui.js";
 
@@ -18,6 +18,7 @@ export function onRecordSelected(handler) {
 export function resetResults() {
   Object.assign(view, { records: [], fields: [], total: 0, page: 0, error: "", ready: false, imported: null });
   $("dataset-result").replaceChildren();
+  $("provenance").hidden = true;
   show("dataset-status", "");
   show("rs-range", "");
 }
@@ -151,6 +152,7 @@ export function render() {
   if (all.length !== view.records.length) notes.unshift(t("results.filtered", { n: view.records.length }));
   if (view.total > view.records.length) notes.unshift(t("results.partial", { n: view.records.length, total: view.total }));
   if (view.stale) notes.push(t("results.staleSources", { n: view.stale }));
+  if (view.imported) notes.unshift(t("results.imported", { at: when(view.imported) }));
   show("dataset-status", notes.join(" "), "muted");
   $("prev-page").disabled = view.page === 0;
   $("next-page").disabled = view.page >= pages - 1;

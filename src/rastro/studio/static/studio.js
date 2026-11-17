@@ -5,6 +5,7 @@ import { $, api, bind, el, requireFile, show, state, table } from "./dom.js";
 import { initAI } from "./ai.js";
 import { fillControls, initControls } from "./controls.js";
 import { initOperate, resetOperate } from "./operate.js";
+import { initProvenance } from "./provenance.js";
 import { initRegistry } from "./registry.js";
 import { initResults, loadRecords, resetResults } from "./results.js";
 import { initWizard } from "./wizard.js";
@@ -135,6 +136,7 @@ async function start() {
   $("selector-pick").addEventListener("change", showSelector);
   initOperate();
   initResults();
+  initProvenance();
   initWizard({ openJob, refreshJobs, switchView });
   initRegistry();
   await initAI();
