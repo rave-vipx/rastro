@@ -235,6 +235,47 @@ lists one `RecipeSelection` (`source_index`, `recipe_origin`, `recipe_version`) 
 `JobLoadResult` sources carry the same `recipe_origin` and `recipe_version`. See
 [recipe repair](repair.md) for the gates and the rule that picks the recipe.
 
+## Adapters: fetch and load your own records
+
+An app adapter that knows its sources (detail pages, a JSON ticket endpoint, an XML
+sitemap) can stay on public names: fetch under a policy, extract with `scrape`, apply its
+own rules, then store the records with provenance. No private modules, no JSON snapshot
+job, no `rastro.cli.main`.
+
+```python
+from rastro import AcquisitionPolicy, Fetched, fetch, fetch_async, load_records
+```
+
+| Function | Returns | What it does |
+| --- | --- | --- |
+| `fetch(url, *, policy=None, representation="html", max_bytes=None, locale="en-US")` | `Fetched` | Fetches one URL with the same acquirer as `scrape` URLs and jobs: exact host allowlist, robots.txt, egress, request budget, redirect checks and the byte limit. |
+| `fetch_async(...)` | `Fetched` | The same, inside a running event loop. |
+| `load_records(job, records, *, source_url, observed_at=None, allow_absolute_paths=False, allow_remote=False, allow_env=())` | `JobLoadResult` | Writes caller-built dicts into the job file's `[dataset]` with the same validation, identity and snapshot semantics as `rastro job load`. |
+
+`fetch` defaults to a policy that allows only the URL's host (HTTPS unless the URL is
+`http://`); pass an `AcquisitionPolicy` for several hosts, budgets or egress. Only
+`render = "http"` is supported. `Fetched` is frozen: `status` (an `Outcome`), `url` (final,
+after permitted redirects), `body` (the decoded document, or `None`), `media_type`
+(`text/html` or `application/json`, `None` on failure) and `issues`. A refusal is returned,
+never raised: `robots_denied`, `invalid_robots`, `host_not_allowed`, `body_too_large`,
+timeouts and HTTP failures keep their category, and a blank document is `invalid_data` with
+`empty_document`, never a successful empty body. An invalid URL, representation or
+`max_bytes` raises `ConfigurationError`.
+
+`load_records` reads the dataset, fields and identity from the job file. `records` are dicts
+keyed by declared field names and form the complete current set for `source_url`: a record
+loaded earlier from that source and absent now is reported `missing`, as in `rastro job
+load`. All records are validated against the job's fields first; an undeclared or invalid
+field, a missing or duplicate identity, or an empty list raises `ConfigurationError` and
+writes nothing. More records than `[limits] max_records` raise `ResourceLimitError`.
+`source_url` must not carry a query string or fragment (provenance never keeps them).
+`observed_at` must be timezone-aware and not in the future; it defaults to the load time.
+Each supplied field gets provenance with `source_url`, `observed_at`, `method = "json"`,
+`locator = "adapter"` and `recipe_version = 0`, so adapter data is never presented as a
+recipe extraction. Records then appear in `rastro dataset export` and Studio like any
+other. [`examples/adapter.py`](https://github.com/rave-vipx/rastro/blob/main/examples/adapter.py)
+runs the whole path offline.
+
 ## Recipes from examples
 
 ```python

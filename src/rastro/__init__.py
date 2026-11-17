@@ -98,6 +98,7 @@ from rastro.domain.recipe_compare import (
 )
 from rastro.domain.results import RepairProposal, SelfRepair
 from rastro.domain.suggest import FieldConfidence, Suggestion, SuggestionError
+from rastro.fetch_api import Fetched, fetch, fetch_async
 from rastro.mocklab import (
     FixtureBundle,
     MockLabError,
@@ -110,6 +111,7 @@ from rastro.mocklab import (
 from rastro.model_factory import model
 from rastro.ports.model import ModelPort
 from rastro.ports.recipes import RecipeLifecycle, RecipeRepository
+from rastro.records_api import load_records
 from rastro.scrape import scrape, scrape_async
 
 if TYPE_CHECKING:
@@ -152,6 +154,7 @@ __all__ = [
     "Evidence",
     "ExtractionRecord",
     "ExtractionResult",
+    "Fetched",
     "FieldConfidence",
     "FileJobSource",
     "FixtureBundle",
@@ -226,6 +229,8 @@ __all__ = [
     "build_fixture",
     "build_job_schema",
     "css",
+    "fetch",
+    "fetch_async",
     "forget_job_source",
     "job_health",
     "job_json_schema",
@@ -233,6 +238,7 @@ __all__ = [
     "load_fixture",
     "load_job",
     "load_job_file",
+    "load_records",
     "model",
     "parse_job",
     "promote_job_recipe",
