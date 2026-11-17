@@ -50,7 +50,9 @@ _RULES: tuple[tuple[str, re.Pattern[str]], ...] = (
         re.compile(
             r"<\|(?:im_start|im_end|system|user|assistant|endoftext)\|>|\[/?INST\]|<</?SYS>>"
             r"|</?(?:system|assistant)>"
-            r"|^[ \t]*#{1,6}[ \t]*(?:system|assistant)(?:[ \t]+(?:prompt|message))?[ \t]*:?[ \t]*$",
+            # possessive whitespace: a near-miss header cannot backtrack quadratically
+            r"|^[ \t]*+#{1,6}+[ \t]*+(?:system|assistant)(?:[ \t]++(?:prompt|message))?+"
+            r"[ \t]*+(?::[ \t]*+)?$",
             re.I | re.M,
         ),
     ),

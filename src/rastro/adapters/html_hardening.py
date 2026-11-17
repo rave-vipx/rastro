@@ -96,9 +96,13 @@ def _hidden_kind(node: Element) -> str | None:
 
 
 def _drop(node: Element) -> None:
-    """Remove ``node`` and its subtree, keeping the text that follows it."""
+    """Remove ``node`` and its subtree, keeping the text that follows it.
+
+    A hidden root has no parent to leave it: it is emptied, attributes included.
+    """
     parent = node.getparent()
     if parent is None:
+        node.clear()
         return
     if node.tail:
         previous = node.getprevious()
