@@ -10,6 +10,8 @@ from rastro.studio.app import create_app
 from tests.integration.test_studio import post, serving
 from tests.integration.test_studio_ops import EXAMPLES, PAGE, URL, FakeAcquirer
 
+I18N = "src/rastro/studio/static/i18n.js"  # bounds.js labels come from the dictionary (N8)
+
 pytestmark = pytest.mark.usefixtures("offline_cli_loop")
 
 
@@ -135,6 +137,7 @@ const nodes = {};
 const $ = id => nodes[id] ??= {};
 const show = (id, text) => { $(id).textContent = text; };
 """
+        + f'const {{ t }} = await import("{Path(I18N).resolve().as_uri()}");\n'
         + fill
         + """
 fillBounds({limits, scroll_disabled: true});

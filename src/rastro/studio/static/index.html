@@ -12,11 +12,10 @@
 <header class="bar">
   <div class="bar-row">
     <h1 class="brand" data-i18n="brand">Rastro Studio</h1>
-    <div class="project">
-      <label for="files" data-i18n="project.label">Project</label>
-      <select id="files"></select>
-      <button type="button" id="validate" data-i18n="project.open">Open</button>
-    </div>
+    <nav class="crumbs" aria-label="Breadcrumb" data-i18n-label="crumbs.label">
+      <button type="button" id="go-home" class="link" data-i18n="crumbs.projects">Projects</button>
+      <span id="crumb-project" class="crumb-project"></span>
+    </nav>
     <div class="prefs">
       <label for="pref-lang" data-i18n="prefs.language">Language</label>
       <select id="pref-lang">
@@ -33,7 +32,7 @@
   </div>
   <p id="root" class="muted"></p>
   <p id="validation" role="status" aria-live="polite"></p>
-  <nav class="tabs" aria-label="Views" data-i18n-label="nav.label">
+  <nav id="project-nav" class="tabs" aria-label="Views" data-i18n-label="nav.label" hidden>
     <button type="button" class="tab" data-view="results" aria-pressed="true" data-i18n="nav.results">Results</button>
     <button type="button" class="tab" data-view="sources" aria-pressed="false" data-i18n="nav.sources">Sources</button>
     <button type="button" class="tab" data-view="alerts" aria-pressed="false" data-i18n="nav.alerts">Alerts</button>
@@ -44,7 +43,35 @@
 </header>
 <p id="listing" class="banner" role="status" aria-live="polite"></p>
 <main id="main">
-  <div id="view-results">
+  <div id="view-home">
+    <section class="card" aria-labelledby="home-heading">
+      <div class="card-head">
+        <h2 id="home-heading" data-i18n="home.title">Projects</h2>
+        <div id="home-start" class="row"></div>
+      </div>
+      <p id="home-status" role="status" aria-live="polite"></p>
+      <div id="home-list"></div>
+    </section>
+    <details id="export-help" class="card fold">
+      <summary id="export-help-summary" data-i18n="home.exportTitle">Connect an export</summary>
+      <p data-i18n="home.exportFormats">Supported: JSON records you load with the Python API, or a Rastro SQLite dataset.</p>
+      <p class="muted" data-i18n="home.exportHow">Load records from your own export into a project's dataset with rastro.load_records. They are validated like a web load, keep their provenance and show as an imported snapshot. Then open the project here.</p>
+      <pre>from rastro import load_records
+
+load_records("pages/events.toml", records, source_url="https://example.com/events")</pre>
+      <p class="muted" data-i18n="home.exportSqlite">For a Rastro SQLite dataset, create a job whose [dataset] points at that file, then open it.</p>
+    </details>
+    <details class="card fold">
+      <summary data-i18n="home.openFile">Open a job file (advanced)</summary>
+      <div class="row project">
+        <label for="files" data-i18n="project.label">Job file</label>
+        <select id="files"></select>
+        <button type="button" id="validate" data-i18n="project.open">Open</button>
+      </div>
+    </details>
+  </div>
+
+  <div id="view-results" hidden>
     <section class="card">
       <h2 data-i18n="run.title">Run</h2>
       <div class="row">
@@ -58,23 +85,67 @@
       <div id="run-result"></div>
     </section>
 
-    <section class="card">
-      <h2 data-i18n="dataset.title">Records</h2>
-      <div class="row">
-        <button type="button" id="dataset" data-i18n="dataset.show">Show records</button>
-        <button type="button" id="prev-page" data-i18n="dataset.prev">Previous page</button>
-        <button type="button" id="next-page" data-i18n="dataset.next">Next page</button>
-        <button type="button" id="export-json" data-i18n="dataset.json">Download JSON</button>
-        <button type="button" id="export-html" data-i18n="dataset.html">Download HTML</button>
+    <section class="card" aria-labelledby="records-heading">
+      <div class="card-head">
+        <h2 id="records-heading" data-i18n="dataset.title">Records</h2>
+        <div class="row">
+          <button type="button" id="dataset" class="small" data-i18n="dataset.show">Reload</button>
+          <span class="label" data-i18n="dataset.export">Export</span>
+          <button type="button" id="export-json" class="small" data-i18n="dataset.json">JSON</button>
+          <button type="button" id="export-html" class="small" data-i18n="dataset.html">HTML</button>
+        </div>
       </div>
+      <div class="toolbar">
+        <label class="grow"><span class="sr" data-i18n="filter.search">Search records</span>
+          <input id="rs-search" type="search" maxlength="200" data-i18n-placeholder="filter.search"></label>
+        <label id="rs-source-wrap" hidden><span data-i18n="filter.source">Source</span> <select id="rs-source"></select></label>
+        <label><span data-i18n="filter.status">Status</span>
+          <select id="rs-state">
+            <option value="" data-i18n="filter.all">All</option>
+            <option value="upcoming" data-i18n="filter.upcoming">Upcoming</option>
+            <option value="live" data-i18n="filter.live">Live now</option>
+            <option value="stale" data-i18n="filter.stale">From a failed source</option>
+          </select></label>
+        <label id="rs-date-wrap" hidden><span data-i18n="filter.date">Date</span>
+          <select id="rs-date">
+            <option value="" data-i18n="filter.anyDate">Any date</option>
+            <option value="week" data-i18n="filter.week">Next 7 days</option>
+            <option value="weekend" data-i18n="filter.weekend">This weekend</option>
+            <option value="month" data-i18n="filter.month">This month</option>
+          </select></label>
+      </div>
+      <p id="export-status" role="status" aria-live="polite"></p>
       <p id="dataset-status" role="status" aria-live="polite"></p>
       <div id="dataset-result"></div>
+      <div class="pager">
+        <p id="rs-range" role="status" aria-live="polite"></p>
+        <label><span data-i18n="pager.perPage">Per page</span>
+          <select id="rs-per-page"><option>25</option><option>50</option><option>100</option></select></label>
+        <button type="button" id="prev-page" data-i18n="dataset.prev">Previous</button>
+        <button type="button" id="next-page" data-i18n="dataset.next">Next</button>
+      </div>
     </section>
+    <aside id="provenance" class="panel" hidden aria-labelledby="prov-title">
+      <div class="panel-head">
+        <h2 id="prov-title" tabindex="-1" data-i18n="prov.title">Where it came from</h2>
+        <button type="button" id="prov-close" class="small" data-i18n="prov.close">Close</button>
+      </div>
+      <p id="prov-record" class="prov-record"></p>
+      <div id="prov-body"></div>
+    </aside>
   </div>
 
   <div id="view-sources" hidden>
-    <section class="card">
-      <h2 data-i18n="health.title">Source health</h2>
+    <section class="card" aria-labelledby="sources-heading">
+      <div class="card-head">
+        <h2 id="sources-heading" data-i18n="sources.title">Sites in this project</h2>
+        <button type="button" id="sources-refresh" class="small" data-i18n="sources.refresh">Refresh</button>
+      </div>
+      <p id="sources-status" role="status" aria-live="polite"></p>
+      <div id="sources-list"></div>
+    </section>
+    <details class="card fold">
+      <summary data-i18n="health.title">Technical detail: serving recipe and stored versions</summary>
       <button type="button" id="health" class="primary" data-i18n="health.check">Check health</button>
       <p id="health-status" role="status" aria-live="polite"></p>
       <div id="health-alerts" role="alert"></div>
@@ -83,21 +154,44 @@
       <div id="health-result"></div>
       <div id="repair-result"></div>
       <div id="ai-repair-result"></div>
-    </section>
+    </details>
   </div>
 
   <div id="view-alerts" hidden>
-    <section class="card empty">
-      <h2 data-i18n="alerts.title">Alerts</h2>
-      <p class="muted" data-i18n="alerts.empty">Alerts from the last run and health check appear here, with what to do next.</p>
+    <section class="card" aria-labelledby="alerts-heading">
+      <div class="card-head">
+        <h2 id="alerts-heading" data-i18n="alerts.title">Alerts</h2>
+        <button type="button" id="alerts-refresh" class="small" data-i18n="sources.refresh">Refresh</button>
+      </div>
+      <p id="alerts-status" role="status" aria-live="polite"></p>
+      <div id="alerts-list"></div>
     </section>
   </div>
 
   <div id="view-repair" hidden>
-    <section class="card">
-      <h2 data-i18n="fix.title">Preview and correct</h2>
+    <section class="card" aria-labelledby="fix-heading">
+      <h2 id="fix-heading" data-i18n="fix.heading">Fix a site</h2>
+      <p class="muted" data-i18n="fix.lead">When a site changes, Rastro proposes a new way to read it and checks it. Compare the fields, then apply it with a reason or discard it.</p>
+      <p id="fix-memory-note" class="note" hidden data-i18n="fix.needsMemory">Fixes need a recipe memory file in the job.</p>
+      <div class="row">
+        <label for="fix-source" data-i18n="fix.source">Site</label>
+        <select id="fix-source"></select>
+        <button type="button" id="fix-find" class="primary" data-i18n="fix.find">Find a fix</button>
+      </div>
+      <p id="fix-status" role="status" aria-live="polite"></p>
+      <div id="fix-alerts" role="alert"></div>
+      <div id="fix-result"></div>
+    </section>
+    <section class="card" aria-labelledby="auto-heading">
+      <h2 id="auto-heading" data-i18n="fix.autoTitle">Apply fixes automatically</h2>
+      <label class="check"><input type="checkbox" id="auto-promote"> <span data-i18n="switch.autoPromote">Apply fixes automatically for this job</span></label>
+      <p class="muted" data-i18n="switch.autoPromoteHelp">Off by default.</p>
+      <p id="auto-promote-status" role="status" aria-live="polite"></p>
+    </section>
+    <details class="card fold">
+      <summary data-i18n="fix.title">Correct a field by hand</summary>
       <p class="muted" data-i18n="fix.intro">Sample records with how each field was found. Nothing is written.</p>
-      <button type="button" id="preview" class="primary" data-i18n="fix.preview">Preview sample records</button>
+      <button type="button" id="preview" data-i18n="fix.preview">Preview sample records</button>
       <div class="row">
         <label for="selector-pick" data-i18n="fix.field">Field</label>
         <select id="selector-pick"></select>
@@ -108,12 +202,18 @@
       </div>
       <p id="accepted" role="status" aria-live="polite"></p>
       <div id="records"></div>
-    </section>
+    </details>
   </div>
 
   <div id="view-settings" hidden>
-    <section class="card">
-      <h2 data-i18n="settings.title">Next page, link following and scroll</h2>
+    <section class="card" aria-labelledby="settings-heading">
+      <h2 id="settings-heading" data-i18n="settings.heading">Project settings (advanced)</h2>
+      <p class="muted" data-i18n="settings.lead">Each group changes one part of the job file and checks it before saving. Nothing here grants network access.</p>
+      <p id="controls-status" role="status" aria-live="polite"></p>
+    </section>
+
+    <details class="card fold">
+      <summary data-i18n="settings.title">Next page</summary>
       <p class="muted" data-i18n="settings.intro">Follow a next link up to a page cap.</p>
       <div class="row">
         <label for="pagination-source" data-i18n="settings.recipe">Recipe</label>
@@ -124,12 +224,16 @@
         <input id="pagination-cap" type="number">
         <button type="button" id="save-pagination" data-i18n="settings.saveNext">Save next page</button>
       </div>
+    </details>
+
+    <details class="card fold">
+      <summary data-i18n="spider.legend">Follow links</summary>
       <fieldset class="bound-controls">
         <legend data-i18n="spider.legend">Follow links</legend>
         <label><input id="spider-enabled" type="checkbox"> <span data-i18n="spider.enabled">Follow links from the starting URLs</span></label>
         <label><span data-i18n="spider.depth">Link depth</span> <span id="spider-depth-range"></span> <input id="spider-depth" type="number"></label>
         <label><span data-i18n="spider.pages">Page cap</span> <span id="spider-pages-range"></span> <input id="spider-pages" type="number"></label>
-        <label for="spider-links" id="spider-link-label" data-i18n="spider.links">Link selector</label>
+        <label for="spider-links" id="spider-link-label">Link selector</label>
         <input id="spider-links" type="text" value="a::attr(href)">
         <label><input id="spider-same-host" type="checkbox" checked> <span data-i18n="spider.sameHost">Stay on the same host</span></label>
         <p class="muted" data-i18n="spider.otherHosts">Other hosts still require the job's allowed hosts.</p>
@@ -137,7 +241,10 @@
         <label><span data-i18n="spider.deny">Denied path prefixes (one per line)</span><textarea id="spider-deny"></textarea></label>
         <button type="button" id="save-spider" data-i18n="spider.save">Save link following</button>
       </fieldset>
-      <h3 data-i18n="scroll.title">Scroll for more records</h3>
+    </details>
+
+    <details class="card fold">
+      <summary data-i18n="scroll.title">Scroll for more records</summary>
       <p id="scroll-reason"></p>
       <fieldset id="scroll-controls" class="bound-controls" disabled>
         <legend data-i18n="scroll.legend">Bounded browser scroll</legend>
@@ -146,61 +253,113 @@
         <label><span data-i18n="scroll.settle">Wait after each step (ms)</span> <span id="scroll-settle-range"></span> <input id="scroll-settle" type="number"></label>
         <button type="button" id="save-scroll" data-i18n="scroll.save">Save scroll</button>
       </fieldset>
-      <label class="check"><input type="checkbox" id="auto-promote"> <span data-i18n="switch.autoPromote">Apply fixes automatically for this job</span></label>
-      <p class="muted" data-i18n="switch.autoPromoteHelp">Off by default.</p>
+    </details>
+
+    <details class="card fold">
+      <summary data-i18n="settings.browser">Browser and stealth</summary>
+      <p class="muted" data-i18n="settings.browserHelp">Whether a source uses a browser is set in the job file (render under [acquisition]). Stealth is never written to a job or a bundle: it is a grant for this Studio session only.</p>
       <label class="check"><input type="checkbox" id="allow-stealth"> <span data-i18n="switch.stealth">Allow stealth for this Studio session</span></label>
       <p class="muted" data-i18n="switch.stealthHelp">Off by default.</p>
-      <p id="controls-status" role="status" aria-live="polite"></p>
-    </section>
+    </details>
 
-    <section class="card">
-      <h2 data-i18n="connect.title">Connect your app</h2>
+    <details class="card fold">
+      <summary data-i18n="settings.network">Network permissions</summary>
+      <p class="muted" data-i18n="settings.networkHelp">Studio reads only the hosts the job allows (allowed_hosts under [acquisition]); robots.txt and public-address checks always apply. Operator grants are flags of the command that starts Studio, never settings here:</p>
+      <pre>rastro studio --allow-egress
+rastro studio --allow-env NAME
+rastro studio --allow-stealth</pre>
+    </details>
+
+    <details class="card fold">
+      <summary data-i18n="connect.title">Connect your app</summary>
+      <p class="muted" data-i18n="connect.help">The commands and the Python call for this project, generated from the job. Run them from the Studio folder.</p>
       <button type="button" id="connect" data-i18n="connect.show">Show commands</button>
       <pre id="commands"></pre>
-    </section>
+    </details>
+
+    <details class="card fold">
+      <summary data-i18n="registry.title">Registry (URL)</summary>
+      <div id="settings-registry"></div>
+    </details>
   </div>
 
+
   <div id="view-wizard" hidden>
-    <section class="card">
-      <h2 data-i18n="wizard.url.title">1. Page URL</h2>
-      <p class="muted" data-i18n="wizard.url.intro">Paste a page URL.</p>
-      <div class="row">
+    <section class="card" aria-labelledby="wizard-heading">
+      <h2 id="wizard-heading" data-i18n="wizard.title">New scraper from a URL</h2>
+      <ol class="stepper" aria-label="Steps" data-i18n-label="wizard.steps">
+        <li data-step="1" aria-current="step" data-i18n="wizard.step1">URL</li>
+        <li data-step="2" data-i18n="wizard.step2">Fields</li>
+        <li data-step="3" data-i18n="wizard.step3">Preview</li>
+        <li data-step="4" data-i18n="wizard.step4">Name and save</li>
+      </ol>
+
+      <div id="wiz-step-1" class="step">
+        <h3 data-i18n="wizard.url.title">Paste the page URL</h3>
+        <p class="muted" data-i18n="wizard.url.intro">Paste a page URL.</p>
         <label for="page-url" data-i18n="wizard.url.label">Page URL</label>
-        <input id="page-url" type="url" size="48" placeholder="https://example.com/list" required>
+        <input id="page-url" class="wide" type="url" size="48" placeholder="https://example.com/list" required>
+        <p class="muted" data-i18n="wizard.url.browser">If the page builds its list with JavaScript, the preview may find no records; the browser path is explained in the docs (acquisition, JavaScript pages).</p>
+        <p id="url-status" role="status" aria-live="polite"></p>
+        <div class="row step-nav">
+          <button type="button" id="wiz-next-1" class="primary" data-i18n="wizard.next">Continue</button>
+        </div>
       </div>
-    </section>
-    <section class="card">
-      <h2 data-i18n="wizard.fields.title">2. Fields and one example each</h2>
-      <p class="muted" data-i18n="wizard.fields.intro">Name each field and copy one value exactly as the page shows it.</p>
-      <div class="scroll">
-        <table class="fields">
-          <thead><tr><th scope="col" data-i18n="wizard.fields.name">Field name</th><th scope="col" data-i18n="wizard.fields.example">Example value</th>
-            <th scope="col" data-i18n="wizard.fields.key">Record key</th><th scope="col"><span class="sr" data-i18n="wizard.fields.remove">Remove</span></th></tr></thead>
-          <tbody id="field-rows"></tbody>
-        </table>
+
+      <div id="wiz-step-2" class="step" hidden>
+        <h3 data-i18n="wizard.fields.title">Name the fields and paste one example each</h3>
+        <p class="muted" data-i18n="wizard.fields.intro">Name each field and copy one value exactly as the page shows it.</p>
+        <div class="scroll">
+          <table class="fields">
+            <thead><tr><th scope="col" data-i18n="wizard.fields.name">Field name</th><th scope="col" data-i18n="wizard.fields.example">Example value</th>
+              <th scope="col" data-i18n="wizard.fields.key">Record key</th><th scope="col"><span class="sr" data-i18n="wizard.fields.remove">Remove</span></th></tr></thead>
+            <tbody id="field-rows"></tbody>
+          </table>
+        </div>
+        <div class="row">
+          <button type="button" id="add-field" data-i18n="wizard.fields.add">Add field</button>
+          <button type="button" id="ask-ai" hidden data-i18n="wizard.fields.askAi">Ask AI (no examples needed)</button>
+        </div>
+        <p id="ai-notice" hidden></p>
+        <p id="suggest-status" role="status" aria-live="polite"></p>
+        <div class="row step-nav">
+          <button type="button" id="wiz-back-2" data-i18n="wizard.back">Back</button>
+          <button type="button" id="suggest" class="primary" data-i18n="wizard.fields.suggest">Preview records</button>
+        </div>
       </div>
-      <div class="row">
-        <button type="button" id="add-field" data-i18n="wizard.fields.add">Add field</button>
-        <button type="button" id="suggest" class="primary" data-i18n="wizard.fields.suggest">Suggest</button>
-        <button type="button" id="ask-ai" hidden data-i18n="wizard.fields.askAi">Ask AI (no examples needed)</button>
+
+      <div id="wiz-step-3" class="step" hidden>
+        <h3 data-i18n="wizard.preview.title">Check the records</h3>
+        <p class="muted" data-i18n="wizard.preview.intro">If a field comes out wrong, go back and paste another example for it.</p>
+        <div id="suggest-result"></div>
+        <div class="row step-nav">
+          <button type="button" id="wiz-back-3" data-i18n="wizard.preview.fix">Correct a field</button>
+          <button type="button" id="wiz-next-3" class="primary" data-i18n="wizard.next">Continue</button>
+        </div>
       </div>
-      <p id="ai-notice" hidden></p>
-      <p id="suggest-status" role="status" aria-live="polite"></p>
-      <div id="suggest-result"></div>
-    </section>
-    <section class="card">
-      <h2 data-i18n="wizard.create.title">3. Create the job</h2>
-      <div class="row">
-        <label for="new-file" data-i18n="wizard.create.file">Job file</label>
-        <input id="new-file" type="text" size="30" spellcheck="false" placeholder="pages/events.toml">
-        <label for="new-dataset" data-i18n="wizard.create.dataset">Dataset file, next to the job file (optional)</label>
-        <input id="new-dataset" type="text" size="24" spellcheck="false" placeholder="events.sqlite">
-        <label for="new-memory" data-i18n="wizard.create.memory">Recipe memory file, enables fixes (optional)</label>
-        <input id="new-memory" type="text" size="24" spellcheck="false" placeholder="recipes.sqlite">
-        <button type="button" id="create" class="primary" data-i18n="wizard.create.submit">Create job</button>
+
+      <div id="wiz-step-4" class="step" hidden>
+        <h3 data-i18n="wizard.create.title">Name the project and save</h3>
+        <label for="new-name" data-i18n="wizard.create.name">Project name</label>
+        <input id="new-name" class="wide" type="text" maxlength="80" spellcheck="false">
+        <p id="new-key-note" class="muted" data-i18n="wizard.create.note">A dataset needs at least one record key.</p>
+        <details class="fold">
+          <summary data-i18n="wizard.create.files">File names (advanced)</summary>
+          <div class="row">
+            <label for="new-file" data-i18n="wizard.create.file">Job file</label>
+            <input id="new-file" type="text" size="30" spellcheck="false" placeholder="pages/events.toml">
+            <label for="new-dataset" data-i18n="wizard.create.dataset">Dataset file, next to the job file (optional)</label>
+            <input id="new-dataset" type="text" size="24" spellcheck="false" placeholder="events.sqlite">
+            <label for="new-memory" data-i18n="wizard.create.memory">Recipe memory file, enables fixes (optional)</label>
+            <input id="new-memory" type="text" size="24" spellcheck="false" placeholder="recipes.sqlite">
+          </div>
+        </details>
+        <p id="create-status" role="status" aria-live="polite"></p>
+        <div class="row step-nav">
+          <button type="button" id="wiz-back-4" data-i18n="wizard.back">Back</button>
+          <button type="button" id="create" class="primary" data-i18n="wizard.create.submit">Save and open</button>
+        </div>
       </div>
-      <p class="muted" data-i18n="wizard.create.note">The job scrapes this URL on every run.</p>
-      <p id="create-status" role="status" aria-live="polite"></p>
     </section>
   </div>
 </main>

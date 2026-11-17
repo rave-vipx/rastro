@@ -28,7 +28,8 @@ def test_english_and_spanish_have_the_same_keys() -> None:
 
 
 def test_every_static_text_key_exists_and_none_is_orphaned() -> None:
-    """N8: each data-i18n key in the page is in the dictionary, and each entry is used."""
+    """N8: each data-i18n key in the page is in the dictionary, and each entry is used,
+    by the page, by a t("key") call, or by a key family a script builds (t(`code.${...}`))."""
     page = _page()
     used = {
         value
@@ -37,7 +38,10 @@ def test_every_static_text_key_exists_and_none_is_orphaned() -> None:
     }
     keys = set(_messages()["en"])
     assert used - keys == set()
-    assert keys - used == set()
+    scripts = "".join(p.read_text(encoding="utf-8") for p in STATIC.glob("*.js"))
+    used |= set(re.findall(r'"([a-z]\w*(?:\.\w+)+)"', scripts))  # t("a.b"), t(x ? "a.b" : ...)
+    families = tuple(re.findall(r"\bt\(`([\w.]+)\$\{", scripts))
+    assert keys - used - {k for k in keys if families and k.startswith(families)} == set()
 
 
 def test_spanish_copy_uses_voseo() -> None:

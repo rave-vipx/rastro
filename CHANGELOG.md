@@ -7,6 +7,12 @@ All notable user-facing changes are recorded here. The project follows [Semantic
 ### Changed
 
 - Studio shell (stage 1): design tokens with system, light and dark themes, an English/Spanish dictionary (English default), and views for Results, Sources, Alerts, Fix, Settings and New scraper; every token pair meets AA contrast (N1, N5, N8).
+- Studio Results (stage 2): records load when a project opens, with search, source/status/date filters, 25/50/100 per page, JSON and HTML export; empty cells say why (not published, source failed, no reason reported), several prices show a summary with the tier count, and links or images from data never load on their own (N5, DATA-004).
+- Studio provenance panel (stage 3): each field's page, observation time, extraction and recipe version; per-tier prices with availability; an *Imported snapshot* line for adapter records; a *Looks like instructions* marker with its explanation for flagged values (N5, N19, DATA-004).
+- Studio Sources and Alerts (stage 4): per-source status in words with last fetch, read/rejected counts, caps, warnings and one next step; alerts newest first, grouped by day, each with a sentence from its kind and issue code and one action; a missing or failing endpoint is shown as an error, never as an empty list (N5).
+- Studio Fix a site (stage 5): **Find a fix** shows each proposal's checks and a before/after of how every field is read; **Apply fix** needs a reason and re-runs every check through `/api/promote`, **Discard** writes nothing, **Also write it to the job file** uses `/api/apply`; the automatic switch moves here and stays off by default; run, health and correction messages now come from the dictionary (N7, N12, N8).
+- Studio wizard and Home (stage 6): New scraper is four steps (URL, fields, preview, name and save) with file names derived from the project name and folded as advanced; Studio opens on Projects with one card per project (health in words, last update, records, sources with problems, **View results**) and explains an empty folder, unrecognized SQLite files and loading (N1, N2, N5).
+- Studio Settings, registry, mobile and Spanish (stage 7): Settings are folded groups showing only real CLI commands and flags; the registry is **Registry (URL)** with local publish; at 40rem and below tables become labelled cards and the provenance panel a bottom sheet; every JS-built message now comes from the English/Spanish dictionary (N8, N10, N12).
 
 ## Unreleased — adoption cut (N15–N19)
 

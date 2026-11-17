@@ -1,41 +1,42 @@
-// Run, health and repair, and the dataset browser for the open job.
-// All source-derived text is set as plain text content; markup is never parsed.
-import { $, api, bind, el, pill, requireFile, show, state, table } from "./dom.js";
+// Run (extract, load) and the technical health table for the open job; Results shows the
+// stored records and Fix handles repairs. Source-derived text is always plain text content.
+import { $, api, bind, el, request, requireFile, show, table } from "./dom.js";
+import { t } from "./i18n.js";
 import { showAlerts, withProgress } from "./controls.js";
+import { loadRecords } from "./results.js";
+import { actionButton, chip } from "./ui.js";
 
 import { spiderLine } from "./bounds.js";
 
-const PAGE_SIZE = 25;
-let offset = 0;
-
 export function resetOperate() {
-  offset = 0;
-  for (const id of ["run-result", "health-result", "repair-result", "ai-repair-result", "dataset-result"]) {
-    $(id).replaceChildren();
-  }
-  for (const id of ["run-status", "health-status", "dataset-status", "operation-progress", "failure-command"]) show(id, "");
+  for (const id of ["run-result", "health-result"]) $(id).replaceChildren();
+  for (const id of ["run-status", "health-status", "operation-progress", "failure-command"]) show(id, "");
   for (const id of ["run-alerts", "health-alerts"]) $(id).replaceChildren();
   $("failure-hint").hidden = true;
 }
 
-function origin(source) {
+export function origin(source) {
   if (!source.recipe_origin) return "-";
-  const version = source.recipe_version === null ? "new" : `v${source.recipe_version}`;
-  return `${source.recipe_origin === "memory" ? "recipe memory" : "job file"} ${version}`;
+  const version = source.recipe_version === null ? t("run.newRecipe") : `v${source.recipe_version}`;
+  return t(source.recipe_origin === "memory" ? "run.fromMemory" : "run.fromJob", { version });
 }
 
-function issues(list) {
-  return (list || []).map((i) => i.code + (i.field ? `(${i.field})` : "")).join(", ") || "none";
+export function issues(list) {
+  return (list || []).map((i) => i.code + (i.field ? `(${i.field})` : "")).join(", ") || t("run.noIssues");
+}
+
+function headers(keys) {
+  return keys.map((key) => t(`col.${key}`));
 }
 
 async function extract() {
   const data = await withProgress(() => api("/api/extract", { file: requireFile() }));
   showAlerts("run-alerts", data.alerts);
   const j = data.job;
-  show("run-status", `Extract ${j.status}: ${j.records_accepted} accepted, ${j.records_rejected} rejected. Nothing was written. ${spiderLine(data.sources)}`,
+  show("run-status", `${t("run.extracted", { status: j.status, accepted: j.records_accepted, rejected: j.records_rejected })} ${spiderLine(data.sources)}`,
     j.status === "success" ? "good" : "warn");
   const rows = data.sources.map((s) => [s.source_index, s.source_url, s.status, s.records, origin(s), issues(s.issues)]);
-  $("run-result").replaceChildren(table(["#", "source", "status", "records", "recipe", "issues"], rows));
+  $("run-result").replaceChildren(table(headers(["n", "source", "status", "records", "recipe", "issues"]), rows));
 }
 
 async function load() {
@@ -44,169 +45,46 @@ async function load() {
   showAlerts("run-alerts", data.alerts);
   // Green only for a clean load: open drift ("degraded") or a storage error is a warning.
   const open = (result.open_drift || []).length;
-  show("run-status", `Load ${result.status} into dataset "${result.dataset}".`
-    + (open ? ` ${open} source(s) have open drift: review, repair or acknowledge it.` : ""),
-    result.status === "success" ? "good" : "warn");
+  show("run-status", t("run.loaded", { status: result.status, dataset: result.dataset })
+    + (open ? ` ${t("run.openDrift", { n: open })}` : ""), result.status === "success" ? "good" : "warn");
   const rows = result.sources.map((s, i) => {
     const counts = Object.entries(s.counts).map(([k, v]) => `${k} ${v}`).join(", ");
-    const drift = result.drift && result.drift[i] ? `${result.drift[i].verdict} (${result.drift[i].risk})` : "not measured";
+    const drift = result.drift && result.drift[i] ? `${result.drift[i].verdict} (${result.drift[i].risk})` : t("run.notMeasured");
     return [i + 1, s.source_url, s.status, counts, origin(s), drift, issues(s.issues)];
   });
   const out = $("run-result");
-  out.replaceChildren(table(["#", "source", "status", "changes", "recipe", "drift", "issues"], rows));
-  if (result.stale_sources.length) out.append(el("p", `${result.stale_sources.length} source(s) are stale.`, "warn"));
+  out.replaceChildren(table(headers(["n", "source", "status", "changes", "recipe", "drift", "issues"]), rows));
+  if (result.stale_sources.length) out.append(el("p", t("run.stale", { n: result.stale_sources.length }), "warn"));
+  await loadRecords();
+  request("loaded", {});
+}
+
+function freshness(s) {
+  if (!s.status) return t("health.noDataset");
+  if (s.status.stale) return chip("warn", t("health.stale"));
+  if (s.open_drift) return chip("warn", t("health.drift", { risk: s.open_drift.risk }));
+  return chip("ok", t("health.fresh"));
 }
 
 async function health() {
   const data = await api("/api/health", { file: requireFile() });
-  const out = $("health-result");
   showAlerts("health-alerts", data.alerts);
   show("failure-command", data.on_failure_command);
   $("failure-hint").hidden = false;
   const rows = data.sources.map((s, i) => {
-    const status = !s.status ? "no dataset yet"
-      : s.status.stale ? pill("stale", false)
-      : s.open_drift ? pill(`open drift (${s.open_drift.risk})`, false)
-      : pill("fresh", true);
     const versions = s.versions.map((v) => `v${v.version} ${v.state}`).join(", ") || "-";
-    const actions = el("div", undefined, "row");
-    if (data.has_memory) {
-      actions.append(button("Fix this site", () => repair(i + 1)));
-      actions.append(button("Write to job file", () => apply(i + 1)));
-    }
-    const drift = s.open_drift ? `${s.open_drift.risk}: review or fix` : "none";
-    return [i + 1, s.source_url, origin(s), status, s.status?.last_success || "never", s.status?.reason || "", drift, versions, actions];
+    const fix = data.has_memory ? actionButton(t("source.action.fix"), () => request("fix", { source: i + 1 }), "small") : "";
+    const drift = s.open_drift ? t("health.driftReview", { risk: s.open_drift.risk }) : t("health.none");
+    return [i + 1, s.source_url, origin(s), freshness(s), s.status?.last_success || t("time.never"),
+      s.status?.reason || "", drift, versions, fix];
   });
-  out.replaceChildren(table(["#", "source", "serving recipe", "status", "last success", "why stale", "open drift", "stored versions", "actions"], rows));
-  show("health-status", data.has_memory ? "" : "Add recipe_memory to the job to propose and promote repairs.", "muted");
-}
-
-function button(label, action) {
-  const node = el("button", label);
-  node.type = "button";
-  node.addEventListener("click", async () => {
-    node.disabled = true;
-    try { await action(); } catch (error) { show("health-status", `Error: ${error.message}`, "bad"); }
-    finally { node.disabled = false; }
-  });
-  return node;
-}
-
-async function repair(source) {
-  const notice = state.ai.enabled ? (state.ai.remote ? " The configured model may help; page content is sent to the remote model." : " The configured model may help.") : "";
-  show("health-status", `Fixing source ${source}: looking for a recipe that passes the checks…${notice}`, "muted");
-  const data = await withProgress(() => api("/api/repair", { file: requireFile(), source }));
-  const { report } = data;
-  showAlerts("health-alerts", data.alerts);
-  const item = report.sources[0];
-  const out = $("repair-result");
-  out.replaceChildren(el("h3", `Repair for source ${source}: ${item.outcome || "done"}`));
-  if (item.issues && item.issues.length) out.append(el("p", `issues: ${issues(item.issues)}`, "warn"));
-  if (!item.comparisons.length) out.append(el("p", "No candidate recipe was found.", "warn"));
-  for (const comparison of item.comparisons) out.append(candidate(source, comparison, item.promoted_version));
-  $("ai-repair-result").replaceChildren();
-  const usable = item.comparisons.some((c) => !c.evaluation || c.evaluation.decision !== "reject");
-  if (state.ai.enabled && !usable && !item.promoted_version) out.append(button("Ask AI for a repair", () => askRepair(source)));
-  show("health-status", item.promoted_version ? `Version ${item.promoted_version} now serves.` : "Review the candidates below.", "muted");
-}
-
-// Repair with the model: relocation, then model proposals, the same gates and the semantic
-// judge. A candidate is promoted only when the job sets auto_promote and the judge agrees.
-async function askRepair(source) {
-  const notice = state.ai.remote ? " Page content is sent to the remote model." : "";
-  show("health-status", `Asking the model for a repair of source ${source}…${notice}`, "muted");
-  const { report } = await api("/api/ai/repair", { file: requireFile(), source });
-  const item = report.sources[0];
-  const out = $("ai-repair-result");
-  out.replaceChildren(el("h3", `Repair with the model for source ${source} (${item.inference_calls || 0} model call(s))`));
-  if (item.issues && item.issues.length) out.append(el("p", `issues: ${issues(item.issues)}`, "warn"));
-  if (!item.comparisons.length) out.append(el("p", "No candidate recipe was found.", "warn"));
-  for (const comparison of item.comparisons) out.append(candidate(source, comparison, item.promoted_version));
-  show("health-status", item.promoted_version
-    ? `Version ${item.promoted_version} now serves: the job allows automatic promotion and the model judged the values unchanged in meaning.`
-    : "Check that the new values mean the same as before, then promote with a reason.", item.promoted_version ? "good" : "muted");
-}
-
-function candidate(source, comparison, promoted) {
-  const box = el("div", undefined, "candidate");
-  const ev = comparison.evaluation;
-  box.append(el("h3", `Candidate v${comparison.candidate_version} (replaces v${comparison.previous_version})`));
-  if (comparison.diff) {
-    const [oldRecord, newRecord] = comparison.diff.record_selector;
-    const rows = [["(record)", oldRecord, newRecord]];
-    for (const f of comparison.diff.fields) rows.push([f.field, f.old, f.new]);
-    const grid = table(["field", "old selector", "new selector"], rows);
-    grid.querySelectorAll("tbody tr").forEach((tr, i) => {
-      if (i > 0 && comparison.diff.fields[i - 1].changed) tr.className = "changed";
-    });
-    box.append(grid);
-  }
-  if (ev) {
-    box.append(el("p", `Decision: ${ev.decision}. ${ev.current_records} records now; ${ev.historical_passed}/${ev.historical_fixtures} past samples pass.`,
-      ev.decision === "promote" ? "good" : ev.decision === "reject" ? "bad" : "warn"));
-    const gates = ev.regressions.map((r) => [r.name, pill(r.passed ? "pass" : "fail", r.passed)]);
-    if (gates.length) box.append(table(["gate", "result"], gates));
-    if (ev.reasons.length) box.append(el("p", `Reasons: ${ev.reasons.join("; ")}`));
-  }
-  if (promoted === comparison.candidate_version) box.append(el("p", "This version is now serving.", "good"));
-  else if (!ev || ev.decision !== "reject") box.append(promoteForm(source, comparison.candidate_version));
-  return box;
-}
-
-function promoteForm(source, version) {
-  const form = el("div", undefined, "row");
-  const id = `reason-${source}-${version}`;
-  const label = el("label", "Reason");
-  label.htmlFor = id;
-  const reason = el("input");
-  Object.assign(reason, { id, type: "text", maxLength: 500, size: 32 });
-  const go = button("Promote", async () => {
-    if (!reason.value.trim()) throw new Error("give a reason before promoting");
-    const data = await withProgress(() => api("/api/promote", { file: requireFile(), source, version, reason: reason.value }));
-    showAlerts("health-alerts", data.alerts);
-    const done = data.report.sources[0].promoted_version;
-    show("health-status", done ? `Version ${done} now serves. Use "Write to job file" to save it there.` : "Not promoted: the candidate failed its checks. The current recipe keeps serving.", done ? "good" : "warn");
-  });
-  const note = el("p", "Promotion re-runs every check. Studio cannot override a failed check.", "muted");
-  form.append(label, reason, go, note);
-  return form;
-}
-
-async function apply(source) {
-  const data = await api("/api/apply", { file: requireFile(), source, sha256: state.sha });
-  state.sha = data.sha256;
-  show("health-status", data.changed ? `Recipe v${data.recipe_version} written to the job file.` : "The job file already holds the serving recipe.", "good");
-}
-
-async function records(delta) {
-  offset = Math.max(0, offset + delta);
-  const data = await api("/api/records", { file: requireFile(), offset, limit: PAGE_SIZE });
-  if (data.total && offset >= data.total) offset = Math.max(0, data.total - PAGE_SIZE);
-  const last = Math.min(offset + data.records.length, data.total);
-  show("dataset-status", `Records ${data.total ? offset + 1 : 0}-${last} of ${data.total} in "${data.dataset}". ${data.stale_sources} stale source(s). Values come from the source pages.`, "muted");
-  const rows = data.records.map((r) => [
-    ...data.fields.map((name) => r.fields[name]), r.last_observed_at, r.stale ? pill("stale", false) : "",
-  ]);
-  $("dataset-result").replaceChildren(table([...data.fields, "last seen", "stale"], rows));
-}
-
-async function download(format) {
-  const data = await api("/api/export", { file: requireFile(), format });
-  const url = URL.createObjectURL(new Blob([data.content], { type: data.media_type }));
-  const link = el("a");
-  Object.assign(link, { href: url, download: data.filename });
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-  show("dataset-status", `Downloaded ${data.filename}.`, "good");
+  $("health-result").replaceChildren(table(headers(["n", "source", "serving", "status", "lastSuccess",
+    "whyStale", "drift", "versions", "actions"]), rows));
+  show("health-status", data.has_memory ? "" : t("fix.needsMemory"), "muted");
 }
 
 export function initOperate() {
   bind("extract", "run-status", extract);
   bind("load", "run-status", load);
   bind("health", "health-status", health);
-  bind("dataset", "dataset-status", () => records(-offset));
-  bind("prev-page", "dataset-status", () => records(-PAGE_SIZE));
-  bind("next-page", "dataset-status", () => records(PAGE_SIZE));
-  bind("export-json", "dataset-status", () => download("json"));
-  bind("export-html", "dataset-status", () => download("html"));
 }
