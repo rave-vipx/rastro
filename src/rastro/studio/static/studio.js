@@ -2,7 +2,7 @@
 // All source-derived text is set as plain text content; markup is never parsed.
 import { initPrefs } from "./prefs.js";
 import { $, api, bind, show, state, switchView } from "./dom.js";
-import { t } from "./i18n.js";
+import { onLangChange, t } from "./i18n.js";
 import { initAI } from "./ai.js";
 import { fillControls, initControls } from "./controls.js";
 import { fillSelectors, initCorrect, resetCorrect } from "./correct.js";
@@ -50,6 +50,7 @@ async function connect() {
 export async function refreshJobs(select) {
   const data = await api("/api/jobs");
   if (data.truncated) show("listing", t("open.truncated"));
+  state.root = data.root;
   show("root", t("open.folder", { name: data.root }), "muted");
   const list = $("files");
   list.replaceChildren(...data.files.map((name) => new Option(name, name)));
@@ -58,6 +59,7 @@ export async function refreshJobs(select) {
 }
 
 function wireRequests() {
+  onLangChange(() => { if (state.root) show("root", t("open.folder", { name: state.root }), "muted"); });
   document.addEventListener("studio:loaded", () => Promise.all([loadSources(), loadAlerts()]));
   document.addEventListener("studio:settings", (event) => {
     switchView("settings");

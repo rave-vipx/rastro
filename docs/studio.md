@@ -148,9 +148,14 @@ language and theme choices, and, once a project is open, its views: **Results** 
 **Settings** (next page, link following, scroll, stealth, connecting your app, the recipe registry)
 and **New scraper**.
 
-- **Language:** English by default; Spanish (Rioplatense voseo) from the header. Static labels come
-  from one dictionary (`static/i18n.js`); messages produced by actions are still English and move to
-  the dictionary in later stages.
+- **Language:** English by default; Spanish (Rioplatense voseo) from the header. Every label and
+  message Studio writes comes from one dictionary (`static/i18n.js`, tests keep both languages
+  complete); lists, cards and panels redraw when the language changes. Sentences the server writes
+  (run alerts above a result) and issue codes stay as the server sends them.
+- **Narrow screens:** from 360 px. At 40rem and below the results and before/after tables become
+  cards with a label per value, the provenance panel opens as a bottom sheet, and controls are 44 px.
+- **Settings** are folded groups: next page, follow links, scroll, browser and stealth, network
+  permissions, connect your app, and **Registry (URL)**.
 - **Theme:** System (default), Light or Dark. Both choices are stored in this browser only; with
   storage blocked they last until reload.
 - **Accessibility:** controls are at least 36 px (44 px on narrow screens), focus is a 3 px accent
@@ -227,6 +232,12 @@ product differ, the interface adapts:
 | Step 1 checks the page and offers a browser | Step 1 takes the URL; the page is read on **Preview records**, with a pointer to the browser docs | Studio has no fetch-only route, and the render mode is a job setting |
 | Block-style field builder with a "Código" toggle (Nuevo step 2) | A table of field name, example and record key | Same job fields, no new engine concept; the job file stays viewable outside Studio |
 | Project name saved as a title | The name becomes the file names (`agenda-de-fiestas.toml`); the card shows the dataset name or file stem | Jobs have no display-name field |
+| "Hub on GitHub" and "Open pull request" (Recetas) | **Registry (URL)**: search and install from a local registry folder or an HTTPS URL; publish writes into a local folder and never runs Git or pushes | N10: no accounts and no Rastro-operated server; a GitHub repository can still serve as the HTTPS URL |
+| Recipe "collections" | Not offered | Not a defined concept |
+| Illustrative commands in Ajustes (`rastro export`, `rastro serve`, `rastro recipes …`) | Only real commands: the ones `/api/connect` generates for the project, and the real `rastro studio --allow-egress`, `--allow-env NAME`, `--allow-stealth` flags | A test checks every shown flag exists in the CLI |
+| Stealth as a mode choice in Ajustes | A switch for this Studio session only, off by default; the render mode stays a job setting | N12: a recipe or bundle can never set stealth |
+| "Permisos de red por host" editor | An explanation of `allowed_hosts` and the operator flags | Network grants belong to the operator, not to a page |
+| Mobile bottom sheet with its own layout (Movil) | The same views; at 40rem and below tables become labelled cards and the provenance panel a bottom sheet | One page, CSS only |
 | "Conectar una exportación" as an import flow | An explanation with the real `rastro.load_records` call and the SQLite option | Studio has no import route; the adapter API is the supported path |
 | "Avisarme por notificación del sistema" in Alerts | Not offered; the Technical detail keeps the `--on-failure` command for the README hook | Studio has no notification permission and adds no background process |
 | "Agregar sitio" / "Quitar del proyecto" in Sources | Not offered | Sources are job data; Studio edits only bounded settings of a job |

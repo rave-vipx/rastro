@@ -56,7 +56,7 @@ function emptyNote(reason) {
   return null;
 }
 
-function fieldBlock(record, field) {
+function fieldBlock(record, field, shared) {
   const box = el("section", undefined, "prov-field");
   box.append(el("h4", field));
   const value = record.fields[field];
@@ -66,19 +66,31 @@ function fieldBlock(record, field) {
   if (why) box.append(why);
   const flag = flagNote(record, field);
   if (flag) box.append(flag);
-  const origin = (record.provenance || {})[field];
-  const meta = el("dl", undefined, "prov-meta");
-  if (origin) {
-    if (origin.source_url) meta.append(line(t("prov.page"), blockedUrl(origin.source_url)));
-    meta.append(line(t("prov.observed"), when(origin.observed_at)));
-    const how = [origin.method, origin.locator].filter(Boolean).join(" · ");
-    if (how) meta.append(line(t("prov.method"), how));
-    if (origin.recipe_version !== undefined && origin.recipe_version !== null) {
-      meta.append(line(t("prov.recipe"), t("prov.version", { n: origin.recipe_version })));
-    }
-  } else meta.append(line(t("prov.page"), t("prov.notReported")));
-  box.append(meta);
+  if (!shared) box.append(originMeta((record.provenance || {})[field]));
   return box;
+}
+
+function originMeta(origin) {
+  const meta = el("dl", undefined, "prov-meta");
+  if (!origin) {
+    meta.append(line(t("prov.page"), t("prov.notReported")));
+    return meta;
+  }
+  if (origin.source_url) meta.append(line(t("prov.page"), blockedUrl(origin.source_url)));
+  meta.append(line(t("prov.observed"), when(origin.observed_at)));
+  const how = [origin.method, origin.locator].filter(Boolean).join(" · ");
+  if (how) meta.append(line(t("prov.method"), how));
+  if (origin.recipe_version !== undefined && origin.recipe_version !== null) {
+    meta.append(line(t("prov.recipe"), t("prov.version", { n: origin.recipe_version })));
+  }
+  return meta;
+}
+
+// One origin for every field (the usual case) is shown once, above the fields.
+function sharedOrigin(record) {
+  const origins = view.fields.map((field) => (record.provenance || {})[field]);
+  const first = JSON.stringify(origins[0]);
+  return origins.length && origins[0] && origins.every((o) => JSON.stringify(o) === first) ? origins[0] : null;
 }
 
 function importedNote(record) {
@@ -100,7 +112,9 @@ function render() {
   if (record.stale) parts.push(el("p", t("prov.stale"), "note note-warn"));
   if (!record.provenance) parts.push(el("p", t("prov.notSent"), "muted"));
   parts.push(el("p", t("prov.lastSeen", { at: when(record.last_observed_at) }), "muted"));
-  for (const field of view.fields) parts.push(fieldBlock(record, field));
+  const shared = sharedOrigin(record);
+  if (shared) parts.push(el("h3", t("prov.allFields")), originMeta(shared));
+  for (const field of view.fields) parts.push(fieldBlock(record, field, shared));
   if (record.truncated) parts.push(el("p", t("prov.truncated"), "muted"));
   body.replaceChildren(...parts.filter(Boolean));
 }

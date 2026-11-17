@@ -1,4 +1,6 @@
 // Shared helpers. All source-derived text is set as plain text content; markup is never parsed.
+import { t } from "./i18n.js";
+
 export const $ = (id) => document.getElementById(id);
 export const state = { token: "", file: "", sha: null, ai: { enabled: false, remote: false } };
 
@@ -80,7 +82,7 @@ export function bind(buttonId, statusId, action) {
     try {
       await action();
     } catch (error) {
-      show(statusId, `Error: ${error.message}`, "bad");
+      show(statusId, t("msg.error", { why: error.message }), "bad");
     } finally {
       button.disabled = false;
     }
@@ -88,7 +90,7 @@ export function bind(buttonId, statusId, action) {
 }
 
 export function requireFile() {
-  if (!state.file) throw new Error("open a job file first");
+  if (!state.file) throw new Error(t("msg.openFirst"));
   return state.file;
 }
 

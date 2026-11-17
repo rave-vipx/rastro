@@ -1,5 +1,6 @@
 // Bounded discovery and scrolling; the server validates the domain policies.
 import { $, api, bind, requireFile, show, state } from "./dom.js";
+import { t } from "./i18n.js";
 let spider = {};
 
 export function fillBounds(data) {
@@ -15,24 +16,24 @@ export function fillBounds(data) {
     input.step = limit.step;
     input.value = data[kind]?.[name] ?? limit.default ?? "";
     show(id + "-range", limit.min != null && limit.max != null
-      ? `(${limit.min}–${limit.max}, step ${limit.step})` : "");
+      ? t("bounds.range", { min: limit.min, max: limit.max, step: limit.step }) : "");
   }
   spider = data.spider || {};
   $("spider-enabled").checked = spider.mode === "spider";
   $("spider-links").value = spider.link_field || spider.links || "a::attr(href)";
-  $("spider-link-label").textContent = spider.link_field ? "Link field" : "Link selector";
+  $("spider-link-label").textContent = t(spider.link_field ? "spider.linkField" : "spider.links");
   $("spider-same-host").checked = spider.same_host !== false;
   $("spider-allow").value = (spider.allow || []).join("\n");
   $("spider-deny").value = (spider.deny || []).join("\n");
   $("scroll-enabled").checked = !!data.scroll;
   $("scroll-controls").disabled = data.scroll_disabled;
-  show("scroll-reason", data.scroll_disabled ? "Scroll needs browser rendering; HTTP ignores scroll and stealth does not support it." : "Stops when no new records appear, or at the step cap.");
+  show("scroll-reason", t(data.scroll_disabled ? "scroll.disabled" : "scroll.stops"));
 }
 
 async function save(kind, policy) {
   const data = await api("/api/bounds", {file: requireFile(), sha256: state.sha, kind, policy});
   state.sha = data.sha256;
-  show("controls-status", "Saved bounded " + kind + " settings.", "good");
+  show("controls-status", t(`bounds.saved.${kind}`), "good");
 }
 
 export function initBounds() {

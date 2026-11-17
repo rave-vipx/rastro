@@ -206,8 +206,14 @@ load_records("pages/events.toml", records, source_url="https://example.com/event
   </div>
 
   <div id="view-settings" hidden>
-    <section class="card">
-      <h2 data-i18n="settings.title">Next page, link following and scroll</h2>
+    <section class="card" aria-labelledby="settings-heading">
+      <h2 id="settings-heading" data-i18n="settings.heading">Project settings (advanced)</h2>
+      <p class="muted" data-i18n="settings.lead">Each group changes one part of the job file and checks it before saving. Nothing here grants network access.</p>
+      <p id="controls-status" role="status" aria-live="polite"></p>
+    </section>
+
+    <details class="card fold">
+      <summary data-i18n="settings.title">Next page</summary>
       <p class="muted" data-i18n="settings.intro">Follow a next link up to a page cap.</p>
       <div class="row">
         <label for="pagination-source" data-i18n="settings.recipe">Recipe</label>
@@ -218,12 +224,16 @@ load_records("pages/events.toml", records, source_url="https://example.com/event
         <input id="pagination-cap" type="number">
         <button type="button" id="save-pagination" data-i18n="settings.saveNext">Save next page</button>
       </div>
+    </details>
+
+    <details class="card fold">
+      <summary data-i18n="spider.legend">Follow links</summary>
       <fieldset class="bound-controls">
         <legend data-i18n="spider.legend">Follow links</legend>
         <label><input id="spider-enabled" type="checkbox"> <span data-i18n="spider.enabled">Follow links from the starting URLs</span></label>
         <label><span data-i18n="spider.depth">Link depth</span> <span id="spider-depth-range"></span> <input id="spider-depth" type="number"></label>
         <label><span data-i18n="spider.pages">Page cap</span> <span id="spider-pages-range"></span> <input id="spider-pages" type="number"></label>
-        <label for="spider-links" id="spider-link-label" data-i18n="spider.links">Link selector</label>
+        <label for="spider-links" id="spider-link-label">Link selector</label>
         <input id="spider-links" type="text" value="a::attr(href)">
         <label><input id="spider-same-host" type="checkbox" checked> <span data-i18n="spider.sameHost">Stay on the same host</span></label>
         <p class="muted" data-i18n="spider.otherHosts">Other hosts still require the job's allowed hosts.</p>
@@ -231,7 +241,10 @@ load_records("pages/events.toml", records, source_url="https://example.com/event
         <label><span data-i18n="spider.deny">Denied path prefixes (one per line)</span><textarea id="spider-deny"></textarea></label>
         <button type="button" id="save-spider" data-i18n="spider.save">Save link following</button>
       </fieldset>
-      <h3 data-i18n="scroll.title">Scroll for more records</h3>
+    </details>
+
+    <details class="card fold">
+      <summary data-i18n="scroll.title">Scroll for more records</summary>
       <p id="scroll-reason"></p>
       <fieldset id="scroll-controls" class="bound-controls" disabled>
         <legend data-i18n="scroll.legend">Bounded browser scroll</legend>
@@ -240,17 +253,36 @@ load_records("pages/events.toml", records, source_url="https://example.com/event
         <label><span data-i18n="scroll.settle">Wait after each step (ms)</span> <span id="scroll-settle-range"></span> <input id="scroll-settle" type="number"></label>
         <button type="button" id="save-scroll" data-i18n="scroll.save">Save scroll</button>
       </fieldset>
+    </details>
+
+    <details class="card fold">
+      <summary data-i18n="settings.browser">Browser and stealth</summary>
+      <p class="muted" data-i18n="settings.browserHelp">Whether a source uses a browser is set in the job file (render under [acquisition]). Stealth is never written to a job or a bundle: it is a grant for this Studio session only.</p>
       <label class="check"><input type="checkbox" id="allow-stealth"> <span data-i18n="switch.stealth">Allow stealth for this Studio session</span></label>
       <p class="muted" data-i18n="switch.stealthHelp">Off by default.</p>
-      <p id="controls-status" role="status" aria-live="polite"></p>
-    </section>
+    </details>
 
-    <section class="card">
-      <h2 data-i18n="connect.title">Connect your app</h2>
+    <details class="card fold">
+      <summary data-i18n="settings.network">Network permissions</summary>
+      <p class="muted" data-i18n="settings.networkHelp">Studio reads only the hosts the job allows (allowed_hosts under [acquisition]); robots.txt and public-address checks always apply. Operator grants are flags of the command that starts Studio, never settings here:</p>
+      <pre>rastro studio --allow-egress
+rastro studio --allow-env NAME
+rastro studio --allow-stealth</pre>
+    </details>
+
+    <details class="card fold">
+      <summary data-i18n="connect.title">Connect your app</summary>
+      <p class="muted" data-i18n="connect.help">The commands and the Python call for this project, generated from the job. Run them from the Studio folder.</p>
       <button type="button" id="connect" data-i18n="connect.show">Show commands</button>
       <pre id="commands"></pre>
-    </section>
+    </details>
+
+    <details class="card fold">
+      <summary data-i18n="registry.title">Registry (URL)</summary>
+      <div id="settings-registry"></div>
+    </details>
   </div>
+
 
   <div id="view-wizard" hidden>
     <section class="card" aria-labelledby="wizard-heading">
