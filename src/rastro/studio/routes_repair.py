@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import os
 import shlex
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -31,7 +32,7 @@ from rastro.application.recipe_apply import write_serving_recipe
 from rastro.application.recipe_diff import with_diffs
 from rastro.domain.jobs import Job
 from rastro.domain.lifecycle_history import check_reason
-from rastro.studio import files
+from rastro.studio import files, run_log
 from rastro.studio.operations import alerts, operation, remembered
 from rastro.studio.web import Refused, Studio, body, flag, integer, plain, reply, text
 
@@ -165,6 +166,9 @@ def routes(studio: Studio) -> list[Route]:
             payload = await run_in_threadpool(run)
             promoted = any(s.get("promoted_version") for s in payload["report"]["sources"])
             outcome.update(status="promoted" if promoted else "refused", alerts=payload["alerts"])
+        urls = current_source_urls(job)
+        if not promoted and index <= len(urls):
+            run_log.remember(studio.root, path, run_log.refused(urls[index - 1], datetime.now(UTC)))
         return reply(payload)
 
     async def apply(request: Request) -> Response:

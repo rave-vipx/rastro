@@ -21,6 +21,7 @@ from rastro.studio import (
     routes_ai,
     routes_dataset,
     routes_jobs,
+    routes_overview,
     routes_registry,
     routes_repair,
     routes_run,
@@ -75,6 +76,7 @@ def create_app(
         *routes_run.routes(studio),
         *routes_repair.routes(studio),
         *routes_dataset.routes(studio),
+        *routes_overview.routes(studio),
         *routes_ai.routes(studio),
     ]
     middleware = [Middleware(TrustedHostMiddleware, allowed_hosts=list(LOCAL_HOSTS))]
