@@ -33,7 +33,9 @@ def add_commands(subcommands: argparse._SubParsersAction) -> None:  # type: igno
     )
     sp.add_argument("page", type=Path, help="Saved HTML page")
     _add_example_options(sp)
-    sp.add_argument("--output", choices=("json", "table"), default="json")
+    sp.add_argument(
+        "--output", choices=("json", "table"), default="json", help="JSON or a human table"
+    )
     new = subcommands.add_parser(
         "new", help="Create a job file from a saved page, known sites or a goal"
     )
@@ -43,10 +45,23 @@ def add_commands(subcommands: argparse._SubParsersAction) -> None:  # type: igno
     )
     new.add_argument("--from", dest="page", type=Path, help="Saved HTML page")
     new.add_argument("--goal", help="Research goal text for source discovery")
-    new.add_argument("--site", nargs="+", action="extend", default=[], metavar="URL")
-    new.add_argument("--fields", action="append", default=[], metavar="A,B")
-    new.add_argument("--search", choices=("searxng", "model"))
-    new.add_argument("--approve", nargs="+", action="extend", default=[], metavar="HOST")
+    new.add_argument(
+        "--site", nargs="+", action="extend", default=[], metavar="URL", help="Page URLs to scrape"
+    )
+    new.add_argument(
+        "--fields", action="append", default=[], metavar="A,B", help="Field names to propose"
+    )
+    new.add_argument(
+        "--search", choices=("searxng", "model"), help="How --goal finds candidate sources"
+    )
+    new.add_argument(
+        "--approve",
+        nargs="+",
+        action="extend",
+        default=[],
+        metavar="HOST",
+        help="Hosts you approve for fetching",
+    )
     _add_example_options(new)
     new.add_argument("--dataset", help="Dataset path for approved records, relative to the job")
     new.add_argument("--identity", action="append", default=[], help="Record key field")

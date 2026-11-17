@@ -215,6 +215,14 @@ What Rastro already does, for people and for AI coding agents. Use these before 
 - **Do not build:** importing Rastro internals or scraping without the contract
 - **Docs:** [capabilities.md](capabilities.md)
 
+### See every configuration option before writing one
+
+- **Use:** `rastro config` (JSON, or `--output markdown`) lists every job key, keyword argument, operator grant, environment variable and CLI flag with type, default and bounds; `rastro job template --all` prints an annotated job file; MCP resource `rastro://configuration`
+- **CLI:** `rastro config`, `rastro job template`
+- **Limits:** Generated from the code of the installed version; unknown job keys are rejected with the closest valid key
+- **Do not build:** guessing option names, or hand-building what an option already does
+- **Docs:** [configuration.md](configuration.md)
+
 ## Not Rastro's job
 
 These belong to your app; build them there:

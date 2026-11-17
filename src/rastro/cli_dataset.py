@@ -17,20 +17,29 @@ from rastro.cli_trust import add_trust_arguments, trust_options
 from rastro.domain.job_results import JobExitCode
 from rastro.domain.models import ConfigurationError
 
+_DATASET_HELP = {
+    "export": "Print a dataset's records as JSON, JSONL or an HTML table",
+    "status": "Show each source's freshness and last load",
+}
+
 
 def add_commands(subcommands: argparse._SubParsersAction, jobs: argparse._SubParsersAction) -> None:  # type: ignore[type-arg]
     load = jobs.add_parser("load", help="Run a job and load approved observed fields")
-    load.add_argument("file", type=Path)
+    load.add_argument("file", type=Path, help="Job file (.toml or .json)")
     load.add_argument("--drift", action="store_true", help="Measure and report structural drift")
-    load.add_argument("--output", choices=("json",), default="json")
-    load.add_argument("--allow-absolute-paths", action="store_true")
+    load.add_argument(
+        "--output", choices=("json",), default="json", help="Machine-readable output format"
+    )
+    load.add_argument(
+        "--allow-absolute-paths", action="store_true", help="Allow absolute paths in the job file"
+    )
     add_trust_arguments(load)
     add_hook_argument(load)
     dataset = subcommands.add_parser("dataset", help="Read dataset records and freshness")
     commands = dataset.add_subparsers(dest="dataset_command", required=True)
     for command in ("export", "status"):
-        parser = commands.add_parser(command)
-        parser.add_argument("path", type=Path)
+        parser = commands.add_parser(command, help=_DATASET_HELP[command])
+        parser.add_argument("path", type=Path, help="Dataset SQLite file")
         parser.add_argument(
             "--dataset", help="Dataset name (required if file contains multiple datasets)"
         )
@@ -38,11 +47,18 @@ def add_commands(subcommands: argparse._SubParsersAction, jobs: argparse._SubPar
             "--format",
             choices=("json", "jsonl", "html") if command == "export" else ("json", "jsonl"),
             default="json",
+            help="Output format",
         )
         if command == "export":
-            parser.add_argument("--sort-field")
-            parser.add_argument("--upcoming", action="store_true")
-            parser.add_argument("--timezone", default="UTC")
+            parser.add_argument(
+                "--sort-field", help="Field to sort records by (ISO date for --upcoming)"
+            )
+            parser.add_argument(
+                "--upcoming", action="store_true", help="Only records dated today or later"
+            )
+            parser.add_argument(
+                "--timezone", default="UTC", help="IANA timezone that decides today"
+            )
 
 
 def load_job_command(args: argparse.Namespace) -> int:

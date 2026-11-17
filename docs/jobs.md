@@ -356,6 +356,7 @@ uv run rastro job preview job.toml --output table
 uv run rastro job schema --target job
 uv run rastro job schema --target run
 uv run rastro job schema --target preview
+uv run rastro job template --all > job.toml   # every option, commented
 uv run rastro job load job.toml --drift --on-failure "notify-script"
 uv run rastro job ack-drift job.toml --source 1
 uv run rastro job forget-source job.toml --url https://old.example/list
@@ -370,6 +371,9 @@ uv run rastro health job.toml --output json
 | `3` | `JobExitCode.PARTIAL_SUCCESS` | At least one source succeeded or partially succeeded, but not all of them succeeded (`status = "partial_success"`). |
 | `4` | `JobExitCode.NEEDS_ATTENTION` | The command succeeded but an operator must act: `load` finished with open drift (`status = "degraded"`); `rastro health` or `rastro dataset status` found a stale source, open drift or a quarantined candidate. |
 | `5` | `JobExitCode.STORAGE_ERROR` | `load` ran but a dataset write or read failed. The report is still printed: committed sources keep their counts, the rest carry a `storage_error` issue (`status = "storage_error"`). |
+
+Every key, flag and default is listed in the [Configuration reference](configuration.md)
+(`rastro config`). An unknown key fails validation with a `hint` naming the closest valid key.
 
 Severity order: 5, 1, 3, 4, 0. See [Monitoring and alerts](operations.md) for open drift,
 `rastro health`, the `--on-failure` hook and `RASTRO_ON_FAILURE`, and

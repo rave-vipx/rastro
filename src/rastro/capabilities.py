@@ -293,6 +293,18 @@ CAPABILITIES: tuple[Capability, ...] = (
         instead_of="importing Rastro internals or scraping without the contract",
         docs="docs/capabilities.md",
     ),
+    Capability(
+        task="See every configuration option before writing one",
+        use="`rastro config` (JSON, or `--output markdown`) lists every job key, keyword "
+        "argument, operator grant, environment variable and CLI flag with type, default and "
+        "bounds; `rastro job template --all` prints an annotated job file; MCP resource "
+        "`rastro://configuration`",
+        cli=("rastro config", "rastro job template"),
+        limits="Generated from the code of the installed version; unknown job keys are "
+        "rejected with the closest valid key",
+        instead_of="guessing option names, or hand-building what an option already does",
+        docs="docs/configuration.md",
+    ),
 )
 
 # Public names that are inputs, results, errors or types rather than a capability of their

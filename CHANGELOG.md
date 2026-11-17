@@ -4,6 +4,10 @@ All notable user-facing changes are recorded here. The project follows [Semantic
 
 ## Unreleased — Studio redesign
 
+### Added
+
+- Configuration reference (N18, AGENT-001): `rastro config [--output json|markdown]`, the generated `docs/configuration.md` and the MCP resource `rastro://configuration` list every job key, Python keyword argument, operator grant, environment variable and CLI flag with type, default, bounds, description and docs link, introspected from the models, signatures and parser. `rastro job template [--all]` prints an annotated job file that validates as printed. `rastro init --agent` snippets gain a configuration map and the rule to check the reference before writing an option; `rastro job validate` names the closest valid key for an unknown one. Tests fail when a field or flag lacks a description or the page is stale.
+
 ### Changed
 
 - Studio shell (stage 1): design tokens with system, light and dark themes, an English/Spanish dictionary (English default), and views for Results, Sources, Alerts, Fix, Settings and New scraper; every token pair meets AA contrast (N1, N5, N8).

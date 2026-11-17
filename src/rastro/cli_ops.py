@@ -18,26 +18,34 @@ def add_job_commands(jobs: argparse._SubParsersAction) -> None:  # type: ignore[
     ack = jobs.add_parser(
         "ack-drift", help="Acknowledge open drift so the drifted structure becomes the baseline"
     )
-    ack.add_argument("file", type=Path)
+    ack.add_argument("file", type=Path, help="Job file (.toml or .json)")
     which = ack.add_mutually_exclusive_group(required=True)
     which.add_argument("--source", type=int, help="One-based source index")
     which.add_argument("--all", action="store_true", help="Every source of the job")
-    ack.add_argument("--allow-absolute-paths", action="store_true")
+    ack.add_argument(
+        "--allow-absolute-paths", action="store_true", help="Allow absolute paths in the job file"
+    )
     forget = jobs.add_parser(
         "forget-source", help="Forget the status and drift state of a source no longer in the job"
     )
-    forget.add_argument("file", type=Path)
+    forget.add_argument("file", type=Path, help="Job file (.toml or .json)")
     forget.add_argument("--url", required=True, help="The source URL as `dataset status` shows")
-    forget.add_argument("--allow-absolute-paths", action="store_true")
+    forget.add_argument(
+        "--allow-absolute-paths", action="store_true", help="Allow absolute paths in the job file"
+    )
 
 
 def add_health_command(subcommands: argparse._SubParsersAction) -> None:  # type: ignore[type-arg]
     health = subcommands.add_parser(
         "health", help="Stale sources, open drift and pending repairs of a job; exit 4 if any"
     )
-    health.add_argument("file", type=Path)
-    health.add_argument("--output", choices=("table", "json"), default="table")
-    health.add_argument("--allow-absolute-paths", action="store_true")
+    health.add_argument("file", type=Path, help="Job file (.toml or .json)")
+    health.add_argument(
+        "--output", choices=("table", "json"), default="table", help="Human table or JSON"
+    )
+    health.add_argument(
+        "--allow-absolute-paths", action="store_true", help="Allow absolute paths in the job file"
+    )
 
 
 def job_command(args: argparse.Namespace) -> int:

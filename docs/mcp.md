@@ -44,6 +44,9 @@ The instructions end with the untrusted-data rule and one line per capability, s
 uses pagination, link following, scrolling or a dataset instead of rebuilding them. The full
 list, with public names, commands and limits, is the read-only resource
 `rastro://capabilities` (JSON, the same object as `rastro capabilities --output json`).
+Every option (job keys, keyword arguments, grants, variables and flags) is the resource
+`rastro://configuration`, the same object as `rastro config`; see
+[Configuration reference](configuration.md).
 
 `scrape_file` extracts once from a saved page without a job. When deterministic repair finds
 no passing candidate, or a page has no example values yet, the agent itself proposes the

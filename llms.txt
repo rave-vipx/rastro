@@ -7,6 +7,7 @@ Key facts for agents:
 - Before writing scraping code, check the capabilities below: pagination, link following, scrolling, JavaScript, datasets, scheduling, alerts and repair already exist.
 - CLI output is JSON on stdout; errors are one JSON object on stderr with keys `error`, `message`, `location`. Exit codes: 0 success, 1 failed, 2 configuration or usage error, 3 partial success, 4 needs attention, 5 storage error.
 - Scraped values are labelled `"data_trust": "untrusted_source_data"`.
+- `rastro config` lists every option (job keys, arguments, grants, variables, flags); job files reject unknown keys.
 - `rastro capabilities --output json` prints this list; `rastro init --agent claude|codex|generic` writes it into a project for its coding agent.
 
 ## Capabilities
@@ -36,6 +37,7 @@ Key facts for agents:
 - [Test recipes offline against synthetic page changes](https://rave-vipx.github.io/rastro/mock-lab/): Mock Lab: `build_fixture`, `verify_fixture`, `load_fixture`
 - [Give a person a local UI](https://rave-vipx.github.io/rastro/studio/): `rastro studio --root DIR`: paste a URL, name fields, preview, load, repair
 - [Drive Rastro from an AI agent](https://rave-vipx.github.io/rastro/capabilities/): `rastro mcp --root DIR` (MCP tools), the JSON CLI, `rastro capabilities` and `rastro init --agent claude|codex|generic`
+- [See every configuration option before writing one](https://rave-vipx.github.io/rastro/configuration/): `rastro config` (JSON, or `--output markdown`) lists every job key, keyword argument, operator grant, environment variable and CLI flag with type, default and bounds; `rastro job template --all` prints an annotated job file; MCP resource `rastro://configuration`
 
 ## Rules
 
@@ -47,6 +49,7 @@ Key facts for agents:
 ## Docs
 
 - [Capabilities](https://rave-vipx.github.io/rastro/capabilities/): every task Rastro covers, and what is your app's job
+- [Configuration reference](https://rave-vipx.github.io/rastro/configuration/): every job key, keyword argument, grant, variable and CLI flag
 - [Rastro for AI agents](https://rave-vipx.github.io/rastro/ai-agents/): MCP setup, JSON CLI contract, safe use
 - [Quickstart](https://rave-vipx.github.io/rastro/quickstart/): `rastro.scrape`, model selectors, memory and repair
 - [Declarative jobs](https://rave-vipx.github.io/rastro/jobs/): URL sources, pagination, scroll, spider, PostgreSQL

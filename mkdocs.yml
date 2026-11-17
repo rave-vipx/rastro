@@ -28,6 +28,7 @@ nav:
   - Getting started: getting-started.md
   - For AI agents: ai-agents.md
   - Capabilities: capabilities.md
+  - Configuration reference: configuration.md
   - Stability policy: stability.md
   - Declarative jobs: jobs.md
   - Recipes from examples: suggest.md
