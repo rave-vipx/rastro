@@ -1,4 +1,10 @@
-"""Offline candidate CI, independent of persistence and activation (REPAIR-002/004/005)."""
+"""Offline candidate CI, independent of persistence and activation (REPAIR-002/004/005).
+
+Containment (N19): a candidate whose current values, or the success samples the semantic
+judge would read, look like instructions is never promoted automatically. It is held in
+quarantine with the reason ``instruction_like_content``; an operator can still promote it
+with a reason and ``--override-gates``.
+"""
 
 from collections.abc import Sequence
 from datetime import datetime
@@ -9,6 +15,8 @@ from pydantic import BaseModel
 from rastro.application.consistency import History, evaluate_consistency
 from rastro.application.extraction import extract_document, validate_recipe
 from rastro.domain.consistency import ConsistencyReport, ConsistencyRule
+from rastro.domain.injection import CODE as INSTRUCTION_LIKE
+from rastro.domain.injection import record_flags
 from rastro.domain.models import (
     ConfigurationError,
     Issue,
@@ -89,6 +97,9 @@ def evaluate_candidate(
     decision, reasons = _decide(
         candidate, current.status, len(rows), indicators, historical, generated, bool(rules), policy
     )
+    if decision != "reject" and _instruction_like(rows, fixtures):
+        kept = tuple(r for r in reasons if r != "all_gates_passed")
+        decision, reasons = "quarantine", (*kept, INSTRUCTION_LIKE)
     return CandidateEvaluation(
         decision=decision,
         reasons=reasons,
@@ -100,6 +111,12 @@ def evaluate_candidate(
         regressions=(*historical, *generated),
         blocking=() if decision != "reject" else _blocking(current.issues),
     )
+
+
+def _instruction_like(rows: Sequence[dict[str, object]], fixtures: Sequence[FixtureBundle]) -> bool:
+    """Current values, or the samples a judge would read, look like instructions."""
+    samples = [record.data for fixture in fixtures for record in fixture.expected.records]
+    return bool(record_flags(rows) or record_flags(samples))
 
 
 def _blocking(issues: Sequence[Issue]) -> tuple[Issue, ...]:

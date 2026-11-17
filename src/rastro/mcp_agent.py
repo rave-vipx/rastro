@@ -21,6 +21,7 @@ from rastro.application.agent_review import RECIPE_FORMAT, job_repair_context, s
 from rastro.application.job_loader import load_job
 from rastro.application.page_digest import digest_page
 from rastro.application.recipe_diff import with_diffs
+from rastro.domain.injection import record_flags, value_flags
 from rastro.domain.lifecycle_history import check_reason
 from rastro.domain.models import ConfigurationError, Limits, Recipe
 from rastro.domain.selector_policy import check_untrusted_recipe
@@ -59,6 +60,7 @@ def _with_outline(payload: dict[str, Any], outline: str | None) -> dict[str, Any
 def repair_context(root: Path, path: str, source: int) -> dict[str, Any]:
     """Failing recipe, fields, last success values, current issues and a page outline."""
     payload = job_repair_context(_existing(root, path), source, allow_absolute_paths=False)
+    payload["flags"] = record_flags(payload["last_success_sample"])
     outline = payload.pop("page_outline")
     return _with_outline(payload, outline)
 
@@ -97,7 +99,13 @@ def _next_step(decision: str | None) -> str:
 
 def review(root: Path, path: str, source: int, version: int) -> dict[str, Any]:
     """Old and new values side by side for each changed field of a stored version."""
-    return bounded(semantic_review(_existing(root, path), source, version), max_chars=300)
+    payload = semantic_review(_existing(root, path), source, version)
+    for item in payload["fields"]:
+        old, new = (value_flags({item["field"]: v}) for v in (item["old"], item["new"]))
+        item["flags"] = [
+            {**f, "side": side} for side, fs in (("old", old), ("new", new)) for f in fs
+        ]
+    return bounded(payload, max_chars=300)
 
 
 def suggest_context(root: Path, page_path: str, fields: Sequence[str]) -> dict[str, Any]:
@@ -141,6 +149,7 @@ def recipe_try(
         "total": len(rows),
         "filled": filled,
         "preview": rows[:PREVIEW_ROWS],
+        "flags": record_flags(rows[:PREVIEW_ROWS]),
         "issues": [issue.model_dump(mode="json") for issue in result.issues[:20]],
         "truncated": len(rows) > PREVIEW_ROWS,
     }

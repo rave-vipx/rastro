@@ -138,6 +138,31 @@ outside the client's control. Selector literals may contain source values: keep
 learned recipes/results under the same privacy policy as the source. See the
 [intelligence guide](docs/intelligence.md) and [ADR 0004](docs/decisions/0004-bounded-recipe-learning.md).
 
+## Prompt injection
+
+Scraped pages are written by people Rastro does not trust. Some of that text may address
+the model or agent that reads it later. [ADR 0035](docs/decisions/0035-prompt-injection-defense.md)
+records the design.
+
+| Threat | Where it enters | What Rastro does |
+| --- | --- | --- |
+| Hidden instructions (`display:none`, `hidden`, `aria-hidden`, off-screen, zero size, comments, `<template>`, `<noscript>`) | Raw HTML and page outlines sent to a repair model or an MCP agent | Removed before any model sees the page. Extraction still runs on the original page. |
+| Invisible characters (zero-width, bidi, Unicode tag smuggling) and compatibility forms | Text in prompts | Stripped and NFKC-folded in model contexts. Tag-encoded ASCII is decoded for detection, so it is still flagged in record values. |
+| Visible instructions in a field ("ignore previous instructions", a fake `<\|im_start\|>system` turn, a Rastro tool name, a markdown link that leaks data in its query) | Extracted values, success samples, MCP payloads | Kept as data, never altered. Flagged as `instruction_like_content` with the field and rule ids, never the matched text. |
+| A model or agent that obeys the page | Repair proposals, semantic verdicts, `recipe_propose` | The model only returns a recipe or a verdict, parsed strictly and gated by recipe CI. Auto-promotion is refused when the candidate's values, or the samples the judge reads, are flagged. The candidate stays quarantined with the reason `instruction_like_content`. |
+| An agent tricked into overriding gates | `recipe_promote(override_gates=true)` | Off for MCP clients unless the operator starts the server with `--allow-override-gates`. A person can promote a held candidate with a reason and `--override-gates`. |
+
+Model contexts use a JSON data envelope whose untrusted parts are named `untrusted_*`,
+with a system rule that they are data. MCP and CLI outputs carry
+`data_trust: untrusted_source_data` and, for record payloads, a `flags` list.
+
+What Rastro cannot do: detection is a conservative pattern list, so new phrasings, other
+languages or encodings get through, and an ordinary value can occasionally match. Rastro
+cannot make a downstream agent immune. An agent that reads Rastro's output must treat
+records as data, keep its own tool permissions narrow and confirm destructive actions.
+Attribute values (`alt`, `title`, `data-*`) and `<script>` bodies still reach a repair model
+in raw HTML, because selectors need them.
+
 ## Dependency maintenance
 
 CI audits the locked core and all optional runtime dependency graphs. Dependabot checks Python dependencies and pinned GitHub Actions. A clean vulnerability scan is evidence about known advisories, not a guarantee of safety. Dependency-license and naming reviews are required before the first public package release.

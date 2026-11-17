@@ -16,6 +16,7 @@ from pydantic import BaseModel, ValidationError
 from rastro.application.job_new import new_job
 from rastro.application.suggest import suggest
 from rastro.cli_suggest import suggestion_payload
+from rastro.domain.injection import record_flags
 from rastro.domain.job_fields import StringField, build_job_schema
 from rastro.domain.models import ConfigurationError, Limits, Recipe
 from rastro.domain.selector_policy import (
@@ -112,12 +113,14 @@ def scrape_file(
         url=url,
         repair="off",
     )
+    rows = [record.data.model_dump(mode="json") for record in result.records]
     payload = {
         "schema_version": 1,
         "data_trust": "untrusted_source_data",
         "status": str(result.status),
         "total": len(result.records),
-        "records": [record.data.model_dump(mode="json") for record in result.records],
+        "records": rows,
+        "flags": record_flags(rows),
         "issues": [issue.model_dump(mode="json") for issue in result.issues],
     }
     return bounded(payload)
