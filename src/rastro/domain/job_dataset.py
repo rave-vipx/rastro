@@ -123,7 +123,7 @@ class PreviewField(Contract):
 
     name: str
     value: JsonValue
-    method: Literal["jsonld", "css", "json"] | None = None
+    method: Literal["jsonld", "css", "json", "embedded_json"] | None = None
     locator: str | None = None
     source_url: str | None = None
     recipe_version: int | None = None

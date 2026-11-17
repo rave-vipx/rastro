@@ -8,10 +8,12 @@ from cssselect import SelectorError, parse
 from lxml.etree import LxmlError  # type: ignore[import-untyped]
 from scrapling.parser import Selector
 
+from rastro.adapters.embedded_json import parse_embedded_json
 from rastro.domain.json import MISSING, resolve_pointer, strict_json
 from rastro.domain.models import (
     ConfigurationError,
     CssRecipe,
+    EmbeddedJsonRecipe,
     Issue,
     JsonLdRecipe,
     Limits,
@@ -125,14 +127,17 @@ class ScraplingParser:
     """Translate parser output into bounded, declarative candidates."""
 
     def parse(self, html: str, recipe: Recipe, limits: Limits) -> ParsedDocument:
-        if not isinstance(recipe, CssRecipe | JsonLdRecipe):
-            raise ConfigurationError("HTML documents require a css or jsonld recipe")
+        if not isinstance(recipe, CssRecipe | JsonLdRecipe | EmbeddedJsonRecipe):
+            raise ConfigurationError("HTML documents require a css, jsonld or embedded_json recipe")
         if not html.strip():
             return ParsedDocument(())
         page = _parse_html(html)
         try:
             if isinstance(recipe, CssRecipe):
                 return self._css(page, recipe, limits)
+            if isinstance(recipe, EmbeddedJsonRecipe):
+                count = element_count(page, recipe.source)
+                return parse_embedded_json(page, recipe, limits, count)
             return self._jsonld(page, recipe, limits)
         except SelectorError:
             raise ConfigurationError("Recipe contains an invalid CSS selector") from None
@@ -162,6 +167,7 @@ class ScraplingParser:
         candidates: list[Candidate] = []
         issues: list[Issue] = []
         examined = 0
+        wanted = recipe.item_types
         for block_index, block in enumerate(blocks):
             try:
                 payload = strict_json(str(block))
@@ -175,8 +181,9 @@ class ScraplingParser:
                 item_types = item.get("@type", [])
                 if isinstance(item_types, str):
                     item_types = [item_types]
-                if recipe.item_type and (
-                    not isinstance(item_types, list) or recipe.item_type not in item_types
+                if wanted and not (
+                    isinstance(item_types, list)
+                    and any(isinstance(t, str) and t in wanted for t in item_types)
                 ):
                     continue
                 values: dict[str, object] = {}

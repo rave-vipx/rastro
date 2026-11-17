@@ -13,7 +13,13 @@ from __future__ import annotations
 
 import re
 
-from rastro.domain.recipes import DOCUMENT_PREFIX, EXPAND_PREFIX, CssRecipe, Recipe
+from rastro.domain.recipes import (
+    DOCUMENT_PREFIX,
+    EXPAND_PREFIX,
+    CssRecipe,
+    EmbeddedJsonRecipe,
+    Recipe,
+)
 from rastro.domain.sources import ConfigurationError
 
 MAX_ALTERNATIVES = 8  # comma-separated selectors in one list
@@ -91,6 +97,8 @@ def check_untrusted_field(expression: str) -> None:
 def check_untrusted_recipe[R: Recipe](recipe: R) -> R:
     """Check every CSS selector of ``recipe`` and its fallbacks; other strategies pass."""
     for candidate in (recipe, *recipe.fallbacks):
+        if isinstance(candidate, EmbeddedJsonRecipe):
+            check_untrusted_field(candidate.source)
         if not isinstance(candidate, CssRecipe):
             continue
         if candidate.pagination is not None:

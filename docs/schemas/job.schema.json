@@ -769,6 +769,77 @@
       "title": "EgressProfile",
       "type": "object"
     },
+    "EmbeddedJsonRecipe": {
+      "additionalProperties": false,
+      "description": "Read JSON embedded in HTML: ``source`` selects one node, then ``record_path`` and fields\nwork as in ``JsonRecipe``.\n\n``source`` is a CSS selector ending in ``::attr(name)`` (``input[name=GXState]::attr(value)``)\nor ``::text`` (``script#__NEXT_DATA__::text``); it must match exactly one node.",
+      "properties": {
+        "fallbacks": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/HtmlRecipe"
+          },
+          "maxItems": 3,
+          "title": "Fallbacks",
+          "type": "array"
+        },
+        "fields": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "maxProperties": 100,
+          "minProperties": 1,
+          "title": "Fields",
+          "type": "object"
+        },
+        "pagination": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Pagination"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "record_path": {
+          "maxLength": 1024,
+          "title": "Record Path",
+          "type": "string"
+        },
+        "require_evidence": {
+          "default": false,
+          "title": "Require Evidence",
+          "type": "boolean"
+        },
+        "source": {
+          "maxLength": 1024,
+          "minLength": 1,
+          "title": "Source",
+          "type": "string"
+        },
+        "strategy": {
+          "const": "embedded_json",
+          "default": "embedded_json",
+          "title": "Strategy",
+          "type": "string"
+        },
+        "version": {
+          "default": 1,
+          "maximum": 2147483647,
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "fields",
+        "source",
+        "record_path"
+      ],
+      "title": "EmbeddedJsonRecipe",
+      "type": "object"
+    },
     "FileJobSource": {
       "additionalProperties": false,
       "description": "Local HTML or JSON file source resolved within the job file's directory by default.",
@@ -805,6 +876,7 @@
               "discriminator": {
                 "mapping": {
                   "css": "#/$defs/CssRecipe",
+                  "embedded_json": "#/$defs/EmbeddedJsonRecipe",
                   "json": "#/$defs/JsonRecipe",
                   "jsonld": "#/$defs/JsonLdRecipe"
                 },
@@ -819,6 +891,9 @@
                 },
                 {
                   "$ref": "#/$defs/JsonRecipe"
+                },
+                {
+                  "$ref": "#/$defs/EmbeddedJsonRecipe"
                 }
               ]
             },
@@ -922,6 +997,7 @@
       "discriminator": {
         "mapping": {
           "css": "#/$defs/CssRecipe",
+          "embedded_json": "#/$defs/EmbeddedJsonRecipe",
           "jsonld": "#/$defs/JsonLdRecipe"
         },
         "propertyName": "strategy"
@@ -932,6 +1008,9 @@
         },
         {
           "$ref": "#/$defs/JsonLdRecipe"
+        },
+        {
+          "$ref": "#/$defs/EmbeddedJsonRecipe"
         }
       ]
     },
@@ -1136,7 +1215,7 @@
     },
     "JsonLdRecipe": {
       "additionalProperties": false,
-      "description": "Map JSON-LD objects, optionally of one ``item_type``, with absolute JSON pointers.\n\nA field maps to one pointer or to 1..4 pointers; the first that resolves wins.",
+      "description": "Map JSON-LD objects, optionally of one or several ``item_type`` values, with pointers.\n\n``item_type`` is one type or 1..8 types; an object matches when any of its ``@type``\nvalues is listed. A field maps to one pointer or to 1..4 pointers; the first that\nresolves wins.",
       "properties": {
         "fallbacks": {
           "default": [],
@@ -1174,6 +1253,16 @@
               "maxLength": 256,
               "minLength": 1,
               "type": "string"
+            },
+            {
+              "items": {
+                "maxLength": 256,
+                "minLength": 1,
+                "type": "string"
+              },
+              "maxItems": 8,
+              "minItems": 1,
+              "type": "array"
             },
             {
               "type": "null"
@@ -2010,6 +2099,7 @@
               "discriminator": {
                 "mapping": {
                   "css": "#/$defs/CssRecipe",
+                  "embedded_json": "#/$defs/EmbeddedJsonRecipe",
                   "json": "#/$defs/JsonRecipe",
                   "jsonld": "#/$defs/JsonLdRecipe"
                 },
@@ -2024,6 +2114,9 @@
                 },
                 {
                   "$ref": "#/$defs/JsonRecipe"
+                },
+                {
+                  "$ref": "#/$defs/EmbeddedJsonRecipe"
                 }
               ]
             },
@@ -2189,6 +2282,7 @@
           "discriminator": {
             "mapping": {
               "css": "#/$defs/CssRecipe",
+              "embedded_json": "#/$defs/EmbeddedJsonRecipe",
               "json": "#/$defs/JsonRecipe",
               "jsonld": "#/$defs/JsonLdRecipe"
             },
@@ -2203,6 +2297,9 @@
             },
             {
               "$ref": "#/$defs/JsonRecipe"
+            },
+            {
+              "$ref": "#/$defs/EmbeddedJsonRecipe"
             }
           ]
         },
