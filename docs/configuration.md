@@ -854,7 +854,7 @@ Open the local Studio (needs rastro[studio]). Docs: [studio.md#install-and-start
 
 | Flag | Value | Default | Choices | Description |
 | --- | --- | --- | --- | --- |
-| `--root` | Path | `"/Users/usuario/Dev/Rastro-studio"` |  | Workspace directory (default: cwd) |
+| `--root` | Path | `"."` |  | Workspace directory (default: cwd) |
 | `--port` | int | `8765` |  | Loopback port |
 | `--model` | value | - |  | Model spec for Ask AI (default: RASTRO_MODEL); any provider works |
 | `--allow-remote` | flag | - |  | Allow sending page content to a non-loopback or hosted model |

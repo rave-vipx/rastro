@@ -119,3 +119,20 @@ assert.equal(events.at(-1).type, "studio:settings");
 """,
         ALERTS=ALERTS,
     )
+
+
+def test_an_unknown_rejected_count_is_never_shown_as_zero() -> None:
+    """Review of #147: rejected=null (a schema 3 metric row) reads as unknown, in en and es."""
+    run_node(
+        """
+const { counts } = await import("STATIC/sources.js");
+const i18n = await import("STATIC/i18n.js");
+const unknown = counts({status: "ok", read: 12, rejected: null, cap: null});
+assert.ok(!unknown.includes("0 rejected"), unknown);
+assert.ok(unknown.includes("12 read") && unknown.includes("rejected not recorded"), unknown);
+assert.ok(counts({status: "ok", read: 12, rejected: 0, cap: null}).includes("0 rejected"));
+i18n.setLang("es");
+const es = counts({status: "ok", read: 12, rejected: null, cap: null});
+assert.ok(!es.includes("0 rechazados") && es.includes("rechazos sin registrar"), es);
+""",
+    )

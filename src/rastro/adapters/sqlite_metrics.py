@@ -16,7 +16,7 @@ COLUMNS = (
     "run_id, source_url, host, strategy, started_at, finished_at, outcome, http_status, "
     "requests, retries, bytes, network_seconds, processing_seconds, render_seconds, "
     "model_calls, model_tokens, records, required_fields_ok, fields_validated, "
-    "rejected, cap, cap_value"
+    "rejected, cap, cap_value, requested_url"
 )
 NAMES = tuple(name.strip() for name in COLUMNS.split(","))
 
@@ -70,7 +70,7 @@ def _values(row: RunMetric) -> tuple[object, ...]:
     data = row.model_dump()
     data["started_at"] = row.started_at.isoformat()
     data["finished_at"] = row.finished_at.isoformat()
-    return tuple(data[name] for name in NAMES)
+    return tuple(data.get(name) for name in NAMES)  # model_dump omits a None requested_url
 
 
 def _row(values: Sequence[object]) -> RunMetric:

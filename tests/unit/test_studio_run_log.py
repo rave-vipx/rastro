@@ -13,8 +13,10 @@ from rastro.domain.job_results import JobSummary
 from rastro.domain.models import ConfigurationError, Evidence, Issue, Outcome
 from rastro.studio.record_extras import extras
 from rastro.studio.run_log import (
+    MAX_LOG_BYTES,
     MAX_RUNS,
     LoggedRun,
+    LoggedSource,
     _file,
     append_run,
     from_load,
@@ -100,3 +102,25 @@ def test_a_web_record_has_web_origin_and_missing_fields_are_explained() -> None:
     assert row["provenance"]["title"]["recipe_version"] == 2
     stale = extras(_record(".title::text", {"title": "Tango"}), ["title", "venue"], {URL})
     assert stale["empty"] == {"venue": "source_failed"}
+
+
+def test_the_writer_keeps_the_log_within_the_reader_limit(tmp_path: Path) -> None:
+    """Review of #147: six valid runs of 30 long URLs once wrote a file the reader dropped."""
+    job = tmp_path / "job.toml"
+    urls = [f"https://example.com/{'a' * 3000}{i}" for i in range(30)]
+    for n in range(6):
+        run = LoggedRun(
+            at=NOW + timedelta(minutes=n), sources=tuple(LoggedSource(url=u) for u in urls)
+        )
+        append_run(tmp_path, job, run)
+        assert _file(tmp_path, job).stat().st_size <= MAX_LOG_BYTES
+    runs = read_runs(tmp_path, job)
+    assert runs and runs[-1].at == NOW + timedelta(minutes=5)
+
+
+def test_a_run_too_large_alone_keeps_the_readable_log(tmp_path: Path) -> None:
+    job = tmp_path / "job.toml"
+    append_run(tmp_path, job, refused(URL, NOW))
+    huge = tuple(LoggedSource(url=f"https://example.com/{'a' * 8000}{i}") for i in range(70))
+    append_run(tmp_path, job, LoggedRun(at=NOW + timedelta(minutes=1), sources=huge))
+    assert [r.kind for r in read_runs(tmp_path, job)] == ["promote_refused"]

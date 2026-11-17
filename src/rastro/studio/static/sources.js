@@ -30,7 +30,12 @@ export function counts(source) {
     return t("source.cappedDetail", { read: source.read, cap: source.cap });
   }
   if (source.status === "never") return t("source.neverDetail");
-  return t("source.counts", { read: source.read ?? 0, rejected: source.rejected ?? 0 });
+  const read = source.read ?? 0;
+  // null means "not recorded" (a schema 3 row or a Studio-only log), never "none rejected".
+  if (source.rejected === null || source.rejected === undefined) {
+    return t("source.countsUnknownRejected", { read });
+  }
+  return t("source.counts", { read, rejected: source.rejected });
 }
 
 function place(url) {

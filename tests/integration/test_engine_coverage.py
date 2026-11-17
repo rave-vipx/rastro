@@ -163,3 +163,27 @@ def test_a_postgres_job_reports_unknown_counts_as_null_not_zero(tmp_path, client
     (tmp_path / "job.toml").write_text(text, encoding="utf-8")
     [row] = sources(client, "job.toml")
     assert (row["status"], row["read"], row["rejected"], row["cap"]) == ("never", None, None, None)
+
+
+def test_a_redirected_source_is_joined_to_its_final_url(tmp_path, client, monkeypatch, capsys):
+    """Review of #147: /one redirects to /final; the configured source is not "never"."""
+
+    async def resolve(self, host, port):
+        return ("8.8.8.8",)
+
+    async def get(self, target, **kwargs):
+        if target.url.endswith("robots.txt"):
+            return HttpResponse(404, {}, b"", 0)
+        if target.url.endswith("/one"):
+            return HttpResponse(302, {"location": "/final"}, b"", 0)
+        body = b"<article><h2>One</h2></article>"
+        return HttpResponse(200, {"content-type": "text/html"}, body, len(body))
+
+    monkeypatch.setattr(SystemResolver, "resolve", resolve)
+    monkeypatch.setattr(CurlTransport, "get", get)
+    (tmp_path / "job.toml").write_text(PAGED_JOB, encoding="utf-8")
+    assert main(["job", "load", str(tmp_path / "job.toml")]) == 0
+    capsys.readouterr()
+    [row] = sources(client, "job.toml")
+    assert (row["url"], row["status"], row["read"]) == ("https://agenda.example/one", "ok", 1)
+    assert row["last_fetch"] is not None

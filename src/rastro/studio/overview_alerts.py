@@ -77,7 +77,7 @@ def _logged(state: JobState) -> list[dict[str, Any]]:
                 if issue.code.endswith(CAP_ENDINGS):
                     continue
                 name = issue.field if issue.field in declared else None
-                found.append(_alert(run.at, "warning", item.url, issue.code, "details", name))
+                found.append(_alert(run.at, "warning", item.url, code(issue.code), "details", name))
     return found
 
 

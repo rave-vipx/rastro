@@ -1,13 +1,12 @@
 """Read-only state behind the Projects and Sources views (N5): one job's dataset status,
 run metrics, open drift, waiting candidates and Studio's run log, reduced to plain statuses.
 
-Every code shown comes from Rastro's own vocabulary (``CODE_PATTERN``); anything else read
-from a file becomes ``unknown``. Nothing here creates a file.
+Every code shown comes from Rastro's own vocabulary (``KNOWN_CODES``); anything else read
+from a file becomes ``unknown``, even when it is shaped like a code. Nothing here creates a file.
 """
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -21,24 +20,24 @@ from rastro.application.job_loader import resolve_job_path
 from rastro.application.job_maintenance import current_source_urls
 from rastro.domain.dataset import SourceStatus
 from rastro.domain.health import OpenDrift
+from rastro.domain.issue_codes import KNOWN_CODES
 from rastro.domain.jobs import Job
 from rastro.domain.lifecycle import RecipeState
 from rastro.domain.metrics import RunMetric
 from rastro.domain.models import Outcome
-from rastro.studio.run_log import CODE_PATTERN, LoggedRun, LoggedSource, read_runs
+from rastro.studio.run_log import LoggedRun, LoggedSource, read_runs
 
 FAILED = frozenset(o.value for o in Outcome) - {"success", "unchanged", "partial_success"}
 PROBLEMS = frozenset({"failed", "stale"})
 CAP_ENDINGS = ("_cap", "max_pages", "page_limit", "depth_limit", "budget")
 MAX_WARNINGS = 10
-_CODE = re.compile(CODE_PATTERN)
 
 
 def code(value: object) -> str | None:
     """A Rastro code as is; other text from a file becomes ``unknown``; None stays None."""
     if value is None:
         return None
-    return value if isinstance(value, str) and _CODE.fullmatch(value) else "unknown"
+    return value if isinstance(value, str) and value in KNOWN_CODES else "unknown"
 
 
 @dataclass(frozen=True)
@@ -59,6 +58,8 @@ class JobState:
     runs: tuple[LoggedRun, ...] = ()
     candidates: list[Candidate] = field(default_factory=list)
     records: int = 0
+    # Configured URL -> the final URL a redirect stored it under (from the run metrics).
+    redirects: dict[str, str] = field(default_factory=dict)
 
 
 def _dataset(state: JobState, root: Path, path: Path) -> None:
@@ -73,6 +74,7 @@ def _dataset(state: JobState, root: Path, path: Path) -> None:
         return
     state.statuses = {s.source_url: s for s in store.source_status(spec.name)}
     state.metrics = store.run_metrics(spec.name)
+    state.redirects = {m.requested_url: m.source_url for m in state.metrics if m.requested_url}
     state.records = len(store.records(spec.name))
     monitor = SQLiteDriftMonitor(file, limits=state.job.limits)
     state.drift = {d.source_url: d for d in monitor.open_drift(spec.name)}
@@ -134,19 +136,21 @@ def _kind(
         return "capped", code(cap)
     if metric is None and item is not None and capped(item):  # no metrics: PostgreSQL
         cap_codes = [i.code for i in item.issues if i.code.endswith(CAP_ENDINGS)]
-        return "capped", (cap_codes or ["cap_reached"])[0]
+        return "capped", code((cap_codes or ["cap_reached"])[0])
     if warnings:
         return "warning", warnings[0]
     return "ok", None
 
 
 def source_row(state: JobState, url: str) -> dict[str, Any]:
-    status = state.statuses.get(url)
-    logged = _logged(state, url)
+    stored = state.redirects.get(url, url)  # the dataset keys a redirected source by its end
+    status = state.statuses.get(stored)
+    logged = _logged(state, stored)
     item = logged[0] if logged else None
-    metric = _latest_metric(state, url)
-    warnings = [i.code for i in item.issues if not i.code.endswith(CAP_ENDINGS)] if item else []
-    warnings += ["open_drift"] if url in state.drift else []
+    metric = _latest_metric(state, stored)
+    issues = item.issues if item else ()
+    warnings = [str(code(i.code)) for i in issues if not i.code.endswith(CAP_ENDINGS)]
+    warnings += ["open_drift"] if stored in state.drift else []
     warnings += ["quarantined_candidate"] if any(c.url == url for c in state.candidates) else []
     warnings = list(dict.fromkeys(warnings))[:MAX_WARNINGS]
     if status is None and item is None and metric is None:
