@@ -49,6 +49,29 @@ CAPABILITIES: tuple[Capability, ...] = (
         docs="docs/acquisition.md#extract-a-url",
     ),
     Capability(
+        task="Fetch a detail page or a JSON endpoint from your own adapter code",
+        use="`rastro.fetch(url, policy=AcquisitionPolicy(allowed_hosts=(...)), "
+        'representation="json")` returns `Fetched` (status, final url, body, media_type, '
+        "issues); `fetch_async` inside an event loop",
+        python=_names("fetch fetch_async Fetched"),
+        limits="Same acquirer as jobs: allowlist, robots.txt, egress, budgets, byte limit; "
+        "refusals are explicit outcomes, never an empty success; plain HTTP only",
+        instead_of="importing private acquirers or transports, or your own HTTP client",
+        docs="docs/api.md#adapters-fetch-and-load-your-own-records",
+    ),
+    Capability(
+        task="Store records your own code built, with provenance, in a Rastro dataset",
+        use="`rastro.load_records(job_path, records, source_url=..., observed_at=...)`: the job "
+        "file supplies dataset, fields and identity; same validation and snapshot rules as "
+        "`rastro job load`, then Studio and `rastro dataset export` show them",
+        python=_names("load_records"),
+        limits="Every record validated before writing; identity required and unique; "
+        "provenance records `locator = adapter`",
+        instead_of="writing a JSON snapshot and running `job load` on it, or your own database "
+        "just to inspect results",
+        docs="docs/api.md#adapters-fetch-and-load-your-own-records",
+    ),
+    Capability(
         task="Scrape a list of URLs repeatedly without writing Python",
         use="A TOML job: `[[sources]] url = ...`, `[acquisition] allowed_hosts`, `[recipe]`, "
         "`[[fields]]`. Every run fetches the URLs again; `rastro new --site URL` drafts one",
@@ -70,10 +93,12 @@ CAPABILITIES: tuple[Capability, ...] = (
         docs="docs/jobs.md#complete-toml-example",
     ),
     Capability(
-        task="Read HTML, a JSON API or embedded JSON-LD",
-        use='`[recipe] strategy = "css"`, `"json"` (JSON pointers) or `"jsonld"`; '
-        "`representation` on the source",
-        python=_names("Recipe CssRecipe JsonRecipe JsonLdRecipe Representation"),
+        task="Read HTML, a JSON API, embedded JSON-LD, or JSON hidden in an attribute or script",
+        use='`[recipe] strategy = "css"`, `"json"` (JSON pointers), `"jsonld"` (`item_type` '
+        'takes one type or several, e.g. `["Event", "MusicEvent"]`) or `"embedded_json"` '
+        '(`source = "input[name=GXState]::attr(value)"` or `"script#__NEXT_DATA__::text"`, '
+        "then `record_path`); `representation` on the source",
+        python=_names("Recipe CssRecipe JsonRecipe JsonLdRecipe EmbeddedJsonRecipe Representation"),
         cli=("rastro validate-recipe",),
         limits="Selectors follow the cost policy; recipes are data, never code",
         instead_of="your own JSON-LD or JSON response parsing",

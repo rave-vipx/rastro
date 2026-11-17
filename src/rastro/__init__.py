@@ -73,6 +73,7 @@ from rastro.domain.model_selectors import css
 from rastro.domain.models import (
     ConfigurationError,
     CssRecipe,
+    EmbeddedJsonRecipe,
     Evidence,
     ExtractionRecord,
     ExtractionResult,
@@ -172,6 +173,7 @@ __all__ = [
     "JobRunStatus",
     "JobSource",
     "JobSummary",
+    "EmbeddedJsonRecipe",
     "JsonLdRecipe",
     "JsonRecipe",
     "LifecycleAction",

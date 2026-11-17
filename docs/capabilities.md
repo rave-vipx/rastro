@@ -23,6 +23,22 @@ What Rastro already does, for people and for AI coding agents. Use these before 
 - **Do not build:** your own HTTP client, retry loop or robots.txt check
 - **Docs:** [acquisition.md#extract-a-url](acquisition.md#extract-a-url)
 
+### Fetch a detail page or a JSON endpoint from your own adapter code
+
+- **Use:** `rastro.fetch(url, policy=AcquisitionPolicy(allowed_hosts=(...)), representation="json")` returns `Fetched` (status, final url, body, media_type, issues); `fetch_async` inside an event loop
+- **Python:** `fetch`, `fetch_async`, `Fetched`
+- **Limits:** Same acquirer as jobs: allowlist, robots.txt, egress, budgets, byte limit; refusals are explicit outcomes, never an empty success; plain HTTP only
+- **Do not build:** importing private acquirers or transports, or your own HTTP client
+- **Docs:** [api.md#adapters-fetch-and-load-your-own-records](api.md#adapters-fetch-and-load-your-own-records)
+
+### Store records your own code built, with provenance, in a Rastro dataset
+
+- **Use:** `rastro.load_records(job_path, records, source_url=..., observed_at=...)`: the job file supplies dataset, fields and identity; same validation and snapshot rules as `rastro job load`, then Studio and `rastro dataset export` show them
+- **Python:** `load_records`
+- **Limits:** Every record validated before writing; identity required and unique; provenance records `locator = adapter`
+- **Do not build:** writing a JSON snapshot and running `job load` on it, or your own database just to inspect results
+- **Docs:** [api.md#adapters-fetch-and-load-your-own-records](api.md#adapters-fetch-and-load-your-own-records)
+
 ### Scrape a list of URLs repeatedly without writing Python
 
 - **Use:** A TOML job: `[[sources]] url = ...`, `[acquisition] allowed_hosts`, `[recipe]`, `[[fields]]`. Every run fetches the URLs again; `rastro new --site URL` drafts one
@@ -33,10 +49,10 @@ What Rastro already does, for people and for AI coding agents. Use these before 
 - **Do not build:** a script with its own fetch loop, retries and per-site code
 - **Docs:** [jobs.md#complete-toml-example](jobs.md#complete-toml-example)
 
-### Read HTML, a JSON API or embedded JSON-LD
+### Read HTML, a JSON API, embedded JSON-LD, or JSON hidden in an attribute or script
 
-- **Use:** `[recipe] strategy = "css"`, `"json"` (JSON pointers) or `"jsonld"`; `representation` on the source
-- **Python:** `Recipe`, `CssRecipe`, `JsonRecipe`, `JsonLdRecipe`, `Representation`
+- **Use:** `[recipe] strategy = "css"`, `"json"` (JSON pointers), `"jsonld"` (`item_type` takes one type or several, e.g. `["Event", "MusicEvent"]`) or `"embedded_json"` (`source = "input[name=GXState]::attr(value)"` or `"script#__NEXT_DATA__::text"`, then `record_path`); `representation` on the source
+- **Python:** `Recipe`, `CssRecipe`, `JsonRecipe`, `JsonLdRecipe`, `EmbeddedJsonRecipe`, `Representation`
 - **CLI:** `rastro validate-recipe`
 - **Limits:** Selectors follow the cost policy; recipes are data, never code
 - **Do not build:** your own JSON-LD or JSON response parsing
