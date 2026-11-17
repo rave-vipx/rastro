@@ -53,36 +53,47 @@ classes and short text, at most 6,000 characters), never the whole page, keys or
 
 ## Walkthrough
 
-The page has two views, **Jobs** and **New scraper**, switched with the buttons at the top.
+Studio opens on **Projects**: one card per project found in the folder, with its health in words
+(*Up to date*, *With warnings*, *Failing*, *Status unknown*), last update, record count and sources
+with problems, and **View results**. **Projects** in the header always comes back here.
+
+- **Empty folder:** Studio says no projects were found and offers **Start from a URL** and **Connect
+  an export** (JSON records loaded with `rastro.load_records`, or a Rastro SQLite dataset).
+- **A database Studio doesn't recognize:** SQLite files under the folder that no job uses are listed
+  by path with what to do; Studio does not open them.
+- **Loading** is said while the list is read. With a Studio that has no project list endpoint, job
+  files are listed with *Status unknown* and a note, never with an invented health.
 
 ### Create a scraper (New scraper)
 
+Four steps, one decision each:
+
 1. **URL.** Paste a page URL you have permission to scrape. Studio fetches the page
    through the acquisition boundary; public-address checks, robots and the source
-   request budget apply. Saving HTML by hand is not required. A saved-page input,
-   when used, is an offline alternative. A URL job fetches its URL on every later run.
-2. **Fields and examples.** Name each field (letters, digits and `_`, starting with
-   a letter) and copy an example value exactly as the page shows it. Preview the
-   suggested recipe and up to 50 records. With a configured model, **Ask AI** can
-   propose selectors from names alone. Proposals must extract valid records; the
-   model does not supply the records. If HTTP yields no records, use the offered
-   browser path after installing the [browser extra and runtime](acquisition.md#javascript-pages).
-3. **Create the job.** Name the job file (for example `pages/events.toml`). It must be in an
-   existing folder under the Studio root, and must not exist yet: Studio never overwrites a file.
-   To store records, give a dataset file name and tick at least one **Record key** field.
-   To repair the recipe later, also give a **Recipe memory file** (for example
-   `recipes.sqlite`).
-   Studio then opens the new job in the Jobs view.
+   request budget apply. Saving HTML by hand is not required. A URL job fetches its URL on
+   every later run. If the page builds its list with JavaScript, see the
+   [browser extra and runtime](acquisition.md#javascript-pages).
+2. **Fields.** Name each field (letters, digits and `_`, starting with a letter) and copy an
+   example value exactly as the page shows it. Tick **Record key** on a field that identifies a
+   record (needed to store records). With a configured model, **Ask AI** can propose selectors
+   from names alone; proposals must extract valid records, the model does not supply them.
+3. **Preview.** **Preview records** shows up to 50 records found on the page; how each field is
+   read is folded under a technical detail. If a field comes out wrong, **Correct a field** goes
+   back to paste another example.
+4. **Name and save.** Give the project a name; the job, dataset and recipe-memory file names are
+   filled from it (`agenda-de-fiestas.toml`, `agenda-de-fiestas.sqlite`,
+   `agenda-de-fiestas-recipes.sqlite`) and can be changed under **File names (advanced)**. Studio
+   never overwrites a file. **Save and open** opens the new project on Results.
 
-### Work with a job (Jobs)
+### Details that apply to every project
 
-1. **Job file.** Lists the `.toml` and `.json` job files below the root (four levels deep):
+1. **Open a job file (advanced),** at the bottom of Projects, lists the `.toml` and `.json` job files below the root (four levels deep):
    files with a top-level `format_version`, valid or not, so a broken job still shows its
    errors. Repair reports, `pyproject.toml` and other TOML or JSON files are not listed.
    Symlinks, hidden directories and vendor directories (`node_modules`, `__pycache__`, `venv`,
    `dist`, `build`, `site`) are skipped; at most 500 files are listed and the page says when
    the list is cut. **Open** validates the job with the same rules as `rastro job validate`.
-2. **Preview and correct.** Runs `rastro job preview` logic: sample records, and for every field
+2. **Correct a field by hand** (in Fix). Runs `rastro job preview` logic: sample records, and for every field
    the method, locator, validation status and whether it would be loaded. Rejected records show
    their reasons. A preview needs a `[dataset]` block and writes nothing; a job with
    `recipe_memory` reads its recipe store without changing it. Choose a field mapping, edit its
@@ -93,13 +104,13 @@ The page has two views, **Jobs** and **New scraper**, switched with the buttons 
    layout are kept because only the one selector text is replaced; if that text is not unique
    in the file, Studio refuses and asks you to edit by hand. JSON jobs are rewritten with
    two-space indentation.
-3. **Run.** **Extract** runs the job and reports status, record counts and issues per source,
+3. **Run** (in Results). **Extract** runs the job and reports status, record counts and issues per source,
    plus which recipe each source used (the job file's, or a newer one in recipe memory, with
    its version). It writes nothing, not even the recipe store. **Load into dataset** runs
    `rastro job load`: approved fields go into the dataset and the result shows the changes per
    source, the recipe used and any stale sources. Tick **Measure drift** to also compare each
    page's structure with its last good run.
-4. **Health and repair.** **Check health** shows, per source, the serving recipe, whether the
+4. **Health and repair** (Sources → *Technical detail*, and Fix). **Check health** shows, per source, the serving recipe, whether the
    source is stale in the dataset, its last success, why it is stale, open drift and the
    stored recipe versions. Above the table, plain-language alerts name failed or stale
    sources, open drift, quarantined recipes and the alerts of the last run of this job in
@@ -120,8 +131,8 @@ The page has two views, **Jobs** and **New scraper**, switched with the buttons 
    - **Write to job file** copies the serving recipe from recipe memory into the job file,
      as `rastro recipe apply` does, keeping the rest of the file. It carries the file digest
      like saving a selector.
-5. **Dataset.** Shows the stored records 25 at a time with **Previous page** and **Next page**,
-   when each was last seen, and a stale marker for records from stale sources. Values longer than
+5. **Dataset** (Results). Shows the stored records with a stale marker for records from stale
+   sources (see [Results](#results-n5)). Values longer than
    2,000 characters are shortened and the record is marked `truncated`, on the page and in
    downloads. **Download JSON** and **Download HTML** produce the same records as
    `rastro dataset export` (with that shortening), for datasets of up to 5,000 records (use the command line for
@@ -131,10 +142,11 @@ The page has two views, **Jobs** and **New scraper**, switched with the buttons 
 
 ## Layout, language and theme
 
-Studio opens on **Results**. The header holds the project picker (a job file in the folder), the
-language and theme choices, and the views: **Results** (run and records), **Sources** (health),
-**Alerts**, **Fix** (preview and correct a selector), **Settings** (next page, link following,
-scroll, the two opt-in switches, connecting your app, the recipe registry) and **New scraper**.
+Studio opens on **Projects**. The header holds **Projects** with the open project's name, the
+language and theme choices, and, once a project is open, its views: **Results** (run and records),
+**Sources**, **Alerts**, **Fix** (repair, the automatic switch, correcting a field by hand),
+**Settings** (next page, link following, scroll, stealth, connecting your app, the recipe registry)
+and **New scraper**.
 
 - **Language:** English by default; Spanish (Rioplatense voseo) from the header. Static labels come
   from one dictionary (`static/i18n.js`); messages produced by actions are still English and move to
@@ -211,6 +223,11 @@ product differ, the interface adapts:
 | Design | Studio | Why |
 | --- | --- | --- |
 | Separate "Jobs" page with every card | Cards moved into Results, Sources, Fix and Settings; element ids unchanged | Stage 1 is layout only; behaviour stays the same |
+| "Buscar por palabra clave" start option (Main, Nuevo step 1) | Removed | No product need covers it and it would need a search provider |
+| Step 1 checks the page and offers a browser | Step 1 takes the URL; the page is read on **Preview records**, with a pointer to the browser docs | Studio has no fetch-only route, and the render mode is a job setting |
+| Block-style field builder with a "Código" toggle (Nuevo step 2) | A table of field name, example and record key | Same job fields, no new engine concept; the job file stays viewable outside Studio |
+| Project name saved as a title | The name becomes the file names (`agenda-de-fiestas.toml`); the card shows the dataset name or file stem | Jobs have no display-name field |
+| "Conectar una exportación" as an import flow | An explanation with the real `rastro.load_records` call and the SQLite option | Studio has no import route; the adapter API is the supported path |
 | "Avisarme por notificación del sistema" in Alerts | Not offered; the Technical detail keeps the `--on-failure` command for the README hook | Studio has no notification permission and adds no background process |
 | "Agregar sitio" / "Quitar del proyecto" in Sources | Not offered | Sources are job data; Studio edits only bounded settings of a job |
 | "Ver apartados" for quarantined records | **See details** opens Sources | Records are rejected, not stored apart; quarantine applies to fixes |

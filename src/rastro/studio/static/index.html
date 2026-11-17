@@ -12,11 +12,10 @@
 <header class="bar">
   <div class="bar-row">
     <h1 class="brand" data-i18n="brand">Rastro Studio</h1>
-    <div class="project">
-      <label for="files" data-i18n="project.label">Project</label>
-      <select id="files"></select>
-      <button type="button" id="validate" data-i18n="project.open">Open</button>
-    </div>
+    <nav class="crumbs" aria-label="Breadcrumb" data-i18n-label="crumbs.label">
+      <button type="button" id="go-home" class="link" data-i18n="crumbs.projects">Projects</button>
+      <span id="crumb-project" class="crumb-project"></span>
+    </nav>
     <div class="prefs">
       <label for="pref-lang" data-i18n="prefs.language">Language</label>
       <select id="pref-lang">
@@ -33,7 +32,7 @@
   </div>
   <p id="root" class="muted"></p>
   <p id="validation" role="status" aria-live="polite"></p>
-  <nav id="project-nav" class="tabs" aria-label="Views" data-i18n-label="nav.label">
+  <nav id="project-nav" class="tabs" aria-label="Views" data-i18n-label="nav.label" hidden>
     <button type="button" class="tab" data-view="results" aria-pressed="true" data-i18n="nav.results">Results</button>
     <button type="button" class="tab" data-view="sources" aria-pressed="false" data-i18n="nav.sources">Sources</button>
     <button type="button" class="tab" data-view="alerts" aria-pressed="false" data-i18n="nav.alerts">Alerts</button>
@@ -44,7 +43,35 @@
 </header>
 <p id="listing" class="banner" role="status" aria-live="polite"></p>
 <main id="main">
-  <div id="view-results">
+  <div id="view-home">
+    <section class="card" aria-labelledby="home-heading">
+      <div class="card-head">
+        <h2 id="home-heading" data-i18n="home.title">Projects</h2>
+        <div id="home-start" class="row"></div>
+      </div>
+      <p id="home-status" role="status" aria-live="polite"></p>
+      <div id="home-list"></div>
+    </section>
+    <details id="export-help" class="card fold">
+      <summary id="export-help-summary" data-i18n="home.exportTitle">Connect an export</summary>
+      <p data-i18n="home.exportFormats">Supported: JSON records you load with the Python API, or a Rastro SQLite dataset.</p>
+      <p class="muted" data-i18n="home.exportHow">Load records from your own export into a project's dataset with rastro.load_records. They are validated like a web load, keep their provenance and show as an imported snapshot. Then open the project here.</p>
+      <pre>from rastro import load_records
+
+load_records("pages/events.toml", records, source_url="https://example.com/events")</pre>
+      <p class="muted" data-i18n="home.exportSqlite">For a Rastro SQLite dataset, create a job whose [dataset] points at that file, then open it.</p>
+    </details>
+    <details class="card fold">
+      <summary data-i18n="home.openFile">Open a job file (advanced)</summary>
+      <div class="row project">
+        <label for="files" data-i18n="project.label">Job file</label>
+        <select id="files"></select>
+        <button type="button" id="validate" data-i18n="project.open">Open</button>
+      </div>
+    </details>
+  </div>
+
+  <div id="view-results" hidden>
     <section class="card">
       <h2 data-i18n="run.title">Run</h2>
       <div class="row">
@@ -226,46 +253,81 @@
   </div>
 
   <div id="view-wizard" hidden>
-    <section class="card">
-      <h2 data-i18n="wizard.url.title">1. Page URL</h2>
-      <p class="muted" data-i18n="wizard.url.intro">Paste a page URL.</p>
-      <div class="row">
+    <section class="card" aria-labelledby="wizard-heading">
+      <h2 id="wizard-heading" data-i18n="wizard.title">New scraper from a URL</h2>
+      <ol class="stepper" aria-label="Steps" data-i18n-label="wizard.steps">
+        <li data-step="1" aria-current="step" data-i18n="wizard.step1">URL</li>
+        <li data-step="2" data-i18n="wizard.step2">Fields</li>
+        <li data-step="3" data-i18n="wizard.step3">Preview</li>
+        <li data-step="4" data-i18n="wizard.step4">Name and save</li>
+      </ol>
+
+      <div id="wiz-step-1" class="step">
+        <h3 data-i18n="wizard.url.title">Paste the page URL</h3>
+        <p class="muted" data-i18n="wizard.url.intro">Paste a page URL.</p>
         <label for="page-url" data-i18n="wizard.url.label">Page URL</label>
-        <input id="page-url" type="url" size="48" placeholder="https://example.com/list" required>
+        <input id="page-url" class="wide" type="url" size="48" placeholder="https://example.com/list" required>
+        <p class="muted" data-i18n="wizard.url.browser">If the page builds its list with JavaScript, the preview may find no records; the browser path is explained in the docs (acquisition, JavaScript pages).</p>
+        <p id="url-status" role="status" aria-live="polite"></p>
+        <div class="row step-nav">
+          <button type="button" id="wiz-next-1" class="primary" data-i18n="wizard.next">Continue</button>
+        </div>
       </div>
-    </section>
-    <section class="card">
-      <h2 data-i18n="wizard.fields.title">2. Fields and one example each</h2>
-      <p class="muted" data-i18n="wizard.fields.intro">Name each field and copy one value exactly as the page shows it.</p>
-      <div class="scroll">
-        <table class="fields">
-          <thead><tr><th scope="col" data-i18n="wizard.fields.name">Field name</th><th scope="col" data-i18n="wizard.fields.example">Example value</th>
-            <th scope="col" data-i18n="wizard.fields.key">Record key</th><th scope="col"><span class="sr" data-i18n="wizard.fields.remove">Remove</span></th></tr></thead>
-          <tbody id="field-rows"></tbody>
-        </table>
+
+      <div id="wiz-step-2" class="step" hidden>
+        <h3 data-i18n="wizard.fields.title">Name the fields and paste one example each</h3>
+        <p class="muted" data-i18n="wizard.fields.intro">Name each field and copy one value exactly as the page shows it.</p>
+        <div class="scroll">
+          <table class="fields">
+            <thead><tr><th scope="col" data-i18n="wizard.fields.name">Field name</th><th scope="col" data-i18n="wizard.fields.example">Example value</th>
+              <th scope="col" data-i18n="wizard.fields.key">Record key</th><th scope="col"><span class="sr" data-i18n="wizard.fields.remove">Remove</span></th></tr></thead>
+            <tbody id="field-rows"></tbody>
+          </table>
+        </div>
+        <div class="row">
+          <button type="button" id="add-field" data-i18n="wizard.fields.add">Add field</button>
+          <button type="button" id="ask-ai" hidden data-i18n="wizard.fields.askAi">Ask AI (no examples needed)</button>
+        </div>
+        <p id="ai-notice" hidden></p>
+        <p id="suggest-status" role="status" aria-live="polite"></p>
+        <div class="row step-nav">
+          <button type="button" id="wiz-back-2" data-i18n="wizard.back">Back</button>
+          <button type="button" id="suggest" class="primary" data-i18n="wizard.fields.suggest">Preview records</button>
+        </div>
       </div>
-      <div class="row">
-        <button type="button" id="add-field" data-i18n="wizard.fields.add">Add field</button>
-        <button type="button" id="suggest" class="primary" data-i18n="wizard.fields.suggest">Suggest</button>
-        <button type="button" id="ask-ai" hidden data-i18n="wizard.fields.askAi">Ask AI (no examples needed)</button>
+
+      <div id="wiz-step-3" class="step" hidden>
+        <h3 data-i18n="wizard.preview.title">Check the records</h3>
+        <p class="muted" data-i18n="wizard.preview.intro">If a field comes out wrong, go back and paste another example for it.</p>
+        <div id="suggest-result"></div>
+        <div class="row step-nav">
+          <button type="button" id="wiz-back-3" data-i18n="wizard.preview.fix">Correct a field</button>
+          <button type="button" id="wiz-next-3" class="primary" data-i18n="wizard.next">Continue</button>
+        </div>
       </div>
-      <p id="ai-notice" hidden></p>
-      <p id="suggest-status" role="status" aria-live="polite"></p>
-      <div id="suggest-result"></div>
-    </section>
-    <section class="card">
-      <h2 data-i18n="wizard.create.title">3. Create the job</h2>
-      <div class="row">
-        <label for="new-file" data-i18n="wizard.create.file">Job file</label>
-        <input id="new-file" type="text" size="30" spellcheck="false" placeholder="pages/events.toml">
-        <label for="new-dataset" data-i18n="wizard.create.dataset">Dataset file, next to the job file (optional)</label>
-        <input id="new-dataset" type="text" size="24" spellcheck="false" placeholder="events.sqlite">
-        <label for="new-memory" data-i18n="wizard.create.memory">Recipe memory file, enables fixes (optional)</label>
-        <input id="new-memory" type="text" size="24" spellcheck="false" placeholder="recipes.sqlite">
-        <button type="button" id="create" class="primary" data-i18n="wizard.create.submit">Create job</button>
+
+      <div id="wiz-step-4" class="step" hidden>
+        <h3 data-i18n="wizard.create.title">Name the project and save</h3>
+        <label for="new-name" data-i18n="wizard.create.name">Project name</label>
+        <input id="new-name" class="wide" type="text" maxlength="80" spellcheck="false">
+        <p id="new-key-note" class="muted" data-i18n="wizard.create.note">A dataset needs at least one record key.</p>
+        <details class="fold">
+          <summary data-i18n="wizard.create.files">File names (advanced)</summary>
+          <div class="row">
+            <label for="new-file" data-i18n="wizard.create.file">Job file</label>
+            <input id="new-file" type="text" size="30" spellcheck="false" placeholder="pages/events.toml">
+            <label for="new-dataset" data-i18n="wizard.create.dataset">Dataset file, next to the job file (optional)</label>
+            <input id="new-dataset" type="text" size="24" spellcheck="false" placeholder="events.sqlite">
+            <label for="new-memory" data-i18n="wizard.create.memory">Recipe memory file, enables fixes (optional)</label>
+            <input id="new-memory" type="text" size="24" spellcheck="false" placeholder="recipes.sqlite">
+          </div>
+        </details>
+        <p id="create-status" role="status" aria-live="polite"></p>
+        <div class="row step-nav">
+          <button type="button" id="wiz-back-4" data-i18n="wizard.back">Back</button>
+          <button type="button" id="create" class="primary" data-i18n="wizard.create.submit">Save and open</button>
+        </div>
       </div>
-      <p class="muted" data-i18n="wizard.create.note">The job scrapes this URL on every run.</p>
-      <p id="create-status" role="status" aria-live="polite"></p>
     </section>
   </div>
 </main>

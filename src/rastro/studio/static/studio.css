@@ -202,6 +202,34 @@ table.before-after tr.changed .chip-warn { background: var(--surface); }
 .decision { border-top: 1px solid var(--border); margin-top: var(--s-3); padding-top: var(--s-3); display: grid; gap: var(--s-2); }
 .decision input { width: 100%; }
 
+/* Header breadcrumb, Home project cards, wizard steps. */
+.crumbs { display: flex; align-items: center; gap: var(--s-2); min-width: 0; }
+.crumb-project { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.crumb-project:not(:empty)::before { content: "/"; color: var(--text-3); margin-right: var(--s-2); }
+button.link { background: transparent; border-color: transparent; color: var(--accent); padding: 0 var(--s-1); }
+button.link:hover { background: var(--accent-soft); }
+.project-grid { list-style: none; padding: 0; margin: var(--s-3) 0 0; display: grid; gap: var(--s-4);
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); }
+.project-card { border: 1px solid var(--border); border-radius: var(--r-lg); padding: var(--s-4); display: grid; gap: var(--s-2);
+  align-content: start; background: var(--surface); box-shadow: var(--shadow-1); }
+.project-card h3 { margin: 0; font-size: 15px; }
+.project-card .chip { justify-self: start; }
+.mono { font-family: var(--font-mono); font-size: 12.5px; overflow-wrap: anywhere; }
+.facts { margin: 0; display: grid; gap: var(--s-1); font-size: 13px; }
+.facts div { display: flex; justify-content: space-between; gap: var(--s-2); }
+.facts dt { color: var(--text-3); }
+.facts dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+.loading { padding: var(--s-5) 0; }
+.stepper { list-style: none; counter-reset: step; display: flex; flex-wrap: wrap; gap: var(--s-2); padding: 0; margin: var(--s-3) 0; }
+.stepper li { counter-increment: step; color: var(--text-3); font-weight: 600; font-size: 13px;
+  border: 1px solid var(--border); border-radius: var(--r-pill); padding: var(--s-1) var(--s-3); }
+.stepper li::before { content: counter(step) ". "; }
+.stepper li[aria-current="step"] { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+.step { display: grid; gap: var(--s-2); }
+.step[hidden] { display: none; }
+.step-nav { justify-content: flex-end; border-top: 1px solid var(--border); padding-top: var(--s-3); }
+input.wide { width: 100%; }
+
 .skip, .sr { position: absolute; left: -9999px; }
 .skip:focus { left: var(--s-4); top: var(--s-2); z-index: 20; background: var(--surface); padding: var(--s-2) var(--s-3); }
 

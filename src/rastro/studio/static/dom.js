@@ -98,7 +98,8 @@ export function switchView(name) {
   for (const tab of document.querySelectorAll(".tab")) {
     tab.setAttribute("aria-pressed", String(tab.dataset.view === name));
   }
-  $("project-nav").hidden = name === "home";
+  $("project-nav").hidden = name === "home" || !state.file;
+  $("crumb-project").hidden = name === "home";
 }
 
 // Ask another view to act, without importing it: e.g. "fix" with {source: 2}.

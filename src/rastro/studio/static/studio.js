@@ -10,7 +10,8 @@ import { fillFixSources, initFix, resetFix } from "./fix.js";
 import { initOperate, resetOperate } from "./operate.js";
 import { initProvenance } from "./provenance.js";
 import { initRegistry } from "./registry.js";
-import { initResults, loadRecords, resetResults } from "./results.js";
+import { initHome, loadHome } from "./home.js";
+import { initResults, loadRecords, render as renderResults, resetResults, view } from "./results.js";
 import { initSources, loadSources, resetSources } from "./sources.js";
 import { initAlerts, loadAlerts, resetAlerts } from "./alerts.js";
 import { initWizard } from "./wizard.js";
@@ -29,8 +30,16 @@ export async function openJob(name) {
   if (!data.has_dataset) notes.push(t("open.noDataset"));
   if (data.has_memory) notes.push(t("open.memory"));
   show("validation", t("open.valid", { notes: notes.join("; ") }), "good");
-  await Promise.all([data.has_dataset ? loadRecords() : null, loadSources(), loadAlerts()]);
+  $("crumb-project").textContent = name;
+  if (!data.has_dataset) Object.assign(view, { ready: true, error: t("open.noDataset") });
+  await Promise.all([data.has_dataset ? loadRecords() : renderResults(), loadSources(), loadAlerts()]);
   fillFixSources(data.sources);
+}
+
+function goHome() {
+  show("validation", "");
+  switchView("home");
+  return loadHome();
 }
 
 async function connect() {
@@ -67,14 +76,17 @@ async function start() {
   for (const tab of document.querySelectorAll(".tab")) {
     tab.addEventListener("click", () => switchView(tab.dataset.view));
   }
-  bind("validate", "validation", () => openJob($("files").value));
+  bind("validate", "home-status", async () => { await openJob($("files").value); switchView("results"); });
   bind("connect", "commands", connect);
+  bind("go-home", "listing", goHome);
   for (const init of [initOperate, initResults, initProvenance, initSources, initAlerts, initCorrect, initFix]) init();
   wireRequests();
   initWizard({ openJob, refreshJobs, switchView });
+  initHome({ openJob, switchView });
   initRegistry();
   await initAI();
   await initControls();
+  await goHome();
 }
 
 start().catch((error) => show("listing", t("msg.error", { why: error.message }), "bad"));
