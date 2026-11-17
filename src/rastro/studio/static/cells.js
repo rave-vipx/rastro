@@ -1,7 +1,7 @@
 // One results cell: what a stored value means (text, free, several tiers, a link, or empty
 // with its reason) and how it is drawn. cellModel is pure so it can be tested without a page.
 import { el } from "./dom.js";
-import { t } from "./i18n.js";
+import { t, when } from "./i18n.js";
 import { blockedUrl, emptyCell, trustMarker } from "./ui.js";
 
 const STATES = new Set(["published", "free", "not_published", "source_failed"]);
@@ -9,6 +9,7 @@ const FREE = new Set(["free", "gratis"]);
 const LIVE = new Set(["en_vivo", "live", "live_now"]);
 const URL_LIKE = /^https?:\/\/\S+$/i;
 const DATE_LIKE = /^\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2})?/;
+const DATETIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})?$/;
 
 function blank(value) {
   return value === null || value === undefined || (typeof value === "string" && !value.trim());
@@ -53,6 +54,7 @@ export function cellModel(value, reason) {
   if (Array.isArray(value)) return several.length ? cellModel(several[0], reason) : { kind: "empty" };
   if (typeof value === "object") return { kind: "text", text: JSON.stringify(value) };
   const text = String(value);
+  if (DATETIME.test(text.trim())) return { kind: "date", text: text.trim() };
   if (URL_LIKE.test(text.trim())) return { kind: "url", text: text.trim() };
   if (FREE.has(text.trim().toLowerCase())) return { kind: "free", text };
   return { kind: "text", text };
@@ -89,7 +91,11 @@ export function renderCell(record, field) {
   const model = cellModel(value, (record.empty || {})[field]);
   const box = el("span", undefined, "cell");
   if (model.kind === "text") box.append(document.createTextNode(model.text));
-  else if (model.kind === "free") box.append(el("strong", model.text));
+  else if (model.kind === "date") {
+    const time = el("time", when(model.text));
+    time.setAttribute("datetime", model.text);
+    box.append(time);
+  } else if (model.kind === "free") box.append(el("strong", model.text));
   else if (model.kind === "tiers") {
     box.append(document.createTextNode(model.text), " ", el("span", t("cell.tiers", { n: model.n }), "tag"));
   } else if (model.kind === "url") box.append(blockedUrl(model.text));
