@@ -118,7 +118,7 @@ async function createJob(app) {
     : `Created ${made.file}. Opening it…`;
   show("create-status", note, made.allow_http ? "warn" : "good");
   await app.refreshJobs(made.file);
-  app.switchView("jobs");
+  app.switchView("results");
   await app.openJob(made.file);
 }
 

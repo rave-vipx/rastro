@@ -2,6 +2,12 @@
 
 All notable user-facing changes are recorded here. The project follows [Semantic Versioning](docs/stability.md) from 0.6.0. Versions before 0.6.0 were never published to a package registry.
 
+## Unreleased — Studio redesign
+
+### Changed
+
+- Studio shell (stage 1): design tokens with system, light and dark themes, an English/Spanish dictionary (English default), and views for Results, Sources, Alerts, Fix, Settings and New scraper; every token pair meets AA contrast (N1, N5, N8).
+
 ## Unreleased — adoption cut (N15–N19)
 
 Driven by the first real adoption report (Rave App). See `docs/action-plan-adoption.md`.

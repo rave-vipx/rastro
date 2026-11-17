@@ -31,6 +31,8 @@ ASSETS = frozenset(
         "controls.js",
         "registry.js",
         "bounds.js",
+        "i18n.js",
+        "prefs.js",
     }
 )
 

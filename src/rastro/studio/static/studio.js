@@ -1,5 +1,6 @@
 // Studio entry: session token, views, job list, preview and selector correction.
 // All source-derived text is set as plain text content; markup is never parsed.
+import { initPrefs } from "./prefs.js";
 import { $, api, bind, el, requireFile, show, state, table } from "./dom.js";
 import { initAI } from "./ai.js";
 import { fillControls, initControls } from "./controls.js";
@@ -114,6 +115,7 @@ export function switchView(name) {
 }
 
 async function start() {
+  initPrefs();
   if (!state.token) {
     show("listing", "Open the address printed in the terminal (it carries the session token).", "bad");
     return;

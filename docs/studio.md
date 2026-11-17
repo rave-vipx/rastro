@@ -129,6 +129,31 @@ The page has two views, **Jobs** and **New scraper**, switched with the buttons 
 6. **Connect your app.** Shows the `rastro job run`, `job load` and `dataset export` commands and
    the `run_job_file` call for that job. Run them from the root directory.
 
+## Layout, language and theme
+
+Studio opens on **Results**. The header holds the project picker (a job file in the folder), the
+language and theme choices, and the views: **Results** (run and records), **Sources** (health),
+**Alerts**, **Fix** (preview and correct a selector), **Settings** (next page, link following,
+scroll, the two opt-in switches, connecting your app, the recipe registry) and **New scraper**.
+
+- **Language:** English by default; Spanish (Rioplatense voseo) from the header. Static labels come
+  from one dictionary (`static/i18n.js`); messages produced by actions are still English and move to
+  the dictionary in later stages.
+- **Theme:** System (default), Light or Dark. Both choices are stored in this browser only; with
+  storage blocked they last until reload.
+- **Accessibility:** controls are at least 36 px (44 px on narrow screens), focus is a 3 px accent
+  outline, and every text/background token pair meets WCAG AA (a test computes the ratios).
+
+### Design adaptations
+
+The redesign follows `docs/design/studio-redesign/IMPLEMENTATION.md`. Where the design and the
+product differ, the interface adapts:
+
+| Design | Studio | Why |
+| --- | --- | --- |
+| Separate "Jobs" page with every card | Cards moved into Results, Sources, Fix and Settings; element ids unchanged | Stage 1 is layout only; behaviour stays the same |
+| Alerts view with a list | Explains where alerts appear until the alert list endpoint lands (stage 4) | No alert list route yet |
+
 ## Collection, alerts and sharing (N4, N5, N7, N10, N12)
 
 These controls sit in the Jobs view and call the existing services. URL-first job

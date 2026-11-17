@@ -137,5 +137,5 @@ export function initRegistry() {
     "Installing never changes auto-promote or grants network access.", "warn"));
   searchForm(section);
   publishForm(section);
-  $("view-jobs").append(section);
+  $("view-settings").append(section);
 }

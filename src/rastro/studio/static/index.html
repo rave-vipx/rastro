@@ -8,91 +8,49 @@
 <link rel="stylesheet" href="/static/studio.css">
 </head>
 <body>
-<a class="skip" href="#main">Skip to content</a>
-<header class="top">
-  <h1>Rastro Studio</h1>
+<a class="skip" href="#main" data-i18n="skip">Skip to content</a>
+<header class="bar">
+  <div class="bar-row">
+    <h1 class="brand" data-i18n="brand">Rastro Studio</h1>
+    <div class="project">
+      <label for="files" data-i18n="project.label">Project</label>
+      <select id="files"></select>
+      <button type="button" id="validate" data-i18n="project.open">Open</button>
+    </div>
+    <div class="prefs">
+      <label for="pref-lang" data-i18n="prefs.language">Language</label>
+      <select id="pref-lang">
+        <option value="en">English</option>
+        <option value="es">Español</option>
+      </select>
+      <label for="pref-theme" data-i18n="prefs.theme">Theme</label>
+      <select id="pref-theme">
+        <option value="system" data-i18n="theme.system">System</option>
+        <option value="light" data-i18n="theme.light">Light</option>
+        <option value="dark" data-i18n="theme.dark">Dark</option>
+      </select>
+    </div>
+  </div>
   <p id="root" class="muted"></p>
-  <nav aria-label="Views">
-    <button type="button" class="tab" data-view="jobs" aria-pressed="true">Jobs</button>
-    <button type="button" class="tab" data-view="wizard" aria-pressed="false">New scraper</button>
+  <p id="validation" role="status" aria-live="polite"></p>
+  <nav class="tabs" aria-label="Views" data-i18n-label="nav.label">
+    <button type="button" class="tab" data-view="results" aria-pressed="true" data-i18n="nav.results">Results</button>
+    <button type="button" class="tab" data-view="sources" aria-pressed="false" data-i18n="nav.sources">Sources</button>
+    <button type="button" class="tab" data-view="alerts" aria-pressed="false" data-i18n="nav.alerts">Alerts</button>
+    <button type="button" class="tab" data-view="repair" aria-pressed="false" data-i18n="nav.repair">Fix</button>
+    <button type="button" class="tab" data-view="settings" aria-pressed="false" data-i18n="nav.settings">Settings</button>
+    <button type="button" class="tab tab-new" data-view="wizard" aria-pressed="false" data-i18n="nav.new">New scraper</button>
   </nav>
 </header>
 <p id="listing" class="banner" role="status" aria-live="polite"></p>
 <main id="main">
-  <div id="view-jobs">
+  <div id="view-results">
     <section class="card">
-      <h2>Job file</h2>
+      <h2 data-i18n="run.title">Run</h2>
       <div class="row">
-        <label for="files">Job</label>
-        <select id="files"></select>
-        <button type="button" id="validate">Open</button>
-      </div>
-      <p id="validation" role="status" aria-live="polite"></p>
-    </section>
-
-    <section class="card">
-      <h2>Preview and correct</h2>
-      <p class="muted">Sample records with how each field was found. Nothing is written.</p>
-      <button type="button" id="preview">Preview sample records</button>
-      <div class="row">
-        <label for="selector-pick">Field</label>
-        <select id="selector-pick"></select>
-        <label for="selector-text">New selector</label>
-        <input id="selector-text" type="text" maxlength="1024" size="40" spellcheck="false">
-        <button type="button" id="repreview">Preview with this selector</button>
-        <button type="button" id="accept">Save to job file</button>
-      </div>
-      <p id="accepted" role="status" aria-live="polite"></p>
-      <div id="records"></div>
-    </section>
-
-    <section class="card">
-      <h2>Next page and repair settings</h2>
-      <p class="muted">Follow a next link up to a page cap. Studio writes the recipe's existing pagination fields.</p>
-      <div class="row">
-        <label for="pagination-source">Recipe</label>
-        <select id="pagination-source"></select>
-        <label for="pagination-next">Next-link selector</label>
-        <input id="pagination-next" type="text" maxlength="1024" size="32" spellcheck="false" placeholder="a.next::attr(href)">
-        <label for="pagination-cap">Page cap <span id="pagination-cap-range"></span></label>
-        <input id="pagination-cap" type="number">
-        <button type="button" id="save-pagination">Save next page</button>
-      </div>
-      <fieldset class="bound-controls">
-        <legend>Follow links</legend>
-        <label><input id="spider-enabled" type="checkbox"> Follow links from the starting URLs</label>
-        <label>Link depth <span id="spider-depth-range"></span> <input id="spider-depth" type="number"></label>
-        <label>Page cap <span id="spider-pages-range"></span> <input id="spider-pages" type="number"></label>
-        <label for="spider-links" id="spider-link-label">Link selector</label>
-        <input id="spider-links" type="text" value="a::attr(href)">
-        <label><input id="spider-same-host" type="checkbox" checked> Stay on the same host</label>
-        <p class="muted">Other hosts still require the job's allowed hosts.</p>
-        <label>Allowed path prefixes (one per line)<textarea id="spider-allow"></textarea></label>
-        <label>Denied path prefixes (one per line)<textarea id="spider-deny"></textarea></label>
-        <button type="button" id="save-spider">Save link following</button>
-      </fieldset>
-      <h3>Scroll for more records</h3>
-      <p id="scroll-reason"></p>
-      <fieldset id="scroll-controls" class="bound-controls" disabled>
-        <legend>Bounded browser scroll</legend>
-        <label><input id="scroll-enabled" type="checkbox"> Scroll for more records</label>
-        <label>Step cap <span id="scroll-steps-range"></span> <input id="scroll-steps" type="number"></label>
-        <label>Wait after each step (ms) <span id="scroll-settle-range"></span> <input id="scroll-settle" type="number"></label>
-        <button type="button" id="save-scroll">Save scroll</button>
-      </fieldset>
-      <label class="check"><input type="checkbox" id="auto-promote"> Auto-promote repairs for this job</label>
-      <p class="muted">Off by default. On writes <code>[repair] auto_promote</code> to this job only; a repair still has to pass every gate and the semantic judge, which needs a configured model. Off means you promote with a reason.</p>
-      <label class="check"><input type="checkbox" id="allow-stealth"> Allow stealth for this Studio session</label>
-      <p class="muted">Off by default. Lets jobs that ask for <code>render = "stealth"</code> run while this Studio is open. Nothing is written to a job or a bundle.</p>
-      <p id="controls-status" role="status" aria-live="polite"></p>
-    </section>
-
-    <section class="card">
-      <h2>Run</h2>
-      <div class="row">
-        <button type="button" id="extract">Extract (writes nothing)</button>
-        <button type="button" id="load">Load into dataset</button>
-        <label class="check"><input type="checkbox" id="drift"> Measure drift</label>
+        <button type="button" id="extract" data-i18n="run.extract">Extract (writes nothing)</button>
+        <button type="button" id="load" class="primary" data-i18n="run.load">Load into dataset</button>
+        <label class="check"><input type="checkbox" id="drift"> <span data-i18n="run.drift">Measure drift</span></label>
       </div>
       <p id="run-status" role="status" aria-live="polite"></p>
       <p id="operation-progress" role="status" aria-live="polite"></p>
@@ -101,75 +59,147 @@
     </section>
 
     <section class="card">
-      <h2>Health and repair</h2>
-      <button type="button" id="health">Check health</button>
+      <h2 data-i18n="dataset.title">Records</h2>
+      <div class="row">
+        <button type="button" id="dataset" data-i18n="dataset.show">Show records</button>
+        <button type="button" id="prev-page" data-i18n="dataset.prev">Previous page</button>
+        <button type="button" id="next-page" data-i18n="dataset.next">Next page</button>
+        <button type="button" id="export-json" data-i18n="dataset.json">Download JSON</button>
+        <button type="button" id="export-html" data-i18n="dataset.html">Download HTML</button>
+      </div>
+      <p id="dataset-status" role="status" aria-live="polite"></p>
+      <div id="dataset-result"></div>
+    </section>
+  </div>
+
+  <div id="view-sources" hidden>
+    <section class="card">
+      <h2 data-i18n="health.title">Source health</h2>
+      <button type="button" id="health" class="primary" data-i18n="health.check">Check health</button>
       <p id="health-status" role="status" aria-live="polite"></p>
       <div id="health-alerts" role="alert"></div>
-      <p class="muted" id="failure-hint" hidden>Get the same alerts outside Studio: create <code>notify.py</code> as the README's "Notify on failure" section shows, then run this from the Studio folder. A job file cannot set this hook.</p>
+      <p class="muted" id="failure-hint" hidden data-i18n="health.hint">Get the same alerts outside Studio.</p>
       <pre id="failure-command"></pre>
       <div id="health-result"></div>
       <div id="repair-result"></div>
       <div id="ai-repair-result"></div>
     </section>
+  </div>
 
+  <div id="view-alerts" hidden>
+    <section class="card empty">
+      <h2 data-i18n="alerts.title">Alerts</h2>
+      <p class="muted" data-i18n="alerts.empty">Alerts from the last run and health check appear here, with what to do next.</p>
+    </section>
+  </div>
+
+  <div id="view-repair" hidden>
     <section class="card">
-      <h2>Dataset</h2>
+      <h2 data-i18n="fix.title">Preview and correct</h2>
+      <p class="muted" data-i18n="fix.intro">Sample records with how each field was found. Nothing is written.</p>
+      <button type="button" id="preview" class="primary" data-i18n="fix.preview">Preview sample records</button>
       <div class="row">
-        <button type="button" id="dataset">Show records</button>
-        <button type="button" id="prev-page">Previous page</button>
-        <button type="button" id="next-page">Next page</button>
-        <button type="button" id="export-json">Download JSON</button>
-        <button type="button" id="export-html">Download HTML</button>
+        <label for="selector-pick" data-i18n="fix.field">Field</label>
+        <select id="selector-pick"></select>
+        <label for="selector-text" data-i18n="fix.selector">New selector</label>
+        <input id="selector-text" type="text" maxlength="1024" size="40" spellcheck="false">
+        <button type="button" id="repreview" data-i18n="fix.repreview">Preview with this selector</button>
+        <button type="button" id="accept" data-i18n="fix.accept">Save to job file</button>
       </div>
-      <p id="dataset-status" role="status" aria-live="polite"></p>
-      <div id="dataset-result"></div>
+      <p id="accepted" role="status" aria-live="polite"></p>
+      <div id="records"></div>
+    </section>
+  </div>
+
+  <div id="view-settings" hidden>
+    <section class="card">
+      <h2 data-i18n="settings.title">Next page, link following and scroll</h2>
+      <p class="muted" data-i18n="settings.intro">Follow a next link up to a page cap.</p>
+      <div class="row">
+        <label for="pagination-source" data-i18n="settings.recipe">Recipe</label>
+        <select id="pagination-source"></select>
+        <label for="pagination-next" data-i18n="settings.next">Next-link selector</label>
+        <input id="pagination-next" type="text" maxlength="1024" size="32" spellcheck="false" placeholder="a.next::attr(href)">
+        <label for="pagination-cap"><span data-i18n="settings.cap">Page cap</span> <span id="pagination-cap-range"></span></label>
+        <input id="pagination-cap" type="number">
+        <button type="button" id="save-pagination" data-i18n="settings.saveNext">Save next page</button>
+      </div>
+      <fieldset class="bound-controls">
+        <legend data-i18n="spider.legend">Follow links</legend>
+        <label><input id="spider-enabled" type="checkbox"> <span data-i18n="spider.enabled">Follow links from the starting URLs</span></label>
+        <label><span data-i18n="spider.depth">Link depth</span> <span id="spider-depth-range"></span> <input id="spider-depth" type="number"></label>
+        <label><span data-i18n="spider.pages">Page cap</span> <span id="spider-pages-range"></span> <input id="spider-pages" type="number"></label>
+        <label for="spider-links" id="spider-link-label" data-i18n="spider.links">Link selector</label>
+        <input id="spider-links" type="text" value="a::attr(href)">
+        <label><input id="spider-same-host" type="checkbox" checked> <span data-i18n="spider.sameHost">Stay on the same host</span></label>
+        <p class="muted" data-i18n="spider.otherHosts">Other hosts still require the job's allowed hosts.</p>
+        <label><span data-i18n="spider.allow">Allowed path prefixes (one per line)</span><textarea id="spider-allow"></textarea></label>
+        <label><span data-i18n="spider.deny">Denied path prefixes (one per line)</span><textarea id="spider-deny"></textarea></label>
+        <button type="button" id="save-spider" data-i18n="spider.save">Save link following</button>
+      </fieldset>
+      <h3 data-i18n="scroll.title">Scroll for more records</h3>
+      <p id="scroll-reason"></p>
+      <fieldset id="scroll-controls" class="bound-controls" disabled>
+        <legend data-i18n="scroll.legend">Bounded browser scroll</legend>
+        <label><input id="scroll-enabled" type="checkbox"> <span data-i18n="scroll.enabled">Scroll for more records</span></label>
+        <label><span data-i18n="scroll.steps">Step cap</span> <span id="scroll-steps-range"></span> <input id="scroll-steps" type="number"></label>
+        <label><span data-i18n="scroll.settle">Wait after each step (ms)</span> <span id="scroll-settle-range"></span> <input id="scroll-settle" type="number"></label>
+        <button type="button" id="save-scroll" data-i18n="scroll.save">Save scroll</button>
+      </fieldset>
+      <label class="check"><input type="checkbox" id="auto-promote"> <span data-i18n="switch.autoPromote">Apply fixes automatically for this job</span></label>
+      <p class="muted" data-i18n="switch.autoPromoteHelp">Off by default.</p>
+      <label class="check"><input type="checkbox" id="allow-stealth"> <span data-i18n="switch.stealth">Allow stealth for this Studio session</span></label>
+      <p class="muted" data-i18n="switch.stealthHelp">Off by default.</p>
+      <p id="controls-status" role="status" aria-live="polite"></p>
     </section>
 
     <section class="card">
-      <h2>Connect your app</h2>
-      <button type="button" id="connect">Show commands</button>
+      <h2 data-i18n="connect.title">Connect your app</h2>
+      <button type="button" id="connect" data-i18n="connect.show">Show commands</button>
       <pre id="commands"></pre>
     </section>
   </div>
 
   <div id="view-wizard" hidden>
     <section class="card">
-      <h2>1. Page URL</h2>
-      <p class="muted">Paste a page URL. Studio fetches it and the job scrapes that URL on every run.</p>
+      <h2 data-i18n="wizard.url.title">1. Page URL</h2>
+      <p class="muted" data-i18n="wizard.url.intro">Paste a page URL.</p>
       <div class="row">
-        <label for="page-url">Page URL</label>
+        <label for="page-url" data-i18n="wizard.url.label">Page URL</label>
         <input id="page-url" type="url" size="48" placeholder="https://example.com/list" required>
       </div>
     </section>
     <section class="card">
-      <h2>2. Fields and one example each</h2>
-      <p class="muted">Name each field and copy one value exactly as the page shows it.</p>
-      <table class="fields">
-        <thead><tr><th scope="col">Field name</th><th scope="col">Example value</th>
-          <th scope="col">Record key</th><th scope="col"><span class="sr">Remove</span></th></tr></thead>
-        <tbody id="field-rows"></tbody>
-      </table>
+      <h2 data-i18n="wizard.fields.title">2. Fields and one example each</h2>
+      <p class="muted" data-i18n="wizard.fields.intro">Name each field and copy one value exactly as the page shows it.</p>
+      <div class="scroll">
+        <table class="fields">
+          <thead><tr><th scope="col" data-i18n="wizard.fields.name">Field name</th><th scope="col" data-i18n="wizard.fields.example">Example value</th>
+            <th scope="col" data-i18n="wizard.fields.key">Record key</th><th scope="col"><span class="sr" data-i18n="wizard.fields.remove">Remove</span></th></tr></thead>
+          <tbody id="field-rows"></tbody>
+        </table>
+      </div>
       <div class="row">
-        <button type="button" id="add-field">Add field</button>
-        <button type="button" id="suggest" class="primary">Suggest</button>
-        <button type="button" id="ask-ai" hidden>Ask AI (no examples needed)</button>
+        <button type="button" id="add-field" data-i18n="wizard.fields.add">Add field</button>
+        <button type="button" id="suggest" class="primary" data-i18n="wizard.fields.suggest">Suggest</button>
+        <button type="button" id="ask-ai" hidden data-i18n="wizard.fields.askAi">Ask AI (no examples needed)</button>
       </div>
       <p id="ai-notice" hidden></p>
       <p id="suggest-status" role="status" aria-live="polite"></p>
       <div id="suggest-result"></div>
     </section>
     <section class="card">
-      <h2>3. Create the job</h2>
+      <h2 data-i18n="wizard.create.title">3. Create the job</h2>
       <div class="row">
-        <label for="new-file">Job file</label>
+        <label for="new-file" data-i18n="wizard.create.file">Job file</label>
         <input id="new-file" type="text" size="30" spellcheck="false" placeholder="pages/events.toml">
-        <label for="new-dataset">Dataset file, next to the job file (optional)</label>
+        <label for="new-dataset" data-i18n="wizard.create.dataset">Dataset file, next to the job file (optional)</label>
         <input id="new-dataset" type="text" size="24" spellcheck="false" placeholder="events.sqlite">
-        <label for="new-memory">Recipe memory file, enables repair (optional)</label>
+        <label for="new-memory" data-i18n="wizard.create.memory">Recipe memory file, enables fixes (optional)</label>
         <input id="new-memory" type="text" size="24" spellcheck="false" placeholder="recipes.sqlite">
-        <button type="button" id="create" class="primary">Create job</button>
+        <button type="button" id="create" class="primary" data-i18n="wizard.create.submit">Create job</button>
       </div>
-      <p class="muted">The job scrapes this URL on every run. A dataset needs at least one record key.</p>
+      <p class="muted" data-i18n="wizard.create.note">The job scrapes this URL on every run.</p>
       <p id="create-status" role="status" aria-live="polite"></p>
     </section>
   </div>
