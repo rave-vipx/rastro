@@ -101,7 +101,7 @@ def test_migration_failure_rolls_back_and_retry_is_idempotent():
         db.execute("BEGIN IMMEDIATE")
         migrate(db)
         migrate(db)
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 3
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 4
 
 
 def test_capacity_failure_rolls_back_records_and_status(tmp_path):

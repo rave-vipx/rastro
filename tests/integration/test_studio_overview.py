@@ -86,7 +86,8 @@ def test_projects_report_health_counts_and_other_databases(client: TestClient) -
     shown = {p["file"]: p for p in reply["projects"]}
     assert shown["agenda.toml"] == {
         **shown["agenda.toml"],
-        "name": "agenda_fiestas",
+        "name": "Agenda fiestas",
+        "dataset": "agenda_fiestas",
         "health": "warnings",
         "records": 6,
         "sources_total": 5,
@@ -104,7 +105,7 @@ def test_an_invalid_job_is_listed_with_unknown_health(client: TestClient, root: 
     (root / "broken.toml").write_text("format_version = 1\n[recipe]\n", encoding="utf-8")
     shown = {p["file"]: p for p in client.get("/api/projects").json()["projects"]}
     assert shown["broken.toml"]["health"] == "unknown"
-    assert shown["broken.toml"]["name"] == "broken"
+    assert (shown["broken.toml"]["name"], shown["broken.toml"]["dataset"]) == ("Broken", None)
 
 
 def test_sources_show_the_sample_statuses(client: TestClient) -> None:
@@ -113,7 +114,11 @@ def test_sources_show_the_sample_statuses(client: TestClient) -> None:
     assert by_url(rows, "cartelera")["issue_code"] == "invalid_robots"
     assert by_url(rows, "entradas")["warnings"] == ["evidence_retention_failed"]
     capped = by_url(rows, "bailes")
-    assert (capped["read"], capped["cap"], capped["issue_code"]) == (20, 20, "cap_reached")
+    assert (capped["read"], capped["cap"], capped["issue_code"]) == (
+        20,
+        20,
+        "pagination_max_pages",
+    )
     assert all(row["last_fetch"] and row["rejected"] == 0 for row in rows)
 
 
@@ -155,8 +160,8 @@ def test_an_oversized_run_log_reads_as_empty(client: TestClient, root: Path) -> 
     log = _file(root, root / "agenda.toml")
     log.write_bytes(b" " * (MAX_LOG_BYTES + 1))
     rows = post(client, "/api/sources", {"file": "agenda.toml"}).json()["sources"]
-    assert by_url(rows, "entradas")["status"] == "ok"
-    assert by_url(rows, "bailes")["cap"] is None
+    assert by_url(rows, "entradas")["status"] == "ok"  # its warning lived in the run log
+    assert by_url(rows, "bailes")["cap"] == 20  # the cap comes from the engine's metrics
 
 
 def test_records_carry_provenance_empty_reasons_flags_and_origin(client: TestClient) -> None:

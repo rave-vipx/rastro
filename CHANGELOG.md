@@ -7,6 +7,7 @@ All notable user-facing changes are recorded here. The project follows [Semantic
 ### Changed
 
 - Studio shell (stage 1): design tokens with system, light and dark themes, an English/Spanish dictionary (English default), and views for Results, Sources, Alerts, Fix, Settings and New scraper; every token pair meets AA contrast (N1, N5, N8).
+- Run metrics record per source `rejected` records and the collection cap reached (`cap`, `cap_value`: pagination, spider, scroll and record limits) for every `rastro job load` and `rastro.load_records`; `rastro job stats` adds `rejected` and `capped_runs`. Dataset files move to schema 4 on their first write (older files still read; their rows report `null`, not 0); Rastro 0.7 refuses a schema 4 file, so keep a copy before writing if you may downgrade. Studio's `/api/sources` reads `read`, `rejected`, `cap` and `capped` from these metrics, so command-line loads show caps and rejections too, and `/api/projects` adds a readable `name` and the raw `dataset` (N5, OBS-003..007, SYNC-002).
 
 ## Unreleased — adoption cut (N15–N19)
 

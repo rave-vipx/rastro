@@ -153,9 +153,7 @@ product differ, the interface adapts:
 | --- | --- | --- |
 | Separate "Jobs" page with every card | Cards moved into Results, Sources, Fix and Settings; element ids unchanged | Stage 1 is layout only; behaviour stays the same |
 | Alerts view with a list | Explains where alerts appear until the alert list endpoint lands (stage 4) | No alert list route yet |
-| Project title such as "Agenda de fiestas · Uruguay" | The dataset name, or the job file name without a dataset | A job has no display name |
-| "Rejected" count per source | Always 0 unless Studio's run log has a number | Neither load results nor run metrics keep per-source rejections |
-| "Limit reached" (capped) source | Shown when Studio's run log records a cap that was reached, or a cap issue code | Load results do not yet carry pagination or spider caps |
+| Project title such as "Agenda de fiestas · Uruguay" | The dataset name made readable (`agenda_fiestas` shows as "Agenda fiestas"; the raw value is `dataset`), or the job file name without a dataset | A job has no display name |
 | "Imported snapshot" with import time and original observation | One `imported_at`: the observation time the adapter gave `rastro.load_records` | The engine does not record a separate import time |
 | Drift and quarantine alerts in the demo | The demo folder has no open drift or waiting candidate | Making them needs a real drifted run; the endpoint reports both when they exist |
 
@@ -170,20 +168,24 @@ every sentence from the dictionary. A code read from a file that is not a Rastro
 
 | Route | Returns |
 | --- | --- |
-| `GET /api/projects` | `projects`: per job `file`, `name`, `health` (`ok`, `warnings`, `failing`, `unknown`), `last_run`, `records`, `sources_total`, `sources_with_problems` (failed or stale); `other_databases`: `.sqlite` files no job uses; `truncated` |
-| `POST /api/sources {file}` | `sources`: per current source `url`, `status` (`ok`, `warning`, `capped`, `failed`, `stale`, `never`), `issue_code`, `last_fetch`, `read`, `rejected`, `cap`, `warnings` (issue codes, `open_drift`, `quarantined_candidate`) |
+| `GET /api/projects` | `projects`: per job `file`, `name` (readable), `dataset` (the raw dataset name, `null` without one), `health` (`ok`, `warnings`, `failing`, `unknown`), `last_run`, `records`, `sources_total`, `sources_with_problems` (failed or stale); `other_databases`: `.sqlite` files no job uses; `truncated` |
+| `POST /api/sources {file}` | `sources`: per current source `url`, `status` (`ok`, `warning`, `capped`, `failed`, `stale`, `never`), `issue_code`, `last_fetch`, `read`, `rejected`, `cap`, `warnings` (issue codes, `open_drift`, `quarantined_candidate`); `read`, `rejected` and `cap` are `null` when nothing recorded them |
 | `POST /api/alerts {file}` | `alerts`, newest first, at most 100: `at`, `kind` (`failure`, `drift`, `cap`, `warning`, `quarantine`, `promote_refused`), `source`, `code`, `field`, `action` (`retry`, `fix`, `details`, `raise_cap`) |
 | `POST /api/records` | The existing page, plus per record `provenance` (per field `source_url`, `observed_at`, `method`, `locator`, `recipe_version`), `empty` (declared fields without a value: `not_published`, or `source_failed` when the record's source is stale), `flags` (instruction-like values, see [ADR 0035](decisions/0035-prompt-injection-defense.md)), `origin` (`web` or `adapter`); and `imported_at` when the page shows adapter records |
 
 A source is `failed` when its last attempt failed with an outcome such as `permanent_failure`,
 `stale` when its last attempt did not refresh it for another reason (for example
-`consistency_failed`), `capped` or `warning` from the last Studio load, and `never` when nothing
-was recorded. A job is `failing` when every attempted source failed or is stale.
+`consistency_failed`), `capped` when its last load stopped at a collection cap (`issue_code` names
+it, such as `pagination_max_pages` or `spider_page_limit`, and `cap` gives the configured value),
+`warning` from the last Studio load, and `never` when nothing was recorded. A job is `failing`
+when every attempted source failed or is stale.
 
-Failures, open drift and waiting candidates come from the dataset and recipe memory, so runs
-started from the command line show up too. Issue codes of a load, caps and refused promotions
-are not kept by the dataset: Studio writes them to a small run log, `.rastro-studio/runs/` under
-the root (one JSON file per job, the last 20 runs, URLs, counts, Rastro codes and declared field
+`read`, `rejected`, `cap` and the `capped` status come from the dataset's run metrics (see
+[Metrics and cost](operations.md#metrics-and-cost)), so loads started from the command line show
+up too, as do failures, open drift and waiting candidates. A PostgreSQL dataset keeps no run
+metrics: its counts are `null`, never 0. Other issue codes of a load and refused promotions are
+not kept by the dataset: Studio writes them to a small run log, `.rastro-studio/runs/` under the
+root (one JSON file per job, the last 20 runs, URLs, counts, Rastro codes and declared field
 names only). Deleting that folder loses only those warnings.
 
 A demo folder with three jobs in these states is built by
