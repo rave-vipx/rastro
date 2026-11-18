@@ -171,3 +171,14 @@ def test_without_dir_fd_init_fails_closed(tmp_path: Path, monkeypatch: pytest.Mo
         with pytest.raises(ConfigurationError, match="rastro capabilities --output markdown"):
             init_project(project, agent, fmt)
     assert list(project.iterdir()) == []
+
+
+def test_snippet_tells_the_agent_how_results_reach_studio() -> None:
+    """N18, Rave adoption: results go through a job dataset; no ad hoc database for Studio."""
+    from rastro.capabilities_render import render_llms
+    from rastro.config_catalog import STUDIO_RESULTS_RULE
+
+    snippet = render_snippet("0.0.0")
+    assert STUDIO_RESULTS_RULE in snippet and STUDIO_RESULTS_RULE in render_llms()
+    assert "rastro.load_records" in STUDIO_RESULTS_RULE
+    assert snippet.index(STUDIO_RESULTS_RULE) < snippet.index(PUBLIC_IMPORT_RULE)
