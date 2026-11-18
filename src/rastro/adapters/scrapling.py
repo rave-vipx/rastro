@@ -170,7 +170,7 @@ class ScraplingParser:
         wanted = recipe.item_types
         for block_index, block in enumerate(blocks):
             try:
-                payload = strict_json(str(block))
+                payload = strict_json(str(block), repair_text=True)
             except (ValueError, RecursionError):
                 issues.append(Issue(code="invalid_jsonld"))
                 continue

@@ -45,7 +45,7 @@ class ScraplingDiscovery:
         examined = 0
         for block in blocks:
             try:
-                payload = strict_json(str(block))
+                payload = strict_json(str(block), repair_text=True)
             except (ValueError, RecursionError):
                 continue
             for item, _ in _objects(payload):

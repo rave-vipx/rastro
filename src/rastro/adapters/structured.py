@@ -19,15 +19,16 @@ from rastro.ports.parser import Candidate, ParsedDocument
 _DISCOVERY_SAMPLE = 20
 
 
-def load_json(text: str, limits: Limits) -> object:
+def load_json(text: str, limits: Limits, *, repair_text: bool = False) -> object:
     """Decode strict JSON within byte, depth and node budgets.
 
     Malformed JSON, duplicate keys and non-finite constants raise ValueError.
+    ``repair_text`` replaces lone surrogates with U+FFFD (see ``strict_json``).
     """
     if len(text.encode()) > limits.max_json_bytes:
         raise ResourceLimitError("JSON input exceeds max_json_bytes")
     try:
-        payload = strict_json(text)
+        payload = strict_json(text, repair_text=repair_text)
     except RecursionError:
         raise ResourceLimitError("JSON nesting exceeds max_json_depth") from None
     nodes = 0
@@ -53,7 +54,7 @@ class JsonParser:
         if not isinstance(recipe, JsonRecipe):
             raise ConfigurationError("JSON documents require a json recipe")
         try:
-            payload = load_json(html, limits)
+            payload = load_json(html, limits, repair_text=True)
         except ValueError:
             return ParsedDocument((), (Issue(code="invalid_json"),))
         target = resolve_pointer(payload, recipe.record_path)
@@ -98,7 +99,7 @@ class JsonDiscovery:
         aliases: AliasMap | None = None,
     ) -> tuple[Recipe, ...]:
         try:
-            payload = load_json(html, limits)
+            payload = load_json(html, limits, repair_text=True)
         except ValueError:
             return ()
         names = {

@@ -15,6 +15,7 @@ grouped by theme. A test fails when a code in `src/rastro` has no row here.
 | `missing_evidence` | A value has no proof of where it came from. | The record is rejected. | Fix the selector so it points at real page content. |
 | `ambiguous_match` | A selector matched more than one thing for a single field. | The record is rejected. | Make the selector more specific. |
 | `invalid_record` | One structured record is not an object. | That record is skipped. | Check the source data. |
+| `invalid_text` | A record holds text that cannot be stored as UTF-8. Lone surrogates in JSON and JSON-LD are already replaced with U+FFFD when decoded. | The record is rejected. Others are saved. | Check the source data or a custom validator that builds text. |
 | `invalid_json` | The response is not valid JSON. | No. | Check the URL and the content type. |
 | `embedded_json_not_found` | An `embedded_json` recipe's `source` selector matched no node, or the node lacks the attribute. | No. | Fix `source`. The page may have moved the data. |
 | `invalid_jsonld` | A JSON-LD block could not be parsed. | The block is ignored. | Use another strategy or fix the page data. |
