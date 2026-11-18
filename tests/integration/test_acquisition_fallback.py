@@ -51,6 +51,10 @@ async def test_no_fallback_after_http_response():
 async def test_fallback_attempts_count_as_requests_and_respect_operation_timeout():
     class SlowFallback(Transport):
         async def get(self, target, **kwargs):
+            if target.address == ADDRESSES[0]:
+                # The first attempt takes time, so the operation deadline (started earlier)
+                # always expires before the fallback request's own deadline.
+                await asyncio.sleep(0.03)
             if target.address == ADDRESSES[1]:
                 self.calls.append((target, kwargs))
                 await asyncio.Event().wait()
