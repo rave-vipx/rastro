@@ -18,6 +18,7 @@ from pydantic import ValidationError
 from pydantic_core import SchemaError
 
 from rastro.application.errors import RunInProgressError, missing_extra_error
+from rastro.config_suggest import unknown_key_hint
 from rastro.domain.dataset import DatasetNotFoundError, DatasetStorageError
 from rastro.domain.models import RastroError, ResourceLimitError
 
@@ -56,11 +57,13 @@ def _validation_payload(error: ValidationError) -> tuple[str, str | None]:
 def classify(error: BaseException) -> dict[str, Any]:
     """Map an exception to the documented error object without echoing raw input."""
     code, message, location = "configuration_error", "Job configuration is invalid", None
+    hint: str | None = None
     if isinstance(error, UsageError):
         code, message = "usage_error", str(error)
     elif isinstance(error, ValidationError):
         code = "validation_error"
         message, location = _validation_payload(error)
+        hint = unknown_key_hint(error)
     elif isinstance(error, SchemaError):
         code, message = "schema_error", "Target fields could not be compiled into a record model"
     elif isinstance(error, tomllib.TOMLDecodeError | json.JSONDecodeError):
@@ -94,7 +97,9 @@ def classify(error: BaseException) -> dict[str, Any]:
         "location": location,
     }
     if isinstance(error, RastroError) and error.hint:
-        payload["hint"] = error.hint[:MAX_MESSAGE]
+        hint = error.hint
+    if hint:
+        payload["hint"] = hint[:MAX_MESSAGE]
     return payload
 
 

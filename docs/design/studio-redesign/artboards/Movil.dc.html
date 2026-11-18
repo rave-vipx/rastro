@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Resultados en móvil</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+.rs{--bg:#f5f5f7;--surface:#ffffff;--surface-2:#f2f2f4;--surface-3:#e8e8ed;--border:#e3e3e8;--border-strong:#c9c9d0;--text:#1d1d1f;--text-2:#55555b;--text-3:#6e6e73;--accent:#0066d6;--accent-soft:#e8f1fc;--on-accent:#ffffff;--ok:#1f7a36;--ok-soft:#e6f4ea;--warn:#a04a00;--warn-soft:#fdf0e1;--fail:#c4161c;--fail-soft:#fdeaea;--bar:rgba(255,255,255,.85);--shadow-1:0 1px 2px rgba(0,0,0,.04),0 1px 1px rgba(0,0,0,.03);--shadow-2:0 -8px 32px rgba(0,0,0,.12);color-scheme:light;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,Roboto,"Helvetica Neue",Arial,sans-serif;font-size:15px;line-height:1.4;color:var(--text);background:var(--bg);-webkit-font-smoothing:antialiased}
+.rs[data-theme=dark]{--bg:#111113;--surface:#1c1c1e;--surface-2:#242427;--surface-3:#2c2c2e;--border:#2f2f33;--border-strong:#48484c;--text:#f5f5f7;--text-2:#b4b4ba;--text-3:#94949a;--accent:#3d9bff;--accent-soft:#16283f;--on-accent:#04101f;--ok:#4cd471;--ok-soft:#12291a;--warn:#ffad33;--warn-soft:#33240c;--fail:#ff6b61;--fail-soft:#3a1714;--bar:rgba(28,28,30,.85);--shadow-1:0 1px 2px rgba(0,0,0,.4);--shadow-2:0 -8px 32px rgba(0,0,0,.6);color-scheme:dark}
+@media (prefers-color-scheme:dark){.rs[data-theme=auto]{--bg:#111113;--surface:#1c1c1e;--surface-2:#242427;--surface-3:#2c2c2e;--border:#2f2f33;--border-strong:#48484c;--text:#f5f5f7;--text-2:#b4b4ba;--text-3:#94949a;--accent:#3d9bff;--accent-soft:#16283f;--on-accent:#04101f;--ok:#4cd471;--ok-soft:#12291a;--warn:#ffad33;--warn-soft:#33240c;--fail:#ff6b61;--fail-soft:#3a1714;--bar:rgba(28,28,30,.85);--shadow-1:0 1px 2px rgba(0,0,0,.4);--shadow-2:0 -8px 32px rgba(0,0,0,.6);color-scheme:dark}}
+.rs :focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+.mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:12px}
+.muted{color:var(--text-2)}.faint{color:var(--text-3)}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:1px 9px;border-radius:999px;font-size:12px;font-weight:600;line-height:20px;white-space:nowrap}
+.chip-ok{background:var(--ok-soft);color:var(--ok)}.chip-warn{background:var(--warn-soft);color:var(--warn)}.chip-fail{background:var(--fail-soft);color:var(--fail)}.chip-neutral{background:var(--surface-2);color:var(--text-2)}.chip-accent{background:var(--accent-soft);color:var(--accent)}
+.fbtn{flex:none;min-height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--border-strong);background:var(--surface);color:var(--text);font:inherit;font-size:14px;font-weight:500}
+.fbtn[aria-pressed=true]{background:var(--text);border-color:var(--text);color:var(--surface)}
+.ev{all:unset;box-sizing:border-box;display:flex;flex-direction:column;gap:6px;width:100%;padding:14px 16px;background:var(--surface);cursor:pointer}
+.ev+.ev{border-top:1px solid var(--border)}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;border-radius:12px;border:1px solid var(--border-strong);background:var(--surface);color:var(--text);font:inherit;font-weight:500}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.seg{display:inline-flex;border-radius:9px;padding:2px;background:var(--surface-3);gap:2px}
+.seg button{min-height:30px;padding:0 10px;border:0;border-radius:7px;background:transparent;color:var(--text-2);font:inherit;font-size:12px;font-weight:600}
+.seg [aria-pressed=true]{background:var(--surface);color:var(--text);box-shadow:var(--shadow-1)}
+</style>
+</helmet>
+<div class="rs" data-theme="{{theme}}" style="width: 390px; height: 1500px; box-sizing: border-box; position: relative; overflow: hidden; display: flex; flex-direction: column">
+  <header style="padding: 14px 16px 10px; background: var(--bar); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+      <a href="Main.dc.html" style="display: inline-flex; align-items: center; gap: 4px; min-height: 44px; color: var(--accent); text-decoration: none; font-weight: 500"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M10 3.5L5.5 8l4.5 4.5"></path></svg>Proyectos</a>
+      <div class="seg" role="group" aria-label="Tema">
+        <button type="button" aria-pressed="{{tAuto}}" onClick="{{setAuto}}" aria-label="Tema del sistema">Auto</button>
+        <button type="button" aria-pressed="{{tLight}}" onClick="{{setLight}}">Claro</button>
+        <button type="button" aria-pressed="{{tDark}}" onClick="{{setDark}}">Oscuro</button>
+      </div>
+    </div>
+    <h1 style="margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -.025em">Agenda de fiestas</h1>
+    <label style="display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 12px; border-radius: 11px; background: var(--surface-3); color: var(--text-3)">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5l3 3"></path></svg>
+      <input type="search" placeholder="Buscar evento o lugar" aria-label="Buscar" style="flex: 1; border: 0; background: transparent; font: inherit; color: var(--text); min-width: 0">
+    </label>
+    <div role="group" aria-label="Filtros" style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px">
+      <button class="fbtn" type="button" aria-pressed="true">Todos · 74</button>
+      <button class="fbtn" type="button" aria-pressed="false">En vivo</button>
+      <button class="fbtn" type="button" aria-pressed="false">Este finde</button>
+      <button class="fbtn" type="button" aria-pressed="false">Fuente</button>
+    </div>
+  </header>
+
+  <div style="padding: 12px 16px 0">
+    <a href="Fuentes.dc.html" style="display: flex; gap: 10px; align-items: center; padding: 12px; border-radius: 12px; background: var(--warn-soft); color: var(--text); text-decoration: none; font-size: 14px">
+      <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="var(--warn)" stroke-width="1.6" aria-hidden="true" style="flex: none"><path d="M8 2.2l6.2 11H1.8z"></path><path d="M8 6.6v3"></path><path d="M8 11.7v.1"></path></svg>
+      <span style="flex: 1">2 fuentes con problema. Algunos datos pueden estar viejos.</span>
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="var(--text-3)" stroke-width="1.8" aria-hidden="true"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+    </a>
+  </div>
+
+  <section aria-label="Eventos" style="margin: 12px 16px; border-radius: 14px; overflow: hidden; border: 1px solid var(--border)">
+    <button class="ev" type="button">
+      <span style="display: flex; justify-content: space-between; gap: 8px"><span class="faint" style="font-size: 13px">Hoy 22:00</span><span class="chip chip-accent">En vivo</span></span>
+      <strong style="font-weight: 600; font-size: 16px">Ciclo Bajo Cero</strong>
+      <span style="display: flex; justify-content: space-between; gap: 8px; font-size: 14px"><span class="muted">Club Faro · Montevideo</span><span style="font-variant-numeric: tabular-nums">$350</span></span>
+    </button>
+    <button class="ev" type="button" style="background: var(--accent-soft)">
+      <span class="faint" style="font-size: 13px">Sáb 22/11 23:30</span>
+      <strong style="font-weight: 600; font-size: 16px">Noche Fluo</strong>
+      <span style="display: flex; justify-content: space-between; gap: 8px; font-size: 14px"><span class="muted">Sala Cielo · Montevideo</span><span>Gratis–$299 <span class="chip chip-neutral">5 lotes</span></span></span>
+    </button>
+    <button class="ev" type="button">
+      <span class="faint" style="font-size: 13px">Vie 21/11 18:00</span>
+      <strong style="font-weight: 600; font-size: 16px">Tarde de vinilos</strong>
+      <span style="display: flex; justify-content: space-between; gap: 8px; font-size: 14px"><span class="muted">Parque Rodó</span><strong style="font-weight: 600">Gratis</strong></span>
+    </button>
+    <button class="ev" type="button">
+      <span class="faint" style="font-size: 13px">Vie 21/11 23:59</span>
+      <strong style="font-weight: 600; font-size: 16px">Hangar Techno</strong>
+      <span style="display: flex; justify-content: space-between; gap: 8px; font-size: 14px"><span class="muted">Hangar 3 · Canelones</span><span class="faint" style="font-style: italic">No publicado</span></span>
+    </button>
+    <button class="ev" type="button">
+      <span style="display: flex; justify-content: space-between; gap: 8px"><span class="faint" style="font-size: 13px">Sáb 22/11 19:00</span><span class="chip chip-neutral">Foto importada</span></span>
+      <strong style="font-weight: 600; font-size: 16px">Atardecer en la Rambla</strong>
+      <span style="display: flex; justify-content: space-between; gap: 8px; font-size: 14px"><span class="muted">Playa Ramírez</span><span style="color: var(--fail); font-weight: 600">La fuente falló</span></span>
+    </button>
+  </section>
+  <p class="faint" style="margin: 0 16px; font-size: 13px; text-align: center">Registros 1–25 de 74 · <a href="Resultados.dc.html" style="color: var(--accent)">Cargar más</a></p>
+
+  <section aria-labelledby="sheet-t" style="position: absolute; left: 0; right: 0; bottom: 0; background: var(--surface); border-radius: 18px 18px 0 0; box-shadow: var(--shadow-2); padding: 8px 16px 24px; display: flex; flex-direction: column; gap: 14px">
+    <span aria-hidden="true" style="align-self: center; width: 36px; height: 5px; border-radius: 3px; background: var(--border-strong)"></span>
+    <div style="display: flex; justify-content: space-between; gap: 10px; align-items: flex-start">
+      <div style="display: flex; flex-direction: column; gap: 2px">
+        <span class="faint" style="font-size: 12px; font-weight: 600">De dónde salió</span>
+        <h2 id="sheet-t" style="margin: 0; font-size: 20px; font-weight: 600">Noche Fluo</h2>
+      </div>
+      <button type="button" aria-label="Cerrar" style="width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--surface-2); color: var(--text-2); display: grid; place-items: center"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"></path></svg></button>
+    </div>
+    <div style="display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 14px">
+      <span class="faint">Página</span><span class="mono" style="word-break: break-all">noche.example/eventos/noche-fluo</span>
+      <span class="faint">Observado</span><span>Hoy 15:12</span>
+      <span class="faint">Extracción</span><span>versión 3</span>
+    </div>
+    <ol style="margin: 0; padding: 0; list-style: none; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; font-size: 14px">
+      <li style="display: flex; justify-content: space-between; gap: 10px; padding: 10px 12px"><span>Sin costo · hasta 01:00</span><span class="chip chip-ok">Disponible</span></li>
+      <li style="display: flex; justify-content: space-between; gap: 10px; padding: 10px 12px; border-top: 1px solid var(--border)"><span>$160 · hasta 01:30</span><span class="chip chip-ok">Disponible</span></li>
+      <li style="display: flex; justify-content: space-between; gap: 10px; padding: 10px 12px; border-top: 1px solid var(--border)"><span>$199 · 1.ª tanda</span><span class="chip chip-neutral">Agotado</span></li>
+      <li style="display: flex; justify-content: space-between; gap: 10px; padding: 10px 12px; border-top: 1px solid var(--border)"><span>$249 · 2.ª tanda</span><span class="chip chip-warn">Quedan pocas</span></li>
+      <li style="display: flex; justify-content: space-between; gap: 10px; padding: 10px 12px; border-top: 1px solid var(--border)"><span>$299 · 3.ª tanda</span><span class="chip chip-neutral">Todavía no</span></li>
+    </ol>
+    <button class="btn" type="button">Abrir la página original</button>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"$preview":{"width":390,"height":1500}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const t = this.state.theme ?? this.props.theme ?? 'auto';
+    const set = (v) => () => this.setState({ theme: v });
+    return { theme: t, tAuto: t === 'auto', tLight: t === 'light', tDark: t === 'dark', setAuto: set('auto'), setLight: set('light'), setDark: set('dark') };
+  }
+}
+</script>
+</body>
+</html>

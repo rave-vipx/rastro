@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Nuevo scraper</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+.rs{--bg:#f5f5f7;--surface:#ffffff;--surface-2:#f2f2f4;--surface-3:#e8e8ed;--border:#e3e3e8;--border-strong:#c9c9d0;--text:#1d1d1f;--text-2:#55555b;--text-3:#6e6e73;--accent:#0066d6;--accent-hover:#0055b3;--accent-soft:#e8f1fc;--on-accent:#ffffff;--ok:#1f7a36;--ok-soft:#e6f4ea;--warn:#a04a00;--warn-soft:#fdf0e1;--fail:#c4161c;--fail-soft:#fdeaea;--bar:rgba(255,255,255,.78);--shadow-1:0 1px 2px rgba(0,0,0,.04),0 1px 1px rgba(0,0,0,.03);--shadow-2:0 12px 32px rgba(0,0,0,.10),0 2px 8px rgba(0,0,0,.06);color-scheme:light;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,Roboto,"Helvetica Neue",Arial,sans-serif;font-size:14px;line-height:1.45;letter-spacing:-.005em;color:var(--text);background:var(--bg);min-height:100vh;-webkit-font-smoothing:antialiased}
+.rs[data-theme=dark]{--bg:#111113;--surface:#1c1c1e;--surface-2:#242427;--surface-3:#2c2c2e;--border:#2f2f33;--border-strong:#48484c;--text:#f5f5f7;--text-2:#b4b4ba;--text-3:#94949a;--accent:#3d9bff;--accent-hover:#62afff;--accent-soft:#16283f;--on-accent:#04101f;--ok:#4cd471;--ok-soft:#12291a;--warn:#ffad33;--warn-soft:#33240c;--fail:#ff6b61;--fail-soft:#3a1714;--bar:rgba(28,28,30,.78);--shadow-1:0 1px 2px rgba(0,0,0,.4);--shadow-2:0 16px 40px rgba(0,0,0,.5);color-scheme:dark}
+@media (prefers-color-scheme:dark){.rs[data-theme=auto]{--bg:#111113;--surface:#1c1c1e;--surface-2:#242427;--surface-3:#2c2c2e;--border:#2f2f33;--border-strong:#48484c;--text:#f5f5f7;--text-2:#b4b4ba;--text-3:#94949a;--accent:#3d9bff;--accent-hover:#62afff;--accent-soft:#16283f;--on-accent:#04101f;--ok:#4cd471;--ok-soft:#12291a;--warn:#ffad33;--warn-soft:#33240c;--fail:#ff6b61;--fail-soft:#3a1714;--bar:rgba(28,28,30,.78);--shadow-1:0 1px 2px rgba(0,0,0,.4);--shadow-2:0 16px 40px rgba(0,0,0,.5);color-scheme:dark}}
+.rs a{color:var(--accent)}.rs a:hover{color:var(--accent-hover)}
+.rs :focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+.mono{font-family:ui-monospace,"SF Mono",SFMono-Regular,"Cascadia Mono",Menlo,Consolas,monospace;font-size:12.5px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:36px;padding:0 14px;border-radius:9px;border:1px solid var(--border-strong);background:var(--surface);color:var(--text)!important;font:inherit;font-weight:500;cursor:pointer;text-decoration:none;white-space:nowrap}
+.btn:hover{background:var(--surface-2)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)!important}
+.btn-primary:hover{background:var(--accent-hover);border-color:var(--accent-hover)}
+.btn-ghost{background:transparent;border-color:transparent}
+.btn-sm{min-height:30px;padding:0 10px;font-size:13px;border-radius:8px}
+.btn svg,.ico{width:16px;height:16px;flex:none}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:1px 9px 1px 7px;border-radius:999px;font-size:12px;font-weight:600;line-height:20px;white-space:nowrap}
+.chip svg{width:13px;height:13px;flex:none}
+.chip-ok{background:var(--ok-soft);color:var(--ok)}.chip-warn{background:var(--warn-soft);color:var(--warn)}.chip-fail{background:var(--fail-soft);color:var(--fail)}.chip-neutral{background:var(--surface-2);color:var(--text-2)}.chip-accent{background:var(--accent-soft);color:var(--accent)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow-1)}
+.muted{color:var(--text-2)}.faint{color:var(--text-3)}
+.eyebrow{font-size:12px;font-weight:600;color:var(--text-3);letter-spacing:.01em}
+.seg{display:inline-flex;border-radius:9px;padding:2px;background:var(--surface-3);gap:2px;flex-wrap:wrap}
+.seg button,.seg a{min-height:26px;padding:0 10px;border:0;border-radius:7px;background:transparent;color:var(--text-2)!important;font:inherit;font-size:12px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.seg [aria-pressed=true],.seg [aria-current=page]{background:var(--surface);color:var(--text)!important;box-shadow:var(--shadow-1)}
+.seg-lg button{min-height:34px;font-size:13px;padding:0 14px}
+.input{min-height:40px;padding:0 12px;border:1px solid var(--border-strong);border-radius:10px;background:var(--surface);color:var(--text);font:inherit;box-sizing:border-box}
+.input::placeholder{color:var(--text-3)}
+.step{display:flex;align-items:center;gap:10px;color:var(--text-3);font-weight:500;font-size:13px}
+.step b{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;border:1.5px solid var(--border-strong);font-size:12px;font-weight:700}
+.step[data-s=done]{color:var(--text-2)}.step[data-s=done] b{background:var(--text);border-color:var(--text);color:var(--surface)}
+.step[data-s=now]{color:var(--text);font-weight:600}.step[data-s=now] b{border-color:var(--accent);background:var(--accent);color:var(--on-accent)}
+.blk{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;background:var(--surface);border:1px solid var(--border-strong);box-shadow:var(--shadow-1)}
+.blk::before{content:"";position:absolute;top:-1px;left:18px;width:22px;height:5px;border-radius:0 0 5px 5px;background:var(--surface-2);border:1px solid var(--border-strong);border-top:0}
+.blk[data-sel=true]{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.grip{color:var(--text-3);cursor:grab;display:inline-flex}
+.slot{min-height:28px;padding:0 10px;border-radius:999px;border:1px solid var(--border);background:var(--surface-2);color:var(--text);font:inherit;font-size:13px;box-sizing:border-box}
+.slot-sel{appearance:none;padding-right:24px;background-image:linear-gradient(45deg,transparent 50%,var(--text-3) 50%),linear-gradient(135deg,var(--text-3) 50%,transparent 50%);background-position:calc(100% - 13px) 12px,calc(100% - 9px) 12px;background-size:4px 4px;background-repeat:no-repeat}
+.type{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--text-2)}
+.pal{display:flex;align-items:center;gap:8px;min-height:36px;padding:0 10px;border-radius:9px;border:1px dashed var(--border-strong);background:var(--surface);color:var(--text);font:inherit;font-size:13px;cursor:grab;text-align:left}
+.pal:hover{border-style:solid;background:var(--surface-2)}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{text-align:left;font-size:12px;font-weight:600;color:var(--text-3);padding:8px 12px;border-bottom:1px solid var(--border)}
+.tbl td{padding:9px 12px;border-bottom:1px solid var(--border)}
+details summary{cursor:pointer;font-weight:600}
+</style>
+</helmet>
+<div class="rs" data-theme="{{theme}}" style="display: flex; flex-direction: column">
+  <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; padding: 10px 20px; background: var(--bar); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); border-bottom: 1px solid var(--border)">
+    <a href="Main.dc.html" style="display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text)">
+      <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="18" r="2" fill="var(--text-3)"></circle><circle cx="11.5" cy="12" r="2.6" fill="var(--text-2)"></circle><circle cx="18.5" cy="5.5" r="3.2" fill="var(--accent)"></circle></svg>
+      <span style="font-weight: 600; font-size: 15px; letter-spacing: -.01em">Rastro Studio</span>
+    </a>
+    <span style="font-weight: 600; font-size: 13px">Nuevo scraper</span>
+    <div style="flex: 1 1 40px"></div>
+    <a class="btn btn-sm btn-ghost" href="Main.dc.html">Cancelar</a>
+    <nav class="seg" aria-label="Idioma"><a href="Nuevo.dc.html" aria-current="page">ES</a><a href="HomeEN.dc.html" lang="en">EN</a></nav>
+    <div class="seg" role="group" aria-label="Tema">
+      <button type="button" aria-pressed="{{tAuto}}" onClick="{{setAuto}}">Sistema</button>
+      <button type="button" aria-pressed="{{tLight}}" onClick="{{setLight}}">Claro</button>
+      <button type="button" aria-pressed="{{tDark}}" onClick="{{setDark}}">Oscuro</button>
+    </div>
+  </header>
+
+  <main style="padding: 28px clamp(16px, 3vw, 40px) 40px; display: flex; flex-direction: column; gap: 24px; max-width: 1240px; width: 100%; box-sizing: border-box; margin: 0 auto">
+    <ol aria-label="Pasos" style="list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px 28px">
+      <sc-for list="{{steps}}" as="s" hint-placeholder-count="4">
+        <li><button class="step" type="button" data-s="{{s.state}}" onClick="{{s.go}}" aria-current="{{s.current}}" style="border: 0; background: transparent; padding: 4px 0; cursor: pointer; font: inherit"><b>{{s.n}}</b>{{s.label}}</button></li>
+      </sc-for>
+    </ol>
+
+    <sc-if value="{{s1}}" hint-placeholder-val="{{false}}">
+      <section aria-labelledby="p1" style="display: flex; flex-direction: column; gap: 20px; max-width: 820px">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <h1 id="p1" style="margin: 0; font-size: 28px; font-weight: 600; letter-spacing: -.025em">¿De dónde sacamos los datos?</h1>
+          <p class="muted" style="margin: 0">Elegí una forma de empezar. Después podés sumar más sitios al mismo proyecto.</p>
+        </div>
+        <div class="seg seg-lg" role="group" aria-label="Origen de los datos">
+          <button type="button" aria-pressed="{{oTerm}}" onClick="{{toTerm}}">Buscar por término</button>
+          <button type="button" aria-pressed="{{oUrl}}" onClick="{{toUrl}}">Desde URL</button>
+          <button type="button" aria-pressed="{{oFile}}" onClick="{{toFile}}">Archivos locales</button>
+        </div>
+
+        <sc-if value="{{oUrl}}" hint-placeholder-val="{{true}}">
+          <div class="card" style="padding: 20px; display: flex; flex-direction: column; gap: 14px">
+            <label style="display: flex; flex-direction: column; gap: 6px">
+              <span style="font-weight: 600">Pegá la URL de la página con la lista</span>
+              <input class="input mono" style="font-size: 14px" type="url" value="https://fiestas-uy.example/agenda">
+            </label>
+            <span class="faint" style="font-size: 13px">Podés pegar varias, una por línea. Studio revisa robots.txt antes de consultar.</span>
+            <div role="status" style="display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; padding: 12px 14px; border-radius: 10px; background: var(--surface-2)">
+              <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="var(--text-2)" stroke-width="1.5" aria-hidden="true"><rect x="1.75" y="2.75" width="12.5" height="10.5" rx="1.5"></rect><path d="M1.75 5.5h12.5"></path></svg>
+              <span style="flex: 1 1 280px">La página carga los eventos con JavaScript. Sin navegador se ven 0 eventos; con navegador, 24.</span>
+              <button class="btn btn-sm btn-primary" type="button">Usar navegador</button>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{oTerm}}" hint-placeholder-val="{{false}}">
+          <div class="card" style="padding: 20px; display: flex; flex-direction: column; gap: 14px">
+            <label style="display: flex; flex-direction: column; gap: 6px">
+              <span style="font-weight: 600">¿Qué estás buscando?</span>
+              <input class="input" type="search" value="fiestas Montevideo este fin de semana">
+            </label>
+            <fieldset style="border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden">
+              <legend class="sr" style="position: absolute; width: 1px; height: 1px; overflow: hidden">Sitios encontrados</legend>
+              <label style="display: flex; gap: 12px; align-items: center; padding: 11px 14px"><input type="checkbox" checked style="width: 18px; height: 18px; accent-color: var(--accent)"><span style="flex: 1"><strong style="font-weight: 600">noche.example</strong> <span class="faint">· agenda semanal</span></span><span class="chip chip-ok">Receta lista</span></label>
+              <label style="display: flex; gap: 12px; align-items: center; padding: 11px 14px; border-top: 1px solid var(--border)"><input type="checkbox" checked style="width: 18px; height: 18px; accent-color: var(--accent)"><span style="flex: 1"><strong style="font-weight: 600">pasesya.example</strong> <span class="faint">· venta de entradas</span></span><span class="chip chip-ok">Receta lista</span></label>
+              <label style="display: flex; gap: 12px; align-items: center; padding: 11px 14px; border-top: 1px solid var(--border)"><input type="checkbox" style="width: 18px; height: 18px; accent-color: var(--accent)"><span style="flex: 1"><strong style="font-weight: 600">fiestas-uy.example</strong> <span class="faint">· agenda</span></span><span class="chip chip-neutral">Hay que armarla</span></label>
+              <label style="display: flex; gap: 12px; align-items: center; padding: 11px 14px; border-top: 1px solid var(--border); color: var(--text-3)"><input type="checkbox" disabled style="width: 18px; height: 18px"><span style="flex: 1"><strong style="font-weight: 600">boleteria.example</strong> · no permite lectura automática</span><span class="chip chip-fail">robots.txt</span></label>
+            </fieldset>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{oFile}}" hint-placeholder-val="{{false}}">
+          <div class="card" style="padding: 32px 20px; display: flex; flex-direction: column; gap: 12px; align-items: center; text-align: center; border-style: dashed; border-width: 1.5px">
+            <svg width="40" height="40" viewBox="0 0 16 16" fill="none" stroke="var(--text-3)" stroke-width="1" aria-hidden="true"><path d="M4 1.75h5.5L12.25 4.5v9.75H4z"></path><path d="M9.25 1.75V4.75h3"></path><path d="M8 7v4.5M6 9.5l2 2 2-2"></path></svg>
+            <strong style="font-weight: 600">Soltá archivos acá</strong>
+            <span class="muted" style="font-size: 13px">Páginas guardadas (.html), JSON, JSON Lines, CSV o SQLite. No salen de tu computadora.</span>
+            <button class="btn" type="button">Elegir archivos</button>
+          </div>
+        </sc-if>
+
+        <p class="faint" style="margin: 0; font-size: 13px">¿El sitio ya está resuelto por alguien? <a href="Recetas.dc.html">Buscalo en Recetas y Hub</a>.</p>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{s2}}" hint-placeholder-val="{{true}}">
+      <section aria-labelledby="p2" style="display: flex; flex-direction: column; gap: 18px">
+        <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; justify-content: space-between">
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <h1 id="p2" style="margin: 0; font-size: 28px; font-weight: 600; letter-spacing: -.025em">Armá los campos que querés</h1>
+            <p class="muted" style="margin: 0">Cada bloque es una columna. Nombrala como quieras y pegá un ejemplo copiado de la página.</p>
+          </div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap">
+            <button class="btn" type="button"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M8 1.5l1.5 4 4 1.5-4 1.5-1.5 4-1.5-4-4-1.5 4-1.5z"></path></svg>Pedir a la IA</button>
+            <div class="seg" role="group" aria-label="Vista">
+              <button type="button" aria-pressed="{{vBlocks}}" onClick="{{toBlocks}}">Bloques</button>
+              <button type="button" aria-pressed="{{vCode}}" onClick="{{toCode}}">Código</button>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start">
+          <aside aria-label="Bloques disponibles" class="card" style="flex: 1 1 200px; padding: 14px; display: flex; flex-direction: column; gap: 8px; box-shadow: none">
+            <span class="eyebrow">Arrastrá o tocá para sumar</span>
+            <button class="pal" type="button"><span class="mono faint">Aa</span>Texto</button>
+            <button class="pal" type="button"><span class="mono faint">12</span>Número o precio</button>
+            <button class="pal" type="button"><span class="mono faint">◷</span>Fecha y hora</button>
+            <button class="pal" type="button"><span class="mono faint">⌖</span>Lugar</button>
+            <button class="pal" type="button"><span class="mono faint">↗</span>Enlace</button>
+            <button class="pal" type="button"><span class="mono faint">▢</span>Imagen</button>
+            <button class="pal" type="button"><span class="mono faint">≡</span>Lista dentro del evento</button>
+            <span class="eyebrow" style="margin-top: 8px">Transformar</span>
+            <button class="pal" type="button">Limpiar espacios</button>
+            <button class="pal" type="button">Convertir a fecha</button>
+            <button class="pal" type="button">Solo el número</button>
+            <button class="pal" type="button">Seguir el enlace y leer</button>
+          </aside>
+
+          <div style="flex: 999 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 12px">
+            <div class="card" style="padding: 12px 14px; display: flex; gap: 10px; align-items: center; box-shadow: none; background: var(--surface-2)">
+              <span class="eyebrow">Por cada</span>
+              <span class="slot" style="display: inline-flex; align-items: center; font-weight: 600">tarjeta de evento</span>
+              <span class="faint" style="font-size: 13px">en fiestas-uy.example/agenda · 24 encontradas</span>
+            </div>
+
+            <sc-if value="{{vBlocks}}" hint-placeholder-val="{{true}}">
+              <div style="display: flex; flex-direction: column; gap: 10px; padding-left: 14px; border-left: 2px solid var(--border)">
+                <div class="blk" data-sel="false">
+                  <span class="grip" aria-hidden="true"><svg width="12" height="16" viewBox="0 0 12 16" fill="currentColor"><circle cx="4" cy="4" r="1.2"></circle><circle cx="8" cy="4" r="1.2"></circle><circle cx="4" cy="8" r="1.2"></circle><circle cx="8" cy="8" r="1.2"></circle><circle cx="4" cy="12" r="1.2"></circle><circle cx="8" cy="12" r="1.2"></circle></svg></span>
+                  <span class="type">Campo</span>
+                  <label><span class="sr" style="position: absolute; width: 1px; height: 1px; overflow: hidden">Nombre del campo</span><input class="slot" value="evento" style="width: 110px; font-weight: 600"></label>
+                  <span class="faint">es</span>
+                  <label><span class="sr" style="position: absolute; width: 1px; height: 1px; overflow: hidden">Tipo</span><select class="slot slot-sel"><option>Texto</option><option>Número</option><option>Fecha y hora</option></select></label>
+                  <span class="faint">ejemplo</span>
+                  <label style="flex: 1 1 160px; display: flex"><span class="sr" style="position: absolute; width: 1px; height: 1px; overflow: hidden">Ejemplo</span><input class="slot" value="Atardecer en la Rambla" style="flex: 1"></label>
+                  <span class="chip chip-ok" title="Encontrado en 24 de 24 tarjetas">24/24</span>
+                </div>
+                <div class="blk" data-sel="false">
+                  <span class="grip" aria-hidden="true"><svg width="12" height="16" viewBox="0 0 12 16" fill="currentColor"><circle cx="4" cy="4" r="1.2"></circle><circle cx="8" cy="4" r="1.2"></circle><circle cx="4" cy="8" r="1.2"></circle><circle cx="8" cy="8" r="1.2"></circle><circle cx="4" cy="12" r="1.2"></circle><circle cx="8" cy="12" r="1.2"></circle></svg></span>
+                  <span class="type">Campo</span>
+                  <input class="slot" value="inicio" aria-label="Nombre del campo" style="width: 110px; font-weight: 600">
+                  <span class="faint">es</span>
+                  <select class="slot slot-sel" aria-label="Tipo"><option>Fecha y hora</option></select>
+                  <span class="faint">ejemplo</span>
+                  <input class="slot" value="sáb 22 nov · 19 h" aria-label="Ejemplo" style="flex: 1 1 140px">
+                  <span class="chip chip-ok">24/24</span>
+                  <div style="flex-basis: 100%; display: flex; gap: 8px; align-items: center; padding: 6px 0 0 28px">
+                    <span class="faint" style="font-size: 12px">luego</span>
+                    <span class="slot" style="display: inline-flex; align-items: center; background: var(--surface-3)">Convertir a fecha · día/mes</span>
+                    <span class="faint mono" style="font-size: 12px">→ 2026-11-22 19:00</span>
+                  </div>
+                </div>
+                <div class="blk" data-sel="true">
+                  <span class="grip" aria-hidden="true"><svg width="12" height="16" viewBox="0 0 12 16" fill="currentColor"><circle cx="4" cy="4" r="1.2"></circle><circle cx="8" cy="4" r="1.2"></circle><circle cx="4" cy="8" r="1.2"></circle><circle cx="8" cy="8" r="1.2"></circle><circle cx="4" cy="12" r="1.2"></circle><circle cx="8" cy="12" r="1.2"></circle></svg></span>
+                  <span class="type">Campo</span>
+                  <input class="slot" value="lugar" aria-label="Nombre del campo" style="width: 110px; font-weight: 600">
+                  <span class="faint">es</span>
+                  <select class="slot slot-sel" aria-label="Tipo"><option>Lugar</option></select>
+                  <span class="faint">ejemplo</span>
+                  <input class="slot" value="Playa Ramírez" aria-label="Ejemplo" style="flex: 1 1 140px">
+                  <span class="chip chip-warn">19/24</span>
+                  <span style="flex-basis: 100%; padding: 4px 0 0 28px; font-size: 12px; color: var(--warn)">En 5 tarjetas el lugar está en otro lado. Pegá un segundo ejemplo para que Studio aprenda.</span>
+                </div>
+                <div class="blk" style="flex-direction: column; align-items: stretch">
+                  <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center">
+                    <span class="grip" aria-hidden="true"><svg width="12" height="16" viewBox="0 0 12 16" fill="currentColor"><circle cx="4" cy="4" r="1.2"></circle><circle cx="8" cy="4" r="1.2"></circle><circle cx="4" cy="8" r="1.2"></circle><circle cx="8" cy="8" r="1.2"></circle><circle cx="4" cy="12" r="1.2"></circle><circle cx="8" cy="12" r="1.2"></circle></svg></span>
+                    <span class="type">Lista</span>
+                    <input class="slot" value="lotes" aria-label="Nombre de la lista" style="width: 110px; font-weight: 600">
+                    <span class="faint">con un elemento por cada</span>
+                    <span class="slot" style="display: inline-flex; align-items: center">fila de precios</span>
+                  </div>
+                  <div style="display: flex; flex-direction: column; gap: 8px; margin: 10px 0 2px 22px; padding: 10px; border-radius: 9px; background: var(--surface-2)">
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center"><span class="type">Campo</span><input class="slot" value="precio" aria-label="Nombre" style="width: 90px; font-weight: 600"><span class="faint">es</span><span class="slot" style="display: inline-flex; align-items: center">Precio</span><span class="faint">ejemplo</span><input class="slot" value="$199" aria-label="Ejemplo" style="width: 90px"></div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center"><span class="type">Campo</span><input class="slot" value="condición" aria-label="Nombre" style="width: 90px; font-weight: 600"><span class="faint">es</span><span class="slot" style="display: inline-flex; align-items: center">Texto</span><span class="faint">ejemplo</span><input class="slot" value="hasta la 01:30" aria-label="Ejemplo" style="width: 140px"></div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center"><span class="type">Campo</span><input class="slot" value="disponible" aria-label="Nombre" style="width: 90px; font-weight: 600"><span class="faint">es</span><span class="slot" style="display: inline-flex; align-items: center">Sí / No</span><span class="faint">ejemplo</span><input class="slot" value="Agotado" aria-label="Ejemplo" style="width: 100px"></div>
+                  </div>
+                </div>
+                <button type="button" style="display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; border-radius: 10px; border: 1.5px dashed var(--border-strong); background: transparent; color: var(--text-2); font: inherit; cursor: pointer">
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8 3v10M3 8h10"></path></svg>Sumar un campo
+                </button>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{vCode}}" hint-placeholder-val="{{false}}">
+              <pre class="mono card" style="margin: 0; padding: 16px; overflow-x: auto; line-height: 1.65; box-shadow: none">{
+  <span style="color: var(--accent)">"item"</span>: "tarjeta de evento",
+  <span style="color: var(--accent)">"fields"</span>: {
+    <span style="color: var(--accent)">"evento"</span>: { "type": "text",     "example": "Atardecer en la Rambla" },
+    <span style="color: var(--accent)">"inicio"</span>: { "type": "datetime", "example": "sáb 22 nov · 19 h", "then": ["to_date:dmy"] },
+    <span style="color: var(--accent)">"lugar"</span>:  { "type": "place",    "example": ["Playa Ramírez"] },
+    <span style="color: var(--accent)">"lotes"</span>:  { "type": "list", "each": "fila de precios",
+                "fields": { "precio": "price", "condición": "text", "disponible": "bool" } }
+  }
+}</pre>
+            </sc-if>
+          </div>
+        </div>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{s3}}" hint-placeholder-val="{{false}}">
+      <section aria-labelledby="p3" style="display: flex; flex-direction: column; gap: 18px">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <h1 id="p3" style="margin: 0; font-size: 28px; font-weight: 600; letter-spacing: -.025em">¿Salió bien?</h1>
+          <p class="muted" style="margin: 0">Estos son los primeros registros. Tocá una celda si un dato no corresponde.</p>
+        </div>
+        <div class="card" style="padding: 0; overflow: hidden">
+          <div style="overflow-x: auto">
+            <table class="tbl">
+              <thead><tr><th scope="col">evento</th><th scope="col">inicio</th><th scope="col">lugar</th><th scope="col">lotes</th></tr></thead>
+              <tbody>
+                <tr><td>Atardecer en la Rambla</td><td class="num">22/11 19:00</td><td>Playa Ramírez</td><td>1</td></tr>
+                <tr><td>Electro Pocitos</td><td class="num">27/11 23:00</td><td style="background: var(--fail-soft)"><button type="button" style="all: unset; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; color: var(--fail); font-weight: 600"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M5.3 1.8h5.4l3.5 3.5v5.4l-3.5 3.5H5.3l-3.5-3.5V5.3z"></path><path d="M6.2 6.2l3.6 3.6M9.8 6.2l-3.6 3.6"></path></svg>«Comprar entradas»</button></td><td>3</td></tr>
+                <tr><td>Noche de Candombe</td><td class="num">29/11 22:30</td><td>Barrio Sur</td><td>2</td></tr>
+                <tr><td>Fin de año en la playa</td><td class="num">31/12 23:00</td><td>La Paloma</td><td>4</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card" style="padding: 16px 18px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center">
+          <span style="flex: 1 1 320px"><strong style="font-weight: 600">Corregir «lugar»:</strong> <span class="muted">en «Electro Pocitos» tomó el texto del botón. Pegá el lugar correcto de esa tarjeta.</span></span>
+          <input class="input" value="Terraza Pocitos" aria-label="Lugar correcto" style="min-height: 36px">
+          <button class="btn btn-primary btn-sm" type="button">Probar de nuevo</button>
+        </div>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{s4}}" hint-placeholder-val="{{false}}">
+      <section aria-labelledby="p4" style="display: flex; flex-direction: column; gap: 18px; max-width: 720px">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <h1 id="p4" style="margin: 0; font-size: 28px; font-weight: 600; letter-spacing: -.025em">Ponele nombre y guardalo</h1>
+          <p class="muted" style="margin: 0">24 eventos listos de fiestas-uy.example.</p>
+        </div>
+        <div class="card" style="padding: 20px; display: flex; flex-direction: column; gap: 16px">
+          <label style="display: flex; flex-direction: column; gap: 6px"><span style="font-weight: 600">Nombre del proyecto</span><input class="input" value="Agenda de fiestas · Uruguay"></label>
+          <fieldset style="border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px">
+            <legend style="font-weight: 600; padding: 0; margin-bottom: 8px">¿Dónde lo guardo?</legend>
+            <label style="display: flex; gap: 10px; align-items: center"><input type="radio" name="dest" checked style="width: 18px; height: 18px; accent-color: var(--accent)">Sumarlo a «Agenda de fiestas · Uruguay» como cuarta fuente</label>
+            <label style="display: flex; gap: 10px; align-items: center"><input type="radio" name="dest" style="width: 18px; height: 18px; accent-color: var(--accent)">Crear un proyecto nuevo</label>
+          </fieldset>
+          <label style="display: flex; flex-direction: column; gap: 6px"><span style="font-weight: 600">Actualizar</span><select class="input"><option>Cada 6 horas</option><option>Una vez por día</option><option>Solo cuando yo lo pida</option></select></label>
+          <details>
+            <summary>Detalles avanzados</summary>
+            <div style="display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin-top: 10px; font-size: 13px">
+              <span class="faint">Receta</span><span class="mono">recipes/fiestas-uy.example.json</span>
+              <span class="faint">Datos</span><span class="mono">data/agenda-fiestas.sqlite</span>
+              <span class="faint">Muestra para reparar</span><span class="mono">.rastro/samples/fiestas-uy/</span>
+            </div>
+          </details>
+        </div>
+      </section>
+    </sc-if>
+
+    <div style="display: flex; justify-content: space-between; gap: 12px; padding-top: 12px; border-top: 1px solid var(--border)">
+      <button class="btn" type="button" onClick="{{back}}">Atrás</button>
+      <sc-if value="{{notLast}}" hint-placeholder-val="{{true}}"><button class="btn btn-primary" type="button" onClick="{{next}}">Siguiente</button></sc-if>
+      <sc-if value="{{s4}}" hint-placeholder-val="{{false}}"><a class="btn btn-primary" href="Resultados.dc.html">Guardar y ver resultados</a></sc-if>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"step":{"editor":"enum","options":["1","2","3","4"],"default":"2"},"$preview":{"width":1440,"height":1340}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const t = this.state.theme ?? this.props.theme ?? 'auto';
+    const set = (v) => () => this.setState({ theme: v });
+    const step = this.state.step ?? Number(this.props.step ?? 2);
+    const origin = this.state.origin ?? 'url';
+    const view = this.state.view ?? 'blocks';
+    const labels = ['Origen', 'Campos', 'Vista previa', 'Guardar'];
+    const steps = labels.map((label, i) => ({
+      n: i + 1, label,
+      state: i + 1 < step ? 'done' : (i + 1 === step ? 'now' : 'next'),
+      current: i + 1 === step ? 'step' : 'false',
+      go: () => this.setState({ step: i + 1 })
+    }));
+    return {
+      theme: t, tAuto: t === 'auto', tLight: t === 'light', tDark: t === 'dark', setAuto: set('auto'), setLight: set('light'), setDark: set('dark'),
+      steps, s1: step === 1, s2: step === 2, s3: step === 3, s4: step === 4, notLast: step < 4,
+      next: () => this.setState({ step: Math.min(4, step + 1) }),
+      back: () => this.setState({ step: Math.max(1, step - 1) }),
+      oTerm: origin === 'term', oUrl: origin === 'url', oFile: origin === 'file',
+      toTerm: () => this.setState({ origin: 'term' }), toUrl: () => this.setState({ origin: 'url' }), toFile: () => this.setState({ origin: 'file' }),
+      vBlocks: view === 'blocks', vCode: view === 'code',
+      toBlocks: () => this.setState({ view: 'blocks' }), toCode: () => this.setState({ view: 'code' })
+    };
+  }
+}
+</script>
+</body>
+</html>

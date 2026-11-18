@@ -14,6 +14,10 @@ from rastro.domain.recipes import Pagination
 from rastro.domain.scroll import ScrollSpec
 from rastro.studio import bounds
 
+# bounds.js builds its labels with t(); the sliced code gets the real dictionary (N8).
+I18N = Path("src/rastro/studio/static/i18n.js").resolve().as_uri()
+I18N_IMPORT = f'const {{ t }} = await import("{I18N}");\n'
+
 
 def test_controls_follow_changed_domain_bounds(monkeypatch: pytest.MonkeyPatch) -> None:
     class ChangedScroll(ScrollSpec):
@@ -79,6 +83,7 @@ const nodes = {};
 const $ = id => nodes[id] ??= {};
 const show = (id, text) => { $(id).textContent = text; };
 """
+            + I18N_IMPORT
             + fill
             + "const payload = "
             + json.dumps(payload)

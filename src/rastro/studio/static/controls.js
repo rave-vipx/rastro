@@ -1,6 +1,7 @@
 // N4/N5/N12: next-page settings, the job's auto-promote switch, the session stealth grant,
 // readable alerts and the observed operation line. Text is always set as text content.
 import { $, api, bind, el, requireFile, show, state } from "./dom.js";
+import { t } from "./i18n.js";
 
 import { fillBounds, initBounds } from "./bounds.js";
 
@@ -13,7 +14,7 @@ export function fillControls(data) {
   $("auto-promote").checked = data.auto_promote === true;
   recipes = data.recipes || [];
   $("pagination-source").replaceChildren(...recipes.map((row, index) =>
-    new Option(row.source === null ? "Job recipe" : `Source ${row.source + 1} recipe`, String(index))));
+    new Option(row.source === null ? t("settings.jobRecipe") : t("settings.sourceRecipe", { n: row.source + 1 }), String(index))));
   selectRecipe();
 }
 
@@ -36,14 +37,14 @@ export async function withProgress(action) {
     try {
       const data = await api("/api/progress");
       const text = data.state === "running" ? data.detail
-        : data.state === "idle" ? "" : `Last ${data.operation} of ${data.file}: ${data.outcome}.`;
+        : data.state === "idle" ? "" : t("progress.last", { operation: data.operation, file: data.file, outcome: data.outcome });
       show("operation-progress", text, data.state === "failed" ? "bad" : "muted");
     } catch (error) {
-      show("operation-progress", `Progress unavailable: ${error.message}`, "warn");
+      show("operation-progress", t("progress.unavailable", { why: error.message }), "warn");
     }
     if (active) timer = setTimeout(poll, 700);
   }
-  show("operation-progress", "Starting…", "muted");
+  show("operation-progress", t("progress.starting"), "muted");
   timer = setTimeout(poll, 250);
   try {
     return await action();
@@ -56,25 +57,25 @@ export async function withProgress(action) {
 
 async function savePagination() {
   const selected = recipes[Number($("pagination-source").value)];
-  if (!selected) throw new Error("open a job with a declared recipe first");
+  if (!selected) throw new Error(t("settings.needRecipe"));
   const next = $("pagination-next").value.trim();
-  if (!next) throw new Error("type the next-link selector, for example a.next::attr(href)");
+  if (!next) throw new Error(t("settings.needNext"));
   const max_pages = Number($("pagination-cap").value);
   const data = await api("/api/pagination", {
     file: requireFile(), sha256: state.sha, source: selected.source, next, max_pages,
   });
   state.sha = data.sha256;
   selected.pagination = data.pagination;
-  show("controls-status", `Saved: follow "${next}" up to ${max_pages} page(s) on the next run.`, "good");
+  show("controls-status", t("settings.savedNext", { next, n: max_pages }), "good");
 }
 
-async function toggle(input, send) {
+async function toggle(input, send, statusId) {
   input.disabled = true;
   try {
     await send(input.checked);
   } catch (error) {
     input.checked = !input.checked;
-    show("controls-status", `Not saved: ${error.message}`, "bad");
+    show(statusId, t("settings.notSaved", { why: error.message }), "bad");
   } finally {
     input.disabled = input.dataset.locked === "true";
   }
@@ -83,9 +84,7 @@ async function toggle(input, send) {
 async function saveAutoPromote(enabled) {
   const data = await api("/api/auto-promote", { file: requireFile(), sha256: state.sha, enabled });
   state.sha = data.sha256;
-  show("controls-status", enabled
-    ? "Auto-promote is on for this job. A repair still has to pass every gate and the semantic judge (a configured model)."
-    : "Auto-promote is off for this job. Promote repairs yourself, with a reason.", "good");
+  show("auto-promote-status", t(enabled ? "switch.autoOn" : "switch.autoOff"), "good");
 }
 
 function showStealth(session) {
@@ -98,19 +97,15 @@ function showStealth(session) {
 async function saveStealth(enabled) {
   const session = await api("/api/session", { allow_stealth: enabled });
   showStealth(session);
-  show("controls-status", session.allow_stealth
-    ? "This Studio session may run jobs that ask for stealth. No job file was changed."
-    : "This Studio session no longer allows stealth.", "muted");
+  show("controls-status", t(session.allow_stealth ? "switch.stealthOn" : "switch.stealthOff"), "muted");
 }
 
 export async function initControls() {
   initBounds();
   showStealth(await api("/api/session"));
-  if ($("allow-stealth").disabled) {
-    show("controls-status", "Stealth was allowed when Studio started (--allow-stealth or RASTRO_ALLOW_STEALTH).", "muted");
-  }
+  if ($("allow-stealth").disabled) show("controls-status", t("switch.stealthLocked"), "muted");
   $("pagination-source").addEventListener("change", selectRecipe);
   bind("save-pagination", "controls-status", savePagination);
-  $("auto-promote").addEventListener("change", () => toggle($("auto-promote"), saveAutoPromote));
-  $("allow-stealth").addEventListener("change", () => toggle($("allow-stealth"), saveStealth));
+  $("auto-promote").addEventListener("change", () => toggle($("auto-promote"), saveAutoPromote, "auto-promote-status"));
+  $("allow-stealth").addEventListener("change", () => toggle($("allow-stealth"), saveStealth, "controls-status"));
 }

@@ -16,6 +16,7 @@ from rastro.domain.health import OpenDrift
 from rastro.domain.job_dataset import DatasetSpec
 from rastro.domain.job_load import JobLoadResult, LoadedSource, StaleSource
 from rastro.domain.job_results import JobRunResult, JobSummary
+from rastro.domain.jobs import Job
 from rastro.domain.models import ExtractionResult, Issue, Outcome
 from rastro.ports.dataset import DatasetStore, DatasetValidators, SourceFailureRecorder
 from rastro.ports.drift import DriftMonitor, OpenDriftReader
@@ -75,11 +76,13 @@ def load_stream(
     drift_state: OpenDriftReader | None = None,
     required: Sequence[str] = (),
     on_source: SourceHook | None = None,
+    job: Job | None = None,
 ) -> JobLoadResult:
     """`load_results` for results produced lazily: each is loaded before the next is pulled.
 
     ``summary`` is called once ``results`` is exhausted; ``current`` names the origins of the
     whole job (default: those of the results seen) for stale sources and open drift.
+    ``job`` gives the run metrics of a reached cap its configured value (N5).
     """
     sources: list[LoadedSource] = []
     assessments = []
@@ -119,7 +122,10 @@ def load_stream(
             on_source(index, result, sources[-1])
     # Redirected sources are stored under their final URL, which only the results know.
     current = seen if current is None else {*current, *seen}
-    failed = failed or record_run_metrics(store, spec.name, observed, required)
+    refused = [source.inconsistent for source in sources]
+    failed = failed or record_run_metrics(
+        store, spec.name, observed, required, inconsistent=refused, job=job
+    )
     stale: tuple[StaleSource, ...] = ()
     open_drift: tuple[OpenDrift, ...] = ()
     try:

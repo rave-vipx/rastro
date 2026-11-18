@@ -98,6 +98,11 @@ def list_pages(root: Path) -> tuple[list[str], bool]:
     return _listing(root, lambda path: path.suffix.lower() in PAGE_SUFFIXES)
 
 
+def list_databases(root: Path) -> tuple[list[str], bool]:
+    """Relative ``.sqlite`` files below ``root``, bounded like the job list."""
+    return _listing(root, lambda path: path.suffix.lower() == ".sqlite")
+
+
 def _listing(root: Path, wanted: Callable[[Path], bool]) -> tuple[list[str], bool]:
     found: list[str] = []
     for directory, subdirs, names in os.walk(root, followlinks=False):

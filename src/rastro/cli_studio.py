@@ -19,8 +19,10 @@ HOST = "127.0.0.1"
 
 def add_command(subcommands: argparse._SubParsersAction) -> None:  # type: ignore[type-arg]
     studio = subcommands.add_parser("studio", help="Open the local Studio (needs rastro[studio])")
-    studio.add_argument("--root", type=Path, default=Path.cwd())
-    studio.add_argument("--port", type=int, default=8765)
+    studio.add_argument(
+        "--root", type=Path, default=Path(), help="Workspace directory (default: cwd)"
+    )
+    studio.add_argument("--port", type=int, default=8765, help="Loopback port")
     add_trust_arguments(studio)
     studio.add_argument(
         "--model", help="Model spec for Ask AI (default: RASTRO_MODEL); any provider works"
@@ -61,7 +63,7 @@ def studio_command(args: argparse.Namespace) -> int:
         raise ConfigurationError("Port must be between 1 and 65535")
     model = _model(args.model, args.allow_remote)
     app, token = create_app(
-        args.root,
+        args.root.resolve(),
         model=model,
         model_remote=args.allow_remote,
         allow_stealth=getattr(args, "allow_stealth", False) is True,

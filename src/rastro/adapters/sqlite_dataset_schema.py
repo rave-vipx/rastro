@@ -1,4 +1,4 @@
-"""Dataset schema 3, deliberately separate from recipe memory (ADR 0017)."""
+"""Dataset schema 4, deliberately separate from recipe memory (ADR 0017)."""
 
 import os
 import sqlite3
@@ -39,8 +39,8 @@ def safe[**P, T](operation: Callable[P, T]) -> Callable[P, T]:
 
 
 APPLICATION_ID = 0x52534453  # RSDS
-SCHEMA_VERSION = 3
-KNOWN_VERSIONS = (1, 2, SCHEMA_VERSION)
+SCHEMA_VERSION = 4
+KNOWN_VERSIONS = (1, 2, 3, SCHEMA_VERSION)
 
 CREATE_TABLE = (
     "CREATE TABLE IF NOT EXISTS run_metrics (id INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -50,7 +50,15 @@ CREATE_TABLE = (
     "retries INTEGER NOT NULL, bytes INTEGER NOT NULL, network_seconds REAL NOT NULL, "
     "processing_seconds REAL NOT NULL, render_seconds REAL NOT NULL, model_calls INTEGER NOT NULL, "
     "model_tokens INTEGER NOT NULL, records INTEGER NOT NULL, required_fields_ok INTEGER NOT NULL, "
-    "fields_validated INTEGER NOT NULL)"
+    "fields_validated INTEGER NOT NULL, rejected INTEGER, cap TEXT, cap_value INTEGER, "
+    "requested_url TEXT)"
+)
+# Schema 4 (N5): nullable, so schema 3 rows keep "not recorded" rather than a made-up 0.
+ADDED_COLUMNS = (
+    ("rejected", "INTEGER"),
+    ("cap", "TEXT"),
+    ("cap_value", "INTEGER"),
+    ("requested_url", "TEXT"),  # the configured URL of a redirected source
 )
 CREATE_INDEX = "CREATE INDEX IF NOT EXISTS run_metrics_dataset ON run_metrics (dataset, id)"
 
@@ -67,7 +75,7 @@ def _markers(db: sqlite3.Connection) -> tuple[int, int]:
 
 
 def check_schema(db: sqlite3.Connection) -> None:
-    """Reads accept schema 1, 2 or 3 as they are; only the write path migrates forward."""
+    """Reads accept schema 1 to 4 as they are; only the write path migrates forward."""
     if _markers(db) not in {(v, APPLICATION_ID) for v in KNOWN_VERSIONS}:
         raise DatasetStorageError("Foreign or newer database; dataset read refused")
 
@@ -78,6 +86,11 @@ def has_validators(db: sqlite3.Connection) -> bool:
         db.execute("SELECT 1 FROM sqlite_master WHERE name = 'dataset_validators'").fetchone()
         is not None
     )
+
+
+def metric_columns(db: sqlite3.Connection) -> set[str]:
+    """Column names of ``run_metrics``; empty when the table does not exist."""
+    return {row[1] for row in db.execute("PRAGMA table_info(run_metrics)")}
 
 
 def migrate(db: sqlite3.Connection) -> None:
@@ -104,6 +117,10 @@ def migrate(db: sqlite3.Connection) -> None:
             "PRIMARY KEY(dataset, source)) WITHOUT ROWID"
         )
     db.execute(CREATE_TABLE)  # schema 3 (OBS-003)
+    present = metric_columns(db)
+    for name, kind in ADDED_COLUMNS:  # schema 4 (N5)
+        if name not in present:
+            db.execute(f"ALTER TABLE run_metrics ADD COLUMN {name} {kind}")
     db.execute(CREATE_INDEX)
     db.execute(f"PRAGMA application_id = {APPLICATION_ID}")
     db.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")

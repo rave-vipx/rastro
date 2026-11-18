@@ -1,4 +1,5 @@
-"""OBS-003: transactional forward-only v2 -> v3 migration adding ``run_metrics``."""
+"""OBS-003: transactional forward-only migrations adding ``run_metrics`` (v3) and its
+per-source rejection and cap columns (v4, N5)."""
 
 import os
 import sqlite3
@@ -51,8 +52,8 @@ def to_v2(path):
     return status
 
 
-def test_v2_migrates_to_v3_idempotently_and_keeps_records_and_mode(tmp_path):
-    assert SCHEMA_VERSION == 3
+def test_v2_migrates_to_current_idempotently_and_keeps_records_and_mode(tmp_path):
+    assert SCHEMA_VERSION == 4
     path = tmp_path / "d.sqlite"
     status = to_v2(path)
     store = SQLiteDatasetStore(path)
@@ -61,7 +62,7 @@ def test_v2_migrates_to_v3_idempotently_and_keeps_records_and_mode(tmp_path):
         assert db.execute("PRAGMA user_version").fetchone()[0] == 2
     store.record_run_metrics("d", [row()])
     with closing(sqlite3.connect(path)) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 3
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 4
         migrate(db)
         migrate(db)
         assert db.execute("SELECT count(*) FROM run_metrics").fetchone()[0] == 1
@@ -72,7 +73,7 @@ def test_v2_migrates_to_v3_idempotently_and_keeps_records_and_mode(tmp_path):
         assert path.stat().st_mode & 0o777 == 0o600
 
 
-def test_v1_migrates_straight_to_v3_and_old_files_still_read(tmp_path):
+def test_v1_migrates_straight_to_current_and_old_files_still_read(tmp_path):
     path = tmp_path / "d.sqlite"
     v1(path)
     store = SQLiteDatasetStore(path)
@@ -115,3 +116,72 @@ def test_rows_never_store_url_queries_or_userinfo():
         {**row().model_dump(), "source_url": "https://u:p@a.example/x?token=s#f"}
     )
     assert clean.source_url == "https://a.example/x"
+
+
+# The exact ``run_metrics`` table and columns the schema 3 code (0.7, before N5) wrote.
+V3_TABLE = (
+    "CREATE TABLE run_metrics (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+    "dataset TEXT NOT NULL, run_id TEXT NOT NULL, source_url TEXT NOT NULL, host TEXT NOT NULL, "
+    "strategy TEXT NOT NULL, started_at TEXT NOT NULL, finished_at TEXT NOT NULL, "
+    "outcome TEXT NOT NULL, http_status INTEGER, requests INTEGER NOT NULL, "
+    "retries INTEGER NOT NULL, bytes INTEGER NOT NULL, network_seconds REAL NOT NULL, "
+    "processing_seconds REAL NOT NULL, render_seconds REAL NOT NULL, model_calls INTEGER NOT NULL, "
+    "model_tokens INTEGER NOT NULL, records INTEGER NOT NULL, required_fields_ok INTEGER NOT NULL, "
+    "fields_validated INTEGER NOT NULL)"
+)
+
+
+def to_v3(path):
+    """A schema 3 file with one metrics row, written with the pre-N5 columns only."""
+    status = to_v2(path)
+    with closing(sqlite3.connect(path)) as db:
+        db.execute(V3_TABLE)
+        db.execute("CREATE INDEX run_metrics_dataset ON run_metrics (dataset, id)")
+        db.execute(
+            "INSERT INTO run_metrics VALUES (NULL, 'd', 'old', 'https://a.example/list', "
+            "'a.example', 'explicit', ?, ?, 'success', 200, 1, 0, 100, 1.0, 1.0, 0, 0, 0, 2, 2, 4)",
+            (NOW.isoformat(), NOW.isoformat()),
+        )
+        db.execute("PRAGMA user_version = 3")
+        db.commit()
+    return status
+
+
+def test_v3_rows_read_as_unknown_and_migrate_to_v4_once(tmp_path):
+    """N5: old rows keep ``rejected``/``cap`` unknown (None), never a made-up 0."""
+    path = tmp_path / "d.sqlite"
+    status = to_v3(path)
+    store = SQLiteDatasetStore(path)
+    [old] = store.run_metrics("d")  # a read of a schema 3 file does not migrate
+    assert (old.run_id, old.records, old.rejected, old.cap, old.cap_value) == (
+        "old",
+        2,
+        None,
+        None,
+        None,
+    )
+    with closing(sqlite3.connect(path)) as db:
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 3
+    capped = row(1).model_copy(update={"rejected": 3, "cap": "spider_page_limit", "cap_value": 25})
+    store.record_run_metrics("d", [capped])
+    with closing(sqlite3.connect(path, isolation_level=None)) as db:
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 4
+        db.execute("BEGIN IMMEDIATE")
+        migrate(db)
+        migrate(db)
+        db.commit()
+    assert store.run_metrics("d") == (old, capped)
+    assert store.source_status("d") == (status,)
+
+
+def test_an_aborted_v3_to_v4_migration_leaves_schema_3(tmp_path):
+    path = tmp_path / "d.sqlite"
+    to_v3(path)
+    with closing(sqlite3.connect(path, isolation_level=None)) as db:
+        db.execute("BEGIN IMMEDIATE")
+        migrate(db)
+        db.rollback()
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 3
+        columns = {r[1] for r in db.execute("PRAGMA table_info(run_metrics)")}
+        assert "rejected" not in columns
+    assert SQLiteDatasetStore(path).run_metrics("d")[0].rejected is None

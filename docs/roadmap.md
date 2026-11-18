@@ -4,11 +4,15 @@
 
 v0.1 remains the reference release. It is complete: `0.1.0rc1` is its release candidate, with M1–M4 implemented, the M5 technical evidence recorded, every section 18 acceptance criterion evidenced, and DIFF-001 partially demonstrated. Publication (namespace ownership, legal/trademark review, tag and Trusted Publishing) awaits maintainer approval through the release gates in issue #5; nothing has been published.
 
-## Adoption cut N15–N19 (2026-11-17, in integration, not released)
+## Studio redesign and configuration reference (2026-11-17, released in 0.9.0)
+
+Studio rebuilt on design tokens with system/light/dark themes and an English/Spanish dictionary: Home with project health, Results with empty-cell reasons and a provenance panel, Sources and Alerts (N5), Fix a site (N7, N12), a four-step URL wizard (N1, N2), folded Settings and Registry (URL) (N10). The engine now keeps per-source rejected counts and caps in run metrics. `rastro config`, `rastro job template` and `rastro://configuration` give agents every configurable point (N18).
+
+## Adoption cut N15–N19 (2026-11-17, released in 0.9.0)
 
 From the first real adoption (Rave App, `docs/action-plan-adoption.md`): agent capability contract and `rastro init --agent` (N18), public `fetch` and `load_records` (N15), diagnosable warnings and `docs/issues.md` (N17), prompt-injection defense with ADR 0035 (N19), and listing-to-detail patterns: multi-type JSON-LD, `embedded_json`, sitemap spider seeds (N16). Studio redesign (N13, N14, N20) waits for the design mockup (`docs/design/studio-brief.md`).
 
-## N1–N12 product cut (2026-11-16, in integration, not released)
+## N1–N12 product cut (2026-11-16, released in 0.9.0)
 
 **Studio half integrated on `cut/studio-product`:** next-link pagination setting (N4), plain-language alerts, Health detail and an observed operation line (N5), **Fix this site** with the Studio model and no gate override (N7), the auto-promote and session stealth switches (N12), the registry search/install/publish section (N10), and the synthetic registry bundles, newcomer README and spec Amendment Log (N6, N8, N11). URL-first creation (N1) and dev’s spider, scroll, browser reuse, stealth enforcement and HTTPS registry fetcher (N2, N3, N9, N10, N12) are integrated. Studio registry URL search/install exercise the real fetcher under operator trust and keep installations as candidates; Studio edits `[spider]` and `[scroll]` on the job page. Follow-ups delivered on `cut/n1n12-followups`: page_url provenance without queries, robots.txt cached per run or install, the Studio preview expiry, and `service.py`, `spider.py` and `acquisition.py` back under the size budget. Follow-ups 2 on `cut/followups-2`: the robots cache covers every remaining public fetch boundary, and Studio limits come from the job models. Open: `Rastro.web(...).extract` keeps a private robots cache per call; `application/job_repair.py` is over the size budget. The engine has no progress event seam yet, so Studio does not show page or scroll steps. See [product needs](product-needs.md) and [Studio](studio.md).
 

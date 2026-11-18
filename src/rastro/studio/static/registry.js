@@ -1,15 +1,14 @@
-// N10: sharing recipes is explicit; every source-derived value stays plain text.
+// N10: Registry (URL). Search and install from a local registry folder or an HTTPS URL;
+// publish writes into a local registry folder only (no account, no push, no Git).
+// Every source-derived value stays plain text.
 import { $, api, el, requireFile, table } from "./dom.js";
+import { onLangChange, t } from "./i18n.js";
 
 function input(row, id, label, placeholder) {
   const caption = el("label", label);
   caption.htmlFor = id;
   const field = el("input");
-  field.id = id;
-  field.type = "text";
-  field.maxLength = 1024;
-  field.placeholder = placeholder;
-  field.spellcheck = false;
+  Object.assign(field, { id, type: "text", maxLength: 1024, placeholder, spellcheck: false });
   row.append(caption, field);
   return field;
 }
@@ -30,7 +29,7 @@ async function action(button, output, message, run) {
     await run();
     output.className = "good";
   } catch (error) {
-    output.textContent = `Error: ${error.message}`;
+    output.textContent = t("msg.error", { why: error.message });
     output.className = "bad";
   } finally {
     button.disabled = false;
@@ -38,43 +37,42 @@ async function action(button, output, message, run) {
 }
 
 function trustText(trust) {
-  return `Replay ${trust.replay_verified ? "verified" : "not verified"}; ` +
-    `sample ${trust.has_sample ? "included" : "missing"}; ` +
-    `${trust.days_since_verified} days since verification; format ${trust.format}`;
+  return t("registry.trust", {
+    replay: t(trust.replay_verified ? "registry.verified" : "registry.notVerified"),
+    sample: t(trust.has_sample ? "registry.included" : "registry.missing"),
+    days: trust.days_since_verified, format: trust.format,
+  });
 }
 
 function renderEntries(entries, registry, results, output) {
   if (!entries.length) {
-    results.replaceChildren(el("p", "No recipes match this search."));
+    results.replaceChildren(el("p", t("registry.noMatch")));
     return;
   }
   const rows = entries.map((entry) => {
-    const install = el("button", "Install as candidate into open job");
+    const install = el("button", t("registry.install"), "small");
     install.type = "button";
-    install.addEventListener("click", () => action(install, output, "Checking and installing…", async () => {
+    install.addEventListener("click", () => action(install, output, t("registry.installing"), async () => {
       const file = requireFile();
-      const result = await api("/api/registry/install", {
-        registry, spec: `${entry.id}@${entry.version}`, file,
+      const result = await api("/api/registry/install", { registry, spec: `${entry.id}@${entry.version}`, file });
+      output.textContent = t(result.reused ? "registry.reused" : "registry.installed", {
+        spec: `${result.id}@${result.version}`, state: result.state, file, trust: trustText(result.trust),
       });
-      output.textContent = `${result.id}@${result.version}: ${result.reused ? "reused" : "installed"} ` +
-        `${result.state} in ${file}. Nothing promoted; auto-promote unchanged. ` + trustText(result.trust);
     }));
     return [entry.id, entry.version, entry.source_patterns.join(", "), entry.author.name,
       entry.license, trustText(entry.trust), install];
   });
-  results.replaceChildren(table(
-    ["Recipe", "Version", "Sources", "Author", "License", "Published trust indicators", "Action"],
-    rows, "Registry recipes",
-  ));
+  const heads = ["recipe", "version", "sources", "author", "license", "trust", "action"].map((k) => t(`registry.col.${k}`));
+  results.replaceChildren(table(heads, rows, t("registry.caption")));
 }
 
 function searchForm(section) {
   const form = el("form");
   const row = el("div", undefined, "row");
-  const registry = input(row, "registry-location", "Registry directory or HTTPS URL", "examples/registry");
+  const registry = input(row, "registry-location", t("registry.location"), "examples/registry");
   registry.required = true;
-  const query = input(row, "registry-query", "Search recipes or sources", "listing");
-  const search = el("button", "Search registry", "primary");
+  const query = input(row, "registry-query", t("registry.query"), "listing");
+  const search = el("button", t("registry.search"));
   search.type = "submit";
   row.append(search);
   const output = status("registry-status");
@@ -84,58 +82,58 @@ function searchForm(section) {
   form.append(row);
   form.addEventListener("submit", (event) => {
     event.preventDefault();
-    action(search, output, "Searching registry…", async () => {
+    action(search, output, t("registry.searching"), async () => {
       results.replaceChildren();
       installStatus.textContent = "";
       const location = registry.value.trim();
       const data = await api("/api/registry/search", { registry: location, query: query.value });
       renderEntries(data.entries, location, results, installStatus);
-      output.textContent = `${data.entries.length} recipe version(s) found.`;
+      output.textContent = t("registry.found", { n: data.entries.length });
     });
   });
   section.append(form, output, results, installStatus);
 }
 
 function publishForm(section) {
-  section.append(el("h3", "Publish an exported public bundle"));
-  section.append(el("p", "Choose a bundle you exported with public metadata and a sample you may share. " +
-    "Publishing copies that sample and recipe into your local registry. It does not run git or push.", "warn"));
+  section.append(el("h3", t("registry.publishTitle")), el("p", t("registry.publishNote"), "warn"));
   const form = el("form");
   const row = el("div", undefined, "row");
-  const bundle = input(row, "registry-bundle", "Exported bundle directory", "exports/my-recipe");
+  const bundle = input(row, "registry-bundle", t("registry.bundle"), "exports/my-recipe");
   bundle.required = true;
-  const destination = input(row, "registry-destination", "Local registry directory", "examples/registry");
+  const destination = input(row, "registry-destination", t("registry.destination"), "examples/registry");
   destination.required = true;
-  const publish = el("button", "Publish bundle locally");
+  const publish = el("button", t("registry.publish"));
   publish.type = "submit";
   row.append(publish);
   const output = status("registry-publish-status");
   form.append(row);
   form.addEventListener("submit", (event) => {
     event.preventDefault();
-    action(publish, output, "Verifying and publishing…", async () => {
-      const data = await api("/api/registry/publish", {
-        bundle: bundle.value.trim(), registry: destination.value.trim(),
-      });
-      output.textContent = `Published ${data.entry.id}@${data.entry.version} locally, including its sample. Nothing pushed.`;
+    action(publish, output, t("registry.publishing"), async () => {
+      const data = await api("/api/registry/publish", { bundle: bundle.value.trim(), registry: destination.value.trim() });
+      output.textContent = t("registry.published", { spec: `${data.entry.id}@${data.entry.version}` });
     });
   });
   section.append(form, output);
 }
 
-export function initRegistry() {
-  if ($("registry-section")) return;
-  const section = el("section", undefined, "card");
+function build() {
+  const section = el("div");
   section.id = "registry-section";
-  section.setAttribute("aria-labelledby", "registry-heading");
-  const heading = el("h2", "Registry");
-  heading.id = "registry-heading";
-  section.append(heading, el("p", "Search a directory under this Studio folder or an HTTPS registry URL. " +
-    "Open a job with recipe memory before installing. Local paths are relative to the Studio folder.", "muted"));
-  section.append(el("p", "Registry metadata is a publisher's claim, not a safety guarantee. Install checks digests, " +
-    "selector policy and offline replay. New recipes enter as candidates; promotion needs a separate decision. " +
-    "Installing never changes auto-promote or grants network access.", "warn"));
+  section.append(el("p", t("registry.intro"), "muted"), el("p", t("registry.claim"), "warn"));
   searchForm(section);
   publishForm(section);
-  $("view-jobs").append(section);
+  return section;
+}
+
+const FIELDS = ["registry-location", "registry-query", "registry-bundle", "registry-destination"];
+
+export function initRegistry() {
+  if ($("registry-section")) return;
+  $("settings-registry").append(build());
+  onLangChange(() => {
+    const typed = FIELDS.map((id) => $(id).value);
+    $("settings-registry").replaceChildren(build());
+    FIELDS.forEach((id, i) => { $(id).value = typed[i]; });
+  });
 }

@@ -2,8 +2,7 @@
 
 Read `docs/product-needs.md` before `docs/roadmap.md`. The product needs are the planning source for the current cut (N1–N11: URL-first Studio, JavaScript as a normal path, bounded spider, pagination in Studio, plain-language alerts, shareable synthetic recipes, gated repair, a newcomer README, bounded scroll, a hostable registry URL, and a spec amendment). `docs/roadmap.md` is the history of what already shipped. `RASTRO_MASTER_SPEC.md` is reference only; ADR 0032 and ADR 0033 win where they repeal a product ban. Release **0.7.0** (AI-assisted repair, monitoring and alerts, plus the v0.3–v0.5 completion wave) is delivered on top of 0.6.0, the first public PyPI release.
 
-The owner requested this cut on 2026-11-16 and expanded it the same day: finish scroll, a registry others can host, and the spec amendment in this cut. Claude owns acquisition, the spider, scroll, same-source browser reuse, and `src/rastro/application/registry_fetch.py`. Codex owns Studio, the README, `examples/registry/`, and the master-spec amendment. Do not edit the other agent's surface. Cross-review the other PR before merge. Network, persistence, security, and CI changes require that cross-review.
-Work is done by a Claude agent team and Codex, one worker per slice in its own worktree, one reviewer. A cross-model review per cut is required only for changes to persistence, security, network/egress or CI; small docs-only changes need no external review.
+Work is coordinated in a single context: one coordinator slices the work, workers implement slices in their own worktrees, and a reviewer checks each cut. A cross-model review per cut is required for changes to persistence, security, network/egress or CI; small docs-only changes need no external review.
 
 - Deliver one usable vertical slice at a time, with tests and documentation.
 - Keep domain code independent of adapters. Use Scrapling through the parser or acquisition boundary.

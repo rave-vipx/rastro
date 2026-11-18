@@ -44,7 +44,7 @@ def test_existing_dataset_coexists_with_drift_and_repeated_runs_are_idempotent(t
     assert monitor.baseline("events", current) == current
     assert store.source_status("events") == before
     with closing(sqlite3.connect(path)) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 3
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 4
         assert db.execute("SELECT COUNT(*) FROM drift_runs").fetchone()[0] == 1
         assert db.execute("SELECT version FROM drift_schema").fetchone()[0] == 2
 

@@ -10,6 +10,12 @@ alerts, repair, registry), what an agent must not rebuild, and what is the app's
 The same list is in [`llms.txt`](https://github.com/rave-vipx/rastro/blob/main/llms.txt),
 in `rastro capabilities --output json`, and in the MCP resource `rastro://capabilities`.
 
+Before writing a job key, keyword argument or flag, check the
+[Configuration reference](configuration.md) (`rastro config`, MCP resource
+`rastro://configuration`). It is generated from the code and lists every option with its
+type, default and bounds. Job files reject unknown keys, and `rastro job validate` names the
+closest valid one. `rastro job template --all` prints an annotated job file.
+
 ## Tell your coding agent what Rastro does
 
 Run this in the project that uses Rastro, so the agent working there reads the list first:
@@ -83,7 +89,7 @@ exits with code `2` and a `missing_extra` error on stderr.
 `job_run` is a deprecated alias of `job_load`. The server also sends a URL-first workflow
 guide to the client: write a job whose `[[sources]]` are the page URLs, preview it, then load
 it; each run fetches the URLs again. It serves the capability list as the read-only resource
-`rastro://capabilities` (JSON). Details, safety hints and limits: [MCP server](mcp.md).
+`rastro://capabilities` (JSON) and every option as `rastro://configuration`. Details, safety hints and limits: [MCP server](mcp.md).
 
 ### Your agent is the model
 
@@ -126,6 +132,8 @@ rastro dataset export data.sqlite --format jsonl
 rastro recipe repair job.toml --source 1
 rastro doctor                         # installed versions and capabilities
 rastro capabilities --output json     # every task Rastro covers, with names and limits
+rastro config                         # every option: job keys, arguments, grants, flags
+rastro job template --all             # annotated job file with every option commented
 ```
 
 Objects with a `schema_version` key keep their meaning for that version. New keys can appear in
