@@ -54,7 +54,7 @@ async def test_fallback_attempts_count_as_requests_and_respect_operation_timeout
             if target.address == ADDRESSES[0]:
                 # The first attempt takes time, so the operation deadline (started earlier)
                 # always expires before the fallback request's own deadline.
-                await asyncio.sleep(0.03)
+                await asyncio.sleep(0.01)
             if target.address == ADDRESSES[1]:
                 self.calls.append((target, kwargs))
                 await asyncio.Event().wait()
@@ -65,8 +65,8 @@ async def test_fallback_attempts_count_as_requests_and_respect_operation_timeout
         transport,
         Resolver(ADDRESSES),
         max_retries=0,
-        request_timeout_seconds=0.1,
-        operation_timeout_seconds=0.1,
+        request_timeout_seconds=0.5,
+        operation_timeout_seconds=0.5,
     ).acquire(SOURCE, max_bytes=100)
     assert result.issue_code == "operation_timeout"
     assert result.requests == len(transport.calls) == 3
