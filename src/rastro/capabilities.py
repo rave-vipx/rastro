@@ -278,7 +278,8 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         task="Give a person a local UI",
-        use="`rastro studio --root DIR`: paste a URL, name fields, preview, load, repair",
+        use="`rastro studio --root DIR`: projects are jobs with a dataset; paste a URL, name "
+        "fields, preview, load, see results with provenance, repair",
         cli=("rastro studio",),
         limits="`studio` extra; loopback only",
         instead_of="building your own admin page for scrapers",

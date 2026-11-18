@@ -2,6 +2,12 @@
 
 All notable user-facing changes are recorded here. The project follows [Semantic Versioning](docs/stability.md) from 0.6.0. Versions before 0.6.0 were never published to a package registry.
 
+## Unreleased
+
+### Changed
+
+- `rastro init --agent`, `llms.txt` and `docs/capabilities.md` explain how results reach Studio: keep them in a job's dataset (`rastro job load` or `rastro.load_records`) and open `rastro studio --root`, instead of building an ad hoc database (N18).
+
 ## 0.9.0 — 2026-11-17
 
 Studio redesign, the agent configuration reference, the adoption cut (N15–N19) and the N1–N12 product cut. 0.8.0 was never tagged; its work ships here.

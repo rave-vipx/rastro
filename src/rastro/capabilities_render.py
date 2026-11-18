@@ -17,7 +17,7 @@ from rastro.capabilities import (
     UNTRUSTED_DATA_RULE,
     Capability,
 )
-from rastro.config_catalog import CONFIG_RULE, SECTIONS
+from rastro.config_catalog import CONFIG_RULE, SECTIONS, STUDIO_RESULTS_RULE
 
 SITE = "https://rave-vipx.github.io/rastro/"
 REPO = "https://github.com/rave-vipx/rastro/blob/main/"
@@ -104,6 +104,10 @@ def _rules() -> list[str]:
         "",
         *(f"- {item}" for item in NOT_IN_RASTRO),
         "",
+        "## See results in Studio",
+        "",
+        STUDIO_RESULTS_RULE,
+        "",
         "## Public imports",
         "",
         PUBLIC_IMPORT_RULE,
@@ -150,7 +154,8 @@ def render_llms() -> str:
     lines += [f"- {fact}" for fact in KEY_FACTS]
     lines += ["", "## Capabilities", ""]
     lines += [f"- [{cap.task}]({doc_url(cap.docs)}): {cap.use}" for cap in CAPABILITIES]
-    lines += ["", "## Rules", "", f"- {PUBLIC_IMPORT_RULE}", f"- {UNTRUSTED_DATA_RULE}"]
+    lines += ["", "## Rules", "", f"- {PUBLIC_IMPORT_RULE}", f"- {STUDIO_RESULTS_RULE}"]
+    lines += [f"- {UNTRUSTED_DATA_RULE}"]
     lines += [f"- Not Rastro's job: {'; '.join(NOT_IN_RASTRO)}."]
     lines.append("- Missing a capability: stop and write a gap report; never import internals.")
     for title, links in (("Docs", DOC_LINKS), ("Optional", OPTIONAL_LINKS)):
