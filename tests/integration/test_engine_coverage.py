@@ -187,3 +187,41 @@ def test_a_redirected_source_is_joined_to_its_final_url(tmp_path, client, monkey
     [row] = sources(client, "job.toml")
     assert (row["url"], row["status"], row["read"]) == ("https://agenda.example/one", "ok", 1)
     assert row["last_fetch"] is not None
+
+
+@pytest.mark.parametrize(
+    ("second", "expected"),
+    [
+        ((403, b""), ("failed", 0)),
+        ((200, b"<article><h2>A</h2></article><article><h2>B</h2></article>"), ("ok", 2)),
+    ],
+)
+def test_a_later_direct_load_replaces_the_redirect_association(
+    tmp_path, client, monkeypatch, capsys, second, expected
+):
+    """Re-check of #147: after /one -> /final, a later direct load of /one is the one shown."""
+    state = {"redirect": True}
+
+    async def resolve(self, host, port):
+        return ("8.8.8.8",)
+
+    async def get(self, target, **kwargs):
+        if target.url.endswith("robots.txt"):
+            return HttpResponse(404, {}, b"", 0)
+        if target.url.endswith("/one") and state["redirect"]:
+            return HttpResponse(302, {"location": "/final"}, b"", 0)
+        if target.url.endswith("/one"):
+            status, body = second
+            return HttpResponse(status, {"content-type": "text/html"}, body, len(body))
+        body = b"<article><h2>One</h2></article>"
+        return HttpResponse(200, {"content-type": "text/html"}, body, len(body))
+
+    monkeypatch.setattr(SystemResolver, "resolve", resolve)
+    monkeypatch.setattr(CurlTransport, "get", get)
+    (tmp_path / "job.toml").write_text(PAGED_JOB, encoding="utf-8")
+    main(["job", "load", str(tmp_path / "job.toml")])
+    state["redirect"] = False
+    main(["job", "load", str(tmp_path / "job.toml")])
+    capsys.readouterr()
+    [row] = sources(client, "job.toml")
+    assert (row["status"], row["read"]) == expected

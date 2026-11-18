@@ -74,7 +74,8 @@ def _dataset(state: JobState, root: Path, path: Path) -> None:
         return
     state.statuses = {s.source_url: s for s in store.source_status(spec.name)}
     state.metrics = store.run_metrics(spec.name)
-    state.redirects = {m.requested_url: m.source_url for m in state.metrics if m.requested_url}
+    # Every metric in append order, direct loads included, so the latest attempt wins.
+    state.redirects = {(m.requested_url or m.source_url): m.source_url for m in state.metrics}
     state.records = len(store.records(spec.name))
     monitor = SQLiteDriftMonitor(file, limits=state.job.limits)
     state.drift = {d.source_url: d for d in monitor.open_drift(spec.name)}
