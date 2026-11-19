@@ -4,7 +4,7 @@ Releases are published to PyPI as [`rastro-engine`](https://pypi.org/project/ras
 the tag-triggered workflow `.github/workflows/release.yml`. It uses PyPI Trusted Publishing:
 there are no API tokens or repository secrets. Versions before 0.6.0 were never published.
 
-The [release evidence register](release-evidence.md) records completed checks; the
+The maintainer's release evidence register (kept outside the repository) records completed checks; the
 [comparison](comparison.md) publishes current results, including where Rastro is equal or worse.
 The [stability policy](stability.md) defines what a version number promises.
 

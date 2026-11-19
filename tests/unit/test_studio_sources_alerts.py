@@ -8,7 +8,7 @@ from pathlib import Path
 from tests.unit.studio_js import run_node
 
 SAMPLE = json.loads(
-    (Path(__file__).resolve().parents[2] / "docs/design/studio-sample-data.json").read_text(
+    (Path(__file__).resolve().parents[2] / "tests/fixtures/studio_demo/sample-data.json").read_text(
         encoding="utf-8"
     )
 )

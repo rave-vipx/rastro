@@ -1,7 +1,7 @@
 # ADR 0035: prompt-injection defense: harden, flag, contain
 
 - **Status:** accepted 2026-11-17.
-- **Requirements:** N19 in `docs/action-plan-adoption.md`. SEC-008, AI-001, REPAIR-002, REPAIR-005 and AGENT-002 stay.
+- **Requirements:** product need N19. SEC-008, AI-001, REPAIR-002, REPAIR-005 and AGENT-002 stay.
 
 ## Context
 

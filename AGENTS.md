@@ -1,6 +1,6 @@
 # Working on Rastro
 
-Read `docs/product-needs.md` before `docs/roadmap.md`. The product needs are the planning source for the current cut: N21–N30 for 0.10 (robust extraction, discovery, nested records with AI support, a run report contract, a public dataset reader, operations), with design notes and cut order in `docs/action-plan-0.10.md`. N1–N20 shipped in 0.9.0. `docs/roadmap.md` is the history of what already shipped. `RASTRO_MASTER_SPEC.md` is reference only; ADR 0032 and ADR 0033 win where they repeal a product ban. Release **0.7.0** (AI-assisted repair, monitoring and alerts, plus the v0.3–v0.5 completion wave) is delivered on top of 0.6.0, the first public PyPI release.
+Planning documents are local and never committed: product needs, action plans, the roadmap, the master specification, design briefs and mockups, work logs and release evidence registers live in the maintainer's checkout under `local/` (ignored by Git; see "What never goes in the repository" in `CONTRIBUTING.md`). Workers receive the slice they need in their dispatch spec. Current planning source: `local/plans/action-plan-1.0.md` and `local/plans/product-needs.md` (N21–N40 for 1.0.0, capability first per ADR 0036). ADR 0032, ADR 0033 and ADR 0036 win where they repeal a product ban.
 
 Work is coordinated in a single context: one coordinator slices the work, workers implement slices in their own worktrees, and a reviewer checks each cut. A cross-model review per cut is required for changes to persistence, security, network/egress or CI; small docs-only changes need no external review.
 
@@ -10,8 +10,9 @@ Work is coordinated in a single context: one coordinator slices the work, worker
 - Keep default tests offline. Fixtures are synthetic; never commit captured credentials or private content.
 - Treat recipes as data. Core installation and tests must remain usable without AI or browsers.
 - Run the checks in `CONTRIBUTING.md` before committing. Report actual results and known limitations.
-- For a new milestone or architectural boundary, update `docs/roadmap.md` and add an ADR under `docs/decisions/` when a tradeoff needs explanation.
-- Each meaningful change identifies the relevant requirement IDs from the master spec or from `docs/product-needs.md` (N1–N11).
+- For a new milestone or architectural boundary, update the local roadmap and add an ADR under `docs/decisions/` when a tradeoff needs explanation.
+- Each meaningful change identifies the relevant requirement IDs (master spec IDs or product needs N1–N40).
+- Never commit planning documents, agent transcripts, PR body drafts, local evidence, credentials or private project details (see `CONTRIBUTING.md`).
 - Never open, read, search or summarize `benchmarks/recovery/sealed/`, and never edit the frozen recovery corpus or manifest. The sealed half exists only for the final v0.2 evaluation (ADR 0011).
 - Parallel work uses one worktree and branch per slice; the coordinator merges slice branches into one `cut/<name>` branch and opens a single pull request per cut against dev (see the rastro-slice skill).
 - Follow docs/development/clean-code.md; split modules before they exceed its size budget.
@@ -31,4 +32,4 @@ When your agent offers these skills (in Claude Code, Codex, OpenCode and Antigra
 | Reviewing a PR, or a self-review before opening one | `code-review-and-quality` |
 | Coordinating Orca workers, writing specs, merging or promoting | `rastro-slice` (its `references/checklist.md` is the definition of done) |
 
-If a skill conflicts with this file, this file wins. If this file conflicts with `docs/product-needs.md` on what to build next, the product needs win. If either conflicts with `SECURITY.md` on operator grants, SSRF, or recipes-as-data, `SECURITY.md` wins.
+If a skill conflicts with this file, this file wins. If this file conflicts with the local product needs on what to build next, the product needs win. If either conflicts with `SECURITY.md` on operator grants, SSRF, or recipes-as-data, `SECURITY.md` wins.

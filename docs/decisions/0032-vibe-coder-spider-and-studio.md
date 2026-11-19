@@ -1,7 +1,7 @@
 # ADR 0032: vibe-coder Studio, JavaScript, and a bounded spider
 
 - **Status:** accepted by owner request, 2026-11-16.
-- **Requirements:** N1–N8 in [product needs](../product-needs.md). Amends the product bans implied by ADR 0020 and by the "you name the pages" comparison. Does not amend SEC-001–SEC-011.
+- **Requirements:** product needs N1–N8. Amends the product bans implied by ADR 0020 and by the "you name the pages" comparison. Does not amend SEC-001–SEC-011.
 
 ## Problem
 
@@ -15,7 +15,7 @@ Rastro extracts known pages reliably and refuses wrong repairs. A newcomer still
 
 ## Decision
 
-Option 3. [Product needs](../product-needs.md) is the planning source for this cut. Where `RASTRO_MASTER_SPEC.md` forbids discovered links, a URL-first Studio, or progress for a long run, this ADR wins. Do not edit the master spec in place.
+Option 3. The product needs are the planning source for this cut. Where `RASTRO_MASTER_SPEC.md` forbids discovered links, a URL-first Studio, or progress for a long run, this ADR wins. Do not edit the master spec in place.
 
 Security boundaries listed in the product needs stay in force. In particular, stealth, private networks, ignore-robots, and egress remain operator grants; a spider does not grant them.
 

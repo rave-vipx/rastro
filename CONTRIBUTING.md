@@ -4,9 +4,9 @@ Thanks for helping make web data more reliable. Rastro is in beta. The public su
 
 ## Find a useful change
 
-Read the [roadmap](docs/roadmap.md) and [open issues](https://github.com/rave-vipx/rastro/issues). For a substantial feature, describe the problem and proposed API in an issue before investing in implementation. Small fixes and documentation improvements can go straight to a pull request.
+Read the [open issues](https://github.com/rave-vipx/rastro/issues). For a substantial feature, describe the problem and proposed API in an issue before investing in implementation. Small fixes and documentation improvements can go straight to a pull request.
 
-The [master specification](RASTRO_MASTER_SPEC.md) defines scope. Keep examples and public documentation in English. Use synthetic fixtures that you have permission to distribute.
+The README, `SECURITY.md` and the ADRs in `docs/decisions/` define scope. Keep examples and public documentation in English. Use synthetic fixtures that you have permission to distribute.
 
 ## Set up
 
@@ -67,3 +67,20 @@ Explain the user-visible change, reference requirement IDs, and report the exact
 Maintainers review scope, API clarity, correctness, and evidence. Required CI checks must pass before merging. No reviewer response-time guarantee is offered at this stage.
 
 By contributing, you agree that your contributions are licensed under Apache 2.0. Participation follows the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+## What never goes in the repository
+
+Rastro is a public repository. Keep these out of commits, pull requests and issues; the
+maintainer keeps them locally under `local/` (ignored by Git):
+
+- Planning documents: product needs, action plans, roadmaps, the master specification,
+  design briefs, mockups and their sample data (tests use synthetic fixtures under `tests/`).
+- Process records: agent work logs, review transcripts, release evidence registers, PR body
+  drafts (`.pr-*-body.md`) and local run outputs.
+- Anything about private projects that use Rastro: names, sites, customers, findings. Describe
+  a problem in general terms with a synthetic reproduction instead.
+- Credentials, tokens, `.env` files, cookies, captured pages and personal data.
+
+Published documentation explains how to use and operate Rastro (guides, reference, ADRs,
+benchmarks with reproducible commands). If a change needs planning context, summarize the
+decision in an ADR; do not link to local files.

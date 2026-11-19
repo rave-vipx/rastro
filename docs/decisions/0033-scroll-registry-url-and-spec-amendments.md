@@ -1,7 +1,7 @@
 # ADR 0033: bounded scroll, a registry URL, and how the spec stays current
 
 - **Status:** accepted 2026-11-16 by the owner ("terminar Rastro"). Extends ADR 0032.
-- **Requirements:** N9, N10, N11 in `docs/product-needs.md`. HUB-001–006 stay. REC-002, SEC-001, P-005, P-007 stay.
+- **Requirements:** product needs N9, N10, N11. HUB-001–006 stay. REC-002, SEC-001, P-005, P-007 stay.
 
 ## Problem
 

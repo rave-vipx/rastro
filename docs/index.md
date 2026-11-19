@@ -17,7 +17,6 @@ Rastro converts supplied HTML or permitted web sources into validated Python rec
 - [See the architecture and tradeoffs](architecture.md).
 - [Use Rastro from an AI agent](ai-agents.md).
 - [Know what is stable across releases](stability.md).
-- [Follow the milestone plan](roadmap.md).
 
 ## What makes the foundation useful?
 
@@ -27,6 +26,6 @@ Evidence records a source URL, observation time, locator, method, and recipe ver
 
 ## Project resources
 
-[Source code](https://github.com/rave-vipx/rastro) · [Contributing](https://github.com/rave-vipx/rastro/blob/main/CONTRIBUTING.md) · [Security policy](https://github.com/rave-vipx/rastro/blob/main/SECURITY.md) · [Master specification](https://github.com/rave-vipx/rastro/blob/main/RASTRO_MASTER_SPEC.md)
+[Source code](https://github.com/rave-vipx/rastro) · [Contributing](https://github.com/rave-vipx/rastro/blob/main/CONTRIBUTING.md) · [Security policy](https://github.com/rave-vipx/rastro/blob/main/SECURITY.md)
 
 Rastro is licensed under Apache 2.0 and builds on Scrapling and Pydantic. Performance and accuracy comparisons will be published only when a reproducible benchmark exists.
