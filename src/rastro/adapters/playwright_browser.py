@@ -8,6 +8,7 @@ from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack, asynccontextmanager
 from typing import TYPE_CHECKING, Any
 
+from rastro.adapters.browser_controls_apply import request_allowed
 from rastro.adapters.browser_network import (
     browser_flags,
     launch_options,
@@ -15,9 +16,8 @@ from rastro.adapters.browser_network import (
     resolver_rules,
     route_allowed,
 )
-from rastro.application.browser_proxy import BROWSER_PROXY
+from rastro.adapters.playwright_launch import load_page, open_context
 from rastro.application.destinations import permitted_url
-from rastro.application.http_policy import USER_AGENT
 from rastro.domain.acquisition import (
     AcquisitionError,
     AcquisitionPolicy,
@@ -75,7 +75,7 @@ class NetworkGuard:
                 if (
                     not self.active
                     or request.frame.page != page
-                    or not route_allowed(request.url, request.resource_type, self.policy)
+                    or not request_allowed(request.url, request.resource_type, self.policy)
                 ):
                     await route.abort()
                 else:
@@ -86,7 +86,7 @@ class NetworkGuard:
             session = await page.context.new_cdp_session(page)
 
             async def paused(event: dict[str, Any]) -> None:
-                allowed = self.active and route_allowed(
+                allowed = self.active and request_allowed(
                     event["request"]["url"], event.get("resourceType", ""), self.policy
                 )
                 if self.active:
@@ -178,32 +178,12 @@ class PlaywrightBrowser:
     ) -> AcquisitionResult:
         guard = NetworkGuard(policy)
         try:
-            async with self.api.async_playwright() as driver:
-                browser = await driver.chromium.launch(
-                    **launch_options(targets, BROWSER_PROXY.get())
-                )
-                try:
-                    context = await browser.new_context(
-                        user_agent=USER_AGENT,
-                        accept_downloads=False,
-                        permissions=[],
-                        service_workers="block",
-                    )
-                    page = await context.new_page()
-                    await guard.setup(page)
-                    response = await page.goto(
-                        target.url,
-                        timeout=policy.request_timeout_seconds * 1000,
-                        wait_until="networkidle",
-                    )
-                    return guard.result(
-                        page.url,
-                        await page.content(),
-                        response.status if response else 0,
-                        max_bytes,
-                    )
-                finally:
-                    await browser.close()
+            async with AsyncExitStack() as stack:
+                driver = await stack.enter_async_context(self.api.async_playwright())
+                context = await open_context(stack, driver, targets, policy)
+                page = await context.new_page()
+                await guard.setup(page)
+                return await load_page(page, guard, target.url, policy, max_bytes)
         except AcquisitionError:
             raise
         except Exception:
@@ -222,16 +202,7 @@ class PlaywrightBrowser:
         async with AsyncExitStack() as stack:
             try:
                 driver = await stack.enter_async_context(self.api.async_playwright())
-                browser = await driver.chromium.launch(
-                    **launch_options(targets, BROWSER_PROXY.get())
-                )
-                stack.push_async_callback(browser.close)
-                context = await browser.new_context(
-                    user_agent=USER_AGENT,
-                    accept_downloads=False,
-                    permissions=[],
-                    service_workers="block",
-                )
+                context = await open_context(stack, driver, targets, policy)
             except Exception:
                 raise AcquisitionError(
                     "browser_navigation_failed", Outcome.TRANSIENT_FAILURE

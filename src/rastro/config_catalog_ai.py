@@ -16,6 +16,10 @@ ENV_VARS: dict[str, tuple[str, str]] = {
         "Command run with a JSON summary when job load, run or watch needs attention.",
         "docs/operations.md#failure-hook",
     ),
+    "RASTRO_PROFILE_DIR": (
+        "Directory holding the persistent browser profiles that browser.session_profile names.",
+        "docs/browser.md#persistent-sessions",
+    ),
     "RASTRO_SEARXNG_URL": (
         "SearXNG endpoint for `rastro new --goal --search searxng`.",
         "docs/jobs.md#start-from-a-goal",
