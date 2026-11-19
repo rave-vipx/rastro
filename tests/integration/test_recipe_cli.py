@@ -8,7 +8,7 @@ import pytest
 
 from rastro.cli import main
 
-SAMPLE = Path(__file__).parents[2] / "examples/uy-dance-agenda/sample"
+SAMPLE = Path(__file__).parents[2] / "examples/event-agenda/sample"
 
 
 pytestmark = pytest.mark.usefixtures("offline_cli_loop")
@@ -33,7 +33,7 @@ def mutate(folder):
     from rastro.mocklab.mutations.html_structure import HtmlWrapElement
     from rastro.mocklab.mutations.plan import MutationPlan
 
-    path = folder / "sodre-cartelera.html"
+    path = folder / "teatro-central-cartelera.html"
     path.write_text(
         MutationPlan(
             seed=42,
@@ -53,7 +53,7 @@ def mutate(folder):
 def test_rollback_restores_previous_version_and_next_load_uses_it(tmp_path, capsys):
     folder, job = setup_sample(tmp_path)
     assert main(["job", "load", str(job), "--drift"]) == 0
-    original = (folder / "sodre-cartelera.html").read_text(encoding="utf-8")
+    original = (folder / "teatro-central-cartelera.html").read_text(encoding="utf-8")
     capsys.readouterr()
     mutate(folder)
     assert main(["job", "load", str(job), "--drift"]) == 3
@@ -69,7 +69,7 @@ def test_rollback_restores_previous_version_and_next_load_uses_it(tmp_path, caps
     assert loaded["sources"][0]["status"] == "success"
     assert main(["recipe", "rollback", str(job), "--source", "1", "--version", "1"]) == 0
     capsys.readouterr()
-    (folder / "sodre-cartelera.html").write_text(original, encoding="utf-8")
+    (folder / "teatro-central-cartelera.html").write_text(original, encoding="utf-8")
     assert main(["job", "load", str(job)]) == 0
     capsys.readouterr()
     assert main(["recipe", "compare", str(job), "--from-version", "1", "--to-version", "2"]) == 0
@@ -179,7 +179,7 @@ def test_ambiguous_candidate_is_quarantined_not_active(tmp_path, capsys):
         at=now,
         evaluate=lambda candidate: evaluate_candidate(
             candidate,
-            (folder / "sodre-cartelera.html").read_text(encoding="utf-8"),
+            (folder / "teatro-central-cartelera.html").read_text(encoding="utf-8"),
             source=source,
             schema=context.schema,
             parser=ScraplingParser(),

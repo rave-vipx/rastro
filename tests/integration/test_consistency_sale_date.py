@@ -16,7 +16,7 @@ from rastro.cli import main
 from rastro.domain.consistency import parse_consistency_rules
 
 ROOT = Path(__file__).resolve().parents[2]
-EXAMPLE = ROOT / "examples" / "uy-dance-agenda"
+EXAMPLE = ROOT / "examples" / "event-agenda"
 OBSERVED = datetime(2026, 11, 7, 12, 0, tzinfo=timezone(timedelta(hours=-3)))
 FIELDS = ["title", "performers", "venue", "city", "starts_at", "ticket_url"]
 

@@ -17,7 +17,7 @@ pytestmark = pytest.mark.usefixtures("offline_cli_loop")
 
 URL = "https://acme.example/careers"
 V1 = """<main><ul>
-<li class="job"><h3 class="title">Engineer</h3><span class="city">Montevideo</span></li>
+<li class="job"><h3 class="title">Engineer</h3><span class="city">Puerto Claro</span></li>
 <li class="job"><h3 class="title">Designer</h3><span class="city">Salto</span></li>
 </ul></main>"""
 V2 = V1.replace('<h3 class="title">', '<h2 class="heading">').replace("</h3>", "</h2>")

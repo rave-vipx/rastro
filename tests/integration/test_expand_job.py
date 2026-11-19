@@ -11,7 +11,7 @@ JOB = """format_version = 1
 [region]
 locale = "es-UY"
 languages = ["es-UY", "es"]
-timezone = "America/Montevideo"
+timezone = "Etc/GMT+3"
 [dataset]
 name = "multi"
 path = "multi.sqlite"

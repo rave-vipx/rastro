@@ -13,7 +13,7 @@ from mcp.shared.memory import create_connected_server_and_client_session
 
 from rastro.adapters.mcp_server import build_server
 
-V03 = Path(__file__).resolve().parents[2] / "examples" / "uy-dance-agenda" / "sample" / "v03"
+V03 = Path(__file__).resolve().parents[2] / "examples" / "event-agenda" / "sample" / "v03"
 
 
 @pytest.fixture

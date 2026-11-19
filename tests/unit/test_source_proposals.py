@@ -54,7 +54,7 @@ def test_search_provider_protocol_and_proposals_from_search():
     )
     assert isinstance(provider, SearchProvider)
     model = FakeModel('{"sources": []}')
-    proposals = propose_sources("dance events in uruguay", search=provider, model=model)
+    proposals = propose_sources("dance events in valle-azul", search=provider, model=model)
     assert model.calls == 0
     assert proposals == (
         SourceProposal(

@@ -5,9 +5,9 @@
     "template": "page"
   },
   "files": {
-    "expected.json": "c4daa956b7cfcff3355b528d36b1541a38681a2282599e5b3c611b78ef09ae1d",
+    "expected.json": "c52aa8a1ef5fe61d77cbb2bc2242da7ef1eedfca0aac33f0d12237c2ac4aa826",
     "recipe.json": "aa663187535550d79d3fb524e23993f9073f3f29e8056c19eb02720cea0bb7c0",
-    "sample.html": "de9c4152d27cd93c1b65a219d1617851170d830b24bb8e89d5122dedf39efa5a",
+    "sample.html": "86d47a1bfcca83d48623207568bf994479afa040039d8cbc2ca18bedde0f62b6",
     "schema.json": "e0e9c4571a35dd513ef676ba94ff8e2d9828216e59e69b096b0c0c08fc19e575"
   },
   "format_version": 1,
@@ -21,7 +21,7 @@
       "es"
     ],
     "locale": "es-UY",
-    "timezone": "America/Montevideo",
-    "url": "https://sodre.gub.uy/espectaculos/"
+    "timezone": "Etc/GMT+3",
+    "url": "https://agenda.example/espectaculos/"
   }
 }

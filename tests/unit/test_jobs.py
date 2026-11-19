@@ -23,7 +23,7 @@ currency = ["priceCurrency"]
 [region]
 locale = "es-UY"
 languages = ["es-UY", "en"]
-timezone = "America/Montevideo"
+timezone = "Etc/GMT+3"
 currency = "UYU"
 egress = "proxy_uy"
 

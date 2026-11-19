@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-TZ = ZoneInfo("America/Montevideo")
+TZ = ZoneInfo("Etc/GMT+3")
 NOW = datetime(2026, 11, 7, 12, tzinfo=TZ)
 
 

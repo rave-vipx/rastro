@@ -23,9 +23,9 @@ def test_two_cases_produce_the_result_shape(tmp_path: Path) -> None:
     code = measure.main_cli(
         [
             "--case",
-            "sodre:field_class_rename",
+            "venue-cards:field_class_rename",
             "--case",
-            "tickantel:page_emptied",
+            "jsonld-events:page_emptied",
             "--output",
             str(output),
         ]
@@ -33,8 +33,8 @@ def test_two_cases_produce_the_result_shape(tmp_path: Path) -> None:
     assert code == 0
     data = json.loads(output.read_text(encoding="utf-8"))
     assert [(c["page"], c["mutation"]) for c in data["cases"]] == [
-        ("sodre", "field_class_rename"),
-        ("tickantel", "page_emptied"),
+        ("venue-cards", "field_class_rename"),
+        ("jsonld-events", "page_emptied"),
     ]
     for case in data["cases"]:
         assert case["outcome"] in measure.OUTCOMES

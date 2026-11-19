@@ -5,7 +5,7 @@
   "projects": [
     {
       "id": "agenda-fiestas-uy",
-      "name": "Agenda de fiestas · Uruguay",
+      "name": "Agenda de fiestas · Valle Azul",
       "health": "warnings",
       "last_run": "2026-11-21T22:00:00-03:00",
       "records": 74,
@@ -95,7 +95,7 @@
       "titulo": "Noche Faro",
       "inicio": "2026-11-21T23:00:00-03:00",
       "estado": "en_vivo",
-      "lugar": "Sala Faro, Montevideo",
+      "lugar": "Sala Faro, Puerto Claro",
       "precio": { "state": "published", "text": "$ 450" },
       "fuente": "Boletería Sur",
       "url": "https://boleteria-sur.example/evento/noche-faro/4101",
@@ -106,7 +106,7 @@
       "titulo": "Levante Night",
       "inicio": "2026-11-22T00:30:00-03:00",
       "estado": "proximo",
-      "lugar": "Depósito Norte, Montevideo",
+      "lugar": "Depósito Norte, Puerto Claro",
       "precio": { "state": "published", "text": "Sin costo / $ 160 / $ 199" },
       "lotes": [
         { "nombre": "Ingreso sin costo", "precio": "Sin costo", "disponible": true, "condiciones": "Hasta la 01:00" },
@@ -125,7 +125,7 @@
       "titulo": "Ribera al Atardecer",
       "inicio": "2026-11-22T19:00:00-03:00",
       "estado": "proximo",
-      "lugar": "Club Ribera, Punta del Este",
+      "lugar": "Club Ribera, Costa Clara",
       "precio": { "state": "free", "text": "Gratis" },
       "fuente": "Agenda Noche",
       "url": "https://agenda-noche.example/joda/ribera-al-atardecer",
@@ -136,7 +136,7 @@
       "titulo": "Milonga del Cerro",
       "inicio": "2026-11-23T21:00:00-03:00",
       "estado": "proximo",
-      "lugar": "Terraza Cerro, Montevideo",
+      "lugar": "Terraza Cerro, Puerto Claro",
       "precio": { "state": "not_published", "text": null },
       "fuente": "Bailes del Sur",
       "url": "https://bailes-del-sur.example/evento/milonga-del-cerro-885",
@@ -162,7 +162,7 @@
       "titulo": "Verano Adelantado",
       "inicio": "2026-11-29T23:00:00-03:00",
       "estado": "proximo",
-      "lugar": "Galpón Sur, Canelones",
+      "lugar": "Galpón Sur, Valle Verde",
       "precio": { "state": "source_failed", "text": null },
       "fuente": "Cartelera Equis",
       "url": "https://cartelera-x.example/evento/verano-adelantado",
@@ -187,7 +187,7 @@
     "checks": { "historical_replay": "passed", "completeness": "18/18", "value_checks": "passed" },
     "comparison": [
       { "field": "titulo", "before": "Ribera al Atardecer", "after": "Ribera al Atardecer", "changed": false },
-      { "field": "lugar", "before": null, "after": "Club Ribera, Punta del Este", "changed": true },
+      { "field": "lugar", "before": null, "after": "Club Ribera, Costa Clara", "changed": true },
       { "field": "inicio", "before": "2026-11-22T19:00", "after": "2026-11-22T19:00", "changed": false },
       { "field": "precio", "before": "Gratis", "after": "Gratis", "changed": false }
     ],

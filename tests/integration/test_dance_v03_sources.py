@@ -32,7 +32,7 @@ def _load(job: Path, capsys: pytest.CaptureFixture[str]) -> dict:
 def _records(job: Path) -> dict[str, list[dict]]:
     store = SQLiteDatasetStore(job.parent / "agenda.sqlite")
     by_venue: dict[str, list[dict]] = {}
-    for record in store.records("dance_agenda"):
+    for record in store.records("event_agenda"):
         by_venue.setdefault(record.fields["venue"], []).append(record.fields)
     return by_venue
 

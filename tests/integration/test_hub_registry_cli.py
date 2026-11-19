@@ -8,7 +8,7 @@ import pytest
 
 from rastro.cli import main
 
-SAMPLE = Path(__file__).parents[2] / "examples/uy-dance-agenda/sample"
+SAMPLE = Path(__file__).parents[2] / "examples/event-agenda/sample"
 EXAMPLE_REGISTRY = Path(__file__).parents[2] / "examples/registry"
 
 pytestmark = pytest.mark.usefixtures("offline_cli_loop")
@@ -36,7 +36,7 @@ def test_format_1_bundle_still_imports_unchanged(
     """HUB-002: export writes format 2 by default; a format-1 bundle still imports cleanly."""
     folder, job = author_job
     bundle = tmp_path / "bundle-v1"
-    sample = folder / "sodre-cartelera.html"
+    sample = folder / "teatro-central-cartelera.html"
     assert main(["recipe", "export", str(job), "--sample", str(sample), "--to", str(bundle)]) == 0
     capsys.readouterr()
     manifest_path = bundle / "bundle.json"
@@ -65,7 +65,7 @@ def test_cli_export_publish_search_install_round_trip(
 ) -> None:
     """HUB-002..HUB-006: full CLI flow from export to registry publish, search and install."""
     folder, job = author_job
-    sample = folder / "sodre-cartelera.html"
+    sample = folder / "teatro-central-cartelera.html"
     private_bundle = tmp_path / "private-bundle"
     assert (
         main(
@@ -78,7 +78,7 @@ def test_cli_export_publish_search_install_round_trip(
                 "--to",
                 str(private_bundle),
                 "--id",
-                "uy-sodre-agenda",
+                "teatro-central-agenda",
                 "--version",
                 "1.0.0",
                 "--author",
@@ -108,7 +108,7 @@ def test_cli_export_publish_search_install_round_trip(
                 "--to",
                 str(public_bundle),
                 "--id",
-                "uy-sodre-agenda",
+                "teatro-central-agenda",
                 "--version",
                 "1.0.0",
                 "--author",
@@ -124,15 +124,15 @@ def test_cli_export_publish_search_install_round_trip(
 
     assert main(["recipe", "publish", str(public_bundle), "--registry", str(registry)]) == 0
     pub_out = json.loads(capsys.readouterr().out)
-    assert pub_out["id"] == "uy-sodre-agenda"
+    assert pub_out["id"] == "teatro-central-agenda"
     assert pub_out["version"] == "1.0.0"
     assert pub_out["trust"]["replay_verified"] is True
     assert any("git" in cmd for cmd in pub_out["git_commands"])
 
-    assert main(["recipe", "search", "sodre", "--registry", str(registry)]) == 0
+    assert main(["recipe", "search", "teatro", "--registry", str(registry)]) == 0
     search_out = json.loads(capsys.readouterr().out)
     assert len(search_out["results"]) == 1
-    assert search_out["results"][0]["id"] == "uy-sodre-agenda"
+    assert search_out["results"][0]["id"] == "teatro-central-agenda"
     assert search_out["results"][0]["trust"]["replay_verified"] is True
 
     store = tmp_path / "installed.sqlite"
@@ -141,7 +141,7 @@ def test_cli_export_publish_search_install_round_trip(
             [
                 "recipe",
                 "install",
-                "uy-sodre-agenda@1.0.0",
+                "teatro-central-agenda@1.0.0",
                 "--registry",
                 str(registry),
                 "--store",
@@ -151,7 +151,7 @@ def test_cli_export_publish_search_install_round_trip(
         == 0
     )
     install_out = json.loads(capsys.readouterr().out)
-    assert install_out["id"] == "uy-sodre-agenda"
+    assert install_out["id"] == "teatro-central-agenda"
     assert install_out["package_version"] == "1.0.0"
     assert install_out["state"] == "candidate"
     assert install_out["trust"]["replay_verified"] is True
@@ -162,7 +162,7 @@ def test_example_registry_searches_and_installs_cleanly(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """HUB-003, HUB-006: examples/registry contains a valid synthetic package."""
-    assert main(["recipe", "search", "sodre", "--registry", str(EXAMPLE_REGISTRY)]) == 0
+    assert main(["recipe", "search", "teatro", "--registry", str(EXAMPLE_REGISTRY)]) == 0
     found = json.loads(capsys.readouterr().out)
     assert len(found["results"]) >= 1
     pkg_id = found["results"][0]["id"]

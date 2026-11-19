@@ -174,7 +174,7 @@ def test_dance_sample_covers_repeated_rescheduled_near_match_and_sale_date_cases
 
     # 4. Ticket sale date vs event date: fixture embeds validFrom = 2026-11-01T10:00:00-03:00,
     #    and extraction selects startDate (event date) for every record.
-    tickets_html = (EXAMPLE_DIR / "sample" / "tickets-evento.html").read_text(encoding="utf-8")
+    tickets_html = (EXAMPLE_DIR / "sample" / "tickets-event.html").read_text(encoding="utf-8")
     assert "2026-11-01T10:00:00-03:00" in tickets_html
     for rec in seller_v1:
         assert rec["starts_at"] != "2026-11-01T10:00:00-03:00"

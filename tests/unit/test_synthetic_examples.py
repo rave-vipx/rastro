@@ -23,3 +23,19 @@ def test_registry_agenda_uses_a_reserved_host() -> None:
     manifest = json.loads(path.read_text(encoding="utf-8"))
     assert manifest["id"] == "teatro-central-agenda"
     assert urlsplit(manifest["source"]["url"]).hostname == "agenda.example"
+
+
+def test_event_agenda_jobs_and_product_task_use_canonical_synthetic_names() -> None:
+    import tomllib
+
+    for rel in ("sample/job.toml", "sample/v2/job.toml", "sample/v03/job.toml"):
+        data = tomllib.loads((ROOT / "examples/event-agenda" / rel).read_text(encoding="utf-8"))
+        assert data["dataset"]["name"] == "event_agenda"
+        assert all(
+            urlsplit(source["url"]).hostname.endswith(".example") for source in data["sources"]
+        )
+    sources = json.loads(
+        (ROOT / "benchmarks/product_task/baseline/sources.json").read_text(encoding="utf-8")
+    )
+    assert [s["name"] for s in sources] == ["teatro-central", "tickets", "costa"]
+    assert all(urlsplit(s["url"]).hostname.endswith(".example") for s in sources)

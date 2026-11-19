@@ -28,7 +28,7 @@ CATALOGUE_HTML = """
   <body>
     <section class="events">
       <article class="card">
-        <h2 class="title">Montevideo Tango</h2>
+        <h2 class="title">Puerto Claro Tango</h2>
         <span class="price">450</span>
         <span class="price">450</span>
         <time class="starts_on" datetime="2026-11-20">20 Nov</time>
@@ -88,7 +88,7 @@ def test_propose_fields_discovers_repeated_structure_without_model():
     assert len(proposals) >= 3
     assert all(isinstance(p, FieldProposal) for p in proposals)
     by_name = {p.name: p for p in proposals}
-    assert by_name["title"].example == "Montevideo Tango"
+    assert by_name["title"].example == "Puerto Claro Tango"
     assert by_name["title"].selector.endswith("::text")
     assert by_name["starts_on"].type == "date"
     assert by_name["starts_on"].example == "2026-11-20"
@@ -123,7 +123,7 @@ def test_propose_fields_with_requested_field_names_and_model_fallback():
     via_model = propose_fields(CATALOGUE_HTML, fields=("custom_label",), model=fallback_model)
     assert fallback_model.calls == 1
     assert via_model[0].name == "custom_label"
-    assert via_model[0].example == "Montevideo Tango"
+    assert via_model[0].example == "Puerto Claro Tango"
 
 
 def test_propose_fields_raises_when_invalid_or_no_records_observed():
