@@ -70,4 +70,4 @@ Implementation references:
 - [uv's GitHub Actions integration](https://docs.astral.sh/uv/guides/integration/github/).
 - [RFC 6901: JSON Pointer](https://www.rfc-editor.org/rfc/rfc6901).
 
-These references guide adapter behavior and build tooling; the master specification remains the project's scope authority.
+These references guide adapter behavior and build tooling. Requirement labels such as `DIFF-001` or `SEC-001` used across these pages and the ADRs are stable internal labels for product requirements.

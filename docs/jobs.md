@@ -589,8 +589,8 @@ Supplied-file extraction does not follow links.
 
 ## Scroll
 
-A browser source can scroll to load more records (N9,
-[ADR 0033](decisions/0033-scroll-registry-url-and-spec-amendments.md)):
+A browser source can scroll to load more records
+([ADR 0033](decisions/0033-scroll-registry-url-and-spec-amendments.md)):
 
 ```toml
 [acquisition]
@@ -621,8 +621,8 @@ See [Scroll](acquisition.md#scroll) for the full behavior and
 [Browser contexts](acquisition.md#browser-contexts) for how a source's context is reused.
 ## Spider
 
-A job can follow links from the pages it names (N3;
-[ADR 0032](decisions/0032-vibe-coder-spider-and-studio.md)). The start URLs are the job's
+A job can follow links from the pages it names
+([ADR 0032](decisions/0032-vibe-coder-spider-and-studio.md)). The start URLs are the job's
 `[[sources]]`; nothing else starts a crawl, and a model or bundle cannot supply a bare
 domain.
 
@@ -697,7 +697,7 @@ If no page yields a record the result is `missing_data`, not an empty success.
 
 When a site's listing or API is closed (for example `robots_denied`) but its
 `robots.txt` advertises a `sitemap.xml` of public detail pages, seed the spider from the
-sitemap instead of parsing it yourself (N16):
+sitemap instead of parsing it yourself:
 
 ```toml
 [[sources]]

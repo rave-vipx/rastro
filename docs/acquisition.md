@@ -182,7 +182,7 @@ Regional recipe isolation is documented in [recipe memory](memory.md).
 ## Network egress
 
 Egress is the **network origin** of the HTTP connection. It is not browser
-geolocation: Rastro v0.1 has no browser adapter, so a `geolocation` value on `Source`
+geolocation: the browser adapter renders pages but does not emulate location, so a `geolocation` value on `Source`
 is rejected rather than silently ignored, and a proxy never implies a browser-reported
 location. Validators receive the egress profile name, never the proxy endpoint.
 
@@ -283,8 +283,9 @@ call may finish after cancellation. Parsing/validation runs in a worker thread a
 can also finish after cancellation. Acquisition deadlines do not forcibly stop
 trusted validators or native parsers. Use process isolation for hostile workloads.
 
-Browser geolocation, SOCKS or rotating proxies and discovered-link crawling are not
-implemented; JavaScript rendering and sessions are opt-in (see below). Optional [recipe memory](memory.md) and
+Browser geolocation and SOCKS or rotating proxies are not implemented. Following
+discovered links is the job of the bounded [spider](jobs.md#spider); JavaScript
+rendering and sessions are opt-in (see below). Optional [recipe memory](memory.md) and
 [recipe learning](intelligence.md) integrate with the async SDK. See the
 [transport ADR](decisions/0002-policy-aware-acquisition.md) for the documented use of
 curl_cffi, Scrapling's HTTP engine, to expose public DNS-pinning controls.
@@ -351,7 +352,7 @@ disabled, and separate `Set-Cookie` response headers are preserved.
 ## Spider
 
 A job's `[spider]` table (`mode = "spider"`, see [Spider in jobs](jobs.md#spider)) follows
-links from the job's own sources. It adds no acquisition path and no grant (N3, SEC-001,
+links from the job's own sources. It adds no acquisition path and no grant (SEC-001,
 SEC-003, SEC-008):
 
 - **One entry point.** Every page, including pagination pages, is fetched by one
@@ -457,8 +458,8 @@ boundaries and limitations. Live browser tests require `RASTRO_LIVE_BROWSER=1`.
 
 ### Browser contexts
 
-Pages of one source share one browser context for one run (N2,
-[ADR 0034](decisions/0034-opt-in-promote-and-stealth.md)). The source's first rendered page
+Pages of one source share one browser context for one run
+([ADR 0034](decisions/0034-opt-in-promote-and-stealth.md)). The source's first rendered page
 opens the context; its pagination pages and scroll steps reuse it, then it is closed. The
 next source starts a fresh context, so two sources never share cookies or storage, and a
 page on a different host inside one run renders in its own fresh context, never in the first
@@ -479,8 +480,8 @@ outer one, so a crawl can wrap its whole start source in one.
 
 ### Scroll
 
-A job can scroll a rendered page to load more records (N9,
-[ADR 0033](decisions/0033-scroll-registry-url-and-spec-amendments.md)); see the
+A job can scroll a rendered page to load more records
+([ADR 0033](decisions/0033-scroll-registry-url-and-spec-amendments.md)); see the
 [`[scroll]` reference](jobs.md#scroll). Each step scrolls the source's open context once,
 waits at most `settle_ms`, and extracts again with the recipe. The first extraction must
 find records; a step that finds no new record (by record equality) ends the scroll normally.

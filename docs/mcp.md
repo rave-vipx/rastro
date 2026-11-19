@@ -62,7 +62,7 @@ recipe: see [Agent in the loop](#agent-in-the-loop).
 | `job_preview(path)` | `rastro job preview --output json` | Runs the job, writes nothing (recipe memory is read-only) | writes nothing; not `readOnlyHint`, because the job may fetch URLs or call a model |
 | `job_extract(path)` | `rastro job run` | Runs the job and returns its records; writes no dataset | writes recipe memory only |
 | `job_load(path, drift?)` | `rastro job load [--drift]` | Runs the job and loads approved fields into its dataset | destructive |
-| `job_run(path)` | `rastro job load` | Deprecated alias of `job_load`, removed in 0.7.0 | destructive |
+| `job_run(path)` | `rastro job load` | Deprecated alias of `job_load` | destructive |
 | `dataset_records(path, dataset?, sort_field?, upcoming?, timezone?, limit?)` | `rastro dataset export` | A bounded page of records plus stale sources | read-only |
 | `drift_status(path)` | none | Freshness of each source in the job's dataset, and the stale ones | read-only |
 | `recipe_list(path)` | none | Stored recipe versions and states per job source | read-only |

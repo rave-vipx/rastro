@@ -493,8 +493,7 @@ structured API representations remains a documented INT-002 gap.
 | `max_discovery_candidates` | 8 | 32 |
 
 Calls are bounded by `min(max_calls, 1 + max_repair_attempts)`. “Repair” here means
-correcting a rejected cold-context proposal; the v0.2 stored-recipe lifecycle is not
-implemented. Provider failures and response-budget failures stop immediately without
+correcting a rejected cold-context proposal; the [recipe lifecycle](recipe-lifecycle.md) is separate. Provider failures and response-budget failures stop immediately without
 transport retries. A retry includes only a safe failure category, never the previous
 model output or validator error text.
 
@@ -545,11 +544,11 @@ destinations or bypass source policy. Recipes/evidence may include literal selec
 values from source content; keep the database and results private when needed.
 
 Default tests use synthetic pages and fake model/HTTP transports with sockets
-disabled. They cover attacks, limits, cancellation, activation, restart and M3
-payload compatibility. Core wheel installation is checked without HTTPX or Ollama. The OpenAI-compatible
+disabled. They cover attacks, limits, cancellation, activation, restart and
+recipe-payload compatibility. Core wheel installation is checked without HTTPX or Ollama. The OpenAI-compatible
 adapter has its own offline contract and mock-server learning tests.
 These tests do not claim real-model quality. The separate
-The maintainer's live Ollama evidence (kept outside the repository) records one local `qwen3:4b` run
+The recorded live Ollama run (`benchmarks/results/live-ollama.json`) covers one local `qwen3:4b` run
 with its opt-in harness, model digest and limitations.
 
 See [ADR 0004](decisions/0004-bounded-recipe-learning.md) for adapter and trust decisions.

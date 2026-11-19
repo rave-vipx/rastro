@@ -4,8 +4,7 @@ Releases are published to PyPI as [`rastro-engine`](https://pypi.org/project/ras
 the tag-triggered workflow `.github/workflows/release.yml`. It uses PyPI Trusted Publishing:
 there are no API tokens or repository secrets. Versions before 0.6.0 were never published.
 
-The maintainer's release evidence register (kept outside the repository) records completed checks; the
-[comparison](comparison.md) publishes current results, including where Rastro is equal or worse.
+The [comparison](comparison.md) publishes measured results, including where Rastro is equal or worse.
 The [stability policy](stability.md) defines what a version number promises.
 
 ## What the workflow does
@@ -26,7 +25,7 @@ On a pushed tag `v*`:
 All third-party actions are pinned by full commit SHA. If any step fails, nothing later runs; a
 failure in **build** publishes nothing.
 
-## One-time setup (repository owner)
+## One-time setup (repository maintainers)
 
 1. On PyPI, open *Your account → Publishing → Add a new pending publisher* and enter:
    - PyPI project name: `rastro-engine`
@@ -52,12 +51,12 @@ The pending publisher turns into a normal Trusted Publisher with the first succe
 
    ```bash
    git fetch origin
-   git tag v0.6.0 <main sha>
-   git push origin v0.6.0
+   git tag vX.Y.Z <main sha>
+   git push origin vX.Y.Z
    ```
 
 4. Approve the `publish` job in the Actions tab when the build job has passed.
-5. Verify the release: `pip install rastro-engine==0.6.0` in a fresh environment, then
+5. Verify the release: `pip install rastro-engine==X.Y.Z` in a fresh environment, then
    `rastro --version` and `rastro demo`. Check the project page shows the attestations.
 
 Published tags and artifacts are immutable. Never move or re-push a tag; fix a bad release with a

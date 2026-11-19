@@ -156,4 +156,4 @@ Dataset writes and drift writes use separate transactions. If drift storage
 fails after loading records, the command fails explicitly but already validated
 dataset updates remain committed. A retry is safe; monitoring never deletes
 records. Per-snapshot limits are enforced; drift run history grows with runs and
-has no automatic retention policy in this slice.
+currently has no automatic retention policy.

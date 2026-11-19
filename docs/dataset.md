@@ -76,7 +76,7 @@ content or credentials. `source_status()` returns a tuple ordered by URL with
 source, an optional content-free `detail` (`robots_denied`, `http_403`, `http_429`,
 `timeout` or the issue code). Staleness reflects
 the last attempt, not elapsed wall-clock time. Missing records are retained;
-there is no deletion or retention operation in v0.2.
+there is no deletion or retention operation.
 
 `records()` returns a tuple of `StoredRecord` objects. Each keeps `key`, `fields`,
 `provenance`, `source_url`, `observed_at`, `first_observed_at`, `last_observed_at`,
@@ -204,8 +204,8 @@ Observed stdout (2026-11-07; observation times vary on later runs):
 2026-11-26T20:00:00-03:00|Gala Anual 26: Tango y Milonga|Auditorio Nelly Goitiño|2026-11-07T20:35:08.627296Z
 2026-11-28T21:00:00-03:00|Suite del Río de la Plata|Auditorio Nacional Adela Reta|2026-11-07T20:35:08.627296Z
 2026-11-28T21:00:00-03:00|Suite del Río de la Plata|Auditorio Nacional Adela Reta|2026-11-07T20:35:08.627915Z
-{"status":"partial_success","stale_sources":[{"source_url":"https://tickantel.com.uy/ng/espectaculo/9900102/gala-anual-2026-area-tango-y-milonga","last_success":"2026-11-07T20:35:08.627915Z","affected_records":3}]}
-{"data_trust":"untrusted_source_data","stale":[{"source_url":"https://tickantel.com.uy/ng/espectaculo/9900102/gala-anual-2026-area-tango-y-milonga","last_success":"2026-11-07T20:35:08.627915Z","affected_records":3}]}
+{"status":"partial_success","stale_sources":[{"source_url":"https://tickets.example/event/9900102/annual-gala-tango-and-milonga","last_success":"2026-11-07T20:35:08.627915Z","affected_records":3}]}
+{"data_trust":"untrusted_source_data","stale":[{"source_url":"https://tickets.example/event/9900102/annual-gala-tango-and-milonga","last_success":"2026-11-07T20:35:08.627915Z","affected_records":3}]}
        6
 
 ```

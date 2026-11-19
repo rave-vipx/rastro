@@ -1,8 +1,10 @@
 # Stability policy
 
-From 0.6.0, Rastro follows [Semantic Versioning](https://semver.org/). While the major version
-is 0, a minor release (0.7.0) may change the public surface below, but only through the
-deprecation policy; a patch release (0.6.1) only fixes bugs and never breaks it.
+Rastro follows [Semantic Versioning](https://semver.org/). Releases before 0.6.0 were never
+published. From 1.0.0 the public surface below is stable: a minor release (1.1.0) adds
+features compatibly and may remove public names only after the deprecation policy has run; a
+patch release (1.0.1) only fixes bugs and never breaks it. Breaking changes need a new major
+version, except for security fixes (see the deprecation policy).
 
 ## What is public
 

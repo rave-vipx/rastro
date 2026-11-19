@@ -2,11 +2,12 @@
 
 A recipe is data, so it can travel in a plain Git repository. A bundle lets one
 person publish a working recipe and another application use it without the author's
-help (HUB-001..HUB-006; master spec section 09). Phase 1 ships local export and
-import (`rastro recipe export`/`import`); Phase 2 adds package metadata, reproducible
-trust indicators, and a Git-directory community registry (`publish`, `search`,
-`install`). Rastro reads and writes local directories; it never runs `git` and never
-makes network requests for a registry.
+help (HUB-001..HUB-006). Export and import (`rastro recipe export`/`import`) work
+on local directories, and a registry adds package metadata, reproducible trust
+indicators and `publish`, `search` and `install`. A registry is a local directory
+or any HTTPS URL that serves the same layout. Rastro never runs `git`; it makes
+network requests for a registry only when you pass `--registry-url`, under the same
+network safeguards as a scrape.
 
 ## Bundle layout (format 2)
 
@@ -28,7 +29,7 @@ Format 1 bundles (without package metadata) remain supported on import. Unknown
 
 ```console
 $ rastro recipe export job.toml --source 1 --sample page.html --to ./my-recipe \
-    --id uy-sodre-agenda --version 1.0.0 --author "Rastro Contributors" \
+    --id teatro-central-agenda --version 1.0.0 --author "Rastro Contributors" \
     --license Apache-2.0 --public
 ```
 
@@ -96,9 +97,9 @@ publish created (and nothing else), leaves `index.json` as it was, and exits wit
 ### Search and install
 
 ```console
-$ rastro recipe search sodre --registry ./examples/registry
-$ rastro recipe install uy-sodre-agenda --registry ./examples/registry --store recipes.sqlite
-$ rastro recipe install uy-sodre-agenda@1.0.0 --registry ./examples/registry --store recipes.sqlite
+$ rastro recipe search teatro --registry ./examples/registry
+$ rastro recipe install teatro-central-agenda --registry ./examples/registry --store recipes.sqlite
+$ rastro recipe install teatro-central-agenda@1.0.0 --registry ./examples/registry --store recipes.sqlite
 ```
 
 `search` matches the query against `id` and `source_patterns`. `install` selects the
@@ -120,8 +121,8 @@ account system and no Rastro-operated server. Install the `http` extra first
 (`pip install 'rastro-engine[http]'`).
 
 ```console
-$ rastro recipe search sodre --registry-url https://registry.example.org/catalog/
-$ rastro recipe install uy-sodre-agenda --registry-url https://registry.example.org/catalog/ --store recipes.sqlite
+$ rastro recipe search teatro --registry-url https://registry.example.org/catalog/
+$ rastro recipe install teatro-central-agenda --registry-url https://registry.example.org/catalog/ --store recipes.sqlite
 ```
 
 `--registry-url` replaces `--registry`; give one of them, not both. The SDK equivalents are
@@ -161,7 +162,7 @@ A consumer job needs `recipe_memory`, a `[dataset]` and no recipe of its own for
 source. Import or install the bundle into the job's store, promote the candidate, then load:
 
 ```console
-$ rastro recipe install uy-sodre-agenda --registry ./examples/registry --store recipes.sqlite
+$ rastro recipe install teatro-central-agenda --registry ./examples/registry --store recipes.sqlite
 $ rastro recipe promote job.toml --source 1 --version 1 --reason "Reviewed shared recipe"
 $ rastro job load job.toml
 ```
@@ -195,7 +196,7 @@ proposals. Recipes you write in your own job file are not checked.
 Metadata files are capped at 1 MiB and the sample at the job's input limit. The
 JSON Schema in `schema.json` is not used for verification; the field definitions are.
 
-## Synthetic examples (N6)
+## Synthetic examples
 
 The [example registry](https://github.com/rave-vipx/rastro/tree/main/examples/registry)
 contains `synthetic-listing`, `synthetic-news` and `synthetic-product`, plus the
@@ -213,28 +214,19 @@ these example jobs explicitly choose a file source so the tutorial works offline
 Keep source URL, regional context and field definitions aligned with the bundle
 when adopting it. Installs cannot modify your job's auto-promote policy or grant stealth.
 
-## Host a static registry (N10)
+## Host a static registry
 
 Serve the unchanged registry directory over HTTPS: `index.json` and
 `recipes/<id>/<version>/` with the exact exported bytes. No account system or
 Rastro-operated service is needed. Publishing remains a local write; commit/push
-or upload the directory yourself after reviewing it.
+or upload the directory yourself after reviewing it, then point
+`--registry-url` at it (see [Install from a registry URL](#install-from-a-registry-url)).
+Studio's registry section accepts the same `https://` address; without the `http`
+extra it answers `503 registry_url_unavailable_install_http_extra` and local registry
+directories keep working.
 
-**Pending in this branch:** the registry fetcher and CLI integration must land
-before these commands work; this checkout's help exposes only `--registry`. Until
-then Studio's registry section answers an `https://` address with
-`503 registry_url_unavailable_install_http_extra`; local registry directories work:
-
-```sh
-# Planned N10 flags; replace this reserved example host with your static host.
-rastro recipe search synthetic --registry-url https://registry.example/catalogue/
-rastro recipe install synthetic-listing@1.0.0 \
-  --registry-url https://registry.example/catalogue/ --store recipes.sqlite
-```
-
-The URL path must retain the same local-layout verification gates: HTTPS only,
-public-address/SSRF checks and redirect re-checks, byte limits, digests, selector
+The URL path keeps the same verification gates as a local registry: HTTPS only,
+public-address checks and redirect re-checks, byte limits, digests, selector
 policy and offline replay before candidate storage. A URL, bundle or model cannot
-grant private-network access or enable stealth. Until integration is verified,
-clone the registry and use `--registry` locally. There is no executable recipe
-format, unbounded crawl or multi-tenant hosted registry in this cut.
+grant private-network access or enable stealth. There is no executable recipe
+format and no multi-tenant hosted registry.

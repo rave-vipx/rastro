@@ -81,8 +81,8 @@ Four steps, one decision each:
    read is folded under a technical detail. If a field comes out wrong, **Correct a field** goes
    back to paste another example.
 4. **Name and save.** Give the project a name; the job, dataset and recipe-memory file names are
-   filled from it (`agenda-de-fiestas.toml`, `agenda-de-fiestas.sqlite`,
-   `agenda-de-fiestas-recipes.sqlite`) and can be changed under **File names (advanced)**. Studio
+   filled from it (`book-prices.toml`, `book-prices.sqlite`,
+   `book-prices-recipes.sqlite`) and can be changed under **File names (advanced)**. Studio
    never overwrites a file. **Save and open** opens the new project on Results.
 
 ### Details that apply to every project
@@ -161,7 +161,7 @@ and **New scraper**.
 - **Accessibility:** controls are at least 36 px (44 px on narrow screens), focus is a 3 px accent
   outline, and every text/background token pair meets WCAG AA (a test computes the ratios).
 
-### Results (N5)
+### Results
 
 Opening a project loads its stored records into a table, 25, 50 or 100 per page ("Records 1–25 of
 74"). Search matches any value; filters narrow by source (when there are several), status (upcoming,
@@ -184,7 +184,7 @@ is shown as data and never executed. Records written with `rastro.load_records` 
 snapshot* with the import time and the original observation time, so they are not mistaken for a
 recent web check. **Close** or Esc returns focus to the record.
 
-### Sources and Alerts (N5)
+### Sources and Alerts
 
 **Sources** lists every site of the project with its status in words (*Up to date*, *Up to date,
 with a warning*, *Cap reached*, *Access denied by the site (robots.txt)*, *The site returned
@@ -201,7 +201,7 @@ its kind and issue code in the chosen language, and one action. Both views read 
 endpoints (`/api/sources`, `/api/alerts`); when the endpoint is missing or fails, the view says so
 instead of showing an empty list.
 
-### Fix a site (N7, N12)
+### Fix a site
 
 Pick a site and press **Find a fix** (this runs `rastro recipe repair` for that source; the job needs
 `recipe_memory`). Each proposal shows its checks in one row (the decision in words, records read
@@ -219,36 +219,6 @@ how it is read now, how the proposal reads it, and whether that changed. Then de
 **Apply fixes automatically** is a separate switch in the same view, off by default; it writes only
 `[repair] auto_promote` for this job. **Correct a field by hand** (folded below) keeps the
 preview-and-save-a-selector flow.
-
-### Design adaptations
-
-The redesign follows the maintainer's design implementation notes. Where the design and the
-product differ, the interface adapts:
-
-| Design | Studio | Why |
-| --- | --- | --- |
-| Separate "Jobs" page with every card | Cards moved into Results, Sources, Fix and Settings; element ids unchanged | Stage 1 is layout only; behaviour stays the same |
-| Project title such as "Agenda de fiestas · Uruguay" | The dataset name made readable (`agenda_fiestas` shows as "Agenda fiestas"; the raw value is `dataset`), or the job file name without a dataset | A job has no display name |
-| "Imported snapshot" with import time and original observation | One `imported_at`: the observation time the adapter gave `rastro.load_records` | The engine does not record a separate import time |
-| Drift and quarantine alerts in the demo | The demo folder has no open drift or waiting candidate | Making them needs a real drifted run; the endpoint reports both when they exist |
-| "Buscar por palabra clave" start option (Main, Nuevo step 1) | Removed | No product need covers it and it would need a search provider |
-| Step 1 checks the page and offers a browser | Step 1 takes the URL; the page is read on **Preview records**, with a pointer to the browser docs | Studio has no fetch-only route, and the render mode is a job setting |
-| Block-style field builder with a "Código" toggle (Nuevo step 2) | A table of field name, example and record key | Same job fields, no new engine concept; the job file stays viewable outside Studio |
-| Project name saved as a title | The name becomes the file names (`agenda-de-fiestas.toml`); the card shows the dataset name or file stem | Jobs have no display-name field |
-| "Hub on GitHub" and "Open pull request" (Recetas) | **Registry (URL)**: search and install from a local registry folder or an HTTPS URL; publish writes into a local folder and never runs Git or pushes | N10: no accounts and no Rastro-operated server; a GitHub repository can still serve as the HTTPS URL |
-| Recipe "collections" | Not offered | Not a defined concept |
-| Illustrative commands in Ajustes (`rastro export`, `rastro serve`, `rastro recipes …`) | Only real commands: the ones `/api/connect` generates for the project, and the real `rastro studio --allow-egress`, `--allow-env NAME`, `--allow-stealth` flags | A test checks every shown flag exists in the CLI |
-| Stealth as a mode choice in Ajustes | A switch for this Studio session only, off by default; the render mode stays a job setting | N12: a recipe or bundle can never set stealth |
-| "Permisos de red por host" editor | An explanation of `allowed_hosts` and the operator flags | Network grants belong to the operator, not to a page |
-| Mobile bottom sheet with its own layout (Movil) | The same views; at 40rem and below tables become labelled cards and the provenance panel a bottom sheet | One page, CSS only |
-| "Conectar una exportación" as an import flow | An explanation with the real `rastro.load_records` call and the SQLite option | Studio has no import route; the adapter API is the supported path |
-| "Avisarme por notificación del sistema" in Alerts | Not offered; the Technical detail keeps the `--on-failure` command for the README hook | Studio has no notification permission and adds no background process |
-| "Agregar sitio" / "Quitar del proyecto" in Sources | Not offered | Sources are job data; Studio edits only bounded settings of a job |
-| "Ver apartados" for quarantined records | **See details** opens Sources | Records are rejected, not stored apart; quarantine applies to fixes |
-| Before/after of field *values* in Fix | Before/after of how each field is *read* (locator), with Changed/Same and the checks row | The repair report carries selectors and check results, not sample values; the checks (records read, past samples, gates) say whether values still validate |
-| "Ayer se rechazó otra propuesta" note | Not shown | The repair report has no history of earlier refusals; Alerts lists refused fixes |
-| Image placeholder with **Load** | **Open image** opens the address in a new tab, without a referrer | Studio's Content-Security-Policy blocks every third-party image inside the page; it stays that way |
-| Search and filters over the whole dataset | Over the first 2,000 records, with a note when a dataset is larger | `/api/records` is paged; export covers everything |
 
 ### API for the views
 
@@ -285,12 +255,10 @@ A demo folder with three jobs in these states is built by
 `python -m tests.fixtures.studio_demo.build DIR` from a source checkout; then run
 `rastro studio --root DIR`.
 
-## Collection, alerts and sharing (N4, N5, N7, N10, N12)
+## Collection, alerts and sharing
 
-These controls sit in the Jobs view and call the existing services. URL-first job
-creation (N1) and the acquisition schema for spider and scroll (N2, N3, N9) are
-integrated. Jobs with `[spider]` and `[scroll]` can be edited through the bounded
-controls below. A visible control is not a grant.
+These controls sit in the Jobs view and call the existing services. Jobs with
+`[spider]` and `[scroll]` can be edited through the bounded controls below. A visible control is not a grant.
 
 - **Next page and repair settings.** Pick the job recipe or a source's recipe, type
   the next-link selector (for example `a.next::attr(href)`) and a page cap from 1 to 50,
@@ -372,8 +340,7 @@ several `--example` records when one is not enough. Repair needs `recipe_memory`
 running operation and its outcome, not a page count or an estimate of completion time. It is single-user and has no authentication beyond the
 per-run token.
 
-
-### Bounded links and scrolling (N3, N9)
+### Bounded links and scrolling
 
 After creating a scraper, open its job and use **Follow links** to enable a
 bounded spider. Set link depth (1–4), page cap (1–100), a link selector,

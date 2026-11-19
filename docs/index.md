@@ -1,10 +1,10 @@
 # Web data, with evidence
 
-![Rastro — the open source web data engine](assets/rastro-banner.svg)
+![Rastro: AI writes the scraper once, recipes keep it running](assets/rastro-banner.svg)
 
-Rastro converts supplied HTML or permitted web sources into validated Python records and explains where each observed field came from. Its long-term goal is reliable, continuously updated web datasets.
+**Rastro: AI writes the scraper once, recipes keep it running.** Rastro converts supplied HTML or permitted web sources into validated Python records and explains where each observed field came from. Its goal is reliable, continuously updated web datasets.
 
-**Status: Beta — 0.6.0.** Typed, self-healing web scraping: declare a Pydantic model, get validated records with provenance; when the site changes Rastro detects it and proposes or applies a verified repair. A local Studio, an MCP server and shareable recipe bundles are included; see the [README](https://github.com/rave-vipx/rastro#readme) for results and limits.
+**Status: 1.0 in development.** Typed, self-healing web scraping: declare a Pydantic model, get validated records with provenance; when the site changes Rastro detects it and proposes or applies a verified repair. A local Studio, an MCP server and shareable recipe bundles are included; see the [README](https://github.com/rave-vipx/rastro#readme) for results and limits.
 
 ## Start here
 

@@ -16,7 +16,7 @@ Declared as `[[consistency]]` entries (the example is `examples/uy-dance-agenda/
 | `distinct_ratio` | distinct values / records is below `min_ratio` | `min_ratio` (0.5), `min_records` (3) |
 | `historical_shift` | the median of `field` moved more than `max_shift` versus dataset history | `max_shift`, `unit` = `days` or `ratio` (days), `min_history` (3) |
 
-Unknown kinds and keys are rejected. Rules name fields and thresholds only; dance-specific
+Unknown kinds and keys are rejected. Rules name fields and thresholds only; site-specific
 choices live in the example, never in the engine.
 
 ## Report
