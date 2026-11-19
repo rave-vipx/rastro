@@ -58,7 +58,7 @@ nav:
   - Clean code and module size: development/clean-code.md
   - Engineering decisions:
       - Prompt-injection defense: decisions/0035-prompt-injection-defense.md
-      - Scrapling access and unbounded crawl: decisions/0036-scrapling-access-and-unbounded-crawl.md
+      - Capability first: decisions/0036-scrapling-access-and-unbounded-crawl.md
       - Operator network permissions: decisions/0031-operator-network-permissions.md
       - HTTP sessions and conditional loads: decisions/0030-http-sessions-and-conditional-loads.md
       - Browser rendering and stealth opt-in: decisions/0024-browser-rendering-and-stealth-opt-in.md
