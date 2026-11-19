@@ -180,7 +180,7 @@ async def test_pagination_repeat_uses_canonical_identity():
 @pytest.mark.asyncio
 async def test_redirected_page_uses_final_canonical_identity():
     result, fetched = await paginate(
-        {BASE: '<h1>Two</h1><a href="?utm_source=x&amp;page=2">Same</a>'},
+        {BASE: '<h1>Two</h1><a href="?utm_source=x&amp;token=hidden&amp;page=2">Same</a>'},
         final_url=BASE + "?page=2&token=hidden",
     )
     assert fetched == [BASE]
@@ -219,3 +219,31 @@ async def test_existing_attribute_link_expressions_remain_supported():
     )
     assert fetched == [BASE, BASE + "one"]
     assert result.items[0].name == "One"
+
+
+@pytest.mark.asyncio
+async def test_secret_like_keys_still_distinguish_pages_in_a_crawl():
+    """Identity keeps secret-like keys in memory; only stored provenance drops them."""
+    result, fetched = await crawl(
+        {
+            "": '<a href="?state=CA">CA</a><a href="?state=NY">NY</a>',
+            "?state=CA": "<h1>CA</h1>",
+            "?state=NY": "<h1>NY</h1>",
+        }
+    )
+    assert fetched == [BASE, BASE + "?state=CA", BASE + "?state=NY"]
+    assert [item.name for item in result.items] == ["CA", "NY"]
+    assert "state=" not in result.model_dump_json()
+
+
+@pytest.mark.asyncio
+async def test_secret_like_keys_still_distinguish_pages_in_pagination():
+    result, fetched = await paginate(
+        {
+            BASE + "?state=CA": '<h1>CA</h1><a href="?state=NY">Next</a>',
+            BASE + "?state=NY": "<h1>NY</h1>",
+        }
+    )
+    assert len(fetched) == 2
+    assert [item.name for item in result.items] == ["CA", "NY"]
+    assert result.pagination_stop == "no_next"

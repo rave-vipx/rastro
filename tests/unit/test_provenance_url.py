@@ -110,3 +110,12 @@ def test_canonical_never_returns_a_bare_query_for_an_unparseable_url():
     from rastro.domain.provenance_url import canonical_page_url
 
     assert canonical_page_url("https://[broken/?page=2") == ""
+
+
+def test_page_identity_drops_only_tracking_keys():
+    from rastro.domain.provenance_url import page_identity
+
+    assert (
+        page_identity("https://u:p@h.example/x?utm_source=m&state=CA&token=t&gclid=g#f")
+        == "https://h.example/x?state=CA&token=t"
+    )

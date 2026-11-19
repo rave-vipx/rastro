@@ -30,7 +30,7 @@ from rastro.domain.models import (
     ResourceLimitError,
     Source,
 )
-from rastro.domain.provenance_url import canonical_page_url
+from rastro.domain.provenance_url import page_identity
 from rastro.domain.selector_policy import check_untrusted_recipe
 from rastro.ports.acquisition import AcquisitionPort
 from rastro.ports.parser import DocumentParser
@@ -113,7 +113,7 @@ async def _traverse[T: BaseModel](
     current = source
     stop: str | None = "page_failure"
     for _ in range(recipe.pagination.max_pages):
-        visited.add(canonical_page_url(current.url))
+        visited.add(page_identity(current.url))
         started, started_at = perf_counter(), datetime.now(UTC)
         remaining = scope.remaining
         fetched = await acquisition.acquire(
@@ -147,7 +147,7 @@ async def _traverse[T: BaseModel](
             stop = "record_limit"
         if stop:
             break
-        visited.add(canonical_page_url(fetched.url))
+        visited.add(page_identity(fetched.url))
         try:
             cursor = next_url(fetched.body or "", recipe, parser, limits)
             if cursor is None:
@@ -157,7 +157,7 @@ async def _traverse[T: BaseModel](
             following = Source.model_validate({**source.model_dump(), "url": target})
             target = following.url
             stop = pagination_boundary(target, urlsplit(source.url).hostname, scope.secure)
-            if not stop and canonical_page_url(target) in visited:
+            if not stop and page_identity(target) in visited:
                 stop = "repeat"
             if not stop and len(pages) >= recipe.pagination.max_pages:
                 stop = "max_pages"

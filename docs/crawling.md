@@ -46,20 +46,23 @@ request budgets. Link discovery grants no network access by itself.
 
 ## Page identity and evidence
 
-Crawling and recipe pagination use a canonical URL to recognize repeated pages.
-It retains scheme, host, port and path, sorts query parameters, and removes:
+Rastro normalizes page URLs in two forms. Both keep scheme, host, port and path,
+sort query parameters, and remove URL credentials, path session parameters,
+fragments and tracking keys such as `utm_*`, `fbclid`, `gclid` and `mc_eid`.
 
-- URL credentials, path session parameters and fragments;
-- tracking keys such as `utm_*`, `fbclid`, `gclid` and `mc_eid`;
-- secret-like query keys, including `token`, `key`, `sig`, `signature`, `session`,
-  `sid`, `auth`, `password`, `code` and `state`. Keys are split into words on
-  separators and camelCase, so `access_token`, `accessToken`, `X-Amz-Signature` and
-  `jsessionid` are removed while `keyword` or `author` are kept.
+- The **page identity** recognizes repeated pages in crawling and recipe pagination.
+  It keeps every other query key, so `?state=CA` and `?state=NY` are two pages. It
+  lives in memory only and is never stored, logged or reported.
+- The **stored page URL** (field evidence) also removes secret-like query keys,
+  including `token`, `key`, `sig`, `signature`, `session`, `sid`, `auth`, `password`,
+  `code` and `state`. Keys are split into words on separators and camelCase, so
+  `access_token`, `accessToken`, `X-Amz-Signature` and `jsessionid` are removed while
+  `keyword` or `author` are kept.
 
 For example, `https://catalogue.example/products?utm_source=mail&page=2&token=hidden`
-has the identity `https://catalogue.example/products?page=2`. Page 3 remains a separate
+is stored as `https://catalogue.example/products?page=2`. Page 3 remains a separate
 page. Duplicate query keys and blank values are retained when their keys are allowed.
-Requests still use the original URL: canonicalization changes identity and evidence,
+Requests still use the original URL: normalization changes identity and evidence,
 not the address sent to the acquisition adapter.
 
 Field evidence uses `page_url` for the canonical acquired page when it differs from
@@ -67,7 +70,8 @@ its query-free source URL. Redirected pages use the final acquired URL. `source_
 continues to identify the starting source when pages are combined. Logs, hooks and
 crawl reports carry no URL queries.
 
-The key filter is conservative: secret-like key names may be removed even when their
-values are ordinary data. It cannot recognize a secret placed under an unrelated key
+The stored-URL filter is conservative: secret-like key names may be removed even when
+their values are ordinary data, so two pages can share one stored page URL while
+both are still fetched. It cannot recognize a secret placed under an unrelated key
 such as `page`; treat retained page parameters and paths as source data subject to
 your storage and retention policy.

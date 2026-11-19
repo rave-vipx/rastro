@@ -39,7 +39,7 @@ from rastro.domain.models import (
     ResourceLimitError,
     Source,
 )
-from rastro.domain.provenance_url import canonical_page_url
+from rastro.domain.provenance_url import page_identity
 from rastro.domain.spider import SpiderPolicy
 from rastro.domain.spider_report import SpiderOutcome, SpiderPage, SpiderReport
 from rastro.ports.parser import DocumentParser
@@ -117,7 +117,7 @@ class _Crawl[T: BaseModel]:
     async def run(
         self, start: Link, workers: int, fetch_seed: FetchSeed[T] | None
     ) -> ExtractionResult[T]:
-        self.seen.add(canonical_page_url(start.url))
+        self.seen.add(page_identity(start.url))
         frontier, first = [(1, start)], 0
         if fetch_seed is not None:
             frontier, first = await self._seed(start, fetch_seed), 1
@@ -236,7 +236,7 @@ class _Crawl[T: BaseModel]:
         """Queue each new link found for ``depth``, or note why it is not fetched."""
         for href in hrefs:
             link = classify_link(self.source.url, href)
-            if not link.refusal and canonical_page_url(link.url) in self.seen:
+            if not link.refusal and page_identity(link.url) in self.seen:
                 continue
             self.ordinal += 1
             refusal: SpiderOutcome | None = link.refusal or link_refusal(
@@ -250,7 +250,7 @@ class _Crawl[T: BaseModel]:
             else:
                 frontier.append((self.ordinal, link))
             if not link.refusal:
-                self.seen.add(canonical_page_url(link.url))
+                self.seen.add(page_identity(link.url))
 
     def _note(self, ordinal: int, depth: int, link: Link, outcome: SpiderOutcome) -> None:
         if outcome in ("budget", "page_limit"):
