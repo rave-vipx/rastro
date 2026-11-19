@@ -8,6 +8,10 @@ All notable user-facing changes are recorded here. The project follows [Semantic
 
 - Sitemap seed ordering and link pattern filtering (N16, N3, SEC-001, AGENT-001): `[spider]` adds `seed_order = "document" | "reverse" | "lastmod"` (default `"document"`; `"lastmod"` sorts newest UTC first with undated entries last in document order, and orders `<sitemapindex>` children consistently) and `allow_pattern` (linear-time regex on each link's normalized path; `deny` still wins). Both apply before `max_pages`, unknown `seed_order` values are refused with the closest valid option, and `rastro config`, `rastro capabilities`, `docs/schemas/job.schema.json` and docs are updated.
 
+### Fixed
+
+- JSON-LD blocks with raw newlines or other control characters inside strings are retried once with those characters escaped; recovered records retain provenance and report `tolerant_jsonld` (INT-002, N17). Malformed structure, duplicate keys and non-finite numbers remain rejected. HTML-parser normalization of other controls varies by platform; decoder regression tests cover all controls before HTML parsing (N23).
+
 ### Changed
 
 - `rastro init --agent`, `llms.txt` and `docs/capabilities.md` explain how results reach Studio: keep them in a job's dataset (`rastro job load` or `rastro.load_records`) and open `rastro studio --root`, instead of building an ad hoc database (N18).
