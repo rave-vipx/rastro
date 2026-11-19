@@ -51,3 +51,7 @@ id_ed25519*
 
 # Local logs and scratch output
 *.log
+
+# Local planning, design and evidence (CONTRIBUTING.md: what never goes in the repository).
+/local/
+.pr-*-body.md

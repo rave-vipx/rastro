@@ -35,7 +35,7 @@ Studio redesign, the agent configuration reference, the adoption cut (N15–N19)
 
 ### adoption cut (N15–N19)
 
-Driven by the first real adoption report (Rave App). See `docs/action-plan-adoption.md`.
+Driven by the first real adoption report from an external project.
 
 #### Added
 
@@ -331,7 +331,7 @@ Release candidate tagged on `main`; not published to any package registry. Final
 - Internal: `schema_fingerprint` caches canonical JSON Schema digests per model class (invalidating on `model_rebuild`) and `extract_document` computes `source.evidence_url` and validates shared `Evidence` metadata once per extraction, cutting unprofiled p50 latency on `static` (0.326 → 0.172 ms), `metadata` (0.251 → 0.118 ms) and `large` (12.033 → 9.135 ms; same-run gap over baseline 3.530 → 1.822 ms) with byte-identical serialized results, issues and provenance (P-010, DIFF-001).
 - The README, getting-started and acquisition guides now construct `CssRecipe`, `JsonLdRecipe` and `JsonRecipe` directly instead of `Recipe(strategy=...)`, so every documented example is the typed form (REC-002, QUAL-001).
 - Internal: split `domain.models` (`sources`, `recipes`, `results` with `domain.models` re-exporting all contracts) and extracted cohesive `application` helpers (`http_policy`, `proposals`, `outcomes`, `batch`) from `acquisition`, `intelligence`, `service` and `engine` so every module stays within the 250-line budget with unchanged public imports, SQLite payloads, schema fingerprints and serialized results (P-006, REC-001, REC-002, INT-003, QUAL-004).
-- `docs/roadmap.md` records the merged pre-v0.2 hardening slices (#21–#25, #28–#32), the work still in progress (declarative jobs and JSON CLI, module splits for the clean-code size budget) and the maintainer-owned gates (issues #2–#5, promotion to `main`) (P-010, DIFF-001, INT-002, JOB-001/002, AGENT-001).
+- The roadmap recorded the merged pre-v0.2 hardening slices (#21–#25, #28–#32), the work still in progress (declarative jobs and JSON CLI, module splits for the clean-code size budget) and the maintainer-owned gates (issues #2–#5, promotion to `main`) (P-010, DIFF-001, INT-002, JOB-001/002, AGENT-001).
 
 ### Added
 

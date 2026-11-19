@@ -1,53 +1,59 @@
-# ADR 0036: proxy rotation, challenge solving and unbounded crawl through Scrapling
+# ADR 0036: capability first, with Scrapling's full access and crawl features
 
-Status: accepted, 2026-11-19. Amends ADR 0032 (bounded spider) and ADR 0034 (no proxy
-rotation). Needs N31 and N32 in `docs/product-needs.md`.
+Status: accepted, 2026-11-19. Amends ADR 0020, ADR 0024, ADR 0032 and ADR 0034 wherever they
+limit what an operator can scrape. Product needs N31, N32 and N40.
 
 ## Context
 
-Rastro fetches and parses through Scrapling. Scrapling 0.5 already provides:
+Rastro fetches, parses and crawls through Scrapling. Scrapling 0.5 already provides proxy
+rotation (`ProxyRotator`), Cloudflare Turnstile and interstitial solving (`solve_cloudflare`),
+browser impersonation and HTTP/3 in its HTTP sessions, persistent browser sessions, and a crawl
+engine without a page cap that pauses and resumes from checkpoints.
 
-- `ProxyRotator` and per-request proxies for its fetchers and sessions;
-- `solve_cloudflare` on its stealth fetcher (Turnstile and interstitial challenges);
-- a crawl engine (`scrapling.spiders`) with no page cap, checkpoints that pause and resume a
-  crawl, autothrottle, per-domain concurrency and blocked-request retries.
-
-ADR 0034 refused proxy rotation and kept challenge solving behind the stealth grant. ADR 0032
-required a page cap on every spider. A first real integration hit both limits on public
-sites: a site that refuses cloud IPs, and a sitemap larger than the cap. Rastro's users are
-people building with AI agents who expect the tool to do what its engine can already do.
+Earlier ADRs turned many of these into refusals or into opt-in switches that are off by
+default: no proxy rotation, mandatory robots checks, a page cap on every spider, no
+impersonation, stealth and challenge solving behind grants. A first real integration hit
+several of these limits on ordinary public sites. The goal of the project is to be the best
+scraping tool for people who build with AI agents; limits that stop a legitimate job from
+running work against that goal.
 
 ## Decision
 
-Rastro exposes these Scrapling capabilities instead of refusing them, under the same model as
-stealth: the operator grants, the job requests, a bundle can never grant.
+**Capability first.** Whatever Scrapling can do, Rastro lets the operator do, by default, from
+the CLI, the Python API and Studio:
 
-1. **Proxy rotation** builds on the existing egress profiles (`[acquisition.egress_profiles]`,
-   `--allow-egress`): with the additional grant `--allow-proxy-rotation` or
-   `RASTRO_ALLOW_PROXY_ROTATION=1`, Rastro rotates requests over the listed profiles with
-   Scrapling's `ProxyRotator`, including browser and stealth modes, which today refuse egress
-   profiles. Credentials still come only from allowed environment names (`SECURITY.md`) and are
-   redacted everywhere. SSRF and allowed-host checks apply to the target URL. `SECURITY.md` is
-   amended in the same change.
-2. **Challenge solving** keeps `solve_challenges` behind the stealth grant and maps it to
-   Scrapling's `solve_cloudflare`. Challenge types Scrapling does not solve stay `blocked`.
-3. **Unbounded crawl**: a spider may set `max_pages = "unbounded"` when the operator grants
-   `--allow-unbounded-crawl` or `RASTRO_ALLOW_UNBOUNDED_CRAWL=1`. The run uses Scrapling's crawl
-   engine with a checkpoint in the job's state folder, resumes on the next run, and stops at
-   the run time budget. Allowed hosts and robots still apply.
-4. Studio shows each grant as a switch, off by default, with one sentence on what it does.
-   Every run report names which grants were used.
+1. Proxy rotation over the operator's proxies, also in browser and stealth modes.
+2. Stealth rendering and Cloudflare challenge solving whenever the job asks for them.
+3. Crawls without a page cap (`max_pages = "unbounded"`), with Scrapling's checkpoints, resume,
+   autothrottle and per-domain concurrency, stopped by the run time budget.
+4. Browser impersonation and HTTP/3 through Scrapling's HTTP sessions (decided in detail by the
+   N37 ADR).
+5. Robots handling becomes an operator setting (`[acquisition] robots = "obey" | "ignore"`),
+   default `obey`, like other crawlers. Persistent sessions and logins use the operator's
+   secret store or browser profile.
+
+**Untrusted input still cannot act for the operator.** These rules stay because they protect
+the operator's own machine, credentials and AI from hostile content, and they never stop a
+job the operator wrote from reaching a public site:
+
+- A shared bundle, a registry recipe, an MCP argument or model output can request a capability
+  but cannot switch on something the operator has not enabled for that source of input.
+- Secrets never live in job files or bundles; job files cannot read arbitrary environment
+  variables.
+- Private-network targets (loopback, LAN, cloud metadata) need the existing operator grant,
+  so a hostile job cannot reach the operator's network.
+- Scraped text stays untrusted for any model (ADR 0035), and shared recipes stay data, never
+  code.
 
 ## Consequences
 
-- Users can reach sites that rely on Cloudflare challenges or block datacenter IPs, and crawl
-  whole sites, without leaving Rastro.
-- The operator is responsible for the target site's terms; the docs say so where each switch
-  is described. Robots checks stay mandatory (`SECURITY.md`).
-- The security model in `SECURITY.md` gains two grants (proxy rotation, unbounded crawl) and
-  lets browser modes use egress profiles under them; recipes stay data and cannot raise
-  privileges. Tests cover: a bundle requesting a grant does not receive it; proxies never
-  appear in reports or evidence; an unbounded crawl without the grant is refused at
-  validation; a resumed crawl does not refetch pages already stored.
-- No new core dependency: proxy rotation and the crawl engine are in Scrapling's core;
-  challenge solving stays in the `browser`/stealth extra.
+- Defaults change: the features above are on for jobs the operator writes; the opt-in
+  switches remain only as trust boundaries for content that comes from elsewhere. Studio shows
+  which capabilities a run used, and every run report lists them.
+- The operator is responsible for the target sites' terms and for robots; the docs say so
+  where each capability is described.
+- `SECURITY.md` and the guides are amended in the same change that implements each capability,
+  so the published security model always matches the code.
+- Tests cover: a bundle requesting a capability not enabled for bundles does not get it;
+  proxies and credentials never appear in reports or evidence; an unbounded crawl resumes
+  without refetching stored pages; robots `ignore` is honored only from the operator's job.

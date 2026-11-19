@@ -43,7 +43,7 @@ expectations were not covered by the plan:
 ## Consequences
 
 - Pre-v0.2 hardening grows from refactors to also include provider strategy, job files and
-  machine-readable output. The [roadmap](../roadmap.md) tracks each slice.
+  machine-readable output. The maintainer's roadmap tracks each slice.
 - Remote providers create a data-egress path for page excerpts. Opt-in, documentation and
   key handling are the mitigations; Rastro still needs no paid service.
 - One job format must serve programmers, agents and a future GUI. Its schema is public API

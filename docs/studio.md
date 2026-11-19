@@ -222,7 +222,7 @@ preview-and-save-a-selector flow.
 
 ### Design adaptations
 
-The redesign follows `docs/design/studio-redesign/IMPLEMENTATION.md`. Where the design and the
+The redesign follows the maintainer's design implementation notes. Where the design and the
 product differ, the interface adapts:
 
 | Design | Studio | Why |

@@ -549,7 +549,7 @@ disabled. They cover attacks, limits, cancellation, activation, restart and M3
 payload compatibility. Core wheel installation is checked without HTTPX or Ollama. The OpenAI-compatible
 adapter has its own offline contract and mock-server learning tests.
 These tests do not claim real-model quality. The separate
-[live Ollama evidence](live-ollama-evidence.md) records one local `qwen3:4b` run
+The maintainer's live Ollama evidence (kept outside the repository) records one local `qwen3:4b` run
 with its opt-in harness, model digest and limitations.
 
 See [ADR 0004](decisions/0004-bounded-recipe-learning.md) for adapter and trust decisions.

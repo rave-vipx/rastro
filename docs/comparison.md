@@ -207,8 +207,7 @@ cannot represent website latency. This fixed corpus is a small regression set,
 not a representative independent test set or an adversarial-input evaluation.
 
 The [held-out evaluation](#held-out-evaluation) below adds held-out sources and
-mutations. See the [release evidence register](release-evidence.md) and
-[ADR 0005](decisions/0005-reproducible-release-evidence.md).
+mutations. See [ADR 0005](decisions/0005-reproducible-release-evidence.md).
 
 ### Re-run after the baseline refactor
 
@@ -304,7 +303,7 @@ on every original page before the mutation run, and the runner checks this.
   selectors. A second script returns one invalid proposal first. Each run creates
   a new engine instance (a simulated restart) over the same SQLite file. These numbers
   measure call accounting, **not model quality**. Live models are covered in the
-  [live Ollama evidence](live-ollama-evidence.md).
+  the maintainer's live Ollama evidence (kept outside the repository).
 - **Visibility:** a checklist observed from real results and captured log events.
   It is not a score.
 - **Latency:** as in the first experiment: alternating order, 3 warmups and 30 samples

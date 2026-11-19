@@ -1,7 +1,7 @@
 # ADR 0034: opt-in promote, stealth, and local code
 
 - **Status:** accepted 2026-11-16. The owner asked to include these with an activation choice, not as the default.
-- **Requirements:** N12 in `docs/product-needs.md`. REC-002, SEC-005, and P-005 stay.
+- **Requirements:** product need N12. REC-002, SEC-005, and P-005 stay.
 
 ## Decision
 

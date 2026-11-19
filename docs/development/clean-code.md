@@ -67,7 +67,7 @@ adapters  ->  application  ->  domain
 - Tests mirror modules: `src/rastro/application/memory.py` is covered by
   `tests/unit/test_memory.py`.
 - No dead code, commented-out code, or placeholder implementations. Unfinished
-  work is tracked in `docs/roadmap.md`, not stubbed in `src`.
+  work is tracked in the maintainer's plan, not stubbed in `src`.
 - Failures stay explicit and provenance stays attached. Never turn invalid or
   missing data into successful empty output to shorten a function.
 
