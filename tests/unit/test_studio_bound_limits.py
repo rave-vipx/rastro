@@ -45,8 +45,9 @@ def test_controls_follow_changed_domain_bounds(monkeypatch: pytest.MonkeyPatch) 
     from rastro.domain.spider import SpiderPolicy
 
     schema = SpiderPolicy.model_json_schema()["properties"]
-    for name in ("max_depth", "max_pages"):
-        assert payload["limits"]["spider"][name]["max"] == schema[name]["maximum"]
+    assert payload["limits"]["spider"]["max_depth"]["max"] == schema["max_depth"]["maximum"]
+    pages = next(item for item in schema["max_pages"]["anyOf"] if item.get("type") == "integer")
+    assert payload["limits"]["spider"]["max_pages"]["max"] == pages["maximum"]
 
 
 def test_no_copied_numeric_bounds() -> None:

@@ -39,13 +39,18 @@ def finish_crawl[T: BaseModel](
     limits: Limits,
     report: SpiderReport,
     links_failed: bool,
+    stopped: str | None = None,
 ) -> ExtractionResult[T]:
-    """Combine the pages; the first cap hit, else a failed page, names the stop."""
-    stop = next((f"spider_{name}" for name in _LIMITS if name in hit), None)
+    """Combine the pages; a time or record stop, else the first cap hit or failed page."""
+    stop = {"time_budget": "spider_time_budget", "record_limit": "record_limit"}.get(stopped or "")
+    stop = stop or next((f"spider_{name}" for name in _LIMITS if name in hit), None)
     if stop is None:
         stop = "spider_page_failed" if "page_failed" in hit else "spider_complete"
     combined = combine_pages(pages, stop, limits)
-    issues = combined.issues
+    issues = tuple(  # the crawl's own code for a spent time budget (docs/issues.md)
+        Issue(code="crawl_time_budget") if issue.code == "spider_time_budget" else issue
+        for issue in combined.issues
+    )
     if links_failed:
         issues = (*issues, Issue(code="spider_links_failed"))
     status = combined.status

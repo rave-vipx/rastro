@@ -51,7 +51,10 @@ def test_spider_keys_have_types_defaults_and_bounds() -> None:
     """N18: entries carry the model's type, default and bounds."""
     by_path = {entry.path: entry for entry in ENTRIES}
     pages = by_path["spider.max_pages"]
-    assert (pages.type, pages.default, pages.bounds) == ("integer", "25", ">= 1, <= 100")
+    assert (pages.type, pages.default) == ("integer or string", "25")
+    assert pages.bounds.startswith(">= 1, <= 100") and '"unbounded"' in pages.bounds
+    budget = by_path["spider.time_budget_seconds"]
+    assert (budget.type, budget.default, budget.bounds) == ("integer", "1800", ">= 60, <= 86400")
     assert by_path["spider.seed"].bounds == "one of page, sitemap"
     assert (
         by_path["spider.seed_order"].default,

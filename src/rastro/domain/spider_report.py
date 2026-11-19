@@ -1,8 +1,12 @@
-"""A spider run's content-free report: every attempted page, host and path only (N3)."""
+"""A spider run's content-free report: every attempted page, host and path only (N3).
+
+Past ``MAX_REPORTED_PAGES`` rows, an unbounded crawl's report counts the rest in
+``unreported`` and summarises every page by outcome in ``outcomes``.
+"""
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import Field
 
@@ -44,3 +48,7 @@ class SpiderReport(Contract):
     pages: tuple[SpiderPage, ...] = Field(max_length=MAX_REPORTED_PAGES)
     discovered: int = Field(ge=0)
     unreported: int = Field(default=0, ge=0)
+    # Present only when rows were left out: every page, reported or not, by outcome.
+    outcomes: dict[SpiderOutcome, Annotated[int, Field(ge=0)]] = Field(
+        default_factory=dict, exclude_if=lambda value: not value
+    )

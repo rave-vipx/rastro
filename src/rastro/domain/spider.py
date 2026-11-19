@@ -1,9 +1,11 @@
-"""Bounded spider policy and its content-free page report (N3; SEC-001, SEC-003, SEC-008).
+"""Spider policy and its content-free page report (N3; SEC-001, SEC-003, SEC-008).
 
 A job may follow links from the pages it names. The links are read declaratively (a CSS
-expression or one of the recipe's own fields), never by a callback, and every cap is
-a hard number. The table carries no grants: robots, private networks, ports and stealth
-stay with the operator (SECURITY.md), and the start URLs are the job's ``[[sources]]``.
+expression or one of the recipe's own fields), never by a callback. A crawl is capped by
+a page count, or, with ``max_pages = "unbounded"``, by ``time_budget_seconds``; an unbounded
+crawl requests the ``unbounded_crawl`` capability. The table carries no grants: robots,
+private networks, ports and stealth stay with the operator (SECURITY.md), and the start
+URLs are the job's ``[[sources]]``.
 """
 
 from __future__ import annotations
@@ -23,6 +25,7 @@ from pydantic import (
 )
 from pydantic_core import SchemaError
 
+from rastro.domain.capability_grants import Capability
 from rastro.domain.job_contract import RedactedContract
 from rastro.domain.job_sources import UrlJobSource
 from rastro.domain.recipes import CssRecipe
@@ -43,7 +46,18 @@ class SpiderPolicy(RedactedContract):
     seed: Literal["page", "sitemap"] = "page"
     seed_order: SeedOrder = "document"
     max_depth: StrictInt = Field(default=2, ge=1, le=4)
-    max_pages: StrictInt = Field(default=25, ge=1, le=100)
+    max_pages: Annotated[StrictInt, Field(ge=1, le=100)] | Literal["unbounded"] = Field(
+        default=25,
+        description='Most pages fetched per start URL (1-100), or "unbounded" to crawl until '
+        "the time budget runs out and resume from a checkpoint on the next run.",
+    )
+    time_budget_seconds: StrictInt = Field(
+        default=1800,
+        ge=60,
+        le=86400,
+        description="Seconds a crawl may run per start URL; an unbounded crawl saves its "
+        "checkpoint when the budget runs out.",
+    )
     same_host: StrictBool = True
     allow: tuple[StrictStr, ...] = Field(default=(), max_length=32)
     deny: tuple[StrictStr, ...] = Field(default=(), max_length=32)
@@ -119,6 +133,15 @@ class SpiderPolicy(RedactedContract):
             except ConfigurationError as error:
                 raise ValueError(str(error)) from None
         return self
+
+    @property
+    def unbounded(self) -> bool:
+        """Whether this crawl is capped by its time budget instead of a page count."""
+        return self.mode == "spider" and self.max_pages == "unbounded"
+
+    def requested_capabilities(self) -> frozenset[Capability]:
+        """An unbounded crawl requests ``unbounded_crawl``; any other table requests nothing."""
+        return frozenset({"unbounded_crawl"}) if self.unbounded else frozenset()
 
     def link_expressions(self) -> tuple[str, ...]:
         return (self.links,) if isinstance(self.links, str) else self.links or ()

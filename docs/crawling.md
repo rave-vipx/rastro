@@ -75,3 +75,39 @@ their values are ordinary data, so two pages can share one stored page URL while
 both are still fetched. It cannot recognize a secret placed under an unrelated key
 such as `page`; treat retained page parameters and paths as source data subject to
 your storage and retention policy.
+
+## Unbounded crawls
+
+Set `max_pages = "unbounded"` to crawl a site until its frontier is empty. The time budget
+bounds the crawl instead of a page count:
+
+```toml
+[spider]
+mode = "spider"
+links = ["a.product::attr(href)", "a.next::attr(href)"]
+max_depth = 4
+max_pages = "unbounded"
+time_budget_seconds = 1800
+```
+
+- `time_budget_seconds` (60 to 86400, default 1800) is how long each start URL may crawl.
+  When it runs out, the crawl stops after the pages in flight, reports `crawl_time_budget`
+  and saves a checkpoint. The next run resumes from it, fetches only the pages still in the
+  frontier and reports `crawl_resumed`. A crawl that empties its frontier removes the
+  checkpoint, so the run after it starts over.
+- The job's `max_requests` does not apply to an unbounded crawl. Robots, allowed hosts,
+  path filters, `max_depth`, private-network checks and `min_interval_seconds` all still
+  apply. The pace adapts per host: it slows when responses slow down and backs off on
+  429, 503 or a `Retry-After` header.
+- `[limits] max_records` still caps one run. Pages past it go back to the frontier, so the
+  next run picks them up instead of losing their records.
+- Checkpoints live in `.rastro/crawl/` next to the job file. They are JSON, private to your
+  user, and validated when read; a damaged or edited checkpoint is removed with
+  `crawl_checkpoint_discarded` and the crawl starts over. Delete the folder to start fresh.
+- An unbounded crawl requests the `unbounded_crawl` capability. Your own jobs have it;
+  input from agent tools, bundles, registry recipes or model output needs
+  `--allow-untrusted <origin>:unbounded_crawl`.
+
+The run report's crawl note gives the pages fetched, the frontier left, whether the run
+resumed and the checkpoint state (`saved`, `finished`, `discarded` or `none`). Past 600
+rows, the crawl report counts the rest in `unreported` and totals every page by outcome.

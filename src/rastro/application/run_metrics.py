@@ -59,7 +59,9 @@ def cap_value(job: Job | None, result: ExtractionResult[Any]) -> int | None:
         spider = job.spider
         if spider is None:
             return None
-        return spider.max_pages if cap == "spider_page_limit" else spider.max_depth
+        if cap == "spider_page_limit":  # an unbounded crawl has no page cap
+            return spider.max_pages if isinstance(spider.max_pages, int) else None
+        return spider.max_depth
     recipe = result.learned_recipe or _source_recipe(job, result) or job.recipe
     # shortcut: a recipe served from memory without learned_recipe has no known page cap.
     return recipe.pagination.max_pages if recipe and recipe.pagination else None

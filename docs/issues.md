@@ -125,6 +125,7 @@ grouped by theme. A test fails when a code in `src/rastro` has no row here.
 | `link_group_refused` | A group of links found on a page was not followed because it is outside the crawl's allowed hosts or patterns. | Yes. | Widen `allow_pattern`, or ignore it if intended. |
 | `crawl_resumed` | A crawl continued from a saved checkpoint instead of starting again. | Yes. | Nothing. Delete the checkpoint to start fresh. |
 | `crawl_time_budget` | The crawl stopped because its time budget ran out; its checkpoint is kept. | Partial. | Run again to resume, or raise the time budget. |
+| `crawl_checkpoint_discarded` | A saved crawl checkpoint was unreadable, from another version or changed by hand, so it was removed and the crawl started over. | Yes. | Nothing; the next stop saves a new checkpoint. |
 
 ## Storage, memory and repair
 

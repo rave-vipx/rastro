@@ -447,7 +447,8 @@ Follow links from listing pages to detail pages. Docs: [jobs.md#spider](jobs.md#
 | `spider.seed` | string | `"page"` | `one of page, sitemap` | page starts from each source; sitemap reads a sitemap source. |
 | `spider.seed_order` | string | `"document"` | `one of document, reverse, lastmod` | Order sitemap locs before max_pages: document, reverse or lastmod (newest first). |
 | `spider.max_depth` | integer | `2` | `>= 1, <= 4` | Link levels followed from a start page. |
-| `spider.max_pages` | integer | `25` | `>= 1, <= 100` | Most pages fetched per start URL. |
+| `spider.max_pages` | integer or string | `25` | `>= 1, <= 100; always "unbounded"` | Most pages fetched per start URL (1-100), or "unbounded" to crawl until the time budget runs out and resume from a checkpoint on the next run. |
+| `spider.time_budget_seconds` | integer | `1800` | `>= 60, <= 86400` | Seconds a crawl may run per start URL; an unbounded crawl saves its checkpoint when the budget runs out. |
 | `spider.same_host` | boolean | `true` |  | Stay on the start page's host. |
 | `spider.allow` | array of string | `[]` | `items <= 32` | Path prefixes (whole segments); only matching links are followed. |
 | `spider.deny` | array of string | `[]` | `items <= 32` | Path prefixes (whole segments) that are never followed; deny wins. |

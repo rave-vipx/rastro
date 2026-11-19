@@ -603,7 +603,8 @@
                 "spider_depth_limit",
                 "spider_page_limit",
                 "spider_budget",
-                "spider_page_failed"
+                "spider_page_failed",
+                "spider_time_budget"
               ],
               "type": "string"
             },
@@ -2107,6 +2108,31 @@
           "minimum": 0,
           "title": "Discovered",
           "type": "integer"
+        },
+        "outcomes": {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "propertyNames": {
+            "enum": [
+              "fetched",
+              "no_records",
+              "partial",
+              "failed",
+              "robots_denied",
+              "off_host",
+              "https_downgrade",
+              "path_denied",
+              "port_not_allowed",
+              "invalid_url",
+              "depth_limit",
+              "page_limit",
+              "budget"
+            ]
+          },
+          "title": "Outcomes",
+          "type": "object"
         },
         "pages": {
           "items": {

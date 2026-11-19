@@ -2327,11 +2327,20 @@
           "type": "integer"
         },
         "max_pages": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "const": "unbounded",
+              "type": "string"
+            }
+          ],
           "default": 25,
-          "maximum": 100,
-          "minimum": 1,
-          "title": "Max Pages",
-          "type": "integer"
+          "description": "Most pages fetched per start URL (1-100), or \"unbounded\" to crawl until the time budget runs out and resume from a checkpoint on the next run.",
+          "title": "Max Pages"
         },
         "mode": {
           "default": "list",
@@ -2359,6 +2368,14 @@
         "seed_order": {
           "$ref": "#/$defs/SeedOrder",
           "default": "document"
+        },
+        "time_budget_seconds": {
+          "default": 1800,
+          "description": "Seconds a crawl may run per start URL; an unbounded crawl saves its checkpoint when the budget runs out.",
+          "maximum": 86400,
+          "minimum": 60,
+          "title": "Time Budget Seconds",
+          "type": "integer"
         }
       },
       "title": "SpiderPolicy",
