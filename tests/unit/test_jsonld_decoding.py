@@ -15,7 +15,7 @@ def test_raw_controls_are_preserved_before_html_normalization(control):
     raw = raw.replace(json.dumps(control)[1:-1], control)
     issues = []
     assert _jsonld_payload(raw, issues) == {"description": description}
-    assert [issue.code for issue in issues] == ["tolerant_jsonld"]
+    assert [issue.code for issue in issues] == ["repaired_json"]
     assert issues[0].message is None
 
 

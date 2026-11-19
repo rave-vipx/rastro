@@ -35,7 +35,7 @@ def test_raw_string_controls_are_preserved_with_visible_warning(control):
     assert result.status == Outcome.PARTIAL_SUCCESS
     assert result.records[0].data.description == description
     assert result.records[0].evidence["description"].locator == "jsonld[0]#/description"
-    assert [i.code for i in result.issues] == ["tolerant_jsonld"]
+    assert [i.code for i in result.issues] == ["repaired_json"]
     assert result.issues[0].message is None
 
 
