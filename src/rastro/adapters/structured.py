@@ -13,6 +13,7 @@ from rastro.domain.models import (
     Recipe,
     ResourceLimitError,
 )
+from rastro.domain.recipes import scalar_expression
 from rastro.ports.discovery import AliasMap
 from rastro.ports.parser import Candidate, ParsedDocument
 
@@ -78,7 +79,7 @@ class JsonParser:
             values: dict[str, object] = {}
             locators: dict[str, str] = {}
             for field, pointer in recipe.fields.items():
-                value = resolve_pointer(item, pointer)
+                value = resolve_pointer(item, scalar_expression(pointer))
                 if value is not MISSING:
                     values[field] = value
                     locators[field] = f"json#{path}{pointer}"
@@ -130,7 +131,7 @@ class JsonDiscovery:
             if not mapping:
                 continue
             try:
-                recipe = JsonRecipe(record_path=path, fields=mapping)
+                recipe = JsonRecipe(record_path=path, fields=dict(mapping))
             except ValidationError:
                 continue
             ranked.append((-len(mapping), order, recipe))

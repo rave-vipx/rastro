@@ -391,7 +391,7 @@
         },
         "fields": {
           "additionalProperties": {
-            "type": "string"
+            "$ref": "#/$defs/FieldMapping"
           },
           "maxProperties": 100,
           "minProperties": 1,
@@ -784,7 +784,7 @@
         },
         "fields": {
           "additionalProperties": {
-            "type": "string"
+            "$ref": "#/$defs/FieldMapping"
           },
           "maxProperties": 100,
           "minProperties": 1,
@@ -839,6 +839,24 @@
       ],
       "title": "EmbeddedJsonRecipe",
       "type": "object"
+    },
+    "FieldMapping": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 4,
+          "minItems": 1,
+          "type": "array"
+        },
+        {
+          "$ref": "#/$defs/NestedMapping"
+        }
+      ]
     },
     "FileJobSource": {
       "additionalProperties": false,
@@ -1228,19 +1246,7 @@
         },
         "fields": {
           "additionalProperties": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "items": {
-                  "type": "string"
-                },
-                "maxItems": 4,
-                "minItems": 1,
-                "type": "array"
-              }
-            ]
+            "$ref": "#/$defs/FieldMapping"
           },
           "maxProperties": 100,
           "minProperties": 1,
@@ -1322,7 +1328,7 @@
         },
         "fields": {
           "additionalProperties": {
-            "type": "string"
+            "$ref": "#/$defs/FieldMapping"
           },
           "maxProperties": 100,
           "minProperties": 1,
@@ -1424,6 +1430,48 @@
       "maxLength": 1024,
       "minLength": 1,
       "type": "string"
+    },
+    "NestedMapping": {
+      "additionalProperties": false,
+      "description": "Select items, then read either scalar values or named scalar members.",
+      "properties": {
+        "each": {
+          "description": "Relative CSS scope selector or absolute JSON pointer with one wildcard segment.",
+          "maxLength": 1024,
+          "minLength": 1,
+          "title": "Each",
+          "type": "string"
+        },
+        "members": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Named scalar expressions relative to each item; excludes value.",
+          "maxProperties": 32,
+          "title": "Members",
+          "type": "object"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "maxLength": 1024,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "One scalar expression relative to each item; excludes members.",
+          "title": "Value"
+        }
+      },
+      "required": [
+        "each"
+      ],
+      "title": "NestedMapping",
+      "type": "object"
     },
     "NumberField": {
       "additionalProperties": false,

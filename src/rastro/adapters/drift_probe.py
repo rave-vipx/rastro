@@ -10,7 +10,7 @@ from rastro.adapters.scrapling import ScraplingParser, _parse_html, element_coun
 from rastro.adapters.structured import JsonParser
 from rastro.domain.drift import FieldStructure
 from rastro.domain.models import ConfigurationError, CssRecipe, Limits, Recipe, ResourceLimitError
-from rastro.domain.recipes import DOCUMENT_PREFIX, EXPAND_PREFIX
+from rastro.domain.recipes import DOCUMENT_PREFIX, EXPAND_PREFIX, scalar_expression
 
 
 class ScraplingDriftProbe:
@@ -45,7 +45,8 @@ class ScraplingDriftProbe:
         if len(nodes) > limits.max_records:
             raise ResourceLimitError("Drift record count exceeds configured limits")
         fields = {}
-        for name, selector in sorted(recipe.fields.items()):
+        for name, mapping in sorted(recipe.fields.items()):
+            selector = scalar_expression(mapping)
             count, shapes = 0, []
             # Pseudo-elements select values; fingerprint their owning element's structure.
             selectors = []

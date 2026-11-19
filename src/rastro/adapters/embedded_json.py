@@ -9,6 +9,7 @@ from scrapling.parser import Selector
 from rastro.adapters.structured import load_json
 from rastro.domain.json import MISSING, escape_token, resolve_pointer
 from rastro.domain.models import EmbeddedJsonRecipe, Issue, Limits, ResourceLimitError
+from rastro.domain.recipes import scalar_expression
 from rastro.domain.tolerant_json import repaired_text
 from rastro.ports.parser import Candidate, ParsedDocument
 
@@ -52,7 +53,7 @@ def parse_embedded_json(
         found: dict[str, object] = {}
         locators: dict[str, str] = {}
         for field, pointer in recipe.fields.items():
-            value = resolve_pointer(item, pointer)
+            value = resolve_pointer(item, scalar_expression(pointer))
             if value is not MISSING:
                 found[field] = value
                 locators[field] = f"embedded_json[{escape_token(recipe.source)}]#{path}{pointer}"

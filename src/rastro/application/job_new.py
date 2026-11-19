@@ -21,6 +21,7 @@ from rastro.domain.job_fields import JobField, StringField, build_job_schema
 from rastro.domain.job_sources import FileJobSource, UrlJobSource, validate_job_path_syntax
 from rastro.domain.jobs import parse_job
 from rastro.domain.models import ConfigurationError, Contract, CssRecipe, Limits, Outcome, Source
+from rastro.domain.recipes import scalar_expression
 from rastro.domain.suggest import Example, check_examples, infer_field_type
 from rastro.ports.acquisition import AcquisitionPort
 from rastro.ports.search import SearchProvider
@@ -311,7 +312,10 @@ def render_job(job_fields: Sequence[JobField], recipe: CssRecipe, source: Any, *
         f"record_selector = {_quote(recipe.record_selector)}",
         "",
         "[recipe.fields]",
-        *(f"{name} = {_quote(selector)}" for name, selector in recipe.fields.items()),
+        *(
+            f"{name} = {_quote(scalar_expression(selector))}"
+            for name, selector in recipe.fields.items()
+        ),
         "",
     ]
     if ds is not None:

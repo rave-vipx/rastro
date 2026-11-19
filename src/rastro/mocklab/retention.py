@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from functools import cached_property
 
 from rastro.domain.models import Limits, Recipe
+from rastro.domain.recipes import NestedMapping
 from rastro.mocklab.detectors import contains_secret, secret_categories, selector_tokens
 from rastro.mocklab.errors import SanitizationError
 from rastro.ports.parser import Candidate, DocumentParser
@@ -83,9 +84,15 @@ def build_plan(body: str, recipe: Recipe, parser: DocumentParser, limits: Limits
     )
 
 
+def _members(mapping: tuple[str, ...] | NestedMapping) -> Iterable[str]:
+    if isinstance(mapping, tuple):
+        return mapping
+    return (mapping.each, *mapping.members.values(), *filter(None, (mapping.value,)))
+
+
 def _selectors(recipe: Recipe) -> Iterable[str]:
     for mapping in recipe.fields.values():
-        yield from (mapping,) if isinstance(mapping, str) else mapping
+        yield from (mapping,) if isinstance(mapping, str) else _members(mapping)
     for name in ("record_selector", "item_type", "record_path"):
         value = getattr(recipe, name, None)
         if isinstance(value, str):

@@ -109,7 +109,7 @@ def recipe_from_model(
     if not isinstance(record_selector, str):
         raise ConfigurationError("The record selector must be a CSS selector string")
     try:
-        return CssRecipe(record_selector=record_selector, fields=mapping)
+        return CssRecipe(record_selector=record_selector, fields=dict(mapping))
     except ValidationError:
         raise ConfigurationError(
             "Invalid model selectors: each must end in ::text or ::attr(name)"

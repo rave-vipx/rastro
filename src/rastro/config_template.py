@@ -97,6 +97,8 @@ class _Writer:
             self.lines.append(f"# {name} = {_toml(json.loads(entry.default or 'null'))}")
 
     def _is_section(self, entry: ConfigEntry) -> bool:
+        if entry.path in MINIMAL:  # an inline value; nested member keys live in the reference
+            return False
         return bool(entry.same_as) or any(
             p.startswith((entry.path + ".", entry.path + "[].")) for p in self.paths
         )

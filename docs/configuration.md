@@ -213,7 +213,10 @@ How records are found on a page; one of four strategies. Docs: [api.md#recipe-va
 | Key | Type | Default | Bounds | Description |
 | --- | --- | --- | --- | --- |
 | `recipe.strategy` | string | `"css"` | `always "css"` | Recipe kind; it decides which of the keys below apply. |
-| `recipe.fields` | table of string | required | `keys >= 1, keys <= 100` | Maps each declared field name to its selector or pointer. |
+| `recipe.fields` | map of tables or string or array | required | `keys >= 1, keys <= 100` | Maps each declared field name to its selector or pointer. |
+| `recipe.fields.<name>.each` | string | required | `length >= 1, length <= 1024` | Relative CSS scope selector or absolute JSON pointer with one wildcard segment. |
+| `recipe.fields.<name>.members` | table of string | - | `keys <= 32` | Named scalar expressions relative to each item; excludes value. |
+| `recipe.fields.<name>.value` | string | - | `length >= 1, length <= 1024` | One scalar expression relative to each item; excludes members. |
 | `recipe.version` | integer | `1` | `>= 1, <= 2147483647` | Recipe version number, kept in history and memory. |
 | `recipe.require_evidence` | boolean | `false` |  | Reject a record when a required field has no evidence. |
 | `recipe.fallbacks` | array of tables | `[]` | `items <= 3` | Up to 3 other recipes, tried in order when this one finds nothing. Same keys as `recipe`. |
@@ -227,7 +230,7 @@ How records are found on a page; one of four strategies. Docs: [api.md#recipe-va
 | Key | Type | Default | Bounds | Description |
 | --- | --- | --- | --- | --- |
 | `recipe.strategy` | string | `"jsonld"` | `always "jsonld"` | Recipe kind; it decides which of the keys below apply. |
-| `recipe.fields` | table of string or array of string | required | `keys >= 1, keys <= 100` | Maps each declared field name to its selector or pointer. |
+| `recipe.fields` | map of tables or string or array | required | `keys >= 1, keys <= 100` | Maps each declared field name to its selector or pointer. Same keys as `recipe.fields.<name>`. |
 | `recipe.version` | integer | `1` | `>= 1, <= 2147483647` | Recipe version number, kept in history and memory. |
 | `recipe.require_evidence` | boolean | `false` |  | Reject a record when a required field has no evidence. |
 | `recipe.fallbacks` | array of tables | `[]` | `items <= 3` | Up to 3 other recipes, tried in order when this one finds nothing. Same keys as `recipe`. |
@@ -239,7 +242,7 @@ How records are found on a page; one of four strategies. Docs: [api.md#recipe-va
 | Key | Type | Default | Bounds | Description |
 | --- | --- | --- | --- | --- |
 | `recipe.strategy` | string | `"json"` | `always "json"` | Recipe kind; it decides which of the keys below apply. |
-| `recipe.fields` | table of string | required | `keys >= 1, keys <= 100` | Maps each declared field name to its selector or pointer. |
+| `recipe.fields` | map of tables or string or array | required | `keys >= 1, keys <= 100` | Maps each declared field name to its selector or pointer. Same keys as `recipe.fields.<name>`. |
 | `recipe.version` | integer | `1` | `>= 1, <= 2147483647` | Recipe version number, kept in history and memory. |
 | `recipe.require_evidence` | boolean | `false` |  | Reject a record when a required field has no evidence. |
 | `recipe.fallbacks` | array of tables | `[]` | `items <= 3` | Up to 3 other recipes, tried in order when this one finds nothing. Same keys as `recipe`. |
@@ -251,7 +254,7 @@ How records are found on a page; one of four strategies. Docs: [api.md#recipe-va
 | Key | Type | Default | Bounds | Description |
 | --- | --- | --- | --- | --- |
 | `recipe.strategy` | string | `"embedded_json"` | `always "embedded_json"` | Recipe kind; it decides which of the keys below apply. |
-| `recipe.fields` | table of string | required | `keys >= 1, keys <= 100` | Maps each declared field name to its selector or pointer. |
+| `recipe.fields` | map of tables or string or array | required | `keys >= 1, keys <= 100` | Maps each declared field name to its selector or pointer. Same keys as `recipe.fields.<name>`. |
 | `recipe.version` | integer | `1` | `>= 1, <= 2147483647` | Recipe version number, kept in history and memory. |
 | `recipe.require_evidence` | boolean | `false` |  | Reject a record when a required field has no evidence. |
 | `recipe.fallbacks` | array of tables | `[]` | `items <= 3` | Up to 3 other recipes, tried in order when this one finds nothing. Same keys as `recipe`. |
