@@ -1,7 +1,7 @@
 {
  "cases": [
   {
-   "page": "sodre",
+   "page": "venue-cards",
    "mutation": "container_class_rename",
    "kind": "structural",
    "outcome": "promoted_correct",
@@ -9,7 +9,7 @@
    "model_calls": 0
   },
   {
-   "page": "sodre",
+   "page": "venue-cards",
    "mutation": "wrapper_around_list",
    "kind": "structural",
    "outcome": "not_broken",
@@ -17,7 +17,7 @@
    "model_calls": 0
   },
   {
-   "page": "sodre",
+   "page": "venue-cards",
    "mutation": "field_class_rename",
    "kind": "structural",
    "outcome": "promoted_correct",
@@ -25,7 +25,7 @@
    "model_calls": 0
   },
   {
-   "page": "sodre",
+   "page": "venue-cards",
    "mutation": "field_moved_in_card",
    "kind": "structural",
    "outcome": "promoted_correct",
@@ -33,7 +33,7 @@
    "model_calls": 0
   },
   {
-   "page": "sodre",
+   "page": "venue-cards",
    "mutation": "container_and_field_rename",
    "kind": "structural",
    "outcome": "promoted_correct",
@@ -41,7 +41,7 @@
    "model_calls": 0
   },
   {
-   "page": "sodre",
+   "page": "venue-cards",
    "mutation": "link_class_rename",
    "kind": "structural",
    "outcome": "promoted_correct",
@@ -49,7 +49,7 @@
    "model_calls": 0
   },
   {
-   "page": "sodre",
+   "page": "venue-cards",
    "mutation": "sale_date_in_event_path",
    "kind": "trap",
    "outcome": "held",
@@ -57,7 +57,7 @@
    "model_calls": 0
   },
   {
-   "page": "sodre",
+   "page": "venue-cards",
    "mutation": "title_selector_hits_venue",
    "kind": "trap",
    "outcome": "held",
@@ -65,7 +65,7 @@
    "model_calls": 0
   },
   {
-   "page": "sodre",
+   "page": "venue-cards",
    "mutation": "container_matches_promos",
    "kind": "trap",
    "outcome": "rejected",
@@ -73,7 +73,7 @@
    "model_calls": 0
   },
   {
-   "page": "sodre",
+   "page": "venue-cards",
    "mutation": "page_emptied",
    "kind": "trap",
    "outcome": "no_candidates",
@@ -81,7 +81,7 @@
    "model_calls": 0
   },
   {
-   "page": "tickantel",
+   "page": "jsonld-events",
    "mutation": "jsonld_key_moved",
    "kind": "structural",
    "outcome": "rejected",
@@ -89,7 +89,7 @@
    "model_calls": 0
   },
   {
-   "page": "tickantel",
+   "page": "jsonld-events",
    "mutation": "sale_date_in_event_path",
    "kind": "trap",
    "outcome": "held",
@@ -97,7 +97,7 @@
    "model_calls": 0
   },
   {
-   "page": "tickantel",
+   "page": "jsonld-events",
    "mutation": "title_selector_hits_venue",
    "kind": "trap",
    "outcome": "held",
@@ -105,7 +105,7 @@
    "model_calls": 0
   },
   {
-   "page": "tickantel",
+   "page": "jsonld-events",
    "mutation": "container_matches_promos",
    "kind": "trap",
    "outcome": "rejected",
@@ -113,7 +113,7 @@
    "model_calls": 0
   },
   {
-   "page": "tickantel",
+   "page": "jsonld-events",
    "mutation": "page_emptied",
    "kind": "trap",
    "outcome": "no_candidates",
@@ -121,7 +121,7 @@
    "model_calls": 0
   },
   {
-   "page": "zitarrosa",
+   "page": "list-events",
    "mutation": "container_class_rename",
    "kind": "structural",
    "outcome": "promoted_correct",
@@ -129,7 +129,7 @@
    "model_calls": 0
   },
   {
-   "page": "zitarrosa",
+   "page": "list-events",
    "mutation": "wrapper_around_list",
    "kind": "structural",
    "outcome": "promoted_correct",
@@ -137,7 +137,7 @@
    "model_calls": 0
   },
   {
-   "page": "zitarrosa",
+   "page": "list-events",
    "mutation": "field_class_rename",
    "kind": "structural",
    "outcome": "promoted_correct",
@@ -145,7 +145,7 @@
    "model_calls": 0
   },
   {
-   "page": "zitarrosa",
+   "page": "list-events",
    "mutation": "field_moved_in_card",
    "kind": "structural",
    "outcome": "promoted_correct",
@@ -153,7 +153,7 @@
    "model_calls": 0
   },
   {
-   "page": "zitarrosa",
+   "page": "list-events",
    "mutation": "container_and_field_rename",
    "kind": "structural",
    "outcome": "promoted_correct",
@@ -161,7 +161,7 @@
    "model_calls": 0
   },
   {
-   "page": "zitarrosa",
+   "page": "list-events",
    "mutation": "link_class_rename",
    "kind": "structural",
    "outcome": "not_broken",
@@ -169,7 +169,7 @@
    "model_calls": 0
   },
   {
-   "page": "zitarrosa",
+   "page": "list-events",
    "mutation": "sale_date_in_event_path",
    "kind": "trap",
    "outcome": "held",
@@ -177,7 +177,7 @@
    "model_calls": 0
   },
   {
-   "page": "zitarrosa",
+   "page": "list-events",
    "mutation": "title_selector_hits_venue",
    "kind": "trap",
    "outcome": "held",
@@ -185,7 +185,7 @@
    "model_calls": 0
   },
   {
-   "page": "zitarrosa",
+   "page": "list-events",
    "mutation": "container_matches_promos",
    "kind": "trap",
    "outcome": "no_candidates",
@@ -193,7 +193,7 @@
    "model_calls": 0
   },
   {
-   "page": "zitarrosa",
+   "page": "list-events",
    "mutation": "page_emptied",
    "kind": "trap",
    "outcome": "no_candidates",

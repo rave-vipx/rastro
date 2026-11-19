@@ -89,7 +89,7 @@ def run(folder: Path) -> dict[str, Any]:
     folder.mkdir()  # Never reuse or overwrite a prior integration database.
     job = json.loads((HERE / "rastro/job.json").read_text(encoding="utf-8"))
     for source in job["sources"]:
-        candidates = [ROOT / "examples/uy-dance-agenda/sample", HERE / "fixtures"]
+        candidates = [ROOT / "examples/event-agenda/sample", HERE / "fixtures"]
         original = next(
             base / source["path"] for base in candidates if (base / source["path"]).is_file()
         )
