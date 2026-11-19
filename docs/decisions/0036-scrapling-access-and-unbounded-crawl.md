@@ -1,7 +1,7 @@
 # ADR 0036: capability first, using everything the acquisition engine can do
 
-Status: accepted, 2026-11-19. Amends ADR 0020, ADR 0024, ADR 0032 and ADR 0034 wherever they
-limit what an operator can scrape. Product needs N31, N32 and N40.
+Status: accepted, 2026-11-18. Amends ADR 0020, ADR 0024, ADR 0032 and ADR 0034 wherever they
+limit what an operator can scrape.
 
 ## Context
 
@@ -28,7 +28,7 @@ the CLI, the Python API and Studio:
 3. Crawls without a page cap (`max_pages = "unbounded"`), with the engine's checkpoints, resume,
    autothrottle and per-domain concurrency, stopped by the run time budget.
 4. Browser impersonation and HTTP/3 through the engine's HTTP sessions (decided in detail by
-   the N37 ADR).
+   a separate ADR).
 5. Robots handling becomes an operator setting (`[acquisition] robots = "obey" | "ignore"`),
    default `obey`, like other crawlers. Persistent sessions and logins use the operator's
    secret store or browser profile.

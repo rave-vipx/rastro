@@ -1,6 +1,6 @@
 # ADR 0012: provider strategy, declarative jobs, agent interface and Scrapling parity
 
-- **Status:** accepted on 2026-10-30 by the project owner after the 0.1.0 release candidate.
+- **Status:** accepted on 2026-10-30, after the 0.1.0 release candidate.
 - **Requirements:** AI-005, AI-007, JOB-001–003, DISC-001/002, AGENT-001–003, SCR-001–003 (master specification 1.1).
 
 ## Context
@@ -43,7 +43,7 @@ expectations were not covered by the plan:
 ## Consequences
 
 - Pre-v0.2 hardening grows from refactors to also include provider strategy, job files and
-  machine-readable output. The maintainer's roadmap tracks each slice.
+  machine-readable output.
 - Remote providers create a data-egress path for page excerpts. Opt-in, documentation and
   key handling are the mitigations; Rastro still needs no paid service.
 - One job format must serve programmers, agents and a future GUI. Its schema is public API

@@ -1,6 +1,6 @@
 # ADR 0014: Mock Lab fixture format, synthetic labels and fail-closed sanitization
 
-- **Status:** accepted for v0.2 (wave 1, Mock Lab core).
+- **Status:** accepted for 0.2 (Mock Lab core).
 - **Requirements:** MOCK-001, MOCK-004, MOCK-005, MOCK-006; SEC-004 and SEC-011 for diagnostics.
 
 ## Context
@@ -9,7 +9,7 @@ v0.2 adds an Instant Mock Lab: test artifacts generated from real extraction ses
 three questions. How can a fixture stay replayable as Rastro evolves? How can a generated artifact
 never be mistaken for observed source data? How can it be safe to commit a fixture derived from a
 page that may contain cookies, tokens, personal data or confidential text? Mutations (MOCK-002)
-and failure scenarios (MOCK-003) are built in parallel slices and need the same label.
+and failure scenarios (MOCK-003) are built separately and need the same label.
 
 ## Decision
 
@@ -51,7 +51,7 @@ class SyntheticLabel(Contract):
   an object cannot carry a key, so it is refused rather than written unlabeled.
 - The manifest stores the same label, and loading requires every file's label to match it.
 
-Slices B (mutations) and C (failures) reuse this model with their own `kind`. Adding a field
+Mutations and failure scenarios reuse this model with their own `kind`. Adding a field
 requires a new `label_version`.
 
 ### Fail-closed sanitization with no off switch (MOCK-005)

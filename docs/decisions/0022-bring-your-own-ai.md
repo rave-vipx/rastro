@@ -15,7 +15,7 @@ command transport declared in a job would be arbitrary command execution from da
 ## Options
 
 1. **One adapter per product** (Claude, Codex, Gemini...). Every new product needs code;
-   rejected by the owner.
+   rejected: it does not scale and ties Rastro to vendors.
 2. **Generic transports plus documented presets.** OpenAI-compatible HTTP, any local
    command (no shell, prompt on stdin, bounded stdout, allow-listed environment) and an
    in-process function cover every product. Products are documented argv/endpoint presets.

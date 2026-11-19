@@ -1,6 +1,6 @@
 # ADR 0006: explicit regional context with direct-only egress
 
-- **Status:** accepted for the v0.1 regional-context slice; GEO-001 remains partial.
+- **Status:** accepted for the 0.1 regional context; GEO-001 remains partial.
 - **Requirements:** GEO-001–003, GEO-005 and REC-001.
 
 ## Context

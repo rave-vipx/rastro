@@ -25,7 +25,7 @@ by someone who has not yet seen the implementation.
    episodes (removed field, empty or soft-error page, partial page) reward honest
    non-success and punish a bad repair.
 3. **Two executors that differ by capability.** `baseline_adapted` has generic fallbacks
-   and an alarm but no repair loop, so Rastro is compared with a competent maintainer's
+   and an alarm but no repair loop, so Rastro is compared with a competent engineer's
    code, not a strawman. `baseline_static`, `always_alarm` and `never_alarm` are
    controls against gaming.
 4. **Exact formulas and criteria now.** Absolute and relative thresholds (C1–C8) are

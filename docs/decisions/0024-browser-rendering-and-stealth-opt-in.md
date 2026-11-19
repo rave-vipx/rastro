@@ -1,13 +1,13 @@
 # ADR 0024: browser rendering and stealth opt-in
 
-- **Status:** accepted by owner decision, 2026-11-15.
+- **Status:** accepted, 2026-11-15.
 - **Requirements:** SCR-003 amended, SEC-003, SEC-005, SEC-008, OBS-001, GEO-005.
 
 ## Problem
 
 Some permitted sources expose their records only after JavaScript executes. HTTP
-acquisition cannot extract those records. The owner removed SCR-003's prohibition
-on stealth features; consent must still come from the operator, never a job file.
+acquisition cannot extract those records. SCR-003's prohibition
+on stealth features is lifted; consent must still come from the operator, never a job file.
 
 ## Options
 

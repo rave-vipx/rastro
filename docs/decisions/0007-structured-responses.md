@@ -1,6 +1,6 @@
 # ADR 0007: permitted structured JSON responses
 
-- **Status:** accepted for the v0.1 structured-response slice (INT-002 step 3).
+- **Status:** accepted for 0.1 structured responses (INT-002 step 3).
 - **Requirements:** INT-001–004, QUAL-001–004, REC-001–004, SEC-001, SEC-005,
   SEC-008 and specification section 12.1.
 

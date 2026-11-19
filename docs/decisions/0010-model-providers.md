@@ -1,6 +1,6 @@
 # ADR 0010: model providers as strategies with an OpenAI-compatible adapter
 
-- **Status:** accepted for pre-v0.2; AI-005 pulled forward from v0.2 by owner decision.
+- **Status:** accepted before 0.2; AI-005 was pulled forward from 0.2.
 - **Requirements:** AI-001–005, SEC-004, SEC-005, SEC-011, P-001, P-002, P-007.
 
 ## Context

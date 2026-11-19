@@ -1,6 +1,6 @@
 # ADR 0005: Reproducible release evidence
 
-- **Status:** Accepted for the M5 evidence slice; release acceptance remains open.
+- **Status:** Accepted for the 0.1 release evidence; release acceptance remains open.
 - **Requirements:** DIFF-001, QUAL-003, OBS-001, master specification sections 17–18.
 
 ## Context

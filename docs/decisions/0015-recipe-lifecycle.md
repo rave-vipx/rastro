@@ -10,7 +10,7 @@ Through 0.1.0, recipe memory stored immutable versions and reused the highest
 version of a key. That cannot express a repair candidate that must not serve until
 it passes (REPAIR-001, REC-006), a working recipe that is failing but still the best
 available (`degraded`), or a return to an earlier version (REPAIR-006). Repair and
-drift work in later v0.2 slices needs a small, stable vocabulary of states and
+drift work that follows needs a small, stable vocabulary of states and
 transitions before either is built.
 
 ## Decision
@@ -41,7 +41,7 @@ second serving version.
 
 A degraded version keeps serving. Removing a failing but best-known recipe would turn
 a quality warning into an outage. Drift and repair decide when to degrade, promote
-or retire. This slice provides only the operations.
+or retire. This decision provides only the operations.
 
 ### "Validated" means "has served"
 
@@ -139,7 +139,7 @@ retired but remain rollback targets, so no capability is lost.
   `RecipeLifecycle` port (`next_version`, `save_candidate`, `transition`, `rollback`,
   `history`) is separate, so repositories without lifecycle control remain valid
   recipe stores but cannot hold candidates.
-- No facade or CLI surface is added yet. Repair, drift and agent slices will decide
+- No facade or CLI surface is added yet. Repair, drift and agent features decide
   how operators trigger promotion and rollback.
 
 ## Verification

@@ -2,8 +2,8 @@
 
 Rastro stays maintainable by keeping modules small, responsibilities single, and
 dependencies pointing inward. These rules apply to all code under `src/rastro`
-and to its tests. They implement the Engineering Standards (master spec section 15)
-and the Dependency Rule (section 10).
+and to its tests. They implement Rastro's engineering standards and its dependency rule (domain code
+does not import adapters).
 
 ## Size budgets
 
@@ -17,12 +17,8 @@ A module past the soft limit needs a reason in the PR description. A module past
 the hard trigger does not merge until it is split. Line counts include
 docstrings; do not game them by compressing readable code.
 
-Current state (v0.1 plus the recipe-model refactor): the largest modules are
-`domain/models.py` (324), `application/acquisition.py` (315),
-`application/intelligence.py` (273), `application/service.py` (255) and
-`application/engine.py` (254). Four are at or just past the soft limit and none
-exceeds the hard trigger. Treat them as the first candidates to split when they
-next need a feature.
+To see the current largest modules, run `find src -name '*.py' | xargs wc -l | sort -rn | head`.
+Modules at or past the soft limit are the first candidates to split when they next need a feature.
 
 ## Signals that a module must split
 
@@ -67,7 +63,7 @@ adapters  ->  application  ->  domain
 - Tests mirror modules: `src/rastro/application/memory.py` is covered by
   `tests/unit/test_memory.py`.
 - No dead code, commented-out code, or placeholder implementations. Unfinished
-  work is tracked in the maintainer's plan, not stubbed in `src`.
+  work is tracked in an issue, not stubbed in `src`.
 - Failures stay explicit and provenance stays attached. Never turn invalid or
   missing data into successful empty output to shorten a function.
 
@@ -81,9 +77,9 @@ wc -l src/rastro/*/*.py src/rastro/*.py | awk '$1 > 250 && $2 != "total"' | sort
 
 Anything over 400 lines blocks the merge.
 
-## Worked example: `engine.py` in v0.1
+## Worked example: `engine.py`
 
-In v0.1 `application/engine.py` reached 388 lines. Each feature added to it,
+Early in the project `application/engine.py` reached 388 lines. Each feature added to it,
 JSON responses and then explicit egress, introduced `if representation == "json"`
 branches, and the same branch was copied into several methods. The engine also
 kept compatibility shims for internal ports, and `AcquisitionResult.html`
@@ -119,4 +115,4 @@ seam, then add the feature behind it.
 - [ ] No compatibility shims, dead code or placeholders.
 - [ ] Names match what the code holds.
 - [ ] Tests mirror the modules touched and run offline.
-- [ ] Relevant master spec requirement IDs are named in the PR.
+- [ ] The PR links the issue or ADR it implements.

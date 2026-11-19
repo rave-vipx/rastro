@@ -15,8 +15,8 @@ Keep discovery/model orchestration in `RecipeLearner`, behind `RecipeDiscovery` 
 `ModelPort`. The SDK opts in with `discover_recipes=True` or `model=` on asynchronous
 methods. Existing synchronous and default memory semantics remain intact.
 Scrapling performs exact-name JSON-LD and simple microdata discovery before inference.
-External API discovery is not implemented, and the roadmap continues to mark that
-part of INT-002 incomplete.
+External API discovery is not implemented, and that
+part of INT-002 remains incomplete.
 
 The Ollama adapter uses an optional HTTPX 0.28.x extra against the documented chat
 API. Direct HTTP lets the client bound streamed response bytes, reject compression,
@@ -59,8 +59,8 @@ and egress isolation remain trusted infrastructure concerns.
 
 The default byte budget may reject documents that a particular model could handle.
 It avoids silent Rastro truncation but is not a tokenizer-specific context-fit proof.
-This milestone does not claim live-model extraction quality, automatic stored-recipe
-repair, cloud inference, or comparative performance; release evidence remains M5.
+This decision does not claim live-model extraction quality, automatic stored-recipe
+repair, cloud inference, or comparative performance; release evidence is a separate decision (ADR 0005).
 
 ## Primary references
 
