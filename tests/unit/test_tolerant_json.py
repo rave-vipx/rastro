@@ -9,7 +9,7 @@ from rastro import Outcome, Rastro, Source
 from rastro.adapters.jsonld_objects import jsonld_objects
 from rastro.adapters.scrapling import ScraplingParser, _jsonld_payload
 from rastro.application.job_loader import parse_job
-from rastro.domain.models import EmbeddedJsonRecipe, JsonLdRecipe, Limits
+from rastro.domain.models import ConfigurationError, EmbeddedJsonRecipe, JsonLdRecipe, Limits
 from rastro.domain.tolerant_json import tolerant_json
 from rastro.mocklab.json_scrubber import scrub_json
 from rastro.mocklab.seeds import DeterministicStream
@@ -89,5 +89,5 @@ def test_itemlist_traversed():
 
 def test_config_json_stays_strict():
     job = b'{"format_version": 1,}'
-    with pytest.raises(ValueError):
+    with pytest.raises(ConfigurationError):
         parse_job(job, format="json")
