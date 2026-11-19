@@ -116,7 +116,7 @@ def test_without_a_model_shape_gates_promote_a_wrong_title(tmp_path, monkeypatch
     _scrape(V1, memory)
     _misplace_title(monkeypatch)
     wrong = _scrape(V2_AREA, memory)
-    assert wrong.repair.promoted and wrong.repair.origin is None
+    assert wrong.repair.promoted and wrong.repair.origin == "relocation"
     assert [o.title for o in wrong.items] == ["Centro", "Norte"]
 
 

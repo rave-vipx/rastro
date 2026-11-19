@@ -193,6 +193,6 @@ class ScrapeMemory:
             promoted=promoted is not None,
             promoted_version=promoted,
             candidates=proposals,
-            origin=assisted.origin if assist is not None else None,
+            origin=assisted.origin,
             model_calls=assisted.model_calls,
         )

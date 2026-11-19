@@ -338,5 +338,5 @@ async def _repair_source(
         issues=(*candidates.issues, *assisted.issues),
         comparisons=comparisons,
         promoted_version=promoted[0] if promoted else None,
-        origin=assisted.origin if assist is not None else None,
+        origin=assisted.origin,
     )
