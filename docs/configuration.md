@@ -671,6 +671,15 @@ Forget the status and drift state of a source no longer in the job. Docs: [jobs.
 | `--url` | value | required |  | The source URL as `dataset status` shows |
 | `--allow-absolute-paths` | flag | - |  | Allow absolute paths in the job file |
 
+### `rastro job estimate`
+
+Estimate maximum requests and crawl duration from job caps and pacing; never fetches. Docs: [jobs.md#cli-commands-and-exit-codes](jobs.md#cli-commands-and-exit-codes).
+
+| Flag | Value | Default | Choices | Description |
+| --- | --- | --- | --- | --- |
+| `FILE` | Path | required |  | Job file (.toml or .json) |
+| `--allow-absolute-paths` | flag | - |  | Allow absolute paths for local source files and recipe memory |
+
 ### `rastro job stats`
 
 Per-source throughput, latency, error rate, freshness and coverage. Docs: [jobs.md#cli-commands-and-exit-codes](jobs.md#cli-commands-and-exit-codes).

@@ -35,6 +35,7 @@ from rastro.cli_config import add_commands as add_config_commands
 from rastro.cli_config import config_command, template_command
 from rastro.cli_dataset import add_commands, dataset_command, load_job_command
 from rastro.cli_errors import UsageError, classify, missing_extra_error
+from rastro.cli_estimate import add_estimate_command, estimate_command
 from rastro.cli_hook import add_hook_argument, hook_argv, notify, run_summary
 from rastro.cli_ops import JOB_COMMANDS as OPS_JOB_COMMANDS
 from rastro.cli_ops import add_health_command, health_command
@@ -142,6 +143,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     add_commands(subcommands, job_commands)
     add_ops_job_commands(job_commands)
+    add_estimate_command(job_commands)
     add_stats_command(job_commands)
     add_schedule_command(job_commands)
     add_health_command(subcommands)
@@ -164,14 +166,15 @@ def _run_job_command(args: argparse.Namespace) -> int:
         }[args.target]()
         print(json.dumps(payload, indent=2, sort_keys=True))
         return int(JobExitCode.SUCCESS)
-    if args.job_command == "stats":
-        return stats_command(args)
-    if args.job_command == "template":
-        return template_command(args)
-    if args.job_command == "load":
-        return load_job_command(args)
-    if args.job_command == "watch":
-        return watch_job_command(args)
+    handlers = {
+        "stats": stats_command,
+        "estimate": estimate_command,
+        "template": template_command,
+        "load": load_job_command,
+        "watch": watch_job_command,
+    }
+    if args.job_command in handlers:
+        return handlers[args.job_command](args)
     if args.job_command in OPS_JOB_COMMANDS:
         return ops_job_command(args)
     if args.job_command == "validate":
@@ -217,20 +220,18 @@ def _dispatch(args: argparse.Namespace) -> int:
 
 
 def _run_command(args: argparse.Namespace) -> int:
-    if args.command == "mcp":
-        return _mcp_command(args)
-    if args.command == "recipe":
-        return recipe_command(args)
-    if args.command == "dataset":
-        return dataset_command(args)
-    if args.command == "studio":
-        return studio_command(args)
-    if args.command == "health":
-        return health_command(args)
-    if args.command == "suggest":
-        return suggest_command(args)
-    if args.command == "new":
-        return new_command(args)
+    handlers = {
+        "mcp": _mcp_command,
+        "recipe": recipe_command,
+        "dataset": dataset_command,
+        "studio": studio_command,
+        "health": health_command,
+        "suggest": suggest_command,
+        "new": new_command,
+        "job": _run_job_command,
+    }
+    if args.command in handlers:
+        return handlers[args.command](args)
     if args.command in AGENT_COMMANDS:
         return agent_command(args)
     if args.command in CONFIG_COMMANDS:
@@ -263,8 +264,6 @@ def _run_command(args: argparse.Namespace) -> int:
             raise RastroError("Recipe exceeds 64 KiB")
         print(Recipe.model_validate_json(raw).model_dump_json())
         return int(JobExitCode.SUCCESS)
-    if args.command == "job":
-        return _run_job_command(args)
     from rastro.cli_demo import demo_command
 
     return demo_command()

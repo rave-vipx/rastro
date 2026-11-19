@@ -100,6 +100,7 @@ What Rastro already does, for people and for AI coding agents. Use these before 
 ### Follow links from a listing to detail pages
 
 - **Use:** `[spider] mode = "spider"` with `links = "a.item::attr(href)"` or `link_field`, `max_depth`, `max_pages`, `allow`, `deny`, `allow_pattern`; `seed = "sitemap"` starts from a sitemap.xml (or .xml.gz) source with `seed_order = "document" | "reverse" | "lastmod"` applied before `max_pages`
+- **CLI:** `rastro job estimate`
 - **Limits:** Depth 1 to 4, up to 100 pages per start URL, same host by default, robots.txt, shared budget; caps end as partial success; sitemaps parsed without DTDs or entities, one index level, plain HTTP only
 - **Do not build:** hand-built link following, detail-page fetching or your own sitemap parser
 - **Docs:** [jobs.md#spider](jobs.md#spider)
