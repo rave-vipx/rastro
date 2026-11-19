@@ -17,6 +17,7 @@ from pydantic import BaseModel
 from rastro.application.proposals import propose_with_model, schema_hints
 from rastro.domain.intelligence import InferencePolicy
 from rastro.domain.models import ConfigurationError, CssRecipe, Outcome, Recipe, RecipeAttempt
+from rastro.domain.recipes import FieldMapping
 from rastro.domain.suggest import FieldConfidence, Suggestion, SuggestionError
 from rastro.ports.model import ModelPort
 from rastro.ports.suggest import RecipeCandidate
@@ -58,7 +59,9 @@ async def _propose(
         if not isinstance(proposal, CssRecipe):
             return False, "css_recipe_required"
         notes = {
-            name: FieldConfidence(field=name, method="model", selector=proposal.fields.get(name))
+            name: FieldConfidence(
+                field=name, method="model", selector=_scalar(proposal.fields.get(name))
+            )
             for name in schema.model_fields
         }
         try:
@@ -88,3 +91,7 @@ async def _propose(
     if best is None:
         raise SuggestionError(f"The model proposed no recipe that verified ({failure})")
     return best
+
+
+def _scalar(mapping: FieldMapping | None) -> str | None:
+    return mapping if isinstance(mapping, str) else None

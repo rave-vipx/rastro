@@ -153,7 +153,7 @@ def _build(
     if not mapping:
         return None
     try:
-        recipe = CssRecipe(record_selector=records.selector, fields=mapping)
+        recipe = CssRecipe(record_selector=records.selector, fields=dict(mapping))
     except ValidationError:
         return None
     return RecipeCandidate(recipe, confidence)

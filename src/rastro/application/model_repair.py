@@ -24,6 +24,7 @@ from rastro.application.semantic_judge import apply_verdicts, judge, judge_reque
 from rastro.domain.intelligence import InferencePolicy
 from rastro.domain.models import ConfigurationError, CssRecipe, Issue, Recipe, RecipeAttempt
 from rastro.domain.recipe_compare import CandidateEvaluation, RecipeComparison
+from rastro.domain.recipes import FieldMapping, scalar_expression
 from rastro.domain.repair import RepairCandidate
 from rastro.domain.value_consistency import value_consistency
 from rastro.ports.model import ModelPort
@@ -208,7 +209,10 @@ def with_history(proposal: Recipe, previous: Recipe) -> Recipe:
     """
     if not (isinstance(proposal, CssRecipe) and isinstance(previous, CssRecipe)):
         return proposal
-    fields = {name: _union(previous.fields.get(name), sel) for name, sel in proposal.fields.items()}
+    fields = {
+        name: _union(_scalar(previous.fields.get(name)), scalar_expression(sel))
+        for name, sel in proposal.fields.items()
+    }
     record = _union(previous.record_selector, proposal.record_selector)
     try:
         return Recipe.model_validate(
@@ -216,6 +220,10 @@ def with_history(proposal: Recipe, previous: Recipe) -> Recipe:
         )
     except ValidationError:
         return proposal
+
+
+def _scalar(mapping: FieldMapping | None) -> str | None:
+    return mapping if isinstance(mapping, str) else None
 
 
 def _union(old: str | None, new: str) -> str:

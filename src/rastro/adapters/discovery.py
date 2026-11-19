@@ -74,7 +74,7 @@ class ScraplingDiscovery:
         for node in nodes:
             mapping = _microdata_mapping(node, names)
             if mapping:
-                add(CssRecipe(record_selector="[itemscope]:not([itemprop])", fields=mapping))
+                add(CssRecipe(record_selector="[itemscope]:not([itemprop])", fields=dict(mapping)))
             if len(candidates) == max_candidates:
                 break
         return tuple(candidates)

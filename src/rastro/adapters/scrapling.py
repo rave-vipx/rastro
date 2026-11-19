@@ -20,7 +20,7 @@ from rastro.domain.models import (
     Recipe,
     ResourceLimitError,
 )
-from rastro.domain.recipes import DOCUMENT_PREFIX, EXPAND_PREFIX
+from rastro.domain.recipes import DOCUMENT_PREFIX, EXPAND_PREFIX, pointer_list, scalar_expression
 from rastro.domain.tolerant_json import tolerant_json
 from rastro.ports.parser import Candidate, ParsedDocument
 
@@ -122,7 +122,8 @@ def _node_candidates(
     issues: list[Issue] = []
     expanded: tuple[str, str, list[str]] | None = None
     base = f"{recipe.record_selector} [match {index}] >> "
-    for field, selector in recipe.fields.items():
+    for field, mapping in recipe.fields.items():
+        selector = scalar_expression(mapping)
         scope, css = field_scope(selector, page, node)
         if selector.startswith(EXPAND_PREFIX):
             found = [str(v) for v in scope.css(css).getall()]
@@ -217,7 +218,7 @@ class ScraplingParser:
                 values: dict[str, object] = {}
                 locators: dict[str, str] = {}
                 for field, mapping in recipe.fields.items():
-                    pointers = (mapping,) if isinstance(mapping, str) else mapping
+                    pointers = pointer_list(mapping)
                     for position, pointer in enumerate(pointers, 1):
                         value = resolve_pointer(item, pointer)
                         # A JSON null falls through to the next pointer; the last one decides.

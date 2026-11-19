@@ -33,7 +33,7 @@ from rastro.domain.models import (
     ResourceLimitError,
     Source,
 )
-from rastro.domain.recipes import DOCUMENT_PREFIX, EXPAND_PREFIX
+from rastro.domain.recipes import DOCUMENT_PREFIX, EXPAND_PREFIX, scalar_expression
 from rastro.domain.repair import (
     ElementFingerprint,
     RelocationSnapshot,
@@ -70,7 +70,7 @@ class ScraplingRelocation:
             raise ConfigurationError("Successful result does not match the snapshot records")
         nodes: dict[str, Selector] = {}
         for field, expression in recipe.fields.items():
-            selector, _ = _expression(expression)
+            selector, _ = _expression(scalar_expression(expression))
             if field not in result.records[0].evidence:
                 continue
             matches = _css(records[0], selector)
@@ -121,7 +121,8 @@ class ScraplingRelocation:
         # One template record: the most common shape, so a row missing an optional child
         record = template_record(records)  # does not become the template.
         selected = {
-            field: _css(record, _expression(expr)[0]) for field, expr in recipe.fields.items()
+            field: _css(record, _expression(scalar_expression(expr))[0])
+            for field, expr in recipe.fields.items()
         }
         names = {
             node: (node.tag, tuple(sorted(set(node.get("class", "").split()))))
@@ -131,7 +132,7 @@ class ScraplingRelocation:
         evidence = container_evidence(page, relocated, records, snapshot.fields, selected)
         fields = dict(recipe.fields)
         for field, fingerprint in snapshot.fields.items():
-            if _expression(recipe.fields[field])[0] == ":scope":
+            if _expression(scalar_expression(recipe.fields[field]))[0] == ":scope":
                 evidence.append(RepairEvidence(field=field, match_count=1))
                 continue
             # An element another field already reads is never a relocation target.
@@ -144,9 +145,12 @@ class ScraplingRelocation:
             if matches and [node._root for node in matches] != [
                 node._root for node in selected[field]
             ]:
-                _, suffix = _expression(fields[field])
+                _, suffix = _expression(scalar_expression(fields[field]))
                 fields[field] = ", ".join(
-                    [fields[field], *(path + suffix for path in paths if path is not None)]
+                    [
+                        scalar_expression(fields[field]),
+                        *(path + suffix for path in paths if path is not None),
+                    ]
                 )
         if fields == recipe.fields and record_selector == recipe.record_selector:
             return ()

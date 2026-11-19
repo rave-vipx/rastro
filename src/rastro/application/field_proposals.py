@@ -16,6 +16,7 @@ from rastro.application.model_choice import resolve_model
 from rastro.application.suggest import LOCAL_URL, suggest
 from rastro.domain.models import ConfigurationError, Contract, CssRecipe, Limits, Outcome, Source
 from rastro.domain.page_outline import clip_untrusted
+from rastro.domain.recipes import scalar_expression
 from rastro.domain.selector_policy import check_untrusted_recipe
 from rastro.domain.suggest import SuggestionError, infer_field_type
 from rastro.ports.field_discovery import FieldDiscoverer
@@ -175,7 +176,7 @@ def propose_fields(html: str, **opts: Any) -> ProposedFields:
             items = [
                 FieldProposal(
                     name=n,
-                    selector=rec.fields[n],
+                    selector=scalar_expression(rec.fields[n]),
                     example=clip_untrusted(str(first.get(n, "")), 120),
                     record_selector=rec.record_selector,
                 )

@@ -15,7 +15,7 @@ from pydantic import (
 )
 from pydantic_core import CoreSchema, core_schema
 
-from rastro.domain.json import POINTER
+from rastro.domain.json import POINTER, RELATIVE_POINTER
 from rastro.domain.sources import ConfigurationError, Contract, Representation
 
 DOCUMENT_PREFIX = "document:"  # CSS field evaluated against the page root, not the record
@@ -86,15 +86,47 @@ class Pagination(Contract):
     max_pages: StrictInt = Field(default=5, ge=1, le=50)
 
 
+class NestedMapping(Contract):
+    """Select items, then read either scalar values or named scalar members."""
+
+    each: str = Field(
+        min_length=1,
+        max_length=1024,
+        description=(
+            "Relative CSS scope selector or absolute JSON pointer with one wildcard segment."
+        ),
+    )
+    members: dict[str, str] = Field(
+        default_factory=dict,
+        max_length=32,
+        description="Named scalar expressions relative to each item; excludes value.",
+    )
+    value: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=1024,
+        description="One scalar expression relative to each item; excludes members.",
+    )
+
+    @model_validator(mode="after")
+    def check_shape(self) -> Self:
+        if bool(self.members) == (self.value is not None):
+            raise ValueError("Nested mappings require exactly one of members or value")
+        return self
+
+
+type FieldMapping = str | PointerList | NestedMapping
+
+
 class Recipe(StrategyUnion):
-    """A declarative definition of scalar field mappings: what to extract, never history.
+    """A declarative definition of field mappings: what to extract, never history.
 
     ``Recipe(...)`` and ``Recipe.model_validate(...)`` return a ``CssRecipe``,
     ``JsonLdRecipe``, ``EmbeddedJsonRecipe`` or ``JsonRecipe`` selected by ``strategy``.
     """
 
     strategy: Literal["jsonld", "css", "json", "embedded_json"]
-    fields: dict[str, str] = Field(min_length=1, max_length=100)
+    fields: dict[str, FieldMapping] = Field(min_length=1, max_length=100)
     version: int = Field(default=1, ge=1, le=2_147_483_647)
     require_evidence: bool = False
     fallbacks: tuple[Recipe, ...] = Field(default=(), max_length=3)
@@ -114,24 +146,60 @@ class Recipe(StrategyUnion):
             if expression.startswith((DOCUMENT_PREFIX, EXPAND_PREFIX)):
                 raise ValueError("Pagination requires a scalar page expression")
             self.check_expression(expression)
-        for name, mapping in self.fields.items():
-            expressions = (mapping,) if isinstance(mapping, str) else mapping
-            if not name or len(name) > 256 or not 1 <= len(expressions) <= MAX_POINTERS:
-                raise ValueError("Field names and expressions must be nonempty and bounded")
+        self.check_fields(self.fields)
+        return self
+
+    def check_fields(self, fields: dict[str, FieldMapping]) -> None:
+        for name, mapping in fields.items():
+            if not name or len(name) > 256:
+                raise ValueError("Field names must be nonempty and bounded")
+            if isinstance(mapping, NestedMapping):
+                self.check_each(mapping.each)
+                expressions = (
+                    tuple(mapping.members.values()) if mapping.members else (mapping.value,)
+                )
+                if any(not key or len(key) > 256 for key in mapping.members):
+                    raise ValueError("Member names must be nonempty and bounded")
+            else:
+                expressions = (mapping,) if isinstance(mapping, str) else mapping
+                if isinstance(mapping, tuple) and self.strategy != "jsonld":
+                    raise ValueError("Fallback pointers require the JSON-LD strategy")
             for expression in expressions:
                 if not expression or len(expression) > 1024:
-                    raise ValueError("Field names and expressions must be nonempty and bounded")
+                    raise ValueError("Field expressions must be nonempty and bounded")
                 self.check_expression(expression)
-        return self
+
+    def check_each(self, expression: str) -> None:
+        """Validate an absolute array pointer selecting one level of items."""
+        _check_pointer(expression)
+        if not expression.startswith("/") or expression.split("/").count("*") != 1:
+            raise ValueError("Nested JSON mappings require exactly one wildcard segment")
 
     @staticmethod
     def check_expression(expression: str) -> None:
         """Raise ValueError if a field expression is invalid for this strategy."""
 
 
+def scalar_expression(mapping: FieldMapping) -> str:
+    """Return a single-expression mapping; nested and fallback mappings are not scalar."""
+    if not isinstance(mapping, str):
+        raise ConfigurationError("This operation supports single-expression field mappings only")
+    return mapping
+
+
+def pointer_list(mapping: FieldMapping) -> tuple[str, ...]:
+    """Return the ordered fallback pointers of a non-nested mapping."""
+    if isinstance(mapping, NestedMapping):
+        raise ConfigurationError("Nested field mappings are not extracted by this strategy yet")
+    return (mapping,) if isinstance(mapping, str) else mapping
+
+
 def _check_pointer(expression: str) -> None:
-    if not expression.startswith("/") or POINTER.fullmatch(expression) is None:
-        raise ValueError("JSON mappings must be valid absolute JSON pointers")
+    if not (
+        (expression.startswith("/") and POINTER.fullmatch(expression))
+        or RELATIVE_POINTER.fullmatch(expression)
+    ):
+        raise ValueError("JSON mappings must be valid absolute or relative JSON pointers")
 
 
 def _check_record_path(value: str) -> str:
@@ -150,9 +218,23 @@ class CssRecipe(Recipe):
 
     @model_validator(mode="after")
     def check_expand(self) -> Self:
-        if sum(value.startswith(EXPAND_PREFIX) for value in self.fields.values()) > 1:
+        if (
+            sum(
+                isinstance(value, str) and value.startswith(EXPAND_PREFIX)
+                for value in self.fields.values()
+            )
+            > 1
+        ):
             raise ValueError("At most one field can use the expand: prefix")
         return self
+
+    def check_each(self, expression: str) -> None:
+        if (
+            not expression.strip()
+            or "::" in expression
+            or expression.startswith((DOCUMENT_PREFIX, EXPAND_PREFIX))
+        ):
+            raise ValueError("Nested CSS mappings require a plain scope selector")
 
     @staticmethod
     def check_expression(expression: str) -> None:
@@ -174,9 +256,6 @@ class JsonLdRecipe(Recipe):
     """
 
     strategy: Literal["jsonld"] = "jsonld"
-    fields: dict[str, str | PointerList] = Field(  # type: ignore[assignment]
-        min_length=1, max_length=100
-    )
     fallbacks: tuple[HtmlRecipe, ...] = Field(default=(), max_length=3)
     item_type: (
         ItemType
