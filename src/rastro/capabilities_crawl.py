@@ -18,6 +18,7 @@ CRAWL_CAPABILITIES: tuple[Capability, ...] = (
         '`max_depth`, `max_pages`, `allow`, `deny`, `allow_pattern`; `seed = "sitemap"` starts '
         'from a sitemap.xml (or .xml.gz) source with `seed_order = "document" | "reverse" | '
         '"lastmod"` applied before `max_pages`',
+        cli=("rastro job estimate",),
         limits="Depth 1 to 4, up to 100 pages per start URL, same host by default, robots.txt, "
         "shared budget; caps end as partial success; sitemaps parsed without DTDs or entities, "
         "one index level, plain HTTP only",

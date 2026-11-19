@@ -7,6 +7,7 @@ host and path alone are what a report may say about it.
 
 from __future__ import annotations
 
+from contextvars import ContextVar
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import Annotated
@@ -14,15 +15,19 @@ from urllib.parse import unquote, urljoin, urlsplit, urlunsplit
 
 from pydantic import BaseModel, Field, TypeAdapter, ValidationError
 
-from rastro.application.sitemap import SitemapEntry
+from rastro.application.sitemap import SitemapEntry, sitemap_discovery_note
 from rastro.domain.models import ConfigurationError, ExtractionResult, Limits, ResourceLimitError
 from rastro.domain.provenance_url import canonical_page_url
+from rastro.domain.source_notes import DiscoveryNote, SourceNotes
 from rastro.domain.spider import SpiderPolicy
 from rastro.domain.spider_report import SpiderOutcome
 from rastro.ports.parser import DocumentParser
 
 MAX_URL = 8192
 _DEFAULT_PORTS = {"http": 80, "https": 443}
+_SEED_ENTRIES: ContextVar[tuple[int, list[SitemapEntry], list[SourceNotes]]] = ContextVar(
+    "seed_entries", default=(-1, [], [])
+)
 
 
 @dataclass(frozen=True)
@@ -116,9 +121,67 @@ class LinkHarvest:
         self.hrefs: list[str] = []
         self.sitemaps: list[SitemapEntry] = []  # a sitemap index's child sitemaps (N16)
         self.seed_entries: list[SitemapEntry] = []  # <url> entries from a sitemap seed (N16)
+        self.discovery: DiscoveryNote = DiscoveryNote(
+            seed=spider.seed,
+            order=spider.seed_order,
+        )
+        self._root_notes: list[SourceNotes] | None = None
         self._known: set[str] = set()  # a scrolled page is added once per step
         self.failed = False
         self.page_url: str | None = None
+
+    @property
+    def spider(self) -> SpiderPolicy:
+        return self._spider
+
+    def bind_root_notes(self, notes: SourceNotes, *, first: bool) -> SourceNotes:
+        """Bind or update the root seed page's ``SourceNotes`` across child sitemaps."""
+        scope_id, entries, holder = _SEED_ENTRIES.get()
+        if first or not holder:
+            holder = [notes]
+            _SEED_ENTRIES.set((scope_id, entries, holder))
+        else:
+            object.__setattr__(holder[0], "discovery", self.discovery)
+        self._root_notes = holder
+        return holder[0]
+
+    def record_discovery(
+        self,
+        *,
+        found: int,
+        filtered: int,
+        admitted: int,
+    ) -> DiscoveryNote:
+        """Record or update discovery counts on this harvest."""
+        self.discovery = (
+            sitemap_discovery_note(
+                self._spider.seed_order,
+                found=found,
+                filtered=filtered,
+                admitted=admitted,
+            )
+            if self._spider.seed == "sitemap"
+            else DiscoveryNote(
+                seed=self._spider.seed,
+                order=self._spider.seed_order,
+                locs_found=found,
+                locs_filtered=filtered,
+                locs_admitted=admitted,
+            )
+        )
+        return self.discovery
+
+    def record_seed_entries(
+        self, scope_id: int, entries: tuple[SitemapEntry, ...], *, reset: bool
+    ) -> list[SitemapEntry]:
+        """Accumulate urlset entries across one sitemap seed crawl."""
+        current_id, accumulated, holder = _SEED_ENTRIES.get()
+        if reset or current_id != scope_id:
+            accumulated = []
+            holder = []
+            _SEED_ENTRIES.set((scope_id, accumulated, holder))
+        accumulated.extend(entries)
+        return list(accumulated)
 
     def add[T: BaseModel](
         self, url: str, body: str | None, result: ExtractionResult[T], representation: str
@@ -140,6 +203,7 @@ class LinkHarvest:
             if href not in self._known:
                 self._known.add(href)
                 self.hrefs.append(href)
+        self.record_discovery(found=len(self.hrefs), filtered=0, admitted=len(self.hrefs))
 
     def _from_field[T: BaseModel](self, result: ExtractionResult[T]) -> list[str]:
         name = self._spider.link_field
