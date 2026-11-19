@@ -235,7 +235,7 @@ class UrlField(_FieldBase):
         return self._wrap_required(Annotated[AnyHttpUrl, BeforeValidator(relative_url)])
 
 
-type ScalarField = Annotated[
+type ScalarField = (
     StringField
     | IntegerField
     | NumberField
@@ -243,14 +243,13 @@ type ScalarField = Annotated[
     | DecimalField
     | DateField
     | DateTimeField
-    | UrlField,
-    Field(discriminator="type"),
-]
+    | UrlField
+)
 
 
 class ObjectField(_FieldBase):
     type: Literal["object"] = "object"
-    members: tuple[ScalarField, ...] = Field(
+    members: tuple[Annotated[ScalarField, Field(discriminator="type")], ...] = Field(
         min_length=1,
         max_length=32,
         description="Uniquely named scalar members of an object.",
@@ -284,7 +283,18 @@ class ObjectField(_FieldBase):
 
 class ListField(_FieldBase):
     type: Literal["list"] = "list"
-    item: Annotated[ScalarField | ObjectField, Field(discriminator="type")] = Field(
+    item: Annotated[
+        StringField
+        | IntegerField
+        | NumberField
+        | BooleanField
+        | DecimalField
+        | DateField
+        | DateTimeField
+        | UrlField
+        | ObjectField,
+        Field(discriminator="type"),
+    ] = Field(
         description="Scalar or object item contract; its name is ignored.",
     )
     min_items: StrictInt = Field(default=0, ge=0, le=1000, description="Minimum valid items.")
@@ -316,7 +326,20 @@ class ListField(_FieldBase):
         return self._wrap_required(target)
 
 
-type JobField = Annotated[ScalarField | ListField | ObjectField, Field(discriminator="type")]
+# Spelled out: a discriminated union nested in another reports a doubled tag in error paths.
+type JobField = Annotated[
+    StringField
+    | IntegerField
+    | NumberField
+    | BooleanField
+    | DecimalField
+    | DateField
+    | DateTimeField
+    | UrlField
+    | ListField
+    | ObjectField,
+    Field(discriminator="type"),
+]
 
 
 def build_job_schema(fields: Sequence[JobField]) -> type[BaseModel]:
