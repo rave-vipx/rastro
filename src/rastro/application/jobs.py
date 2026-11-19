@@ -22,6 +22,7 @@ from rastro.application.operator_trust import operator_trust
 from rastro.application.pagination_records import deduplicate_pages
 from rastro.application.robots_cache import robots_cache
 from rastro.application.run_log import log_failures
+from rastro.application.run_report import named, with_report
 from rastro.domain.job_results import JobRunResult
 from rastro.domain.jobs import FileJobSource, Job, UrlJobSource
 from rastro.domain.models import ExtractionResult
@@ -114,7 +115,7 @@ async def run_job_async(
             model=model,
         )
         log_failures(report)
-    return report.model_copy(update={"recipes": selections})
+    return with_report(report, selections)
 
 
 async def _run_active_async(
@@ -216,7 +217,7 @@ def run_job(
             model=model,
         )
         log_failures(report)
-    return report.model_copy(update={"recipes": selections})
+    return with_report(report, selections)
 
 
 def _run_active(
@@ -293,7 +294,7 @@ def run_job_file(
     """Load and execute a declarative job file; see ``run_job`` for the ``allow_*`` options."""
     file_path = Path(path)
     job = load_job(file_path, allow_absolute_paths=allow_absolute_paths)
-    return run_job(
+    result = run_job(
         job,
         base_dir=file_path.parent,
         allow_absolute_paths=allow_absolute_paths,
@@ -309,6 +310,7 @@ def run_job_file(
         max_model_cost=max_model_cost,
         model_cost_per_call=model_cost_per_call,
     )
+    return named(result, file_path.name)
 
 
 __all__ = [

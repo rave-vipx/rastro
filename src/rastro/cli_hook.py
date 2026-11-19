@@ -4,7 +4,9 @@
 non-zero after running (1, 3, 4 or 5). It is never read from a job file. The command is
 split with ``shlex`` and run without a shell, with a timeout, and receives a small JSON
 summary on stdin: outcome codes, hosts and drift levels only, never records, page content,
-paths, queries or secrets. A hook failure is reported on stderr and never changes the exit
+file paths, queries or secrets. Payload version 2 keeps every version 1 key and adds
+``report``, the run report (hosts, URL paths, counts and reasons; see
+``docs/run-report.md``). A hook failure is reported on stderr and never changes the exit
 code. The command line itself is never echoed, since it may hold a webhook token.
 """
 
@@ -20,10 +22,12 @@ from pathlib import Path
 from typing import Any
 
 from rastro.application.run_log import host
+from rastro.application.run_report import report_for_run
 from rastro.domain.failure_reason import failure_detail
 from rastro.domain.job_load import JobLoadResult
 from rastro.domain.job_results import JobRunResult
 from rastro.domain.models import ConfigurationError
+from rastro.domain.run_report import RunReport
 
 ENV = "RASTRO_ON_FAILURE"
 TIMEOUT_SECONDS = 30.0
@@ -51,10 +55,15 @@ def hook_argv(args: argparse.Namespace) -> list[str] | None:
 
 
 def _summary(
-    job: Path, command: str, status: str, code: int, sources: list[dict[str, Any]]
+    job: Path,
+    command: str,
+    status: str,
+    code: int,
+    sources: list[dict[str, Any]],
+    report: RunReport | None,
 ) -> dict[str, Any]:
-    return {
-        "schema_version": 1,
+    summary: dict[str, Any] = {
+        "schema_version": 2,
         "event": "rastro_job_failure",
         "job": job.name,
         "command": command,
@@ -62,6 +71,9 @@ def _summary(
         "exit_code": code,
         "sources": sources,
     }
+    if report is not None:
+        summary["report"] = report.model_dump(mode="json")
+    return summary
 
 
 def run_summary(job: Path, report: JobRunResult[Any]) -> dict[str, Any]:
@@ -75,7 +87,8 @@ def run_summary(job: Path, report: JobRunResult[Any]) -> dict[str, Any]:
         }
         for index, result in enumerate(report.results, start=1)
     ]
-    return _summary(job, "run", report.job.status, int(report.exit_code), sources)
+    run_report = report.report or report_for_run(job.name, report)
+    return _summary(job, "run", report.job.status, int(report.exit_code), sources, run_report)
 
 
 def load_summary(job: Path, loaded: JobLoadResult) -> dict[str, Any]:
@@ -93,7 +106,7 @@ def load_summary(job: Path, loaded: JobLoadResult) -> dict[str, Any]:
         }
         for index, source in enumerate(loaded.sources, start=1)
     ]
-    return _summary(job, "load", loaded.status, int(loaded.exit_code), sources)
+    return _summary(job, "load", loaded.status, int(loaded.exit_code), sources, loaded.report)
 
 
 def notify(argv: list[str] | None, summary: dict[str, Any]) -> None:

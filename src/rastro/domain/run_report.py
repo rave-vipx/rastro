@@ -101,7 +101,9 @@ class RunReport(Contract):
     kind: Literal["run", "load"]
     content: Literal["content_free"] = "content_free"
     job: str = Field(pattern=_FILE_NAME)
-    dataset: str | None = Field(default=None, min_length=1, max_length=128)
+    dataset: str | None = Field(
+        default=None, min_length=1, max_length=128, exclude_if=lambda v: v is None
+    )
     started_at: AwareDatetime
     completed_at: AwareDatetime
     status: RunReportStatus
