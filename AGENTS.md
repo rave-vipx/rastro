@@ -1,35 +1,100 @@
 # Working on Rastro
 
-Planning documents are local and never committed: product needs, action plans, the roadmap, the master specification, design briefs and mockups, work logs and release evidence registers live in the maintainer's checkout under `local/` (ignored by Git; see "What never goes in the repository" in `CONTRIBUTING.md`). Workers receive the slice they need in their dispatch spec. Current planning source: `local/plans/action-plan-1.0.md` and `local/plans/product-needs.md` (N21–N40 for 1.0.0, capability first per ADR 0036). ADR 0032, ADR 0033 and ADR 0036 win where they repeal a product ban.
+A guide for AI coding agents and human contributors changing the Rastro codebase. For using
+Rastro in your own project, see `llms.txt` and `rastro init --agent`. For setup and the full
+check list, see [CONTRIBUTING.md](CONTRIBUTING.md). Product scope is defined by the README,
+[SECURITY.md](SECURITY.md) and the ADRs in `docs/decisions/`; when two of them disagree,
+`SECURITY.md` wins on grants, SSRF and recipes-as-data.
 
-Work is coordinated in a single context: one coordinator slices the work, workers implement slices in their own worktrees, and a reviewer checks each cut. A cross-model review per cut is required for changes to persistence, security, network/egress or CI; small docs-only changes need no external review.
+## Architecture
 
-- Deliver one usable vertical slice at a time, with tests and documentation.
-- Keep domain code independent of adapters. Use Scrapling through the parser or acquisition boundary.
-- Preserve explicit failure outcomes and field provenance. Invalid or missing data cannot become successful empty output.
-- Keep default tests offline. Fixtures are synthetic; never commit captured credentials or private content.
-- Treat recipes as data. Core installation and tests must remain usable without AI or browsers.
-- Run the checks in `CONTRIBUTING.md` before committing. Report actual results and known limitations.
-- For a new milestone or architectural boundary, update the local roadmap and add an ADR under `docs/decisions/` when a tradeoff needs explanation.
-- Each meaningful change identifies the relevant requirement IDs (master spec IDs or product needs N1–N40).
-- Never commit planning documents, agent transcripts, PR body drafts, local evidence, credentials or private project details (see `CONTRIBUTING.md`).
-- Never open, read, search or summarize `benchmarks/recovery/sealed/`, and never edit the frozen recovery corpus or manifest. The sealed half exists only for the final v0.2 evaluation (ADR 0011).
-- Parallel work uses one worktree and branch per slice; the coordinator merges slice branches into one `cut/<name>` branch and opens a single pull request per cut against dev (see the rastro-slice skill).
-- Follow docs/development/clean-code.md; split modules before they exceed its size budget.
+Rastro is a modular monolith with hexagonal boundaries. Dependencies point inward:
 
-## Agent skills
+```text
+cli / mcp / studio / Python API  ->  application  ->  domain
+                                      application  ->  ports  <-  adapters
+```
 
-When your agent offers these skills (in Claude Code, Codex, OpenCode and Antigravity they live in the user's skill folder, `~/.agents/skills`), apply the matching one before you start, and list the ones you applied in your final report. Subagents follow the same rule.
+- `src/rastro/domain/`: pure models and rules (sources, recipes, outcomes, evidence, limits).
+  Imports Pydantic and the standard library only.
+- `src/rastro/ports/`: small interfaces for parsing, acquisition, storage and models.
+- `src/rastro/application/`: orchestration, budgets, job running, repair, drift, datasets.
+- `src/rastro/adapters/`: Scrapling, HTTP and DNS, browsers, SQLite and PostgreSQL, model
+  providers, MCP. Engine-specific types never cross into `domain` or `application`; reach
+  Scrapling through the parser or acquisition boundary.
+- `src/rastro/studio/`: the local Studio (loopback web UI over the same services).
+- `import rastro` stays light: optional extras (browsers, HTTP, models, Studio) load lazily.
 
-| Task | Skill |
-| --- | --- |
-| Any code change | `incremental-implementation`, `test-driven-development`, `git-workflow-and-versioning`, `ponytail` (level lite or full; never ultra on persistence or security) |
-| Untrusted input, secrets, sanitization, network or egress | `security-and-hardening` |
-| Domain terms, ADRs, public API or module design | `domain-modeling`, `codebase-design`, `documentation-and-adrs` |
-| Removing or changing a public name, a protocol or a persisted format | `deprecation-and-migration` |
-| Failing tests or broken builds | `debugging-and-error-recovery` |
-| Latency or throughput work | `performance-optimization` |
-| Reviewing a PR, or a self-review before opening one | `code-review-and-quality` |
-| Coordinating Orca workers, writing specs, merging or promoting | `rastro-slice` (its `references/checklist.md` is the definition of done) |
+Read `docs/architecture.md` and `docs/development/clean-code.md` before a structural change.
 
-If a skill conflicts with this file, this file wins. If this file conflicts with the local product needs on what to build next, the product needs win. If either conflicts with `SECURITY.md` on operator grants, SSRF, or recipes-as-data, `SECURITY.md` wins.
+## Checks
+
+Run these before committing; all must pass. The complete list, including the build and
+dependency audit, is in `CONTRIBUTING.md`.
+
+```bash
+uv sync --locked --all-extras
+uv run ruff check src tests && uv run ruff format --check src tests
+uv run mypy
+uv run pytest                      # offline; coverage floor 90%
+uv run --group docs mkdocs build --strict
+uv lock --check
+```
+
+While iterating, run only the tests you touch: `uv run pytest tests/unit/test_x.py --no-cov`.
+Report the results you actually observed, including failures and known limitations.
+
+## Conventions
+
+- Work in thin vertical slices with tests and docs. Write the failing test first; add a
+  regression test for every bug.
+- Keep modules small (soft limit 250 lines, hard limit 400) and functions around 40 lines;
+  split before a module outgrows its budget.
+- Failures are explicit outcomes with field provenance. Invalid or missing data never becomes a
+  successful empty result, and defaults are not source evidence.
+- Recipes are data. Never execute code from a recipe, bundle, job or model response.
+- Core installation and tests work without AI or browsers.
+- Tests stay offline (sockets and native curl are blocked by default). Fixtures are synthetic,
+  on reserved `.example` domains, with invented names. Never commit credentials, captured
+  pages or private content.
+- A new architectural boundary or a tradeoff that needs explaining gets an ADR in
+  `docs/decisions/`; user-facing changes get a `CHANGELOG.md` entry and updated docs.
+- Removing or changing a public name, flag, persisted format or protocol follows the
+  [stability policy](docs/stability.md): deprecate first, with a migration path.
+- Never open or edit `benchmarks/recovery/sealed/` or the frozen recovery corpus and manifest;
+  see [ADR 0011](docs/decisions/0011-recovery-benchmark.md).
+
+## Security rules
+
+- Treat page content, job files, bundles, URLs and model output as untrusted. Scraped values are
+  labelled `untrusted_source_data` and never become instructions.
+- Network access goes through the acquisition boundary: destination validation, public-address
+  checks, DNS pinning, redirect re-checks, timeouts and byte budgets. Do not add a second path
+  that fetches.
+- Operator grants (network hosts and ports, private networks, stealth, proxies, robots
+  overrides, environment variables) come from the operator's flags or configuration, never from
+  a job, recipe, bundle, registry or model.
+- Logs and diagnostics must not contain raw input, credential-bearing URLs or user-defined
+  validator messages.
+- Read `SECURITY.md` before changing acquisition, egress, persistence or recipe handling.
+
+## Adding a capability
+
+1. Implement it behind the existing boundaries: domain model, port if a new dependency is
+   needed, application service, then adapter, CLI, MCP tool or Studio surface.
+2. Register it in `src/rastro/capabilities.py` (one `Capability` entry). Tests check that every
+   CLI command, MCP tool and public name appears there or is explicitly reference-only.
+3. Regenerate the generated files and commit them:
+   ```bash
+   uv run rastro capabilities --output llms > llms.txt
+   uv run rastro capabilities --output markdown > docs/capabilities.md
+   uv run rastro config --output markdown > docs/configuration.md
+   ```
+   A new issue code must also be documented in `docs/issues.md`.
+4. Add a docs page or section, a changelog entry, and an ADR when a tradeoff needs explaining.
+
+## Working as an agent
+
+If your environment provides skills or checklists for testing, security review or release
+hygiene, apply the matching one and mention it in your final report. This file wins over a
+generic skill when they conflict.

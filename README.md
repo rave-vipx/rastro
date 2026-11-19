@@ -1,12 +1,12 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/rave-vipx/rastro/main/docs/assets/rastro-banner.svg" alt="Rastro — The open source web data engine. Web data, with evidence." width="100%">
+  <img src="https://raw.githubusercontent.com/rave-vipx/rastro/main/docs/assets/rastro-banner.svg" alt="Rastro: AI writes the scraper once, recipes keep it running." width="100%">
 </p>
 
 <p align="center">
   <a href="https://github.com/rave-vipx/rastro/actions/workflows/ci.yml"><img src="https://github.com/rave-vipx/rastro/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.12%2B-3776ab" alt="Python 3.12+"></a>
   <a href="https://github.com/rave-vipx/rastro/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-orange" alt="Apache 2.0 license"></a>
-  <img src="https://img.shields.io/badge/status-beta-536d60" alt="Beta">
+  <a href="https://pypi.org/project/rastro-engine/"><img src="https://img.shields.io/pypi/v/rastro-engine" alt="PyPI version"></a>
 </p>
 
 <p align="center">
@@ -18,8 +18,8 @@
   <a href="https://github.com/rave-vipx/rastro/issues">Issues</a>
 </p>
 
-**Rastro is an open-source web data engine. Paste a URL, name the fields, and it keeps a
-dataset up to date with a verified recipe.**
+**Rastro: AI writes the scraper once, recipes keep it running.** Paste a URL, name the
+fields, and Rastro keeps a dataset up to date with a verified recipe.
 
 - **Scrape once, reuse the recipe.** A run scrapes the URL. The next run fetches that URL
   again and reuses the recipe. It does not call a model unless the site changed.
@@ -46,8 +46,6 @@ mkdir my-scrapers && rastro studio --root my-scrapers
    records.
 4. Give the job a dataset file and a record key, press **Create job**, then **Load into
    dataset**. Load again later to update the same records.
-
-<!-- TODO(owner): add a Studio screenshot here (absolute https:// URL; PyPI renders this file). -->
 
 Two switches, both off by default: **auto-promote** writes only `[repair] auto_promote` on
 the job, and the **stealth** switch grants the running process, never the job. See the
@@ -192,7 +190,7 @@ Rastro promises no invisibility or unrestricted access. See [HTTP acquisition](h
 
 ## Stability
 
-From 0.6.0 Rastro follows Semantic Versioning for the names in `rastro.__all__`, the CLI and
+Rastro follows Semantic Versioning for the names in `rastro.__all__`, the CLI and
 its JSON output, the job format and the recipe bundle format. Deprecated names keep working
 with a warning for one minor release. See the [stability policy](https://rave-vipx.github.io/rastro/stability/) and the
 [changelog](https://github.com/rave-vipx/rastro/blob/main/CHANGELOG.md).

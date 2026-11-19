@@ -2,9 +2,9 @@
 
 Describe the problem and resulting behavior. Include a minimal example for API changes.
 
-## Requirements and scope
+## Scope
 
-Reference master-spec requirement IDs and the issue/milestone. Explain architecture or public API changes.
+Link the issue or ADR this implements. Explain architecture or public API changes.
 
 ## Validation
 

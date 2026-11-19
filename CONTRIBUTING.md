@@ -1,6 +1,6 @@
 # Contributing to Rastro
 
-Thanks for helping make web data more reliable. Rastro is in beta. The public surface and its deprecation policy are defined in the [stability policy](docs/stability.md).
+Thanks for helping make web data more reliable. The public surface and its deprecation policy are defined in the [stability policy](docs/stability.md).
 
 ## Find a useful change
 
@@ -22,8 +22,7 @@ uv run rastro demo
 Create a short-lived branch from `dev` and target `dev` in your pull request.
 `dev` is the integration branch: CI runs on every push and PR, and passing checks
 are required before merging. Promote reviewed changes to `main` through a separate
-PR; documentation deploys only from `main`. CI continues to run on pushes to
-`staging` during the branch transition.
+PR; documentation deploys only from `main`.
 
 Keep each commit focused, with a descriptive `feat:`, `fix:`, `test:`, or `docs:` message. Commit `uv.lock` whenever dependency resolution changes.
 
@@ -62,7 +61,7 @@ For comparison changes, regenerate the full report using the [benchmark methodol
 
 ## Submit a pull request
 
-Explain the user-visible change, reference requirement IDs, and report the exact checks you ran. Include security and performance implications and any limitations. Update API docs and `CHANGELOG.md` in the same change. The PR template provides these prompts.
+Explain the user-visible change, link the issue or ADR, and report the exact checks you ran. Include security and performance implications and any limitations. Update API docs and `CHANGELOG.md` in the same change. The PR template provides these prompts.
 
 Maintainers review scope, API clarity, correctness, and evidence. Required CI checks must pass before merging. No reviewer response-time guarantee is offered at this stage.
 
@@ -71,10 +70,9 @@ By contributing, you agree that your contributions are licensed under Apache 2.0
 ## What never goes in the repository
 
 Rastro is a public repository. Keep these out of commits, pull requests and issues; the
-maintainer keeps them locally under `local/` (ignored by Git):
+maintainers keep them locally under `local/` (ignored by Git):
 
-- Planning documents: product needs, action plans, roadmaps, the master specification,
-  design briefs, mockups and their sample data (tests use synthetic fixtures under `tests/`).
+- Planning documents: roadmaps, requirement lists, action plans, design briefs, mockups and their sample data (tests use synthetic fixtures under `tests/`).
 - Process records: agent work logs, review transcripts, release evidence registers, PR body
   drafts (`.pr-*-body.md`) and local run outputs.
 - Anything about private projects that use Rastro: names, sites, customers, findings. Describe
