@@ -8,11 +8,17 @@ from __future__ import annotations
 
 import importlib
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Sequence
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
+from dataclasses import replace
 from typing import Any
 
+from rastro.adapters.browser_controls_apply import (
+    MAX_SCREENSHOT_BYTES,
+    scrapling_controls,
+    steps_performer,
+)
 from rastro.adapters.playwright_browser import INSTALL, NetworkGuard, browser_flags, proxy_option
 from rastro.application.browser_proxy import BROWSER_PROXY
 from rastro.domain.acquisition import (
@@ -22,6 +28,7 @@ from rastro.domain.acquisition import (
     PinnedTarget,
     ProxyRoute,
 )
+from rastro.domain.browser_controls import BrowserControls
 from rastro.domain.models import ConfigurationError, Outcome
 
 _active: ContextVar[bool] = ContextVar("stealth_logging", default=False)
@@ -55,8 +62,35 @@ def _options(
         "google_search": False,
         "dns_over_https": False,
         "block_webrtc": True,
-        "network_idle": True,
+        **scrapling_controls(policy.browser),
     }
+
+
+def _page_action(
+    policy: AcquisitionPolicy, guard: NetworkGuard, steps: Sequence[Any], evidence: list[bytes]
+) -> Any:
+    """The hook Scrapling runs after navigation: page steps, then optional PNG evidence."""
+    controls: BrowserControls = policy.browser
+
+    async def action(page: Any) -> Any:
+        if steps:
+            await steps_performer()(
+                page, steps, guard=guard, timeout_ms=policy.request_timeout_seconds * 1000
+            )
+        if controls.screenshot:
+            try:
+                image = await page.screenshot(type="png", full_page=False)
+            except Exception:
+                image = b""
+            if isinstance(image, bytes) and 0 < len(image) <= MAX_SCREENSHOT_BYTES:
+                evidence.append(image)
+        return page
+
+    return action
+
+
+def _with_evidence(result: AcquisitionResult, evidence: list[bytes]) -> AcquisitionResult:
+    return replace(result, screenshot=evidence[0]) if evidence else result
 
 
 class ScraplingStealth:
@@ -83,12 +117,16 @@ class ScraplingStealth:
         targets: tuple[PinnedTarget, ...],
     ) -> AcquisitionResult:
         guard = NetworkGuard(policy)
+        evidence: list[bytes] = []
         token = _active.set(True)
         try:
             response = await self.fetcher.async_fetch(
-                target.url, **_options(guard, policy, targets, BROWSER_PROXY.get())
+                target.url,
+                page_action=_page_action(policy, guard, (), evidence),
+                **_options(guard, policy, targets, BROWSER_PROXY.get()),
             )
-            return guard.result(response.url, response.html_content, response.status, max_bytes)
+            result = guard.result(response.url, response.html_content, response.status, max_bytes)
+            return _with_evidence(result, evidence)
         except AcquisitionError:
             raise
         except Exception:
@@ -133,13 +171,28 @@ class StealthSession:
     async def render(
         self, target: PinnedTarget, *, policy: AcquisitionPolicy, max_bytes: int
     ) -> AcquisitionResult:
+        return await self.run_steps(target, (), policy=policy, max_bytes=max_bytes)
+
+    async def run_steps(
+        self,
+        target: PinnedTarget,
+        steps: Sequence[Any],
+        *,
+        policy: AcquisitionPolicy,
+        max_bytes: int,
+    ) -> AcquisitionResult:
+        """Load ``target``, run page steps through Scrapling's after-navigation hook."""
         self._guard.begin(policy)
+        evidence: list[bytes] = []
         token = _active.set(True)
         try:
-            response = await self._engine.fetch(target.url)
-            return self._guard.result(
+            response = await self._engine.fetch(
+                target.url, page_action=_page_action(policy, self._guard, steps, evidence)
+            )
+            result = self._guard.result(
                 response.url, response.html_content, response.status, max_bytes
             )
+            return _with_evidence(result, evidence)
         except AcquisitionError:
             raise
         except Exception:
