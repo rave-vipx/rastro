@@ -85,7 +85,7 @@ def run_demo(folder: Path) -> None:
 
 def _sequence(path: Path, job: dict[str, Any]) -> None:
     assert command("job", "load", "job.json", "--drift")[0] == 0
-    html = Path("sodre-cartelera.html")
+    html = Path("teatro-central-cartelera.html")
     original = html.read_text(encoding="utf-8")
     changed = MutationPlan(
         seed=42,
@@ -118,7 +118,7 @@ def _sequence(path: Path, job: dict[str, Any]) -> None:
     assert command("recipe", "rollback", "job.json", "--version", "1")[0] == 0
     html.write_text(original, encoding="utf-8")
     assert command("job", "load", "job.json", "--drift")[0] == 0
-    seller = Path("tickantel-evento.html")
+    seller = Path("tickets-event.html")
     body = seller.read_text(encoding="utf-8")
     replacements = tuple(
         HtmlChangeLabel(
@@ -141,7 +141,7 @@ def _sequence(path: Path, job: dict[str, Any]) -> None:
     print("All assertions passed; temporary dataset retained 6 records; external spend=$0")
     from rastro.adapters.sqlite_dataset import SQLiteDatasetStore
 
-    assert len(SQLiteDatasetStore("agenda.sqlite").records("uy_dance_agenda")) == 6
+    assert len(SQLiteDatasetStore("agenda.sqlite").records("event_agenda")) == 6
 
 
 if __name__ == "__main__":

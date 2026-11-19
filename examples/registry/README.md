@@ -1,9 +1,9 @@
-# Synthetic recipe registry (N6)
+# Synthetic recipe registry
 
 This is a usable Git-directory registry, distributed under Apache-2.0. Every page
 and expected record is synthetic; the `.example` hosts are placeholders, not live
-scrape targets. The original `uy-sodre-agenda` also uses synthetic HTML; its real
-source URL is metadata, not evidence of coverage of that website.
+scrape targets. The `teatro-central-agenda` package uses the invented Teatro Central
+and a reserved source URL.
 
 | Package | Fields | Offline consumer |
 | --- | --- | --- |
@@ -63,5 +63,5 @@ rastro recipe publish ./my-bundle --registry ./my-registry
 
 The job needs recipe memory with a serving recipe. Publish verifies replay and
 scans for secrets before writing; it prints Git commands and never runs them.
-See [Hub](../../docs/hub.md) for limits and the **pending** `--registry-url` path.
+See [Hub](../../docs/hub.md) for limits and the `--registry-url` option.
 No accounts, executable shared recipes or operator grants travel in a package.

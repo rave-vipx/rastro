@@ -1,15 +1,15 @@
 # Reproducible offline sample (v2 snapshot with rescheduled performance)
-# of the Uruguay dance agenda pilot job.
+# of the synthetic event agenda.
 format_version = 1
 
 [region]
 locale = "es-UY"
 languages = ["es-UY", "es"]
-timezone = "America/Montevideo"
+timezone = "Etc/GMT+3"
 currency = "UYU"
 
 [dataset]
-name = "uy_dance_agenda"
+name = "event_agenda"
 path = "agenda.sqlite"
 identity = ["performance_id"]
 match_fields = ["title", "venue", "starts_at"]
@@ -17,8 +17,8 @@ match_tolerance_minutes = 90
 
 [[sources]]
 kind = "file"
-path = "sodre-cartelera.html"
-url = "https://sodre.gub.uy/espectaculos/"
+path = "teatro-central-cartelera.html"
+url = "https://agenda.example/espectaculos/"
 
 [sources.recipe]
 version = 1
@@ -53,8 +53,8 @@ ticket_url = "a.cyg--btn::attr(href)"
 
 [[sources]]
 kind = "file"
-path = "tickantel-evento.html"
-url = "https://tickantel.com.uy/ng/espectaculo/9900102/gala-anual-2026-area-tango-y-milonga"
+path = "tickets-event.html"
+url = "https://tickets.example/ng/espectaculo/9900102/gala-anual-2026-area-tango-y-milonga"
 
 [sources.recipe]
 version = 1

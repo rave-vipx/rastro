@@ -6,7 +6,7 @@
   "compatibility": {
     "min_rastro": "0.7.0",
     "source_patterns": [
-      "sodre.gub.uy/espectaculos"
+      "agenda.example/espectaculos"
     ]
   },
   "context": {
@@ -15,13 +15,13 @@
     "template": "page"
   },
   "files": {
-    "expected.json": "7c1038befb4f2683e0aa951f907e4f73496964b0ad86d5dea31be08d3b8c5bb8",
+    "expected.json": "96e409def542acb8cc47e1d35ef16015e044b1ff896d8e6ecb684b2981ec0328",
     "recipe.json": "dfaa039fcff7eb623b86b6ab02b42bedcbf16f5065a54f612663b52440b8b064",
-    "sample.html": "ebdd9f81382530b7d49ca9b45c5055b3b646c9b3576210face3fdf83064da3f5",
+    "sample.html": "ff95ae2ef518d2bcab528cfb875d3c3ada0036a36346ae15cc4d479ac3e51255",
     "schema.json": "fcfcc3b4dd9b3d2fef9161e37a06eebbcdf1b8e0b0fb0e2eb4bf3e2241efb450"
   },
   "format_version": 2,
-  "id": "uy-sodre-agenda",
+  "id": "teatro-central-agenda",
   "last_verified": "2026-11-15",
   "license": "Apache-2.0",
   "representation": "html",
@@ -30,8 +30,8 @@
     "egress": "direct",
     "languages": [],
     "locale": "es-UY",
-    "timezone": "America/Montevideo",
-    "url": "https://sodre.gub.uy/espectaculos/"
+    "timezone": "Etc/GMT+3",
+    "url": "https://agenda.example/espectaculos/"
   },
   "version": "1.0.0",
   "visibility": "public"

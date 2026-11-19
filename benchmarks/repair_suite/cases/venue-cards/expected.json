@@ -1,0 +1,44 @@
+[
+ {
+  "performance_id": "venue-1",
+  "title": "Candombe de Invierno",
+  "venue": "Teatro Central",
+  "starts_at": "2099-03-10T20:30:00-03:00",
+  "ticket_url": "https://tickets.example/uy/venue-1"
+ },
+ {
+  "performance_id": "venue-2",
+  "title": "Gala Anual: Tango y Milonga",
+  "venue": "Teatro Central",
+  "starts_at": "2099-03-11T20:30:00-03:00",
+  "ticket_url": "https://tickets.example/uy/venue-2"
+ },
+ {
+  "performance_id": "venue-3",
+  "title": "Noche de Ballet",
+  "venue": "Teatro Central",
+  "starts_at": "2099-03-12T20:30:00-03:00",
+  "ticket_url": "https://tickets.example/uy/venue-3"
+ },
+ {
+  "performance_id": "venue-4",
+  "title": "Folklore en Danza",
+  "venue": "Teatro Central",
+  "starts_at": "2099-03-13T20:30:00-03:00",
+  "ticket_url": "https://tickets.example/uy/venue-4"
+ },
+ {
+  "performance_id": "venue-5",
+  "title": "Milonga del Sur",
+  "venue": "Teatro Central",
+  "starts_at": "2099-03-14T20:30:00-03:00",
+  "ticket_url": "https://tickets.example/uy/venue-5"
+ },
+ {
+  "performance_id": "venue-6",
+  "title": "Ballet Contemporáneo",
+  "venue": "Teatro Central",
+  "starts_at": "2099-03-15T20:30:00-03:00",
+  "ticket_url": "https://tickets.example/uy/venue-6"
+ }
+]
