@@ -1,16 +1,21 @@
-"""Offline structural measurements through Scrapling; never imports a fetcher."""
+"""Offline structural measurements through Scrapling; never imports a fetcher.
+
+A nested field is measured by its item selector, and each member as ``field.member``
+inside those items, so a member that disappears shows even when the items remain.
+"""
 
 import hashlib
 import json
+from collections.abc import Sequence
 
 from cssselect import SelectorError, parse
 from scrapling.parser import Selector
 
 from rastro.adapters.scrapling import ScraplingParser, _parse_html, element_count, field_scope
 from rastro.adapters.structured import JsonParser
-from rastro.domain.drift import FieldStructure
+from rastro.domain.drift import MAX_STRUCTURE_FIELDS, FieldStructure
 from rastro.domain.models import ConfigurationError, CssRecipe, Limits, Recipe, ResourceLimitError
-from rastro.domain.recipes import DOCUMENT_PREFIX, EXPAND_PREFIX, scalar_expression
+from rastro.domain.recipes import DOCUMENT_PREFIX, EXPAND_PREFIX, NestedMapping, scalar_expression
 
 
 class ScraplingDriftProbe:
@@ -45,31 +50,48 @@ class ScraplingDriftProbe:
         if len(nodes) > limits.max_records:
             raise ResourceLimitError("Drift record count exceeds configured limits")
         fields = {}
+        members_left = MAX_STRUCTURE_FIELDS - len(recipe.fields)
         for name, mapping in sorted(recipe.fields.items()):
-            selector = scalar_expression(mapping)
-            count, shapes = 0, []
-            # Pseudo-elements select values; fingerprint their owning element's structure.
-            selectors = []
-            for tree in parse(selector.removeprefix(EXPAND_PREFIX).removeprefix(DOCUMENT_PREFIX)):
-                own_value = tree.canonical().startswith("::")
-                tree.pseudo_element = None
-                selectors.append(None if own_value else tree.canonical())
-            for node in nodes:
-                scope, css = field_scope(selector, page, node)
-                count += element_count(scope, css)
-                for element_selector in selectors:
-                    for element in scope.css(element_selector) if element_selector else [scope]:
-                        shapes.append(_shape(element, limits))
-                        if len(shapes) > limits.max_json_nodes:
-                            raise ResourceLimitError("Drift matches exceed configured limits")
-            digest = hashlib.sha256(json.dumps(sorted(shapes)).encode()).hexdigest()
-            fields[name] = FieldStructure(
-                selector_match_count=count,
-                subtree_fingerprint=digest,
-                field_coverage=0,
-                validation_failure_rate=0,
-            )
+            if not isinstance(mapping, NestedMapping):
+                fields[name] = _measure(page, nodes, scalar_expression(mapping), limits)
+                continue
+            # The item selector measures the field; each member is measured inside the items.
+            fields[name] = _measure(page, nodes, mapping.each, limits)
+            items = [item for node in nodes for item in node.css(mapping.each)]
+            if len(items) > limits.max_json_nodes:
+                raise ResourceLimitError("Drift matches exceed configured limits")
+            for member, expression in sorted(mapping.members.items())[: max(0, members_left)]:
+                fields[f"{name}.{member}"] = _measure(page, items, expression, limits)
+                members_left -= 1
         return fields
+
+
+def _measure(
+    page: Selector, scopes: Sequence[Selector], selector: str, limits: Limits
+) -> FieldStructure:
+    """Match count and structural fingerprint of ``selector`` within each scope."""
+    count, shapes = 0, []
+    # Pseudo-elements select values; fingerprint their owning element's structure.
+    selectors = []
+    for tree in parse(selector.removeprefix(EXPAND_PREFIX).removeprefix(DOCUMENT_PREFIX)):
+        own_value = tree.canonical().startswith("::")
+        tree.pseudo_element = None
+        selectors.append(None if own_value else tree.canonical())
+    for node in scopes:
+        scope, css = field_scope(selector, page, node)
+        count += element_count(scope, css)
+        for element_selector in selectors:
+            for element in scope.css(element_selector) if element_selector else [scope]:
+                shapes.append(_shape(element, limits))
+                if len(shapes) > limits.max_json_nodes:
+                    raise ResourceLimitError("Drift matches exceed configured limits")
+    digest = hashlib.sha256(json.dumps(sorted(shapes)).encode()).hexdigest()
+    return FieldStructure(
+        selector_match_count=count,
+        subtree_fingerprint=digest,
+        field_coverage=0,
+        validation_failure_rate=0,
+    )
 
 
 def _shape(element: Selector, limits: Limits) -> str:

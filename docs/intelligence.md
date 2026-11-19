@@ -173,8 +173,16 @@ The trusted system message gives numbered rules and a one-line example of the JS
 The data envelope carries:
 
 - `fields` and `required_fields`, plus `field_hints`: each field's type and the
-  `Field(description=...)` you wrote;
-- `untrusted_html`, or for a page too large for `max_context_bytes`, `untrusted_page_digest`;
+  `Field(description=...)` you wrote. List and object fields show their members, for
+  example `list[object{name: str, price: Decimal | null}]`, and the rules show a nested
+  mapping (`{"each": "li.ticket", "members": {"price": ".price::text"}}`), so a model can
+  answer "each ticket type with its price" with one recipe;
+- `region_timezone` when the job's region sets one: dates without an offset on the page
+  are local to it, and the model is told to select them as written;
+- `untrusted_html` (hardened: hidden elements, comments and invisible characters removed)
+  with `untrusted_page_text`, the same visible page condensed to Markdown (at most 3,000
+  characters); or, for a page too large for `max_context_bytes`, `untrusted_page_digest`.
+  Page text that looks like instructions is listed in `content_flags`;
 - for repair, `previous_recipe` (the serving recipe, without version or fallbacks), a safe
   `last_failure` category such as `serving_recipe_extracts_no_records`, and
   `untrusted_last_success_samples` (up to two records from the last retained success,

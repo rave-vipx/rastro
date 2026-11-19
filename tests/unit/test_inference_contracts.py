@@ -5,6 +5,7 @@ from pydantic import ValidationError
 
 from rastro import CssRecipe, InferencePolicy, JsonLdRecipe, ModelRequest, RecipeProposal
 from rastro.domain.intelligence import CssProposal, JsonLdProposal, proposal_schema
+from rastro.domain.recipes import NestedMapping
 
 
 @pytest.mark.parametrize(
@@ -62,14 +63,16 @@ def test_proposal_schema_encodes_strategy_specific_recipe_rules():
 
 
 # The constrained-decoding schema 0.1.0 sent to models, minus each variant's title.
-_V0_1_PROPOSAL_SCHEMA = {
+_PROPOSAL_SCHEMA = {
     "anyOf": [
         {
             "additionalProperties": False,
             "properties": {
                 "strategy": {"const": "css", "title": "Strategy", "type": "string"},
                 "fields": {
-                    "additionalProperties": {"type": "string"},
+                    "additionalProperties": {
+                        "anyOf": [{"type": "string"}, {"$ref": "#/$defs/NestedMapping"}]
+                    },
                     "maxProperties": 100,
                     "minProperties": 1,
                     "title": "Fields",
@@ -90,7 +93,9 @@ _V0_1_PROPOSAL_SCHEMA = {
             "properties": {
                 "strategy": {"const": "jsonld", "title": "Strategy", "type": "string"},
                 "fields": {
-                    "additionalProperties": {"type": "string"},
+                    "additionalProperties": {
+                        "anyOf": [{"type": "string"}, {"$ref": "#/$defs/NestedMapping"}]
+                    },
                     "maxProperties": 100,
                     "minProperties": 1,
                     "title": "Fields",
@@ -112,11 +117,13 @@ _V0_1_PROPOSAL_SCHEMA = {
 }
 
 
-def test_proposal_schema_is_derived_from_html_recipe_variants_and_unchanged():
+def test_proposal_schema_is_derived_from_html_recipe_variants():
     schema = proposal_schema()
     titles = [variant.pop("title") for variant in schema["anyOf"]]
     assert titles == ["CssProposal", "JsonLdProposal"]
-    assert schema == _V0_1_PROPOSAL_SCHEMA
+    # Nested mappings for list and object fields are the only change since 0.1.
+    assert schema.pop("$defs") == {"NestedMapping": NestedMapping.model_json_schema()}
+    assert schema == _PROPOSAL_SCHEMA
     # Selector constraints come from the recipe variants, not a parallel definition.
     for proposal, recipe, selector in (
         (CssProposal, CssRecipe, "record_selector"),
@@ -126,8 +133,8 @@ def test_proposal_schema_is_derived_from_html_recipe_variants_and_unchanged():
             assert JsonLdProposal.model_fields[selector].annotation == (str | None)
             continue
         assert repr(proposal.model_fields[selector]) == repr(recipe.model_fields[selector])
-        # Proposals keep scalar expressions while recipes also support nested mappings.
-        assert proposal.model_fields["fields"].annotation == dict[str, str]
+        # Proposals map one expression or a nested mapping; pointer lists stay hand-written.
+        assert proposal.model_fields["fields"].annotation == dict[str, str | NestedMapping]
 
 
 @pytest.mark.parametrize(

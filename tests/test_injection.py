@@ -230,7 +230,8 @@ def test_visible_injection_is_flagged_in_model_contexts_with_values_intact():
         ).content
     )
     assert content["content_flags"] == [
-        {"field": "descripcion", "code": CODE, "rules": ["ignore_instructions"]}
+        {"field": "untrusted_page_text", "code": CODE, "rules": ["tool_reference"]},
+        {"field": "descripcion", "code": CODE, "rules": ["ignore_instructions"]},
     ]
     assert content["untrusted_last_success_samples"] == [sample]
     from pydantic import BaseModel
