@@ -16,6 +16,7 @@ from rastro.domain.models import (
     StrategyUnion,
     seal_union,
 )
+from rastro.domain.recipe_nested import NestedMapping
 
 
 class InferencePolicy(Contract):
@@ -63,7 +64,8 @@ class RecipeProposal(StrategyUnion):
     """
 
     strategy: Literal["jsonld", "css"]
-    fields: dict[str, str] = Field(min_length=1, max_length=100)
+    # One expression per field, or a nested mapping for list/object fields.
+    fields: dict[str, str | NestedMapping] = Field(min_length=1, max_length=100)
 
     def recipe(self) -> Recipe:
         return Recipe.model_validate(self.model_dump())
@@ -78,7 +80,7 @@ def _proposal(variant: type[Recipe]) -> type[RecipeProposal]:
         for name, info in variant.model_fields.items()
         if name not in _DEFINITION_ONLY
     }
-    # Model proposals map one expression per field; pointer lists are for hand-written recipes.
+    # Model proposals never use pointer lists; those are for hand-written recipes.
     fields["fields"] = (
         RecipeProposal.model_fields["fields"].annotation,
         RecipeProposal.model_fields["fields"],
@@ -98,7 +100,11 @@ seal_union(RecipeProposal, CssProposal, JsonLdProposal)
 
 def proposal_schema() -> dict[str, Any]:
     """Constrained-decoding schema with each HTML recipe variant's selector rules."""
-    return {"anyOf": [CssProposal.model_json_schema(), JsonLdProposal.model_json_schema()]}
+    variants = [CssProposal.model_json_schema(), JsonLdProposal.model_json_schema()]
+    defs: dict[str, Any] = {}
+    for variant in variants:  # "$ref"s resolve from the root, so hoist them there
+        defs.update(variant.pop("$defs", {}))
+    return {"anyOf": variants, **({"$defs": defs} if defs else {})}
 
 
 class ModelRequest(Contract):

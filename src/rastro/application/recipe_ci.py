@@ -4,6 +4,9 @@ Containment (N19): a candidate whose current values, or the success samples the 
 judge would read, look like instructions is never promoted automatically. It is held in
 quarantine with the reason ``instruction_like_content``; an operator can still promote it
 with a reason and ``--override-gates``.
+
+List and object members are typed too: a candidate that reads a member value its type
+rejects (the member is nulled or the list item dropped) fails ``valid_nested_members``.
 """
 
 from collections.abc import Sequence
@@ -93,6 +96,11 @@ def evaluate_candidate(
             ),
         ),
         RegressionCheck(name="no_rejected_current_records", passed=current.metrics.rejected == 0),
+        # A list or object member of the wrong type is nulled or dropped, not rejected.
+        RegressionCheck(
+            name="valid_nested_members",
+            passed=not any(issue.code in _MEMBER_LOSS for issue in current.issues),
+        ),
     )
     decision, reasons = _decide(
         candidate, current.status, len(rows), indicators, historical, generated, bool(rules), policy
@@ -125,6 +133,7 @@ def _blocking(issues: Sequence[Issue]) -> tuple[Issue, ...]:
 
 
 _OPTIONAL_SHARE = 0.75
+_MEMBER_LOSS = frozenset({"member_nulled", "list_item_dropped"})
 
 
 def _sample_rates(schema: type[BaseModel], fixtures: Sequence[FixtureBundle]) -> dict[str, float]:
