@@ -202,6 +202,8 @@ runs and field declaration order.
 | `date` | `datetime.date` | `localized` (boolean, default `false`) |
 | `datetime` | `datetime.datetime` | `localized` (boolean, default `false`) |
 | `url` | `AnyHttpUrl` (`http` / `https`, any host, no TLD required) | — |
+| `list` | list of scalars or objects | `item`, `min_items`, `max_items` ([Field contracts](fields.md#lists-and-objects)) |
+| `object` | object of named scalar members | `members` ([Field contracts](fields.md#lists-and-objects)) |
 
 All field types accept `required = true` (default) or `required = false` (nullable, defaulting
 to `None` when omitted by a recipe). Constraints from another type (such as `ge` on `string`)
@@ -210,7 +212,9 @@ are rejected during validation.
 Extracted text values of every type have surrounding whitespace, including non-breaking
 spaces, removed before validation, so `min_length`, `pattern` and number or date parsing see
 the real value. A required field whose value is blank is a validation error, never an empty
-success. A blank value for an optional field stays an empty string, so `min_length = 1` still
+success. `null_values = ["n/a", "-"]` on any field lists text placeholders (compared after
+trimming and case folding, up to 16) that count as missing instead of as a value, so a
+required field fails visibly and an optional one stays empty. A blank value for an optional field stays an empty string, so `min_length = 1` still
 rejects it.
 
 ### Strict job definitions, lax extracted values
@@ -467,6 +471,24 @@ need operator opt-in. The job file cannot grant it to itself.
   `allow_private_network=`, `allow_ports=`, `ignore_robots=`; env `RASTRO_ALLOW_PRIVATE_NETWORK`,
   `RASTRO_ALLOWED_PORTS`, `RASTRO_IGNORE_ROBOTS`). A job file that sets any of them is
   rejected as an unknown key. See [Operator permissions](acquisition.md#operator-permissions).
+- Your own job may set `[acquisition] robots = "ignore"` to skip robots.txt for its hosts;
+  you assert the permission. A job that came from an agent tool, a bundle, a registry
+  recipe or a model proposal needs the `robots_ignore` grant first.
+
+### Capability grants
+
+Stealth, challenge solving and the other powerful engine features are capabilities. Your
+own job files use stealth without a grant; input from another origin (`mcp`, `bundle`,
+`registry`, `model`) gets none unless you grant it
+([Capabilities and input origin](acquisition.md#capabilities-and-input-origin)):
+
+- `--allow-untrusted ORIGIN:NAME` (repeatable; `RASTRO_ALLOW_UNTRUSTED`) grants one
+  capability to one origin, for example `--allow-untrusted mcp:stealth`.
+- `--allow-capability NAME` (repeatable; `RASTRO_ALLOW_CAPABILITIES`) lets your own jobs
+  use a grant-only capability: `persistent_session`, `real_chrome`, `cdp` or
+  `solver_plugins`.
+- `--allow-stealth` is deprecated. Your own jobs need no grant for it; it still grants
+  stealth to untrusted origins. Prefer `--allow-untrusted`.
 
 ```console
 $ RASTRO_PROXY_USER=me RASTRO_PROXY_PASS=secret rastro job run job.toml --allow-egress
@@ -531,6 +553,14 @@ for uncertain cross-source comparisons. Without it, records are matched on `iden
 only and no uncertain match is flagged. A misspelled name is reported with
 `"location": "dataset.match_fields"`.
 See [dataset usage and the executed offline sequence](dataset.md#load-inspect-and-export-a-job).
+
+## Related guides
+
+- [Run report](run-report.md): why each source ended as it did, without opening records.
+- [Field contracts](fields.md): list and object fields, invalid parts and placeholders.
+- [Crawling linked pages](crawling.md): path filters, page identity and evidence.
+- [Engines](engines.md): which Scrapling feature maps to which Rastro setting.
+- [Reading results](reading-results.md): `read_records`, export and the command line.
 
 ## Pagination
 
@@ -642,16 +672,17 @@ deny = ["/login", "/cart"]
 | `mode` | `"list"` (default) reads each source once; `"spider"` follows links. |
 | `seed` | `"page"` (default): the start URL is a page. `"sitemap"`: it is a sitemap whose locs are the links ([Start from a sitemap](#start-from-a-sitemap)). |
 | `seed_order` | `"document"` (default), `"reverse"` or `"lastmod"` (newest first, entries without a valid `<lastmod>` last in document order). Only for `seed = "sitemap"`; applied before `max_pages`. |
-| `links` | A CSS expression ending in `::attr(name)`; every match is a link. It follows the selector cost policy of any job recipe. HTML sources only. |
+| `links` | A CSS expression ending in `::attr(name)`, or a list of up to eight; every match is a link. A comma selector group is refused with `link_group_refused`: use a list of expressions. It follows the selector cost policy of any job recipe. HTML sources only. |
 | `link_field` | The name of a declared field whose value in each accepted record is a link. Works for JSON too. Exactly one of `links` or `link_field` is required in spider mode, unless `seed = "sitemap"` (then at most one). |
 | `max_depth` | Link hops from the start URL, 1 to 4 (default 2). |
 | `max_pages` | Fetched documents per start source, 1 to 100 (default 25). Pagination pages count. |
 | `same_host` | Default `true`. With `false`, a link is followed only when its host is in `[acquisition].allowed_hosts`. |
 | `allow`, `deny` | Path prefixes matched on whole segments: `/item` covers `/item` and `/item/1`, never `/items`. `deny` wins; with `allow`, a path outside it is skipped. The start URL is always fetched. |
+| `deny_pattern` | Optional linear-time regular expression with the same limits as `allow_pattern`, matched against the decoded path; a match is skipped as `path_denied` before `max_pages` and wins over `allow` and `allow_pattern`. |
 | `allow_pattern` | Optional linear-time regular expression (no look-around or backreferences, max 512 chars) matched against each link's normalized path; non-matching links are skipped as `path_denied` before `max_pages`. `deny` still wins. |
 
 The table grants nothing and rejects unknown keys, so a job file cannot add
-`ignore_robots`, private-network or stealth permissions here. They stay operator flags
+private-network or stealth permissions here. They stay operator flags
 ([Operator opt-in](#operator-opt-in)).
 
 Rules:

@@ -13,7 +13,9 @@
 - [Remember validated recipes across restarts](memory.md).
 - [Bring your own AI](ai.md): fully offline by default. Connect a local model, any API, a subscription CLI or your MCP agent. The model proposes and Rastro verifies.
 - [Discover recipes with optional model assistance](intelligence.md).
-- [Understand results, evidence, and limits](api.md).
+- [Understand results, evidence, and limits](api.md), including the [run report](run-report.md) and [reading results](reading-results.md).
+- [Declare list and object fields](fields.md) and [crawl linked pages](crawling.md).
+- [See which engine features Rastro exposes](engines.md).
 - [See the architecture and tradeoffs](architecture.md).
 - [Use Rastro from an AI agent](ai-agents.md).
 - [Know what is stable across releases](stability.md).

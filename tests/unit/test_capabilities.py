@@ -121,6 +121,7 @@ def test_generated_outputs_identical() -> None:
     from rastro.domain.job_load import job_load_json_schema
     from rastro.domain.job_results import job_run_json_schema
     from rastro.domain.jobs import job_json_schema
+    from rastro.domain.run_report import run_report_json_schema
 
     assert EXTRACT_CAPABILITIES
     for path, output in (
@@ -135,6 +136,7 @@ def test_generated_outputs_identical() -> None:
         ("job-load", job_load_json_schema()),
         ("job-preview", job_preview_json_schema()),
         ("health", job_health_json_schema()),
+        ("run-report", run_report_json_schema()),
     ):
         output = json.dumps(schema, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
         assert (ROOT / "docs/schemas" / f"{name}.schema.json").read_bytes() == output.encode()

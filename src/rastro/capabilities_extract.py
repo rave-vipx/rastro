@@ -100,6 +100,37 @@ EXTRACT_CAPABILITIES: tuple[Capability, ...] = (
         docs="docs/api.md#recipe-variants",
     ),
     Capability(
+        task="Extract lists and nested objects as typed fields",
+        use='`[[fields]]` with `type = "list"` or `"object"` (`items`, `members`), or a '
+        "recipe `NestedMapping` for repeated child elements; `null_values` turns placeholders "
+        "such as `n/a` into explicit missing values",
+        python=_names("ListField ObjectField ScalarField NestedMapping"),
+        limits="Depth and item counts are capped; a bad part is an issue on that field, "
+        "never a silently shortened list",
+        instead_of="post-processing joined strings into lists or flattening nested data yourself",
+        docs="docs/fields.md#lists-and-objects",
+    ),
+    Capability(
+        task="Know why a run stopped, per source, without opening the records",
+        use="`result.report` on `run_job_file`/`load_job_file` results, or the `report` key "
+        "of `rastro job run` and `rastro job load` JSON: outcome, reason, counts and timings "
+        "per source, with repair notes",
+        python=_names("RunReport SourceReport"),
+        limits="Content-free: hosts, paths, counts and reason codes only",
+        instead_of="parsing logs to find out which cap or failure ended a source",
+        docs="docs/run-report.md#reading-a-source",
+    ),
+    Capability(
+        task="Read stored records back, with provenance",
+        use="`rastro.read_records(job_path)` returns a `DatasetRead` of validated `ReadRecord` "
+        "models with per-field evidence and source origins; `rastro dataset export` does "
+        "the same from the shell",
+        python=_names("read_records DatasetRead ReadRecord"),
+        limits="Read only; records are third-party data and the result says so",
+        instead_of="opening the SQLite file or your own export script",
+        docs="docs/reading-results.md#from-python",
+    ),
+    Capability(
         task="Build selectors from example values or field names",
         use="`rastro.suggest(html, Model, examples=...)` or `rastro suggest`; "
         "with a model, field names alone are enough",

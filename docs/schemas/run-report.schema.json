@@ -1,0 +1,837 @@
+{
+  "$defs": {
+    "AcquisitionUse": {
+      "additionalProperties": false,
+      "description": "How the source was fetched. Names and counts only; never proxy URLs or credentials.",
+      "properties": {
+        "challenge_solved": {
+          "default": false,
+          "title": "Challenge Solved",
+          "type": "boolean"
+        },
+        "egress": {
+          "default": "direct",
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+          "title": "Egress",
+          "type": "string"
+        },
+        "http_version": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HttpVersion"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "impersonate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BrowserFamily"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "ladder": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/LadderStep"
+          },
+          "maxItems": 16,
+          "title": "Ladder",
+          "type": "array"
+        },
+        "proxies_used": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Proxies Used",
+          "type": "integer"
+        },
+        "proxy_rotation": {
+          "default": false,
+          "title": "Proxy Rotation",
+          "type": "boolean"
+        },
+        "render": {
+          "$ref": "#/$defs/RenderMode"
+        },
+        "robots": {
+          "default": "obeyed",
+          "enum": [
+            "obeyed",
+            "ignored",
+            "overridden"
+          ],
+          "title": "Robots",
+          "type": "string"
+        },
+        "start_level": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LadderLevel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "render"
+      ],
+      "title": "AcquisitionUse",
+      "type": "object"
+    },
+    "BlockKind": {
+      "enum": [
+        "cloud_ip_refused",
+        "login_wall",
+        "captcha",
+        "challenge_unsolved",
+        "rate_limited",
+        "robots",
+        "geo_blocked",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "BlockedHint": {
+      "additionalProperties": false,
+      "description": "A site refused access; ``docs`` is a repository-relative guide anchor.",
+      "properties": {
+        "docs": {
+          "pattern": "^docs/[a-z0-9][a-z0-9_/-]{0,120}\\.md(?:#[a-z0-9][a-z0-9-]{0,80})?$",
+          "title": "Docs",
+          "type": "string"
+        },
+        "http_status": {
+          "anyOf": [
+            {
+              "maximum": 599,
+              "minimum": 100,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Http Status"
+        },
+        "kind": {
+          "$ref": "#/$defs/BlockKind"
+        }
+      },
+      "required": [
+        "kind",
+        "docs"
+      ],
+      "title": "BlockedHint",
+      "type": "object"
+    },
+    "BrowserFamily": {
+      "enum": [
+        "chrome",
+        "firefox",
+        "safari",
+        "edge"
+      ],
+      "type": "string"
+    },
+    "Capability": {
+      "enum": [
+        "stealth",
+        "solve_challenges",
+        "proxy_rotation",
+        "impersonation",
+        "http3",
+        "unbounded_crawl",
+        "robots_ignore",
+        "page_actions",
+        "network_capture",
+        "screenshots",
+        "persistent_session",
+        "real_chrome",
+        "cdp",
+        "solver_plugins"
+      ],
+      "type": "string"
+    },
+    "ChangeKind": {
+      "enum": [
+        "created",
+        "updated",
+        "unchanged",
+        "missing",
+        "uncertain"
+      ],
+      "title": "ChangeKind",
+      "type": "string"
+    },
+    "CrawlNote": {
+      "additionalProperties": false,
+      "description": "The state of a crawl when it ended, including its checkpoint.",
+      "properties": {
+        "checkpoint": {
+          "default": "none",
+          "enum": [
+            "none",
+            "saved",
+            "finished",
+            "discarded"
+          ],
+          "title": "Checkpoint",
+          "type": "string"
+        },
+        "frontier_remaining": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Frontier Remaining",
+          "type": "integer"
+        },
+        "mode": {
+          "enum": [
+            "bounded",
+            "unbounded"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "pages_fetched": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Pages Fetched",
+          "type": "integer"
+        },
+        "resumed": {
+          "default": false,
+          "title": "Resumed",
+          "type": "boolean"
+        },
+        "stop": {
+          "$ref": "#/$defs/SourceReason",
+          "default": "complete"
+        }
+      },
+      "required": [
+        "mode"
+      ],
+      "title": "CrawlNote",
+      "type": "object"
+    },
+    "DiscoveryNote": {
+      "additionalProperties": false,
+      "description": "Where the source's pages came from and how many locations survived filtering.",
+      "properties": {
+        "locs_admitted": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Locs Admitted",
+          "type": "integer"
+        },
+        "locs_filtered": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Locs Filtered",
+          "type": "integer"
+        },
+        "locs_found": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Locs Found",
+          "type": "integer"
+        },
+        "order": {
+          "default": "document",
+          "enum": [
+            "document",
+            "reverse",
+            "lastmod"
+          ],
+          "title": "Order",
+          "type": "string"
+        },
+        "seed": {
+          "enum": [
+            "page",
+            "sitemap"
+          ],
+          "title": "Seed",
+          "type": "string"
+        }
+      },
+      "required": [
+        "seed"
+      ],
+      "title": "DiscoveryNote",
+      "type": "object"
+    },
+    "FieldCounts": {
+      "additionalProperties": {
+        "minimum": 0,
+        "type": "integer"
+      },
+      "maxProperties": 256,
+      "propertyNames": {
+        "maxLength": 128,
+        "minLength": 1
+      },
+      "type": "object"
+    },
+    "HttpVersion": {
+      "enum": [
+        "1.1",
+        "2",
+        "3"
+      ],
+      "type": "string"
+    },
+    "LadderLevel": {
+      "enum": [
+        "http",
+        "browser",
+        "stealth",
+        "challenge",
+        "proxy_rotation",
+        "solver_plugin"
+      ],
+      "type": "string"
+    },
+    "LadderStep": {
+      "additionalProperties": false,
+      "description": "One attempt at one ladder level and how it ended.",
+      "properties": {
+        "level": {
+          "$ref": "#/$defs/LadderLevel"
+        },
+        "outcome": {
+          "enum": [
+            "ok",
+            "blocked",
+            "failed",
+            "not_granted"
+          ],
+          "title": "Outcome",
+          "type": "string"
+        }
+      },
+      "required": [
+        "level",
+        "outcome"
+      ],
+      "title": "LadderStep",
+      "type": "object"
+    },
+    "Outcome": {
+      "enum": [
+        "success",
+        "unchanged",
+        "partial_success",
+        "missing_data",
+        "invalid_data",
+        "access_restriction",
+        "transient_failure",
+        "permanent_failure",
+        "insufficient_evidence"
+      ],
+      "title": "Outcome",
+      "type": "string"
+    },
+    "RenderMode": {
+      "enum": [
+        "http",
+        "browser",
+        "stealth"
+      ],
+      "type": "string"
+    },
+    "RepairNote": {
+      "additionalProperties": false,
+      "description": "Drift and repair for the source; ``promotion_refused`` is an issue code.",
+      "properties": {
+        "candidate_version": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Candidate Version"
+        },
+        "decision": {
+          "default": "none",
+          "enum": [
+            "promoted",
+            "quarantined",
+            "rejected",
+            "none"
+          ],
+          "title": "Decision",
+          "type": "string"
+        },
+        "drift": {
+          "anyOf": [
+            {
+              "enum": [
+                "none",
+                "low",
+                "elevated",
+                "high"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Drift"
+        },
+        "model_calls": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Model Calls",
+          "type": "integer"
+        },
+        "origin": {
+          "anyOf": [
+            {
+              "enum": [
+                "relocation",
+                "adaptive",
+                "model"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Origin"
+        },
+        "promotion_refused": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Promotion Refused"
+        }
+      },
+      "title": "RepairNote",
+      "type": "object"
+    },
+    "RunReportStatus": {
+      "enum": [
+        "success",
+        "degraded",
+        "partial_success",
+        "failed",
+        "storage_error"
+      ],
+      "type": "string"
+    },
+    "RunTotals": {
+      "additionalProperties": false,
+      "description": "Totals across every source of the run.",
+      "properties": {
+        "blocked": {
+          "minimum": 0,
+          "title": "Blocked",
+          "type": "integer"
+        },
+        "failed": {
+          "minimum": 0,
+          "title": "Failed",
+          "type": "integer"
+        },
+        "model_calls": {
+          "minimum": 0,
+          "title": "Model Calls",
+          "type": "integer"
+        },
+        "pages": {
+          "minimum": 0,
+          "title": "Pages",
+          "type": "integer"
+        },
+        "partial": {
+          "minimum": 0,
+          "title": "Partial",
+          "type": "integer"
+        },
+        "records_accepted": {
+          "minimum": 0,
+          "title": "Records Accepted",
+          "type": "integer"
+        },
+        "records_rejected": {
+          "minimum": 0,
+          "title": "Records Rejected",
+          "type": "integer"
+        },
+        "repairs_without_model": {
+          "minimum": 0,
+          "title": "Repairs Without Model",
+          "type": "integer"
+        },
+        "sources": {
+          "minimum": 0,
+          "title": "Sources",
+          "type": "integer"
+        },
+        "succeeded": {
+          "minimum": 0,
+          "title": "Succeeded",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "sources",
+        "succeeded",
+        "partial",
+        "failed",
+        "blocked",
+        "pages",
+        "records_accepted",
+        "records_rejected",
+        "model_calls",
+        "repairs_without_model"
+      ],
+      "title": "RunTotals",
+      "type": "object"
+    },
+    "SourceReason": {
+      "enum": [
+        "complete",
+        "not_modified",
+        "page_cap",
+        "depth_cap",
+        "request_budget",
+        "time_budget",
+        "stopped",
+        "failed",
+        "blocked",
+        "robots_denied",
+        "invalid_data",
+        "missing_data"
+      ],
+      "type": "string"
+    },
+    "SourceReport": {
+      "additionalProperties": false,
+      "description": "One source: where (host and path, never a query), how it ended and what it produced.",
+      "properties": {
+        "acquisition": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AcquisitionUse"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "blocked": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BlockedHint"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "crawl": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CrawlNote"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "detail": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Detail"
+        },
+        "discovery": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DiscoveryNote"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "fields_nulled": {
+          "$ref": "#/$defs/FieldCounts"
+        },
+        "host": {
+          "maxLength": 255,
+          "pattern": "^[a-z0-9](?:[a-z0-9.:\\[\\]-]{0,252}[a-z0-9\\]])?$",
+          "title": "Host",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "pages": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Pages",
+          "type": "integer"
+        },
+        "path": {
+          "pattern": "^/[^?#\\s]{0,2047}$",
+          "title": "Path",
+          "type": "string"
+        },
+        "reason": {
+          "$ref": "#/$defs/SourceReason"
+        },
+        "records_accepted": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Records Accepted",
+          "type": "integer"
+        },
+        "records_rejected": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Records Rejected",
+          "type": "integer"
+        },
+        "rejected_by_code": {
+          "maxProperties": 256,
+          "patternProperties": {
+            "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1
+          },
+          "title": "Rejected By Code",
+          "type": "object"
+        },
+        "repair": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RepairNote"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "seconds": {
+          "$ref": "#/$defs/SourceTiming"
+        },
+        "source_index": {
+          "minimum": 1,
+          "title": "Source Index",
+          "type": "integer"
+        },
+        "stored": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "propertyNames": {
+                "$ref": "#/$defs/ChangeKind"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Stored"
+        }
+      },
+      "required": [
+        "source_index",
+        "host",
+        "path",
+        "outcome",
+        "reason"
+      ],
+      "title": "SourceReport",
+      "type": "object"
+    },
+    "SourceTiming": {
+      "additionalProperties": false,
+      "description": "Wall-clock seconds spent per stage for one source.",
+      "properties": {
+        "acquisition": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Acquisition",
+          "type": "number"
+        },
+        "extraction": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Extraction",
+          "type": "number"
+        },
+        "total": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Total",
+          "type": "number"
+        },
+        "validation": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Validation",
+          "type": "number"
+        }
+      },
+      "title": "SourceTiming",
+      "type": "object"
+    }
+  },
+  "$id": "https://rave-vipx.github.io/rastro/schemas/run-report.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "A content-free report of one ``run`` or ``load`` of one job file.",
+  "properties": {
+    "capabilities_used": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/Capability"
+      },
+      "title": "Capabilities Used",
+      "type": "array"
+    },
+    "completed_at": {
+      "format": "date-time",
+      "title": "Completed At",
+      "type": "string"
+    },
+    "content": {
+      "const": "content_free",
+      "default": "content_free",
+      "title": "Content",
+      "type": "string"
+    },
+    "dataset": {
+      "anyOf": [
+        {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Dataset"
+    },
+    "exit_code": {
+      "maximum": 255,
+      "minimum": 0,
+      "title": "Exit Code",
+      "type": "integer"
+    },
+    "job": {
+      "pattern": "^[^/\\\\\\x00-\\x1f]{1,255}$",
+      "title": "Job",
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "run",
+        "load"
+      ],
+      "title": "Kind",
+      "type": "string"
+    },
+    "open_drift": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Open Drift",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "sources": {
+      "items": {
+        "$ref": "#/$defs/SourceReport"
+      },
+      "maxItems": 10000,
+      "title": "Sources",
+      "type": "array"
+    },
+    "started_at": {
+      "format": "date-time",
+      "title": "Started At",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/RunReportStatus"
+    },
+    "totals": {
+      "$ref": "#/$defs/RunTotals"
+    }
+  },
+  "required": [
+    "kind",
+    "job",
+    "started_at",
+    "completed_at",
+    "status",
+    "exit_code",
+    "sources",
+    "totals"
+  ],
+  "title": "RunReport",
+  "type": "object"
+}

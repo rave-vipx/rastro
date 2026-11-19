@@ -17,8 +17,8 @@ OPS_CAPABILITIES: tuple[Capability, ...] = (
         docs="docs/dataset.md#load-inspect-and-export-a-job",
     ),
     Capability(
-        task="Export a dataset as JSON, JSONL or an HTML table",
-        use="`rastro dataset export data.sqlite --format json|jsonl|html`",
+        task="Export a dataset as JSON, JSONL, CSV or an HTML table",
+        use="`rastro dataset export data.sqlite --format json|jsonl|csv|html`",
         cli=("rastro dataset export",),
         limits="`--upcoming` needs an ISO date `--sort-field`",
         instead_of="your own HTML view or CSV dump of scraped records",

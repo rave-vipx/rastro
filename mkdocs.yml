@@ -31,7 +31,11 @@ nav:
       - Declarative jobs: jobs.md
       - Recipes from examples: suggest.md
       - HTTP acquisition: acquisition.md
+      - Reading results: reading-results.md
       - Dataset load and export: dataset.md
+      - Run report: run-report.md
+      - Field contracts: fields.md
+      - Crawling linked pages: crawling.md
       - Scheduling: scheduling.md
       - Monitoring and alerts: operations.md
       - Structural drift: drift.md
@@ -50,6 +54,7 @@ nav:
       - Capabilities: capabilities.md
       - Configuration reference: configuration.md
       - API and outcomes: api.md
+      - Engines: engines.md
       - Issue codes: issues.md
       - Stability policy: stability.md
       - Architecture: architecture.md

@@ -14,7 +14,7 @@ grouped by theme. A test fails when a code in `src/rastro` has no row here.
 | `missing_fields` | A record lacks required fields. | The record is rejected. | Check the selectors. The page may have changed. |
 | `missing_evidence` | A value has no proof of where it came from. | The record is rejected. | Fix the selector so it points at real page content. |
 | `ambiguous_match` | A selector matched more than one thing for a single field. | The record is rejected. | Make the selector more specific. |
-| `invalid_record` | One structured record is not an object. | That record is skipped. | Check the source data. |
+| `invalid_record` | One structured record is not an object, or its evidence could not be built, or it could not be serialized for storage. | That record is skipped. | Check the source data. |
 | `invalid_text` | A record holds text that cannot be stored as UTF-8. Lone surrogates in JSON and JSON-LD are already replaced with U+FFFD when decoded. | The record is rejected. Others are saved. | Check the source data or a custom validator that builds text. |
 | `invalid_json` | The response is not valid JSON. | No. | Check the URL and the content type. |
 | `embedded_json_not_found` | An `embedded_json` recipe's `source` selector matched no node, or the node lacks the attribute. | No. | Fix `source`. The page may have moved the data. |
@@ -22,7 +22,7 @@ grouped by theme. A test fails when a code in `src/rastro` has no row here.
 | `invalid_jsonld` | A JSON-LD block could not be parsed. | The block is ignored. | Use another strategy or fix the page data. |
 | `record_path_not_found` | The recipe's `record_path` is not in the JSON. | No. | Fix `record_path`. The API may have changed. |
 | `invalid_record_path` | The `record_path` points at something that is not a list of records. | No. | Fix `record_path`. |
-| `extraction_limit` | The page is larger than the parser limits allow. | No. | Raise the limits or pick a smaller page. |
+| `extraction_limit` | The page is larger than the parser limits allow, or a nested list was cut at its limit. | No. | Raise the limits or pick a smaller page. |
 | `not_modified` | The server says the page did not change. | Nothing new. | Nothing. This is normal. |
 | `invalid_acquisition_result` | The fetch returned no usable body. | No. | Retry. Check the source. |
 | `field_nulled` | An optional field had no usable value, so it was stored as null. `field` names it; the run report counts these per field. | Yes, with the field empty. | Nothing, if the field is often empty. Otherwise check its selector. |
@@ -122,7 +122,7 @@ grouped by theme. A test fails when a code in `src/rastro` has no row here.
 | `sitemap_unsupported` | The sitemap seed needs plain HTTP acquisition. | No. | Use `render = "http"` for a sitemap job. |
 | `spider_links_failed` | Links could not be read from a page. | Partial. | Check the link selector. |
 | `spider_needs_recipe` | A spider needs a saved recipe. | No. | Create a recipe first. |
-| `link_group_refused` | A group of links found on a page was not followed because it is outside the crawl's allowed hosts or patterns. | Yes. | Widen `allow_pattern`, or ignore it if intended. |
+| `link_group_refused` | `spider.links` used a comma selector group; use a list of expressions. | No. | Replace the group with a list of expressions. |
 | `crawl_resumed` | A crawl continued from a saved checkpoint instead of starting again. | Yes. | Nothing. Delete the checkpoint to start fresh. |
 | `crawl_time_budget` | The crawl stopped because its time budget ran out; its checkpoint is kept. | Partial. | Run again to resume, or raise the time budget. |
 

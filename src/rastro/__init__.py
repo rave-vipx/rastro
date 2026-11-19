@@ -5,6 +5,8 @@ from importlib.metadata import version
 from typing import TYPE_CHECKING
 
 from rastro.adapters.sqlite import SQLiteRecipeRepository
+from rastro.application.crawl_estimate import CrawlEstimate
+from rastro.application.crawl_estimate import estimate as estimate_crawl
 from rastro.application.engine import Rastro
 from rastro.application.health import job_health
 from rastro.application.job_dataset import load_job_file
@@ -13,6 +15,7 @@ from rastro.application.job_repair import promote_job_recipe, repair_job_source
 from rastro.application.jobs import load_job, run_job, run_job_async, run_job_file
 from rastro.application.recipe_apply import apply_job_recipe
 from rastro.application.suggest import suggest
+from rastro.capabilities import Capability
 from rastro.domain.acquisition import AcquisitionPolicy, EgressProfile
 from rastro.domain.intelligence import InferencePolicy, ModelError, ModelRequest, RecipeProposal
 from rastro.domain.job_fields import (
@@ -23,7 +26,10 @@ from rastro.domain.job_fields import (
     IntegerField,
     JobField,
     JobFieldType,
+    ListField,
     NumberField,
+    ObjectField,
+    ScalarField,
     StringField,
     UrlField,
     build_job_schema,
@@ -97,7 +103,9 @@ from rastro.domain.recipe_compare import (
     RepairReport,
     SourceRepair,
 )
+from rastro.domain.recipes import NestedMapping
 from rastro.domain.results import RepairProposal, SelfRepair
+from rastro.domain.run_report import RunReport, SourceReport
 from rastro.domain.suggest import FieldConfidence, Suggestion, SuggestionError
 from rastro.fetch_api import Fetched, fetch, fetch_async
 from rastro.mocklab import (
@@ -112,6 +120,7 @@ from rastro.mocklab import (
 from rastro.model_factory import model
 from rastro.ports.model import ModelPort
 from rastro.ports.recipes import RecipeLifecycle, RecipeRepository
+from rastro.read_api import DatasetRead, ReadRecord, read_records
 from rastro.records_api import load_records
 from rastro.scrape import scrape, scrape_async
 
@@ -145,9 +154,12 @@ __all__ = [
     "AcquisitionPolicy",
     "BooleanField",
     "CandidateEvaluation",
+    "Capability",
     "CommandProvider",
     "ConfigurationError",
+    "CrawlEstimate",
     "CssRecipe",
+    "DatasetRead",
     "DateField",
     "DateTimeField",
     "DecimalField",
@@ -181,18 +193,22 @@ __all__ = [
     "LifecycleHistory",
     "LifecycleTransitionError",
     "Limits",
+    "ListField",
     "LoadedSource",
     "Metrics",
     "MockLabError",
     "ModelError",
     "ModelPort",
     "ModelRequest",
+    "NestedMapping",
     "NumberField",
+    "ObjectField",
     "OllamaProvider",
     "OpenAICompatibleProvider",
     "Outcome",
     "Rastro",
     "RastroError",
+    "ReadRecord",
     "Recipe",
     "RecipeAttempt",
     "RecipeComparison",
@@ -212,11 +228,14 @@ __all__ = [
     "RepairReport",
     "Representation",
     "ResourceLimitError",
+    "RunReport",
     "SQLiteRecipeRepository",
     "SanitizationError",
+    "ScalarField",
     "SelfRepair",
     "Source",
     "SourceRepair",
+    "SourceReport",
     "StoredRecipe",
     "StringField",
     "Suggestion",
@@ -231,6 +250,7 @@ __all__ = [
     "build_fixture",
     "build_job_schema",
     "css",
+    "estimate_crawl",
     "fetch",
     "fetch_async",
     "forget_job_source",
@@ -244,6 +264,7 @@ __all__ = [
     "model",
     "parse_job",
     "promote_job_recipe",
+    "read_records",
     "repair_job_source",
     "run_job",
     "run_job_async",
