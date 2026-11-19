@@ -82,6 +82,15 @@
           "title": "Egress Profiles",
           "type": "object"
         },
+        "hosts": {
+          "additionalProperties": {
+            "$ref": "#/$defs/HostLimits"
+          },
+          "description": "Pacing and concurrency for one allowed host, overriding the job-wide min_interval_seconds and max_concurrency for it.",
+          "maxProperties": 64,
+          "title": "Hosts",
+          "type": "object"
+        },
         "max_concurrency": {
           "default": 4,
           "maximum": 32,
@@ -164,6 +173,16 @@
           ],
           "title": "Robots",
           "type": "string"
+        },
+        "rotate_egress": {
+          "default": [],
+          "description": "Egress profile names to rotate over, in order: each transfer of a source whose egress is \"direct\" uses the next one, and a proxy failure retries on the next.",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 16,
+          "title": "Rotate Egress",
+          "type": "array"
         },
         "session": {
           "default": false,
@@ -1067,6 +1086,57 @@
         "max_shift"
       ],
       "title": "HistoricalShift",
+      "type": "object"
+    },
+    "HostLimits": {
+      "additionalProperties": false,
+      "description": "Politeness for one host: spacing, concurrency and adaptive throttling.",
+      "properties": {
+        "autothrottle": {
+          "default": false,
+          "description": "Widen the spacing when the host slows down or answers 429.",
+          "title": "Autothrottle",
+          "type": "boolean"
+        },
+        "max_concurrency": {
+          "anyOf": [
+            {
+              "maximum": 32,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Transfers in flight to this host at once; unset keeps the job-wide value.",
+          "title": "Max Concurrency"
+        },
+        "min_interval_seconds": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "ge": 0,
+              "le": 60
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Seconds between requests to this host; unset keeps the job-wide value.",
+          "title": "Min Interval Seconds"
+        }
+      },
+      "title": "HostLimits",
       "type": "object"
     },
     "HtmlRecipe": {
