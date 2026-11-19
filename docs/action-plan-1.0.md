@@ -1,7 +1,8 @@
-# Action plan 0.10: recipes that survive real sites
+# Action plan 1.0: recipes that survive real sites
 
-Status: **approved direction**, 2026-11-19. Its needs are listed in `docs/product-needs.md` as
-N21–N30; each cut follows the rastro-slice skill.
+Status: **approved direction**, 2026-11-19. Target release: **1.0.0**, the version that
+consolidates 0.9 and declares the public API stable. Its needs are listed in
+`docs/product-needs.md` as N21–N32; each cut follows the rastro-slice skill.
 
 ## Why
 
@@ -42,12 +43,18 @@ What it showed, grouped:
 - **Operations are guesswork.** A fix waits for a release that is not on PyPI yet. Politeness
   delays make a 100-page crawl take minutes with no estimate. Some sites refuse cloud IPs and
   the outcome only says `http_403`.
+- **Self-imposed limits block legitimate jobs.** Scrapling 0.5, which Rastro already uses,
+  ships proxy rotation (`ProxyRotator`), Cloudflare Turnstile and interstitial solving
+  (`solve_cloudflare`) and a crawl engine without a page cap that pauses and resumes from
+  checkpoints, with autothrottle and per-domain concurrency. Rastro forbids proxy rotation
+  (ADR 0034) and caps every crawl (ADR 0032). Rastro should expose what Scrapling solves,
+  behind the same operator grants, instead of refusing it.
 
 ## Needs
 
 | ID | Need | Done when |
 | --- | --- | --- |
-| N21 | Fixes reach users the same day | A patch release (0.9.1) ships the surrogate fix to PyPI through trusted publishing; `docs/releasing.md` describes a patch path that needs no feature freeze. |
+| N21 | Fixes reach users the same day | 1.0.0 is published to PyPI through trusted publishing and carries the surrogate fix (#151); `docs/releasing.md` describes a 1.0.x patch path that needs no feature freeze. |
 | N22 | A bad value costs one field, not a source | Every stage isolates failures: a value that cannot be decoded or coerced makes that field null with an issue (optional field) or rejects that record (required field), never the source. Audited by a fault-injection test per stage. |
 | N23 | Tolerant structured data | JSON-LD and embedded JSON with raw control characters in strings, trailing commas or a BOM are read as browsers do, and flagged `repaired_json`. Strict parsing stays for recipes and config. |
 | N24 | Dates as people write them | Naive datetimes take the job or region timezone and are stored aware; per-field `null_values` (e.g. `0000-00-00`, `TBA`) turn placeholders into null with a reason; the AI recipe prompt is told the region timezone. |
@@ -56,6 +63,8 @@ What it showed, grouped:
 | N27 | AI recipes for nested data | The recipe proposer and repair can produce list/object fields from a plain-language description ("each ticket type with its price"); drift and the judge compare nested members, not just the top-level count. |
 | N28 | A run that explains itself | One `RunReport` model, returned by `run_job`, `load_job_file` and the CLI `--json`, and passed to the notification hook: per source outcome and reason (cap vs failure vs blocked), pages, records, rejected by code, drift, repair candidate, quarantine, promotion refused, timing. Studio and alerts read the same model. |
 | N29 | Read results from code | `rastro.read_records(dataset, since=, fields=)` in `rastro.__all__`, with provenance per field and multi-origin records merged; documented as the adoption path instead of shelling out to export. |
+| N31 | Access what Scrapling can reach | Proxy rotation over the operator's egress profiles (Scrapling `ProxyRotator`, credentials from allowed environment names, never from the job or a bundle, also in browser and stealth modes) and Cloudflare challenge solving run when the operator grants them, like stealth (ADR 0034, ADR 0036). Outcomes name what was used. Anything Scrapling does not solve (other CAPTCHA vendors, logins) stays a `blocked` outcome with a hint. |
+| N32 | Crawls without a page cap | A spider may set `max_pages = "unbounded"` when the operator grants it; the run uses Scrapling's crawl engine with checkpoints (pause and resume across runs), autothrottle and per-domain concurrency; robots, allowed hosts and the time budget still apply; progress and resume state appear in the run report and Studio. |
 | N30 | Predictable operation | Per-host rate and concurrency in `[acquisition]`; a dry-run estimate of requests and minutes before a crawl; `blocked` outcomes carry a hint (cloud IP refused, robots, login wall) and link to an egress guide (proxy, self-hosted runner); `Fetched.text`; a `rastro dataset migrate` path between schema versions; small doc and CLI fixes (`job stats --since 30m`, `dataset.path` default). |
 
 Every need keeps the existing rules: recipes are data, scraped text is untrusted (ADR 0035),
@@ -98,24 +107,38 @@ synthetic.
 - Backward compatibility: existing result fields stay for one minor version with a
   deprecation note.
 
+### N31–N32 access and unbounded crawl (ADR 0036)
+
+- Grants, not job keys: `--allow-proxy-rotation` / `RASTRO_ALLOW_PROXY_ROTATION`, the existing
+  stealth grant for `solve_challenges`, and `--allow-unbounded-crawl` /
+  `RASTRO_ALLOW_UNBOUNDED_CRAWL`. Studio shows each as a switch, off by default. A bundle or a
+  registry recipe can request them; it can never grant them.
+- Proxies are the operator's existing egress profiles (`--allow-egress`); rotation over them
+  needs the extra grant, and credentials come only from allowed environment names. They are
+  redacted in every report, log and evidence record. The SSRF and allowed-host checks run on the target URL, not
+  on the proxy hop.
+- Unbounded crawls keep a checkpoint per job under the job's state folder, resume
+  automatically on the next run, and stop at the run's time budget, not at a page count.
+- Robots checks stay mandatory, as `SECURITY.md` requires; no grant turns them off.
+
 ### N30 operations
 
 - Rate limits are per host and shared by pagination, spider and detail fetches of one run.
 - The estimate uses the caps and the configured rate; it never fetches.
-- Release: 0.9.1 is cut from `main` plus the cherry-picked fix; 0.10.0 carries the rest.
+- Release: one release, 1.0.0, carries every need; later fixes ship as 1.0.x.
 
 ## Cuts and order
 
 | Cut | Needs | Why this order | Review |
 | --- | --- | --- | --- |
-| 1 | N21 | Ships a fix users already need; no feature work | release checklist |
+| 1 | N21 (release pipeline) | Trusted publishing works and the surrogate fix is on dev; 1.0.0 ships it with the rest | release checklist |
 | 2 | N22, N23, N24 | Stops silent data loss on messy pages; small, independent | cross-model (persistence) |
 | 3 | N25 | Unblocks sites whose sitemaps or links misled the crawl | cross-model (network) |
 | 4 | N28, N29 | The contract other cuts report into; lets integrators stop shelling out | cross-model (public API) |
 | 5 | N26, N27 | Largest change; builds on the run contract and robust coercion | cross-model (persistence, public API) |
-| 6 | N30 | Operational polish once behaviour is stable | cross-model (network) |
+| 6 | N30, N31, N32 | Operations and access, on the stable run contract | cross-model (network, security) |
 
-After cut 6, release 0.10.0 with the capability manifest (`rastro capabilities`), `llms.txt`
+After cut 6, release 1.0.0 (public API stable from here: `rastro.__all__`, job format, `RunReport` schema) with the capability manifest (`rastro capabilities`), `llms.txt`
 and the configuration reference regenerated, and the integration example rebuilt to show that
 its custom adapters are no longer needed.
 
@@ -123,6 +146,5 @@ its custom adapters are no longer needed.
 
 - Anything specific to one integration (event visibility, price policy, deduplication across
   sites). Those belong to the integrating project.
-- Bypassing access controls. A `blocked` hint explains options; Rastro does not ship IP
-  rotation or CAPTCHA solving.
-- Unbounded crawling, hosted multi-tenant services, executable shared recipes.
+- Access methods Scrapling does not provide (third-party CAPTCHA services, account logins).
+- Hosted multi-tenant services and executable shared recipes.

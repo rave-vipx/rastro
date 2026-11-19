@@ -57,7 +57,7 @@ nav:
   - API and outcomes: api.md
   - Issue codes: issues.md
   - Adoption action plan: action-plan-adoption.md
-  - 0.10 action plan: action-plan-0.10.md
+  - 1.0 action plan: action-plan-1.0.md
   - Architecture: architecture.md
   - Roadmap: roadmap.md
   - Release checklist: releasing.md
@@ -65,6 +65,7 @@ nav:
   - Development work log: development/work-log.md
   - Engineering decisions:
       - Prompt-injection defense: decisions/0035-prompt-injection-defense.md
+      - Scrapling access and unbounded crawl: decisions/0036-scrapling-access-and-unbounded-crawl.md
       - Operator network permissions: decisions/0031-operator-network-permissions.md
       - HTTP sessions and conditional loads: decisions/0030-http-sessions-and-conditional-loads.md
       - Browser rendering and stealth opt-in: decisions/0024-browser-rendering-and-stealth-opt-in.md

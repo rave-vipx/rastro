@@ -19,7 +19,8 @@ transport-level redirects/retries remain disabled.
 401/403/451 stop further requests to that host in the client. 429 and Retry-After
 produce explicit restrictions/deferred results and host cooldowns. Browser stealth mode is an operator opt-in using Scrapling/Patchright browser
 fingerprints; Cloudflare solving additionally requires `solve_challenges = true`.
-Automatic proxy or identity rotation, third-party CAPTCHA services and credentials
+Proxy rotation over the operator's egress profiles is an operator opt-in (ADR 0036:
+`--allow-egress` plus `--allow-proxy-rotation`); third-party CAPTCHA services and credentials
 in job files remain forbidden. Robots checks and exact host/public-IP restrictions
 remain mandatory; browser modes refuse egress profiles. Source allowlisting
 is the caller's permission assertion; it does not confer permission to access a site.

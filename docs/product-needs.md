@@ -6,15 +6,15 @@ Owner request, 2026-11-16, updated the same day: finish the product in this cut,
 
 The job key for plain HTTP, browser, and stealth is `render`, already shipped on `[acquisition]` and on each source (`http`, `browser`, `stealth`). Do not rename it to `engine`.
 
-## Needs N21–N30 (0.10, current cut)
+## Needs N21–N32 (1.0.0, current cut)
 
-Owner request, 2026-11-19. Planning source for 0.10; design notes and cut order are in
-`docs/action-plan-0.10.md`. N1–N12 below shipped in 0.9.0; N13–N20 are in
+Owner request, 2026-11-19. Planning source for 1.0.0; design notes and cut order are in
+`docs/action-plan-1.0.md`. N1–N12 below shipped in 0.9.0; N13–N20 are in
 `docs/action-plan-adoption.md`.
 
 | ID | Need |
 | --- | --- |
-| N21 | Fixes reach users the same day (0.9.1 patch release, patch path in `docs/releasing.md`) |
+| N21 | Fixes reach users the same day (1.0.0 on PyPI with the surrogate fix, 1.0.x patch path) |
 | N22 | A bad value costs one field, not a source |
 | N23 | Tolerant structured data (JSON-LD and embedded JSON as browsers read them) |
 | N24 | Dates as people write them (region timezone, null placeholders) |
@@ -24,6 +24,8 @@ Owner request, 2026-11-19. Planning source for 0.10; design notes and cut order 
 | N28 | A run that explains itself (one `RunReport` for code, Studio and hooks) |
 | N29 | Read results from code (`rastro.read_records`) |
 | N30 | Predictable operation (per-host rate, crawl estimate, blocked hints, schema migrate) |
+| N31 | Access what Scrapling can reach (proxy rotation, Cloudflare challenges; operator grants, ADR 0036) |
+| N32 | Crawls without a page cap (Scrapling crawl engine, checkpoints, resume; operator grant, ADR 0036) |
 
 ## What Rastro is for
 
