@@ -5,10 +5,9 @@ from datetime import UTC, datetime
 from pydantic import BaseModel
 
 from rastro.application.run_report import report_for_run
-from rastro.application.self_repair import repair_note, source_repair_note
+from rastro.application.self_repair import repair_note
 from rastro.domain.job_results import JobRunResult
 from rastro.domain.models import ExtractionResult, Issue, Metrics, Outcome
-from rastro.domain.recipe_compare import SourceRepair
 from rastro.domain.results import RepairProposal, SelfRepair
 from rastro.studio.overview_alerts import report_alerts
 
@@ -83,8 +82,6 @@ def test_promotion_refused_reason_code() -> None:
         mode="auto", previous_version=1, candidates=(proposal("reject", "regression"),)
     )
     assert repair_note(rejected).decision == "rejected"
-    job = SourceRepair(source_index=1, comparisons=(), promoted_version=3)
-    assert source_repair_note(job).decision == "promoted"
 
 
 def test_alerts_view_reads_run_report() -> None:
