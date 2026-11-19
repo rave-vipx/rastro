@@ -110,3 +110,31 @@ def test_capabilities_command_prints_each_format(
         assert json.loads(out)["schema_version"] == 1
     else:
         assert "Follow links from a listing to detail pages" in out
+
+
+def test_generated_outputs_identical() -> None:
+    """AGENT-001: split catalogs preserve generated reference bytes."""
+    from rastro.capabilities_extract import EXTRACT_CAPABILITIES
+    from rastro.config_render import render_markdown as render_configuration
+    from rastro.domain.health import job_health_json_schema
+    from rastro.domain.job_dataset import job_preview_json_schema
+    from rastro.domain.job_load import job_load_json_schema
+    from rastro.domain.job_results import job_run_json_schema
+    from rastro.domain.jobs import job_json_schema
+
+    assert EXTRACT_CAPABILITIES
+    for path, output in (
+        ("llms.txt", render_llms()),
+        ("docs/capabilities.md", render_markdown()),
+        ("docs/configuration.md", render_configuration()),
+    ):
+        assert (ROOT / path).read_bytes() == output.encode("utf-8")
+    for name, schema in (
+        ("job", job_json_schema()),
+        ("job-run", job_run_json_schema()),
+        ("job-load", job_load_json_schema()),
+        ("job-preview", job_preview_json_schema()),
+        ("health", job_health_json_schema()),
+    ):
+        output = json.dumps(schema, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
+        assert (ROOT / "docs/schemas" / f"{name}.schema.json").read_bytes() == output.encode()
