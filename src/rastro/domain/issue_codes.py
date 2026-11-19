@@ -20,6 +20,7 @@ ISSUE_CODES = frozenset(
         "capability_refused",
         "capture_empty",
         "challenge_unsolved",
+        "crawl_checkpoint_discarded",
         "crawl_resumed",
         "crawl_time_budget",
         "destination_denied",

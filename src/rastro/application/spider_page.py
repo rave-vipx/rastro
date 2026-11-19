@@ -21,12 +21,14 @@ from rastro.application.scroll import NoteOnce, scrolled
 from rastro.application.spider import extract_spider
 from rastro.application.spider_links import LinkHarvest
 from rastro.application.spider_sitemap import acquire_charged, fetch_sitemap
+from rastro.application.spider_unbounded import CrawlRuntime
 from rastro.domain.acquisition import AcquisitionPolicy, AcquisitionResult
 from rastro.domain.models import ExtractionResult, Limits, Recipe, Representation, Source
 from rastro.domain.scroll import ScrollSpec
 from rastro.domain.spider import SpiderPolicy
 from rastro.ports.acquisition import AcquisitionPort
 from rastro.ports.browser import BrowserMayRender, BrowserRendered
+from rastro.ports.engine import CrawlThrottle
 from rastro.ports.parser import DocumentParser
 
 
@@ -65,6 +67,15 @@ async def fetch_spider_page[T: BaseModel](
     return stamp_acquired(
         result, source=page, fetched=fetched, started=started, started_at=started_at
     )
+
+
+def _throttle(spider: SpiderPolicy) -> CrawlThrottle | None:
+    """An unbounded crawl adapts its pace per host; a bounded crawl keeps its fixed interval."""
+    if not spider.unbounded:
+        return None
+    from rastro.adapters.scrapling_throttle import ScraplingThrottle
+
+    return ScraplingThrottle()
 
 
 def _may_render_in_browser(acquisition: AcquisitionPort, url: str) -> bool:
@@ -136,4 +147,5 @@ async def crawl_source[T: BaseModel](
             sequential=recipe.pagination is not None or in_browser,
             fetch_page=fetch,
             fetch_seed=seed if spider.seed == "sitemap" else None,
+            runtime=CrawlRuntime(throttle=_throttle(spider)),
         )

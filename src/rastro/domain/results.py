@@ -137,6 +137,7 @@ class ExtractionResult[T: BaseModel](Contract):
             "spider_page_limit",
             "spider_budget",
             "spider_page_failed",
+            "spider_time_budget",
         ]
         | None
     ) = Field(default=None, exclude_if=_absent)

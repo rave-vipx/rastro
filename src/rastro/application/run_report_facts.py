@@ -43,6 +43,7 @@ _STOPS: dict[str, SourceReason] = {
     "record_limit": "stopped",
     "page_failure": "failed",
     "spider_page_failed": "failed",
+    "spider_time_budget": "time_budget",
 }
 _ATTEMPTED = ("fetched", "no_records", "partial", "failed")
 _HOST = re.compile(r"^[a-z0-9](?:[a-z0-9.:\[\]-]{0,252}[a-z0-9\]])?$")
