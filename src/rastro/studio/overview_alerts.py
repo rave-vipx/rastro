@@ -12,6 +12,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
+from rastro.domain.run_report import RunReport
 from rastro.studio.overview_data import CAP_ENDINGS, FAILED, JobState, capped, code
 
 MAX_ALERTS = 100
@@ -81,8 +82,27 @@ def _logged(state: JobState) -> list[dict[str, Any]]:
     return found
 
 
-def alerts(state: JobState) -> list[dict[str, Any]]:
+def report_alerts(report: RunReport) -> list[dict[str, Any]]:
+    """Alerts for one run report: the same codes the report holds, so texts never disagree."""
+    found = []
+    for item in report.sources:
+        source = f"https://{item.host}{item.path}" if item.host else None
+        at = report.completed_at
+        repair = item.repair
+        if repair is not None and repair.decision == "quarantined":
+            code_ = repair.promotion_refused or "quarantined_candidate"
+            found.append(_alert(at, "quarantine", source, code_, "fix"))
+        elif repair is not None and repair.promotion_refused:
+            found.append(_alert(at, "promote_refused", source, repair.promotion_refused, "details"))
+        if repair is not None and repair.drift in ("elevated", "high"):
+            found.append(_alert(at, "drift", source, f"drift_{repair.drift}", "fix"))
+    return found
+
+
+def alerts(state: JobState, report: RunReport | None = None) -> list[dict[str, Any]]:
     items = _failures(state) + _caps(state) + _logged(state)
+    if report is not None:
+        items += report_alerts(report)
     items += [
         _alert(d.observed_at, "drift", url, code(d.verdict), "fix")
         for url, d in state.drift.items()
