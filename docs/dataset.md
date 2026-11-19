@@ -174,15 +174,15 @@ Requires uv, SQLite's CLI and jq. From the repository root:
 ```sh
 DEMO=$(mktemp -d)
 DEMO=$(cd "$DEMO" && pwd -P)
-cp -R examples/uy-dance-agenda/sample "$DEMO/agenda"
+cp -R examples/event-agenda/sample "$DEMO/agenda"
 uv run rastro job validate "$DEMO/agenda/job.toml" | jq -c '{valid, source_count}'
 uv run rastro job preview "$DEMO/agenda/job.toml" --output json | jq -c '{written, status: .job.status, accepted: .job.records_accepted}'
 uv run rastro job load "$DEMO/agenda/job.toml" | jq -c '{counts: [.sources[].counts], stale_sources}'
 uv run rastro job load "$DEMO/agenda/job.toml" | jq -c '{counts: [.sources[].counts], stale_sources}'
 cp "$DEMO/agenda/v2/"*.html "$DEMO/agenda/"
 uv run rastro job load "$DEMO/agenda/job.toml" | jq -c '{counts: [.sources[].counts], stale_sources}'
-sqlite3 "$DEMO/agenda/agenda.sqlite" < examples/uy-dance-agenda/queries/upcoming.sql
-printf '<html>Source unavailable</html>\n' > "$DEMO/agenda/tickantel-evento.html"
+sqlite3 "$DEMO/agenda/agenda.sqlite" < examples/event-agenda/queries/upcoming.sql
+printf '<html>Source unavailable</html>\n' > "$DEMO/agenda/tickets-event.html"
 # The mixed run intentionally returns exit 3; jq prints its stale-origin report.
 uv run rastro job load "$DEMO/agenda/job.toml" | jq -c '{status: .job.status, stale_sources: [.stale_sources[] | {source_url, last_success, affected_records: (.affected_keys | length)}]}'
 uv run rastro dataset status "$DEMO/agenda/agenda.sqlite" | jq -c '{data_trust, stale: [.stale_sources[] | {source_url, last_success, affected_records: (.affected_keys | length)}]}'

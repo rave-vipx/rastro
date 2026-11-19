@@ -257,7 +257,7 @@ Not published.
 - CSS field expressions may read one page-level node with the `document:` prefix (exactly one match, with provenance).
 - `rastro dataset export --format html`, plus `--sort-field`, `--upcoming` and `--timezone`; daily scheduling examples in `docs/scheduling.md` (SCHED-007, DATA-004).
 - Automatic repair relocates a renamed or moved record container from the last successful snapshot, proposes an "old, new" selector union, and quarantines heterogeneous matches; measured on `benchmarks/repair_suite` (REPAIR-001, SCR-002).
-- The events example adds an offline three-venue job (`examples/uy-dance-agenda/sample/v03/`).
+- The events example adds an offline three-venue job (`examples/event-agenda/sample/v03/`).
 
 ### Removed
 

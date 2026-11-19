@@ -6,7 +6,7 @@ Without `--drift`, the output and extraction behavior remain unchanged. This
 implements DRIFT-001–006; it does not repair or activate recipes.
 
 ```sh
-cp -R examples/uy-dance-agenda/sample /tmp/rastro-drift-sample
+cp -R examples/event-agenda/sample /tmp/rastro-drift-sample
 uv run rastro job load /tmp/rastro-drift-sample/job.toml --drift
 uv run rastro job load /tmp/rastro-drift-sample/job.toml --drift
 ```

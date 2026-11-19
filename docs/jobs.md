@@ -315,7 +315,7 @@ validates, runs and prints exactly as before.
 
 ```toml
 [dataset]
-name = "uy_dance_agenda"                    # [a-z][a-z0-9_]{0,63}
+name = "event_agenda"                    # [a-z][a-z0-9_]{0,63}
 path = "agenda.sqlite"                      # relative to the job file; same rules as other job paths
 identity = ["title", "venue", "starts_on"]  # declared field names, 1 to 8
 approve = ["title", "venue", "city", "starts_on", "starts_at", "ticket_url", "price"]  # optional
