@@ -21,7 +21,7 @@ from rastro.domain.suggest import SuggestionError, infer_field_type
 from rastro.ports.field_discovery import FieldDiscoverer
 
 MAX_PROPOSED_FIELDS = 12
-_TYPED: dict[str, type[jf.JobField]] = {
+_TYPED: dict[str, type[jf.ScalarField]] = {
     "integer": jf.IntegerField,
     "decimal": jf.DecimalField,
     "date": jf.DateField,
