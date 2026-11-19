@@ -15,8 +15,8 @@ ACCESS_CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         task="Scrape JavaScript-rendered pages",
-        use='`render = "browser"` on `[acquisition]` or a source; `render = "stealth"` only '
-        "with the operator grant `--allow-stealth`",
+        use='`render = "browser"` or `render = "stealth"` on `[acquisition]` or a source; '
+        "agent tools, bundles, registry recipes and model output need `--allow-untrusted`",
         limits="`browser` extra; one browser context per source; images and media blocked; "
         "stealth is never implied",
         instead_of="driving Playwright or Selenium yourself",

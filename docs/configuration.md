@@ -177,6 +177,7 @@ How URLs are fetched: allowed hosts, rendering, pacing, budgets. Docs: [acquisit
 | `acquisition.allowed_hosts` | array of string | required | `items >= 1, items <= 64` | Exact hosts Rastro may fetch; nothing else is reached. |
 | `acquisition.render` | string | `"http"` | `one of http, browser, stealth` | http fetches HTML; browser renders JavaScript; stealth needs the --allow-stealth grant. |
 | `acquisition.solve_challenges` | boolean | `false` |  | Let the stealth browser solve challenge pages. |
+| `acquisition.robots` | string | `"obey"` | `one of obey, ignore` | "ignore" neither fetches nor enforces robots.txt for this job: the operator asserts permission. Jobs from agent tools, bundles, registry recipes and model output need the robots_ignore grant. |
 | `acquisition.allow_http` | boolean | `false` |  | Allow plain http:// URLs (https only by default). |
 | `acquisition.session` | boolean | `false` |  | Keep cookies in memory across the requests of one job run. |
 | `acquisition.max_concurrency` | integer | `4` | `>= 1, <= 32` | Requests in flight at the same time. |
@@ -515,7 +516,7 @@ Docs: [api.md#declarative-jobs](api.md#declarative-jobs).
 | `model=` | `ModelPort \| None` | - | A ModelPort that replaces the job's [model]. |
 | `allow_remote=` | `bool` | `false` | Operator grant: allow job-declared remote model endpoints. |
 | `allow_egress=` | `bool` | `false` | Operator grant: use the job's egress proxies. |
-| `allow_stealth=` | `bool` | `false` | Operator grant: allow render = "stealth". |
+| `allow_stealth=` | `bool` | `false` | Deprecated: your own jobs need no grant. |
 | `allow_env=` | `Iterable[str]` | `[]` | Operator grant: extra environment variables the job may read. |
 | `allow_private_network=` | `bool` | `false` | Operator grant: reach private addresses of allowed hosts. |
 | `allow_ports=` | `Iterable[int]` | `[]` | Operator grant: ports allowed besides 80 and 443. |
@@ -530,7 +531,9 @@ Only the person running Rastro can grant these; a job file never can.
 | Flag | Also | What it allows | Docs |
 | --- | --- | --- | --- |
 | `--allow-remote` | env RASTRO_ALLOW_REMOTE, Python allow_remote= | Job-declared models may use non-loopback endpoints; page content leaves the machine. | [jobs.md#operator-opt-in](jobs.md#operator-opt-in) |
-| `--allow-stealth` | env RASTRO_ALLOW_STEALTH, Python allow_stealth= | Allow render = "stealth" and challenge solving. | [acquisition.md#javascript-pages](acquisition.md#javascript-pages) |
+| `--allow-stealth` | env RASTRO_ALLOW_STEALTH, Python allow_stealth= | Deprecated: your own jobs need no grant. Grants stealth and challenge solving to agent tools, bundles, registry recipes and model output. | [acquisition.md#capabilities-and-input-origin](acquisition.md#capabilities-and-input-origin) |
+| `--allow-capability` | env RASTRO_ALLOW_CAPABILITIES | Let your own jobs use a grant-only capability: persistent_session, real_chrome, cdp or solver_plugins. | [acquisition.md#capabilities-and-input-origin](acquisition.md#capabilities-and-input-origin) |
+| `--allow-untrusted` | env RASTRO_ALLOW_UNTRUSTED | Grant one capability to one untrusted origin (mcp, bundle, registry or model), as ORIGIN:NAME, such as mcp:stealth. | [acquisition.md#capabilities-and-input-origin](acquisition.md#capabilities-and-input-origin) |
 | `--allow-egress` | env RASTRO_ALLOW_EGRESS, Python allow_egress= | Use the egress proxies the job declares. | [acquisition.md#network-egress](acquisition.md#network-egress) |
 | `--allow-env` | env RASTRO_ALLOWED_ENV, Python allow_env= | Environment variables, besides RASTRO_*, that job keys and proxy credentials may read. | [jobs.md#operator-opt-in](jobs.md#operator-opt-in) |
 | `--allow-private-network` | env RASTRO_ALLOW_PRIVATE_NETWORK, Python allow_private_network= | Reach private, loopback and CGNAT addresses of allowed hosts. | [acquisition.md#operator-permissions](acquisition.md#operator-permissions) |
@@ -560,12 +563,14 @@ Output is JSON unless a flag says otherwise.
 | --- | --- | --- | --- | --- |
 | `--verbose` | flag | - |  | Write structured logs to stderr |
 | `--allow-remote` | flag | - |  | Let job-declared models use non-loopback endpoints (page content leaves) |
-| `--allow-stealth` | flag | - |  | Allow stealth browser rendering (also RASTRO_ALLOW_STEALTH=1) |
+| `--allow-stealth` | flag | - |  | Deprecated: your own jobs need no grant; grants stealth and challenge solving to untrusted origins (also RASTRO_ALLOW_STEALTH=1) |
 | `--allow-egress` | flag | - |  | Use the egress proxies the job declares (also RASTRO_ALLOW_EGRESS=1) |
 | `--allow-env` | NAME (repeatable) | - |  | Let the job's model keys and egress proxy credentials read this environment variable besides RASTRO_* (repeatable; also RASTRO_ALLOWED_ENV) |
 | `--allow-private-network` | flag | - |  | Reach private, loopback and CGNAT addresses of allowed hosts; link-local and cloud metadata stay blocked (also RASTRO_ALLOW_PRIVATE_NETWORK=1) |
 | `--allow-port` | N (repeatable) | - |  | Also allow this port besides 80/443 (repeatable; also RASTRO_ALLOWED_PORTS) |
 | `--ignore-robots` | HOST (repeatable) | - |  | Do not fetch or enforce robots.txt for this exact host: you assert you have permission (repeatable; also RASTRO_IGNORE_ROBOTS) |
+| `--allow-capability` | NAME (repeatable) | - |  | Let your own jobs use a grant-only capability such as cdp or real_chrome (repeatable; also RASTRO_ALLOW_CAPABILITIES) |
+| `--allow-untrusted` | ORIGIN:NAME (repeatable) | - |  | Let jobs from mcp, bundle, registry or model input use one capability, such as mcp:stealth (repeatable; also RASTRO_ALLOW_UNTRUSTED) |
 
 ### `rastro demo`
 

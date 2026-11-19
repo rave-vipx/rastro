@@ -57,7 +57,8 @@ def python_entries() -> Iterator[ConfigEntry]:
 
 def grant_entries() -> Iterator[ConfigEntry]:
     for flag, (env, keyword, text, docs) in GRANTS.items():
-        also = ", ".join(item for item in (env and f"env {env}", f"Python {keyword}=") if item)
+        python = keyword and f"Python {keyword}="  # some grants have no SDK keyword
+        also = ", ".join(item for item in (env and f"env {env}", python) if item)
         yield ConfigEntry(flag, "grant", "operator grant", None, False, also, text, docs)
 
 

@@ -12,8 +12,23 @@ GRANTS: dict[str, tuple[str, str, str, str]] = {
     "--allow-stealth": (
         "RASTRO_ALLOW_STEALTH",
         "allow_stealth",
-        'Allow render = "stealth" and challenge solving.',
-        "docs/acquisition.md#javascript-pages",
+        "Deprecated: your own jobs need no grant. Grants stealth and challenge solving to "
+        "agent tools, bundles, registry recipes and model output.",
+        "docs/acquisition.md#capabilities-and-input-origin",
+    ),
+    "--allow-capability": (
+        "RASTRO_ALLOW_CAPABILITIES",
+        "",
+        "Let your own jobs use a grant-only capability: persistent_session, real_chrome, "
+        "cdp or solver_plugins.",
+        "docs/acquisition.md#capabilities-and-input-origin",
+    ),
+    "--allow-untrusted": (
+        "RASTRO_ALLOW_UNTRUSTED",
+        "",
+        "Grant one capability to one untrusted origin (mcp, bundle, registry or model), "
+        "as ORIGIN:NAME, such as mcp:stealth.",
+        "docs/acquisition.md#capabilities-and-input-origin",
     ),
     "--allow-egress": (
         "RASTRO_ALLOW_EGRESS",

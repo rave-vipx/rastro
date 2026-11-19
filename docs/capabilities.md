@@ -78,7 +78,7 @@ What Rastro already does, for people and for AI coding agents. Use these before 
 
 ### Scrape JavaScript-rendered pages
 
-- **Use:** `render = "browser"` on `[acquisition]` or a source; `render = "stealth"` only with the operator grant `--allow-stealth`
+- **Use:** `render = "browser"` or `render = "stealth"` on `[acquisition]` or a source; agent tools, bundles, registry recipes and model output need `--allow-untrusted`
 - **Limits:** `browser` extra; one browser context per source; images and media blocked; stealth is never implied
 - **Do not build:** driving Playwright or Selenium yourself
 - **Docs:** [acquisition.md#javascript-pages](acquisition.md#javascript-pages)

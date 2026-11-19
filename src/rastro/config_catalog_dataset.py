@@ -52,7 +52,7 @@ PYTHON_PARAMS: dict[str, tuple[str, dict[str, str]]] = {
             "model": "A ModelPort that replaces the job's [model].",
             "allow_remote": "Operator grant: allow job-declared remote model endpoints.",
             "allow_egress": "Operator grant: use the job's egress proxies.",
-            "allow_stealth": 'Operator grant: allow render = "stealth".',
+            "allow_stealth": "Deprecated: your own jobs need no grant.",
             "allow_env": "Operator grant: extra environment variables the job may read.",
             "allow_private_network": "Operator grant: reach private addresses of allowed hosts.",
             "allow_ports": "Operator grant: ports allowed besides 80 and 443.",
