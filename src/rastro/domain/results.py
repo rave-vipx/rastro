@@ -9,6 +9,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from rastro.domain.recipes import Recipe
+from rastro.domain.source_notes import SourceNotes
 from rastro.domain.sources import EGRESS_NAME, Contract
 from rastro.domain.spider_report import SpiderReport
 
@@ -161,6 +162,8 @@ class ExtractionResult[T: BaseModel](Contract):
     metrics: Metrics
     # Results without a repair serialize byte-for-byte as they did before the field.
     repair: SelfRepair | None = Field(default=None, exclude_if=_absent)
+    # Names and counts about how this source was fetched and crawled; absent when unused.
+    notes: SourceNotes | None = Field(default=None, exclude_if=_absent)
 
     @property
     def items(self) -> list[T]:

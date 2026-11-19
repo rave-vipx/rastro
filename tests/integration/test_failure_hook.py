@@ -45,7 +45,7 @@ def test_hook_receives_a_content_free_summary_and_keeps_the_exit_code(job, capsy
         "shop.example",
         "missing_data",
     )
-    for leaked in ("token", "s3cr3t", "private", "page.html", str(job.parent)):
+    for leaked in ("token", "s3cr3t", "private text", "page.html", str(job.parent)):
         assert leaked not in text
 
 

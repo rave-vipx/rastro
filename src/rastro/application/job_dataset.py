@@ -22,6 +22,7 @@ from rastro.application.jobs import run_job
 from rastro.application.model_budget import model_cost_override
 from rastro.application.operator_trust import current_trust, operator_trust
 from rastro.application.run_lock import dataset_lock
+from rastro.application.run_report import report_for_load
 from rastro.application.success_samples import collect_successes
 from rastro.domain.dataset import DatasetStorageError
 from rastro.domain.job_load import JobLoadResult
@@ -184,7 +185,7 @@ def load_job_file(
             successes.pop(result.job_id, None)
     issues = retain_successes(raw_path, spec.name, job.build_schema(), report, successes)
     origins = {s.source_index: s for s in report.recipes}
-    return loaded.model_copy(
+    loaded = loaded.model_copy(
         update={
             "sources": tuple(
                 source.model_copy(
@@ -198,6 +199,7 @@ def load_job_file(
             )
         }
     )
+    return loaded.model_copy(update={"report": report_for_load(file.name, report, loaded)})
 
 
 def _load_acquirer(job: Job, conditional: ConditionalRequests | None) -> AcquisitionPort | None:
