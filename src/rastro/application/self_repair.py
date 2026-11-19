@@ -8,6 +8,7 @@ candidate with an identical definition instead of creating a new version.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping, Sequence
 from datetime import datetime
 from typing import Protocol
@@ -20,13 +21,77 @@ from rastro.application.recipe_repair import repair_candidates
 from rastro.domain.lifecycle import RecipeState
 from rastro.domain.memory import RecipeKey, StoredRecipe
 from rastro.domain.models import Limits, Recipe, Source
-from rastro.domain.recipe_compare import CandidateEvaluation, RecipeComparison
+from rastro.domain.recipe_compare import CandidateEvaluation, RecipeComparison, SourceRepair
 from rastro.domain.repair import RepairCandidate
+from rastro.domain.results import RepairProposal, SelfRepair
+from rastro.domain.source_notes import CODE_PATTERN, RepairNote
 from rastro.domain.value_consistency import value_consistency
 from rastro.ports.parser import DocumentParser
 from rastro.ports.recipes import RecipeLifecycle, RecipeRepository
 
 _REUSE_WINDOW = 32  # newest versions scanned for an identical stored candidate
+_DECISIONS = {"promote": "promoted", "quarantine": "quarantined", "reject": "rejected"}
+_ORDER = ("promoted", "quarantined", "rejected")
+
+
+def repair_note(repair: SelfRepair) -> RepairNote:
+    """The report note for offline self-repair: the strongest decision among its candidates."""
+    decided = [(_DECISIONS[p.decision], p) for p in repair.candidates]
+    for decision in _ORDER:
+        match = next((p for d, p in decided if d == decision), None)
+        if match is not None:
+            return RepairNote(
+                decision=decision,  # type: ignore[arg-type]
+                candidate_version=match.version,
+                promotion_refused=_refusal(match) if decision == "quarantined" else None,
+                origin=repair.origin,
+                model_calls=repair.model_calls,
+            )
+    return RepairNote(origin=repair.origin, model_calls=repair.model_calls)
+
+
+def source_repair_note(item: SourceRepair) -> RepairNote:
+    """The report note for one job-repair source, from its comparisons."""
+    proposals = tuple(
+        RepairProposal(
+            version=c.candidate_version,
+            decision=c.evaluation.decision,
+            reasons=c.evaluation.reasons,
+            changed_fields=c.changed_fields,
+        )
+        for c in item.comparisons
+        if c.evaluation is not None
+    )
+    note = repair_note(
+        SelfRepair(
+            mode="propose",
+            previous_version=1,
+            candidates=proposals,
+            origin=item.origin,
+            model_calls=item.inference_calls or 0,
+        )
+    )
+    if item.promoted_version is not None:
+        return note.model_copy(
+            update={
+                "decision": "promoted",
+                "candidate_version": item.promoted_version,
+                "promotion_refused": None,
+            }
+        )
+    return note
+
+
+def _refusal(proposal: RepairProposal) -> str | None:
+    """The first reason that is a code, other than the pass marker."""
+    return next(
+        (
+            r
+            for r in proposal.reasons
+            if r != "all_gates_passed" and len(r) <= 64 and re.fullmatch(CODE_PATTERN, r)
+        ),
+        None,
+    )
 
 
 class CandidateStore(RecipeRepository, RecipeLifecycle, Protocol):

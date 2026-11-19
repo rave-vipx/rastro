@@ -12,6 +12,8 @@ from datetime import UTC, datetime
 from typing import Any
 
 from rastro.application import run_report_facts as facts
+from rastro.application.field_isolation import count_nulled
+from rastro.application.self_repair import repair_note
 from rastro.domain.capability_grants import CAPABILITIES
 from rastro.domain.job_load import JobLoadResult, LoadedSource
 from rastro.domain.job_results import JobRunResult
@@ -127,12 +129,17 @@ def _source(
         records_accepted=len(result.records),
         records_rejected=metrics.rejected,
         rejected_by_code=facts.rejected_by_code(result),
-        fields_nulled=dict(notes.fields_nulled) if notes else {},
+        fields_nulled=(
+            dict(notes.fields_nulled)
+            if notes and notes.fields_nulled
+            else count_nulled(result.issues)
+        ),
         stored=dict(loaded.counts) if loaded else None,
         acquisition=notes.acquisition if notes and notes.acquisition else facts.acquisition(result),
         discovery=notes.discovery if notes else None,
         crawl=crawl,
-        repair=notes.repair if notes else None,
+        repair=(notes.repair if notes else None)
+        or (repair_note(result.repair) if result.repair else None),
         blocked=notes.blocked if notes else None,
         seconds=SourceTiming(
             acquisition=metrics.acquisition_seconds,
