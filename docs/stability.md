@@ -6,6 +6,37 @@ features compatibly and may remove public names only after the deprecation polic
 patch release (1.0.1) only fixes bugs and never breaks it. Breaking changes need a new major
 version, except for security fixes (see the deprecation policy).
 
+## The 1.0.0 freeze
+
+1.0.0 is the first release under this policy, so it fixes the list that the whole 1.x series
+builds on. A change to anything below follows the deprecation policy; the list is re-checked
+before the `v1.0.0` tag, together with the generated schemas, so the code, the documentation and
+the published contracts agree at the release.
+
+- **Distribution**: the `rastro-engine` project on PyPI, the `rastro` executable, and the
+  `rastro` import package with its optional extras (`browser`, `http`, `ollama`, `openai`,
+  `mcp`, `postgres`, `studio`).
+- **Python names**: every name in `rastro.__all__`, with the signatures and result fields
+  documented in [API](api.md), plus `rastro.OllamaModel` and `rastro.OpenAICompatibleModel`,
+  which are public although they stay out of `__all__`.
+- **Job files**: `format_version = 1`, the job schema ([`job.schema.json`](schemas/job.schema.json),
+  also printed by `rastro job schema`) and the documented job keys.
+- **Run results**: `JobRunResult` and `JobSummary` with `schema_version = 1`
+  ([`job-run.schema.json`](schemas/job-run.schema.json), also `rastro job schema --target run`).
+- **The run report**: `RunReport` and `SourceReport` with `schema_version = 1`, published as
+  `run-report.schema.json`.
+- **Recipes and stores**: recipe bundles with `format_version = 1`, and the recipe-memory and
+  dataset SQLite schemas, which migrate forward as described below.
+- **CLI**: command names, flags, exit codes `0`–`5` and the documented error codes.
+- **MCP**: tool names and arguments served by `rastro mcp`, with the JSON results listed above.
+- **Configuration**: the environment variables and operator flags documented in
+  [configuration](configuration.md), such as `RASTRO_MODEL`, `RASTRO_ALLOW_*` and
+  `RASTRO_IGNORE_ROBOTS`.
+- **Python versions**: CPython 3.12, 3.13 and 3.14.
+
+Anything not in this list is outside the policy; the next section says which of those may change
+without notice.
+
 ## What is public
 
 These are covered by the policy. Code, scripts and files that depend only on them keep working
