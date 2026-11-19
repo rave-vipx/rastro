@@ -225,6 +225,14 @@ What Rastro already does, for people and for AI coding agents. Use these before 
 - **Do not build:** copying selectors between projects by hand
 - **Docs:** [hub.md](hub.md)
 
+### Start from a recipe someone already shared for a site
+
+- **Use:** `rastro hub search URL` offers recipes for the URL's domain from the public hub or any hub URL; `rastro hub install` stores one as a candidate; `rastro hub publish` writes your recipe, a synthetic sample and field descriptions into a hub checkout
+- **CLI:** `rastro hub search`, `rastro hub install`, `rastro hub publish`
+- **Limits:** Offers are candidates until your local gates pass; publish writes locally, sharing is a pull request to the hub repository
+- **Do not build:** writing a recipe for a site someone already scraped
+- **Docs:** [hub.md](hub.md)
+
 ### Test recipes offline against synthetic page changes
 
 - **Use:** Mock Lab: `build_fixture`, `verify_fixture`, `load_fixture`

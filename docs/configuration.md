@@ -919,6 +919,49 @@ Open the local Studio (needs rastro[studio]). Docs: [studio.md#install-and-start
 | `--model` | value | - |  | Model spec for Ask AI (default: RASTRO_MODEL); any provider works |
 | `--allow-remote` | flag | - |  | Allow sending page content to a non-loopback or hosted model |
 
+### `rastro hub`
+
+Share recipes through the hub: publish, search by URL, install a candidate. Docs: [jobs.md#cli-commands-and-exit-codes](jobs.md#cli-commands-and-exit-codes).
+
+### `rastro hub publish`
+
+Write a job's recipe, sample, field descriptions and engine needs into a local hub checkout, ready for a pull request. Docs: [jobs.md#cli-commands-and-exit-codes](jobs.md#cli-commands-and-exit-codes).
+
+| Flag | Value | Default | Choices | Description |
+| --- | --- | --- | --- | --- |
+| `FILE` | Path | required |  | Job file whose recipe memory holds the recipe |
+| `--source` | int | `1` |  | One-based source index |
+| `--sample` | Path | required |  | Synthetic sample you may redistribute |
+| `--registry` | Path | required |  | Local hub checkout |
+| `--id` | value | required |  | Package identifier |
+| `--version` | value | required |  | Semver |
+| `--author` | value | required |  | Package author name |
+| `--author-url` | value | - |  | Optional package author URL |
+| `--license` | value | required |  | SPDX license |
+| `--describe` | FIELD=TEXT (repeatable) | - |  | What a field holds; once per field of the job |
+| `--allow-absolute-paths` | flag | - |  | Allow absolute paths in the job file |
+
+### `rastro hub search`
+
+Offer hub recipes for a URL's domain. Docs: [jobs.md#cli-commands-and-exit-codes](jobs.md#cli-commands-and-exit-codes).
+
+| Flag | Value | Default | Choices | Description |
+| --- | --- | --- | --- | --- |
+| `URL` | value | required |  | The page you want to scrape |
+| `--registry` | Path | - |  | Local hub checkout instead of a URL |
+| `--registry-url` | URL | - |  | https registry URL (default: the public hub, https://raw.githubusercontent.com/rave-vipx/rastro-hub/main/) |
+
+### `rastro hub install`
+
+Install a hub package as a candidate. Docs: [jobs.md#cli-commands-and-exit-codes](jobs.md#cli-commands-and-exit-codes).
+
+| Flag | Value | Default | Choices | Description |
+| --- | --- | --- | --- | --- |
+| `PACKAGE` | value | required |  | Package id or id@version |
+| `--store` | Path | required |  | Recipe SQLite file |
+| `--registry` | Path | - |  | Local hub checkout instead of a URL |
+| `--registry-url` | URL | - |  | https registry URL (default: the public hub, https://raw.githubusercontent.com/rave-vipx/rastro-hub/main/) |
+
 ### `rastro suggest`
 
 Suggest a CSS recipe from a saved page and example values. Docs: [suggest.md#from-the-command-line](suggest.md#from-the-command-line).

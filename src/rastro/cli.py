@@ -37,6 +37,8 @@ from rastro.cli_dataset import add_commands, dataset_command, load_job_command
 from rastro.cli_errors import UsageError, classify, missing_extra_error
 from rastro.cli_estimate import add_estimate_command, estimate_command
 from rastro.cli_hook import add_hook_argument, hook_argv, notify, run_summary
+from rastro.cli_hub_group import add_command as add_hub_group
+from rastro.cli_hub_group import hub_group_command
 from rastro.cli_ops import JOB_COMMANDS as OPS_JOB_COMMANDS
 from rastro.cli_ops import add_health_command, health_command
 from rastro.cli_ops import add_job_commands as add_ops_job_commands
@@ -56,7 +58,7 @@ from rastro.domain.job_load import job_load_json_schema
 
 # Commands whose errors are reported as one JSON object on stderr.
 _JSON_ERRORS = frozenset(
-    {"job", "recipe", "suggest", "new", "health", *AGENT_COMMANDS, *CONFIG_COMMANDS}
+    {"job", "recipe", "suggest", "new", "health", "hub", *AGENT_COMMANDS, *CONFIG_COMMANDS}
 )
 
 
@@ -149,6 +151,7 @@ def _build_parser() -> argparse.ArgumentParser:
     add_health_command(subcommands)
     add_recipe_commands(subcommands)
     add_studio_command(subcommands)
+    add_hub_group(subcommands)
     add_suggest_commands(subcommands)
     add_agent_commands(subcommands)
     add_config_commands(subcommands, job_commands)
@@ -226,6 +229,7 @@ def _run_command(args: argparse.Namespace) -> int:
         "dataset": dataset_command,
         "studio": studio_command,
         "health": health_command,
+        "hub": hub_group_command,
         "suggest": suggest_command,
         "new": new_command,
         "job": _run_job_command,

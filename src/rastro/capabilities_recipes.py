@@ -77,6 +77,17 @@ RECIPES_CAPABILITIES: tuple[Capability, ...] = (
         docs="docs/hub.md",
     ),
     Capability(
+        task="Start from a recipe someone already shared for a site",
+        use="`rastro hub search URL` offers recipes for the URL's domain from the public hub "
+        "or any hub URL; `rastro hub install` stores one as a candidate; `rastro hub publish` "
+        "writes your recipe, a synthetic sample and field descriptions into a hub checkout",
+        cli=("rastro hub search", "rastro hub install", "rastro hub publish"),
+        limits="Offers are candidates until your local gates pass; publish writes locally, "
+        "sharing is a pull request to the hub repository",
+        instead_of="writing a recipe for a site someone already scraped",
+        docs="docs/hub.md",
+    ),
+    Capability(
         task="Test recipes offline against synthetic page changes",
         use="Mock Lab: `build_fixture`, `verify_fixture`, `load_fixture`",
         python=_names(
