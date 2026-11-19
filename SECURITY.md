@@ -14,8 +14,12 @@ adds opt-in HTTP acquisition with an exact source allowlist, public-IP checks,
 validated DNS pinning, per-hop redirect checks, verified TLS, robots rules, host
 pacing, and request/body/deadline budgets. Standard HTTP(S) ports only unless the operator grants more (see the trust model below); HTTP requires
 explicit opt-in and HTTPS never redirects to HTTP. Cookies are disabled by default; opt-in sessions keep bounded, exact-host cookies
-in memory for one run, while ambient proxies, netrc, browser impersonation and
-transport-level redirects/retries remain disabled.
+in memory for one run, while ambient proxies, netrc and transport-level redirects/retries
+remain disabled. Browser impersonation (`[acquisition.http] impersonate`) and HTTP/3
+(`http_version = "3"`) change only the TLS/header fingerprint and the protocol: DNS pinning,
+the destination check, per-hop redirect checks, the body cap, robots and host limits apply
+unchanged, and the job's credentials and cookies are never replaced. Both are capabilities
+(`impersonation`, `http3`), granted to operator jobs and to other input only with a grant.
 
 401/403/451 stop further requests to that host in the client. 429 and Retry-After
 produce explicit restrictions/deferred results and host cooldowns. Browser stealth mode uses Scrapling/Patchright browser
