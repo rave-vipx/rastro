@@ -2,7 +2,7 @@
 
 Status: **approved direction**, 2026-11-19. Target release: **1.0.0**, the version that
 consolidates 0.9 and declares the public API stable. Its needs are listed in
-`docs/product-needs.md` as N21–N32; each cut follows the rastro-slice skill.
+`docs/product-needs.md` as N21–N39; each cut follows the rastro-slice skill.
 
 ## Why
 
@@ -49,6 +49,15 @@ What it showed, grouped:
   checkpoints, with autothrottle and per-domain concurrency. Rastro forbids proxy rotation
   (ADR 0034) and caps every crawl (ADR 0032). Rastro should expose what Scrapling solves,
   behind the same operator grants, instead of refusing it.
+- **Rastro uses a fraction of Scrapling.** Today it uses Scrapling's parser, element
+  relocation for drift and the stealth browser. It does not use adaptive element storage,
+  `find_similar`, `find_by_text`, selector generation, network capture of XHR/JSON responses,
+  most browser controls (`wait_selector`, `disable_resources`, `block_ads`, `pierce_shadow`,
+  page actions, persistent sessions, real Chrome or CDP), Scrapling's HTTP sessions
+  (impersonation, HTTP/3), the crawl engine and its templates (sitemap, feed, Shopify,
+  site-to-markdown), Markdown conversion, or Scrapling's MCP browser tools. Rastro should be
+  the harness that turns all of it into recipes, policy, evidence and Studio, not a wrapper
+  around a small part.
 
 ## Needs
 
@@ -65,6 +74,13 @@ What it showed, grouped:
 | N29 | Read results from code | `rastro.read_records(dataset, since=, fields=)` in `rastro.__all__`, with provenance per field and multi-origin records merged; documented as the adoption path instead of shelling out to export. |
 | N31 | Access what Scrapling can reach | Proxy rotation over the operator's egress profiles (Scrapling `ProxyRotator`, credentials from allowed environment names, never from the job or a bundle, also in browser and stealth modes) and Cloudflare challenge solving run when the operator grants them, like stealth (ADR 0034, ADR 0036). Outcomes name what was used. Anything Scrapling does not solve (other CAPTCHA vendors, logins) stays a `blocked` outcome with a hint. |
 | N32 | Crawls without a page cap | A spider may set `max_pages = "unbounded"` when the operator grants it; the run uses Scrapling's crawl engine with checkpoints (pause and resume across runs), autothrottle and per-domain concurrency; robots, allowed hosts and the time budget still apply; progress and resume state appear in the run report and Studio. |
+| N33 | Every Scrapling feature has a place | `docs/scrapling.md` maps each Scrapling public feature to its Rastro surface (job key, grant, recipe strategy, Studio control, MCP tool) or to a written reason for not exposing it. The map is data in the capability manifest; a CI test inspects the installed Scrapling (fetcher and session options, parser methods, spider settings, templates, MCP tools) and fails when a feature is unmapped, so upgrades never leave value unused. |
+| N34 | Adaptive first, AI second | Recipe creation and repair try Scrapling before any model: `find_similar` finds the repeated record, `generate_css_selector` proposes stable selectors, adaptive storage and `relocate` re-find moved elements, `find_by_text`/`find_by_regex` anchor fields by their labels. The model is called only when these candidates fail the gates, and it receives a Markdown condensation of the page instead of raw HTML. The run report counts repairs done without a model. |
+| N35 | Recipes from the site's own data | In browser mode Rastro records the page's XHR/JSON responses with Scrapling's network capture; Studio offers "this page loads its data from an API" and builds a recipe over that response (same policy, the page stays the job URL). Drift watches the JSON shape, which changes less than markup. |
+| N36 | Browser controls as data | Job keys for `wait_selector` (and state), `network_idle`, `disable_resources`, `block_ads`, `blocked_domains`, `pierce_shadow`, locale and timezone from `[region]`, and declarative page actions (click, type, scroll, wait, as data, never code); screenshots as optional evidence; persistent browser sessions, real Chrome and CDP connections under operator grants; fingerprint options under the stealth grant. |
+| N37 | Scrapling's HTTP engine behind Rastro's policy | An ADR decides whether Scrapling's `FetcherSession` (browser impersonation, HTTP/3, retries) becomes the HTTP path, keeping DNS pinning, redirect and size checks, robots and host limits; impersonation becomes an operator grant with the `SECURITY.md` amendment. If a guarantee cannot be kept, the ADR records why the current client stays. |
+| N38 | Crawl engine and templates | Beyond N32: a development response cache so Studio iterates without refetching, streamed results while a crawl runs, and Scrapling's spider templates (sitemap, feed, Shopify, site-to-markdown, generic crawler) published as starter recipes in the registry. |
+| N39 | Scrapling tools for agents | Rastro's MCP server offers Scrapling's browser tools (snapshot, actions, network requests, screenshot, extract) while an agent builds a recipe, under Rastro's network policy and prompt-injection defense (ADR 0035); `rastro shell JOB` opens Scrapling's interactive shell on a job's page. |
 | N30 | Predictable operation | Per-host rate and concurrency in `[acquisition]`; a dry-run estimate of requests and minutes before a crawl; `blocked` outcomes carry a hint (cloud IP refused, robots, login wall) and link to an egress guide (proxy, self-hosted runner); `Fetched.text`; a `rastro dataset migrate` path between schema versions; small doc and CLI fixes (`job stats --since 30m`, `dataset.path` default). |
 
 Every need keeps the existing rules: recipes are data, scraped text is untrusted (ADR 0035),
@@ -121,6 +137,21 @@ synthetic.
   automatically on the next run, and stop at the run's time budget, not at a page count.
 - Robots checks stay mandatory, as `SECURITY.md` requires; no grant turns them off.
 
+### N33–N39 Rastro as Scrapling's harness
+
+- Principle: Scrapling acquires, parses, relocates and crawls; Rastro decides what is allowed
+  (policy, grants, robots, SSRF), turns results into typed records with provenance, keeps and
+  repairs recipes, and shows it all in Studio and to agents. A Scrapling capability reaches
+  users only through that harness, never as a raw passthrough of untrusted options.
+- The coverage map (N33) is the backbone: each later need adds rows to it, and a Scrapling
+  upgrade starts by running the coverage test.
+- N34 changes the cost profile of the product: most layout changes are repaired by Scrapling's
+  adaptive relocation without a model call; the AI is reserved for real redesigns and for
+  naming fields from plain language.
+- Page actions and network capture are data in the job (steps and URL patterns), consistent
+  with "recipes are data"; `page_action` callables and init scripts stay out of jobs and
+  bundles.
+
 ### N30 operations
 
 - Rate limits are per host and shared by pagination, spider and detail fetches of one run.
@@ -132,13 +163,15 @@ synthetic.
 | Cut | Needs | Why this order | Review |
 | --- | --- | --- | --- |
 | 1 | N21 (release pipeline) | Trusted publishing works and the surrogate fix is on dev; 1.0.0 ships it with the rest | release checklist |
-| 2 | N22, N23, N24 | Stops silent data loss on messy pages; small, independent | cross-model (persistence) |
+| 2 | N22, N23, N24, N33 | Stops silent data loss; the Scrapling coverage map frames every later cut | cross-model (persistence) |
 | 3 | N25 | Unblocks sites whose sitemaps or links misled the crawl | cross-model (network) |
 | 4 | N28, N29 | The contract other cuts report into; lets integrators stop shelling out | cross-model (public API) |
-| 5 | N26, N27 | Largest change; builds on the run contract and robust coercion | cross-model (persistence, public API) |
-| 6 | N30, N31, N32 | Operations and access, on the stable run contract | cross-model (network, security) |
+| 5 | N26, N27, N34 | Nested records and adaptive-first recipe creation and repair, on the run contract | cross-model (persistence, public API) |
+| 6 | N30, N31, N32, N38 | Operations, access and the crawl engine with its templates | cross-model (network, security) |
+| 7 | N35, N36, N37 | Network-first recipes, browser controls as data, the HTTP engine decision | cross-model (network, security) |
+| 8 | N39 | Scrapling tools for agents through MCP and the shell | cross-model (security) |
 
-After cut 6, release 1.0.0 (public API stable from here: `rastro.__all__`, job format, `RunReport` schema) with the capability manifest (`rastro capabilities`), `llms.txt`
+After cut 8, release 1.0.0 (public API stable from here: `rastro.__all__`, job format, `RunReport` schema) with the capability manifest (`rastro capabilities`), `llms.txt`
 and the configuration reference regenerated, and the integration example rebuilt to show that
 its custom adapters are no longer needed.
 

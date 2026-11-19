@@ -6,7 +6,7 @@ Owner request, 2026-11-16, updated the same day: finish the product in this cut,
 
 The job key for plain HTTP, browser, and stealth is `render`, already shipped on `[acquisition]` and on each source (`http`, `browser`, `stealth`). Do not rename it to `engine`.
 
-## Needs N21–N32 (1.0.0, current cut)
+## Needs N21–N39 (1.0.0, current cut)
 
 Owner request, 2026-11-19. Planning source for 1.0.0; design notes and cut order are in
 `docs/action-plan-1.0.md`. N1–N12 below shipped in 0.9.0; N13–N20 are in
@@ -26,6 +26,13 @@ Owner request, 2026-11-19. Planning source for 1.0.0; design notes and cut order
 | N30 | Predictable operation (per-host rate, crawl estimate, blocked hints, schema migrate) |
 | N31 | Access what Scrapling can reach (proxy rotation, Cloudflare challenges; operator grants, ADR 0036) |
 | N32 | Crawls without a page cap (Scrapling crawl engine, checkpoints, resume; operator grant, ADR 0036) |
+| N33 | Every Scrapling feature has a place (coverage map and upgrade test) |
+| N34 | Adaptive first, AI second (Scrapling relocation and similarity before any model call) |
+| N35 | Recipes from the site's own data (network capture of XHR/JSON) |
+| N36 | Browser controls as data (waits, resource blocking, shadow DOM, page actions, sessions) |
+| N37 | Scrapling's HTTP engine behind Rastro's policy (impersonation, HTTP/3; ADR) |
+| N38 | Crawl engine and templates (dev cache, streamed results, starter recipes) |
+| N39 | Scrapling tools for agents (MCP browser tools, `rastro shell`) |
 
 ## What Rastro is for
 

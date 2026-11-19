@@ -6,10 +6,10 @@ v0.1 remains the reference release. It is complete: `0.1.0rc1` is its release ca
 
 ## Next: 1.0.0 plan (approved 2026-11-19)
 
-N21–N32 in `docs/product-needs.md`, cuts in `docs/action-plan-1.0.md`: release pipeline,
+N21–N39 in `docs/product-needs.md`, cuts in `docs/action-plan-1.0.md`: release pipeline,
 robust extraction, discovery, run contract and dataset reader, nested records with AI support,
 operations, and proxy rotation, challenge solving and unbounded crawl through Scrapling
-(ADR 0036). The lone-surrogate fix (#151) is on dev.
+(ADR 0036), with Rastro as the full harness of Scrapling (N33–N39). The lone-surrogate fix (#151) is on dev.
 
 ## Studio redesign and configuration reference (2026-11-17, released in 0.9.0)
 
