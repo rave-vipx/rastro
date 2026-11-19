@@ -10,7 +10,7 @@ All notable user-facing changes are recorded here. The project follows [Semantic
 
 ### Fixed
 
-- JSON-LD blocks with raw newlines or other control characters inside strings are retried once with those characters escaped; recovered records retain provenance and report `tolerant_jsonld` (INT-002, N17). Malformed structure, duplicate keys and non-finite numbers remain rejected.
+- JSON-LD blocks with raw newlines or other control characters inside strings are retried once with those characters escaped; recovered records retain provenance and report `tolerant_jsonld` (INT-002, N17). Malformed structure, duplicate keys and non-finite numbers remain rejected. HTML-parser normalization of other controls varies by platform; decoder regression tests cover all controls before HTML parsing (N23).
 
 ### Changed
 
