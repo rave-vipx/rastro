@@ -64,7 +64,7 @@ class RepairEvidence(Contract):
 
 class RepairCandidate(Contract):
     recipe: Recipe
-    origin: Literal["scrapling_relocation", "fallback", "discovery", "model"]
+    origin: Literal["scrapling_relocation", "adaptive", "fallback", "discovery", "model"]
     rationale: Reason
     evidence: tuple[RepairEvidence, ...] = Field(default=(), max_length=101)
 

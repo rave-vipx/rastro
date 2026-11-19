@@ -1738,6 +1738,7 @@
             {
               "enum": [
                 "relocation",
+                "adaptive",
                 "model"
               ],
               "type": "string"

@@ -15,7 +15,7 @@ from rastro import Outcome, SQLiteRecipeRepository
 from rastro.adapters.scrapling_relocation import ScraplingRelocation
 from rastro.domain.repair import RepairCandidate
 
-pytestmark = pytest.mark.usefixtures("offline_cli_loop")
+pytestmark = pytest.mark.usefixtures("offline_cli_loop", "model_path_only")
 
 URL = "https://acme.example/careers"
 V1 = """<main><ul>

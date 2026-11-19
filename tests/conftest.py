@@ -154,3 +154,16 @@ def offline_cli_loop(monkeypatch):
             return original_loop()
 
     monkeypatch.setattr(asyncio, "SelectorEventLoop", factory)
+
+
+@pytest.fixture
+def model_path_only(monkeypatch):
+    """Turn off adaptive matching, so a repair that needs a model reaches it.
+
+    Many fixtures rewrite a page while keeping its text; adaptive matching repairs those
+    without a model. Tests of the model path itself use this to keep reaching it.
+    """
+    from rastro.adapters.scrapling_adaptive import ScraplingAdaptive
+
+    monkeypatch.setattr(ScraplingAdaptive, "similar_records", lambda *a, **k: ())
+    monkeypatch.setattr(ScraplingAdaptive, "anchor_by_label", lambda *a, **k: None)
