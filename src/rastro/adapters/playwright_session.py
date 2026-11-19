@@ -9,6 +9,7 @@ from typing import Any
 from rastro.adapters.browser_controls_apply import attach_screenshot, steps_performer
 from rastro.adapters.playwright_browser import NetworkGuard
 from rastro.adapters.playwright_launch import load_page
+from rastro.application.page_steps import steps_budget_ms
 from rastro.domain.acquisition import (
     AcquisitionError,
     AcquisitionPolicy,
@@ -81,7 +82,7 @@ class PlaywrightSession:
                 self._page,
                 steps,
                 guard=self._guard,
-                timeout_ms=policy.request_timeout_seconds * 1000,
+                timeout_ms=steps_budget_ms(tuple(steps), policy),
             )
             result = self._guard.result(self._page.url, await self._page.content(), 200, max_bytes)
             result = await attach_screenshot(result, self._page, policy.browser)

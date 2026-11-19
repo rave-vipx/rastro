@@ -17,7 +17,7 @@ from rastro.application.acquisition_state import (
     check_page_request,
 )
 from rastro.application.browser_page_steps import run_page_steps
-from rastro.application.browser_policy import canonical_url, page_policy
+from rastro.application.browser_policy import BROWSER_REGION, canonical_url, page_policy
 from rastro.application.browser_proxy import BROWSER_PROXY
 from rastro.application.browser_scroll_step import scroll_step
 from rastro.application.browser_sessions import SOURCE_SESSIONS
@@ -70,12 +70,14 @@ class BrowserAcquirer(WebAcquirer):
         if representation != "html":
             raise ConfigurationError("Browser modes require the HTML representation")
         token = _render_seconds.set(0)
+        region = BROWSER_REGION.set((source.locale, source.timezone))  # the job's [region]
         try:
             result = await super().acquire(
                 source, max_bytes=max_bytes, representation=representation
             )
             return replace(result, render_seconds=_render_seconds.get(), render=self.policy.render)
         finally:
+            BROWSER_REGION.reset(region)
             _render_seconds.reset(token)
 
     async def _robots(self, url: str, operation: _Operation) -> None:
