@@ -19,6 +19,7 @@ from rastro.application.acquisition_state import (
 )
 from rastro.application.outcomes import failure_result
 from rastro.application.scroll import PAGE_COUNTER, PageCounter, pages_left, spend_page
+from rastro.application.sitemap import SitemapEntry, order_entries
 from rastro.application.spider_filter import link_refusal
 from rastro.application.spider_links import (
     Link,
@@ -162,13 +163,20 @@ class _Crawl[T: BaseModel]:
         """Fetch the start sitemap and, for an index, its children; return the depth-1 links."""
         frontier: list[tuple[int, Link]] = []
         sitemaps = [(1, start)]
+        entries: list[SitemapEntry] = []
+        order = self.spider.seed_order
         for ordinal, link in sitemaps:  # children are appended while the start is read
             if not self._admit([(ordinal, link)], 0):
                 continue
             result, harvest = await self._fetch(ordinal, link, partial(fetch_seed, ordinal == 1))
             self._record(ordinal, 0, link, result, harvest, seed=True)
-            self._discover(harvest.sitemaps, 0, sitemaps, paths=False)  # host rules only
-            self._discover(harvest.hrefs, 1, frontier)
+            children = order_entries(harvest.sitemaps, order)
+            self._discover([item.loc for item in children], 0, sitemaps, paths=False)
+            entries.extend(
+                reversed(harvest.seed_entries) if order == "reverse" else harvest.seed_entries
+            )
+        ordered = order_entries(entries, "lastmod") if order == "lastmod" else entries
+        self._discover([item.loc for item in ordered], 1, frontier)
         return frontier
 
     async def _fetch(

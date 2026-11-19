@@ -82,7 +82,7 @@ def _read[T: BaseModel](
     if sitemap.index and not first:
         return fail(Outcome.INVALID_DATA, "sitemap_nested_index")  # one level at most
     empty = fail(Outcome.MISSING_DATA, "sitemap_empty")
-    if not sitemap.locs:
+    if not sitemap.entries:
         return empty
-    (harvest.sitemaps if sitemap.index else harvest.hrefs).extend(sitemap.locs)
+    (harvest.sitemaps if sitemap.index else harvest.seed_entries).extend(sitemap.entries)
     return empty.model_copy(update={"issues": ()})  # links only, like a listing page

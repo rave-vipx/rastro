@@ -1889,6 +1889,14 @@
       "title": "ScrollSpec",
       "type": "object"
     },
+    "SeedOrder": {
+      "enum": [
+        "document",
+        "reverse",
+        "lastmod"
+      ],
+      "type": "string"
+    },
     "SpiderPolicy": {
       "additionalProperties": false,
       "description": "The job's ``[spider]`` table. ``mode = \"list\"`` (the default) is today's behaviour.",
@@ -1901,6 +1909,20 @@
           "maxItems": 32,
           "title": "Allow",
           "type": "array"
+        },
+        "allow_pattern": {
+          "anyOf": [
+            {
+              "maxLength": 512,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Allow Pattern"
         },
         "deny": {
           "default": [],
@@ -1975,6 +1997,10 @@
           ],
           "title": "Seed",
           "type": "string"
+        },
+        "seed_order": {
+          "$ref": "#/$defs/SeedOrder",
+          "default": "document"
         }
       },
       "title": "SpiderPolicy",

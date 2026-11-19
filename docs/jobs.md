@@ -641,12 +641,14 @@ deny = ["/login", "/cart"]
 | --- | --- |
 | `mode` | `"list"` (default) reads each source once; `"spider"` follows links. |
 | `seed` | `"page"` (default): the start URL is a page. `"sitemap"`: it is a sitemap whose locs are the links ([Start from a sitemap](#start-from-a-sitemap)). |
+| `seed_order` | `"document"` (default), `"reverse"` or `"lastmod"` (newest first, entries without a valid `<lastmod>` last in document order). Only for `seed = "sitemap"`; applied before `max_pages`. |
 | `links` | A CSS expression ending in `::attr(name)`; every match is a link. It follows the selector cost policy of any job recipe. HTML sources only. |
 | `link_field` | The name of a declared field whose value in each accepted record is a link. Works for JSON too. Exactly one of `links` or `link_field` is required in spider mode, unless `seed = "sitemap"` (then at most one). |
 | `max_depth` | Link hops from the start URL, 1 to 4 (default 2). |
 | `max_pages` | Fetched documents per start source, 1 to 100 (default 25). Pagination pages count. |
 | `same_host` | Default `true`. With `false`, a link is followed only when its host is in `[acquisition].allowed_hosts`. |
 | `allow`, `deny` | Path prefixes matched on whole segments: `/item` covers `/item` and `/item/1`, never `/items`. `deny` wins; with `allow`, a path outside it is skipped. The start URL is always fetched. |
+| `allow_pattern` | Optional linear-time regular expression (no look-around or backreferences, max 512 chars) matched against each link's normalized path; non-matching links are skipped as `path_denied` before `max_pages`. `deny` still wins. |
 
 The table grants nothing and rejects unknown keys, so a job file cannot add
 `ignore_robots`, private-network or stealth permissions here. They stay operator flags
@@ -709,9 +711,11 @@ fields = { name = "/name", start = "/startDate" }
 [spider]
 mode = "spider"
 seed = "sitemap"          # default "page": the start URL is an HTML page
+seed_order = "lastmod"    # "document" (default), "reverse", or "lastmod" (newest first)
 max_depth = 1             # detail pages only; 2+ needs links or link_field
 max_pages = 21            # the sitemap counts: 1 sitemap + 20 detail pages
 allow = ["/evento"]
+allow_pattern = "/evento/2026-"  # optional regex on the normalized path, before max_pages
 ```
 
 - The sitemap is fetched like any page: allowlist, robots, pacing, DNS checks, egress,
@@ -724,14 +728,22 @@ allow = ["/evento"]
   `<urlset>` and `<sitemapindex>`. Element names match without their namespace. More
   than 50,000 URLs, or a gzip that inflates past the cap, is `sitemap_too_large`.
 - A `<sitemapindex>` is followed one level: its child sitemaps are depth 0, spend
-  `max_pages` and the budget, and pass the host rules (not `allow`/`deny`, which are
-  for pages). A child that is itself an index is `sitemap_nested_index`.
+  `max_pages` and the budget, and pass the host rules (not `allow`/`deny`/`allow_pattern`,
+  which are for pages). A child that is itself an index is `sitemap_nested_index`.
 - Every `<url><loc>` becomes a depth-1 link and passes the normal link rules: same host
-  by default, https downgrade refused, `allow`/`deny`, fetched once.
-- Selection is **document order**: the first locs that fit `max_pages` and the budget are
-  fetched, and the rest are reported as `page_limit` or `budget` (`partial_success`).
-  `lastmod` is ignored. Sitemap order is the site's choice, so the first N locs are not
-  guaranteed to be "the next N events".
+  by default, https downgrade refused, `allow`/`deny`/`allow_pattern`, fetched once.
+- Ordering and filtering apply **before `max_pages`** and the budget:
+  - `seed_order = "document"` (default) keeps the sitemap's own order.
+  - `seed_order = "reverse"` walks the sitemap from last entry to first (and child
+    sitemaps of a `<sitemapindex>` in reverse too).
+  - `seed_order = "lastmod"` sorts entries with a valid W3C Datetime / ISO 8601
+    `<lastmod>` newest-first in UTC; equal timestamps and entries without a valid
+    `<lastmod>` keep their document order, with undated entries last. Child sitemaps of a
+    `<sitemapindex>` follow the same order, and `<url>` entries from all fetched child
+    sitemaps are sorted together.
+  - Filtered locs are reported as `path_denied` without spending a page slot; excess
+    matching locs past `max_pages` or the budget are reported as `page_limit` or `budget`
+    (`partial_success`).
 - The sitemap yields no records itself (`no_records` in the report). A sitemap with no
   locs is `missing_data` with `sitemap_empty`; a refused or invalid sitemap is a failed
   start page, never an empty success. Without `links` or `link_field` the detail pages

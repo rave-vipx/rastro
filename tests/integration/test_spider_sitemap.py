@@ -48,12 +48,26 @@ class Transport:
 
 
 def urlset(*locs):
-    rows = "".join(f"<url><loc>{loc}</loc></url>" for loc in locs)
+    rows = "".join(
+        f"<url><loc>{loc[0]}</loc>"
+        + (f"<lastmod>{loc[1]}</lastmod>" if loc[1] is not None else "")
+        + "</url>"
+        if isinstance(loc, tuple)
+        else f"<url><loc>{loc}</loc></url>"
+        for loc in locs
+    )
     return f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="{NS}">{rows}</urlset>'
 
 
 def index(*locs):
-    rows = "".join(f"<sitemap><loc>{loc}</loc></sitemap>" for loc in locs)
+    rows = "".join(
+        f"<sitemap><loc>{loc[0]}</loc>"
+        + (f"<lastmod>{loc[1]}</lastmod>" if loc[1] is not None else "")
+        + "</sitemap>"
+        if isinstance(loc, tuple)
+        else f"<sitemap><loc>{loc}</loc></sitemap>"
+        for loc in locs
+    )
     return f'<?xml version="1.0"?><sitemapindex xmlns="{NS}">{rows}</sitemapindex>'
 
 
@@ -296,3 +310,129 @@ def test_lone_surrogate_in_jsonld_is_replaced_and_both_records_are_stored(tmp_pa
     assert loaded.sources[0].issues == ()
     names = sorted(r.fields["name"] for r in store.records("events"))
     assert names == ["Fiesta �", "Salsa \U0001f483"]
+
+
+def test_seed_order_reverse_fetches_tail_locs_before_max_pages():
+    """N16, N3: sitemap of 150 ascending locs e-1..e-150 with max_pages=10."""
+    locs = [f"/evento/e-{n}" for n in range(1, 151)]
+    pages = {"/sitemap.xml": (200, XML, urlset(*locs))} | {
+        loc: event(loc.rsplit("/", 1)[-1]) for loc in locs
+    }
+    doc_result, doc_transport = run(job(spider={"max_pages": 10}), pages)
+    assert [r.name for r in doc_result.items] == [f"e-{n}" for n in range(1, 10)]
+    assert len(doc_transport.fetched()) == 10
+
+    rev_result, rev_transport = run(job(spider={"seed_order": "reverse", "max_pages": 10}), pages)
+    expected = [f"e-{n}" for n in range(150, 141, -1)]  # 9 detail pages + 1 sitemap = 10
+    assert [r.name for r in rev_result.items] == expected
+    assert rev_transport.fetched() == ["/sitemap.xml", *(f"/evento/{n}" for n in expected)]
+    assert rev_result.status == Outcome.PARTIAL_SUCCESS
+    assert rev_result.pagination_stop == "spider_page_limit"
+
+
+def test_seed_order_lastmod_fetches_newest_first_then_undated_in_document_order():
+    """N16, N3: lastmod orders newest UTC first; undated locs trail in document order."""
+    entries = [
+        (f"/evento/e-{n}", None if n in (3, 7) else f"2026-01-{(n % 28) + 1:02d}")
+        for n in range(1, 151)
+    ]
+    # Pin 5 newest timestamps scattered through the 150 locs.
+    pinned = {
+        42: "2026-11-18T12:00:00Z",
+        10: "2026-11-18T11:30:00+02:00",  # 09:30Z -> 4th newest
+        120: "2026-11-18T11:00:00Z",  # 2nd newest
+        5: "2026-11-17",  # 5th newest
+        99: "2026-11-18T10:00:00Z",  # 3rd newest
+    }
+    entries = [(loc, pinned.get(i + 1, lm)) for i, (loc, lm) in enumerate(entries)]
+    pages = {"/sitemap.xml": (200, XML, urlset(*entries))} | {
+        loc: event(loc.rsplit("/", 1)[-1]) for loc, _ in entries
+    }
+    result, _ = run(job(spider={"seed_order": "lastmod", "max_pages": 6}), pages)
+    assert [r.name for r in result.items] == ["e-42", "e-120", "e-99", "e-10", "e-5"]
+
+    # When fewer dated entries than slots exist, undated entries follow in document order.
+    small = [
+        ("/evento/u-1", None),
+        ("/evento/d-old", "2026-01-01"),
+        ("/evento/u-2", "not-a-date"),
+        ("/evento/d-new", "2026-06-01"),
+        ("/evento/u-3", None),
+    ]
+    small_pages = {"/sitemap.xml": (200, XML, urlset(*small))} | {
+        loc: event(loc.rsplit("/", 1)[-1]) for loc, _ in small
+    }
+    small_result, _ = run(job(spider={"seed_order": "lastmod", "max_pages": 5}), small_pages)
+    assert [r.name for r in small_result.items] == ["d-new", "d-old", "u-1", "u-2"]
+
+
+def test_allow_pattern_filters_locs_before_max_pages_and_combines_with_seed_order_and_deny():
+    """N16, N3: allow_pattern filters sitemap locs before max_pages; deny still wins."""
+    locs = [f"/evento/e-{n}" for n in range(1, 151)]
+    pages = {"/sitemap.xml": (200, XML, urlset(*locs))} | {
+        loc: event(loc.rsplit("/", 1)[-1]) for loc in locs
+    }
+    # Only 5 matching locs out of 150 -> all 5 fetched cleanly within max_pages = 10.
+    filtered, transport = run(
+        job(spider={"allow_pattern": r"/evento/e-1[0-4]0$", "max_pages": 10}), pages
+    )
+    assert [r.name for r in filtered.items] == ["e-100", "e-110", "e-120", "e-130", "e-140"]
+    assert filtered.status == Outcome.SUCCESS
+    assert filtered.pagination_stop == "spider_complete"
+    assert len(transport.fetched()) == 6
+
+    # Combine allow_pattern + seed_order = "reverse" + deny before max_pages = 10.
+    combined, _ = run(
+        job(
+            spider={
+                "seed_order": "reverse",
+                "allow_pattern": r"/evento/e-1[0-4]\d$",
+                "deny": ["/evento/e-149"],
+                "max_pages": 10,
+            }
+        ),
+        pages,
+    )
+    assert [r.name for r in combined.items] == [
+        "e-148",
+        "e-147",
+        "e-146",
+        "e-145",
+        "e-144",
+        "e-143",
+        "e-142",
+        "e-141",
+        "e-140",
+    ]
+
+
+def test_sitemap_index_applies_seed_order_to_children_and_entries():
+    """N16: reverse and lastmod work across a sitemapindex without double-reversing."""
+    pages = {
+        "/sitemap.xml": (
+            200,
+            XML,
+            index(("/s1.xml", "2026-01-01"), ("/s2.xml", "2026-06-01")),
+        ),
+        "/s1.xml": (
+            200,
+            XML,
+            urlset(("/evento/e-1", "2026-01-01"), ("/evento/e-2", "2026-05-01")),
+        ),
+        "/s2.xml": (
+            200,
+            XML,
+            urlset(("/evento/e-3", "2026-03-01"), ("/evento/e-4", "2026-06-01")),
+        ),
+        "/evento/e-1": event("e-1"),
+        "/evento/e-2": event("e-2"),
+        "/evento/e-3": event("e-3"),
+        "/evento/e-4": event("e-4"),
+    }
+    rev, rev_transport = run(job(spider={"seed_order": "reverse", "max_pages": 10}), pages)
+    assert rev_transport.fetched()[:3] == ["/sitemap.xml", "/s2.xml", "/s1.xml"]
+    assert [r.name for r in rev.items] == ["e-4", "e-3", "e-2", "e-1"]
+
+    lm, lm_transport = run(job(spider={"seed_order": "lastmod", "max_pages": 10}), pages)
+    assert lm_transport.fetched()[:3] == ["/sitemap.xml", "/s2.xml", "/s1.xml"]
+    assert [r.name for r in lm.items] == ["e-4", "e-2", "e-3", "e-1"]

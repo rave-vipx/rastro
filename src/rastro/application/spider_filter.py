@@ -5,7 +5,7 @@ from __future__ import annotations
 from rastro.application.acquisition_state import PaginationScope, pagination_boundary
 from rastro.application.destinations import permitted_url
 from rastro.application.operator_trust import current_trust
-from rastro.application.spider_links import Link, path_matches
+from rastro.application.spider_links import Link, path_matches, pattern_matches
 from rastro.domain.acquisition import AcquisitionError, AcquisitionPolicy
 from rastro.domain.spider import SpiderPolicy
 from rastro.domain.spider_report import SpiderOutcome
@@ -40,6 +40,7 @@ def link_refusal(
     if paths and (
         path_matches(link.path, spider.deny)
         or (spider.allow and not path_matches(link.path, spider.allow))
+        or (spider.allow_pattern and not pattern_matches(link.path, spider.allow_pattern))
     ):
         return "path_denied"
     return None

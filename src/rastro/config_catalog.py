@@ -69,6 +69,7 @@ JOB_DOCS: dict[str, str] = {
     "scroll": "docs/jobs.md#scroll",
     "spider": "docs/jobs.md#spider",
     "spider.seed": "docs/jobs.md#start-from-a-sitemap",
+    "spider.seed_order": "docs/jobs.md#start-from-a-sitemap",
 }
 
 # Python models whose keyword arguments are the same keys as a job section.
