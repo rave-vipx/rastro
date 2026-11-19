@@ -63,6 +63,8 @@ nav:
       - Clean code and module size: development/clean-code.md
   - Engineering decisions:
       - Overview: decisions/index.md
+      - HTTP transport and impersonation: decisions/0038-http-transport.md
+      - Input origin and capabilities: decisions/0037-input-origin-and-capabilities.md
       - Capability first: decisions/0036-scrapling-access-and-unbounded-crawl.md
       - Prompt-injection defense: decisions/0035-prompt-injection-defense.md
       - Opt-in promote and stealth: decisions/0034-opt-in-promote-and-stealth.md

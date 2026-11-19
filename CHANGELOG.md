@@ -18,7 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Fixed
 
 - Lone UTF-16 surrogates in page JSON (a JSON-LD escape such as `\ud83d` without its low half) no longer fail a whole source: JSON-LD, embedded JSON and JSON parsing and discovery replace them with U+FFFD, valid pairs stay their real character, and a record that still cannot be serialized is rejected with the new `invalid_text` issue and counted in `rejected` instead of failing later (#151).
-- JSON-LD blocks with raw newlines or other control characters inside strings are retried once with those characters escaped; recovered records retain provenance and report `tolerant_jsonld` (INT-002). Malformed structure, duplicate keys and non-finite numbers remain rejected. HTML-parser normalization of other controls varies by platform; decoder regression tests cover all controls before HTML parsing.
+- JSON-LD blocks with raw newlines or other control characters inside strings are retried once with those characters escaped; recovered records retain provenance and report `repaired_json` (INT-002). Malformed structure, duplicate keys and non-finite numbers remain rejected. HTML-parser normalization of other controls varies by platform; decoder regression tests cover all controls before HTML parsing.
 
 ## [0.9.0] - 2026-11-17
 
