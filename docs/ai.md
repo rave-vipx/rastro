@@ -53,6 +53,21 @@ job file. Exact
 options and presets for specific products are listed in
 [optional intelligence](intelligence.md). Model names here are placeholders.
 
+### Find a local model and test it
+
+```sh
+rastro model detect                       # lists Ollama, LM Studio and llama.cpp servers
+rastro model test --model "ollama:llama3.2:3b" --model-cost-per-call 0.002
+```
+
+`detect` asks only the loopback ports 11434, 1234, 8000 and 8080 for their model list, with a
+short timeout; it sends no prompt and no page data, and prints a spec you can pass to
+`--model`. `test` makes one small call and prints whether it worked, whether the model is
+remote, and the cost per call. A hosted model still needs `--allow-remote`. A run report
+shows `totals.model_calls`, `totals.model_cost_per_call` and `totals.model_cost` when a price
+is known (`--model-cost-per-call` or the job's `[model] cost_per_call`). Without a model
+configured, runs work as before.
+
 ## What the model does in each flow
 
 | Flow | Without a model | With a model |

@@ -37,6 +37,8 @@ from rastro.cli_dataset import add_commands, dataset_command, load_job_command
 from rastro.cli_errors import UsageError, classify, missing_extra_error
 from rastro.cli_estimate import add_estimate_command, estimate_command
 from rastro.cli_hook import add_hook_argument, hook_argv, notify, run_summary
+from rastro.cli_model_setup import add_command as add_model_command
+from rastro.cli_model_setup import model_command
 from rastro.cli_ops import JOB_COMMANDS as OPS_JOB_COMMANDS
 from rastro.cli_ops import add_health_command, health_command
 from rastro.cli_ops import add_job_commands as add_ops_job_commands
@@ -149,6 +151,7 @@ def _build_parser() -> argparse.ArgumentParser:
     add_health_command(subcommands)
     add_recipe_commands(subcommands)
     add_studio_command(subcommands)
+    add_model_command(subcommands)
     add_suggest_commands(subcommands)
     add_agent_commands(subcommands)
     add_config_commands(subcommands, job_commands)
@@ -225,6 +228,7 @@ def _run_command(args: argparse.Namespace) -> int:
         "recipe": recipe_command,
         "dataset": dataset_command,
         "studio": studio_command,
+        "model": model_command,
         "health": health_command,
         "suggest": suggest_command,
         "new": new_command,

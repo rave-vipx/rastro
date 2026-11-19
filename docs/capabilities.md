@@ -240,6 +240,14 @@ What Rastro already does, for people and for AI coding agents. Use these before 
 - **Do not build:** building your own admin page for scrapers
 - **Docs:** [studio.md](studio.md)
 
+### Find a local AI model and see what a call costs
+
+- **Use:** `rastro model detect` lists models on loopback ports; `rastro model test --model SPEC` makes one call and prints the cost; the run report totals show model calls and cost
+- **CLI:** `rastro model detect`, `rastro model test`
+- **Limits:** detect probes 127.0.0.1 only; hosted models still need `--allow-remote`
+- **Do not build:** guessing which local servers run or what a model costs
+- **Docs:** [ai.md#find-a-local-model-and-test-it](ai.md#find-a-local-model-and-test-it)
+
 ### Drive Rastro from an AI agent
 
 - **Use:** `rastro mcp --root DIR` (MCP tools), the JSON CLI, `rastro capabilities` and `rastro init --agent claude|codex|generic`

@@ -918,6 +918,25 @@ Open the local Studio (needs rastro[studio]). Docs: [studio.md#install-and-start
 | `--model` | value | - |  | Model spec for Ask AI (default: RASTRO_MODEL); any provider works |
 | `--allow-remote` | flag | - |  | Allow sending page content to a non-loopback or hosted model |
 
+### `rastro model`
+
+Find local AI models and test a model. Docs: [jobs.md#cli-commands-and-exit-codes](jobs.md#cli-commands-and-exit-codes).
+
+### `rastro model detect`
+
+List models running on this machine (loopback only). Docs: [jobs.md#cli-commands-and-exit-codes](jobs.md#cli-commands-and-exit-codes).
+
+### `rastro model test`
+
+Make one small call and show what it costs. Docs: [jobs.md#cli-commands-and-exit-codes](jobs.md#cli-commands-and-exit-codes).
+
+| Flag | Value | Default | Choices | Description |
+| --- | --- | --- | --- | --- |
+| `--model` | SPEC | - |  | Model spec, or 'env' for RASTRO_MODEL |
+| `--allow-remote` | flag | - |  | Allow a hosted model |
+| `--max-model-cost` | USD | - |  | Stop calling the model once this cost would be exceeded (needs --model-cost-per-call or the job's [model] cost_per_call; overrides max_cost) |
+| `--model-cost-per-call` | USD | - |  | Price of one model call; overrides the job's [model] cost_per_call |
+
 ### `rastro suggest`
 
 Suggest a CSS recipe from a saved page and example values. Docs: [suggest.md#from-the-command-line](suggest.md#from-the-command-line).

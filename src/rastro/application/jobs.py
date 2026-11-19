@@ -15,7 +15,7 @@ from rastro.application.job_loader import (
     resolve_job_path,
     validate_job_paths,
 )
-from rastro.application.model_budget import model_cost_override
+from rastro.application.model_budget import model_cost_override, price_per_call
 from rastro.application.operator_trust import operator_trust
 from rastro.application.robots_cache import robots_cache
 from rastro.application.run_log import log_failures
@@ -82,7 +82,8 @@ async def run_job_async(
             model=model,
         )
         log_failures(report)
-    return with_report(report, selections)
+        price = price_per_call(job.model)
+    return with_report(report, selections, price)
 
 
 def run_job(
@@ -139,7 +140,8 @@ def run_job(
             model=model,
         )
         log_failures(report)
-    return with_report(report, selections)
+        price = price_per_call(job.model)
+    return with_report(report, selections, price)
 
 
 def run_job_file(

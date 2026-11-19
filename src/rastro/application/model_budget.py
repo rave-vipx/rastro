@@ -44,6 +44,12 @@ def model_cost_override(
             var.reset(token)
 
 
+def price_per_call(job_model: JobModelProvider | None = None) -> float | None:
+    """USD one model call costs: the operator's override, else the job file's, else unknown."""
+    operator = _PRICE.get()
+    return operator if operator is not None else (job_model.cost_per_call if job_model else None)
+
+
 def _budget(price: float | None, limit: float | None) -> ModelBudget:
     price = _PRICE.get() if _PRICE.get() is not None else price
     limit = _OVERRIDE.get() if _OVERRIDE.get() is not None else limit

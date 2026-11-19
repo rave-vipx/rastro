@@ -92,6 +92,8 @@ class RunTotals(Contract):
     records_rejected: Count
     model_calls: Count
     repairs_without_model: Count
+    model_cost_per_call: float | None = Field(default=None, ge=0, le=1000, allow_inf_nan=False)
+    model_cost: float | None = Field(default=None, ge=0, allow_inf_nan=False)
 
 
 class RunReport(Contract):

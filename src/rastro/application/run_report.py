@@ -24,13 +24,22 @@ from rastro.domain.source_notes import CODE_PATTERN, CrawlNote
 __all__ = ["named", "report_for_load", "report_for_run", "with_report"]
 
 
-def report_for_run(job_name: str, result: JobRunResult[Any]) -> RunReport:
-    """The report of one job run; ``job_name`` is the job file's name, never a path."""
+def report_for_run(
+    job_name: str, result: JobRunResult[Any], cost_per_call: float | None = None
+) -> RunReport:
+    """The report of one job run; ``job_name`` is the job file's name, never a path.
+
+    ``cost_per_call`` (USD) prices the model calls; without it the cost stays unknown.
+    """
     sources = tuple(_source(i, item) for i, item in enumerate(result.results, start=1))
-    return _report("run", job_name, None, result.results, sources, result.job.status, result, 0)
+    return _report(
+        "run", job_name, None, result.results, sources, result.job.status, result, 0, cost_per_call
+    )
 
 
-def report_for_load(job_name: str, run: JobRunResult[Any], load: JobLoadResult) -> RunReport:
+def report_for_load(
+    job_name: str, run: JobRunResult[Any], load: JobLoadResult, cost_per_call: float | None = None
+) -> RunReport:
     """The report of one load: the run's sources plus what each stored."""
     results = run.results
     sources = tuple(
@@ -38,14 +47,24 @@ def report_for_load(job_name: str, run: JobRunResult[Any], load: JobLoadResult) 
         for i, loaded in enumerate(load.sources, start=1)
     )
     return _report(
-        "load", job_name, load.dataset, results, sources, load.status, load, len(load.open_drift)
+        "load",
+        job_name,
+        load.dataset,
+        results,
+        sources,
+        load.status,
+        load,
+        len(load.open_drift),
+        cost_per_call,
     )
 
 
-def with_report[R: JobRunResult[Any]](result: R, selections: tuple[Any, ...]) -> R:
+def with_report[R: JobRunResult[Any]](
+    result: R, selections: tuple[Any, ...], cost_per_call: float | None = None
+) -> R:
     """``result`` with its recipe selections and its run report (named for a file later)."""
     result = result.model_copy(update={"recipes": selections})
-    return result.model_copy(update={"report": report_for_run("job", result)})
+    return result.model_copy(update={"report": report_for_run("job", result, cost_per_call)})
 
 
 def named[R: JobRunResult[Any]](result: R, job_name: str) -> R:
@@ -64,6 +83,7 @@ def _report(
     status: Any,
     outcome: Any,
     open_drift: int,
+    cost_per_call: float | None = None,
 ) -> RunReport:
     times = [(facts.aware(r.started_at), facts.aware(r.completed_at)) for r in results]
     started = min((t[0] for t in times), default=datetime.now(UTC))
@@ -78,18 +98,21 @@ def _report(
         status=status,
         exit_code=int(outcome.exit_code),
         sources=sources,
-        totals=_totals(results, sources),
+        totals=_totals(results, sources, cost_per_call),
         capabilities_used=tuple(c for c in CAPABILITIES if c in used),
         open_drift=open_drift,
     )
 
 
 def _totals(
-    results: Iterable[ExtractionResult[Any]], sources: tuple[SourceReport, ...]
+    results: Iterable[ExtractionResult[Any]],
+    sources: tuple[SourceReport, ...],
+    cost_per_call: float | None = None,
 ) -> RunTotals:
     ok = sum(s.outcome in facts.OK for s in sources)
     partial = sum(s.outcome == Outcome.PARTIAL_SUCCESS for s in sources)
     repairs = [r.repair for r in results if r.repair]
+    calls = sum(r.metrics.inference_calls for r in results)
     return RunTotals(
         sources=len(sources),
         succeeded=ok,
@@ -99,8 +122,10 @@ def _totals(
         pages=sum(s.pages for s in sources),
         records_accepted=sum(s.records_accepted for s in sources),
         records_rejected=sum(s.records_rejected for s in sources),
-        model_calls=sum(r.metrics.inference_calls for r in results),
+        model_calls=calls,
         repairs_without_model=sum(r.promoted and r.model_calls == 0 for r in repairs),
+        model_cost_per_call=cost_per_call,
+        model_cost=None if cost_per_call is None else calls * cost_per_call,
     )
 
 

@@ -199,7 +199,8 @@ def load_job_file(
             )
         }
     )
-    return loaded.model_copy(update={"report": report_for_load(file.name, report, loaded)})
+    price = report.report.totals.model_cost_per_call if report.report else None
+    return loaded.model_copy(update={"report": report_for_load(file.name, report, loaded, price)})
 
 
 def _load_acquirer(job: Job, conditional: ConditionalRequests | None) -> AcquisitionPort | None:
