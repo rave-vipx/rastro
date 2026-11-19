@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field, TypeAdapter, ValidationError
 
 from rastro.application.sitemap import SitemapEntry
 from rastro.domain.models import ConfigurationError, ExtractionResult, Limits, ResourceLimitError
+from rastro.domain.provenance_url import canonical_page_url
 from rastro.domain.spider import SpiderPolicy
 from rastro.domain.spider_report import SpiderOutcome
 from rastro.ports.parser import DocumentParser
@@ -108,7 +109,7 @@ def pattern_matches(path: str, pattern: str) -> bool:
 
 
 class LinkHarvest:
-    """The hrefs of every document a spider page fetched, in document order."""
+    """Links from each fetched document, in expression order then document order."""
 
     def __init__(self, spider: SpiderPolicy, parser: DocumentParser, limits: Limits) -> None:
         self._spider, self._parser, self._limits = spider, parser, limits
@@ -117,10 +118,13 @@ class LinkHarvest:
         self.seed_entries: list[SitemapEntry] = []  # <url> entries from a sitemap seed (N16)
         self._known: set[str] = set()  # a scrolled page is added once per step
         self.failed = False
+        self.page_url: str | None = None
 
     def add[T: BaseModel](
         self, url: str, body: str | None, result: ExtractionResult[T], representation: str
     ) -> None:
+        if self.page_url is None:
+            self.page_url = canonical_page_url(url)
         if not (self._spider.links or self._spider.link_field):
             return  # a sitemap seed without links: detail pages are leaves
         try:
@@ -148,9 +152,12 @@ class LinkHarvest:
             return []
         if representation != "html":
             raise ConfigurationError("links reads HTML; use link_field for JSON sources")
-        parsed = self._parser.parse(body, self._spider.link_probe(), self._limits)
-        values = (candidate.values.get("link") for candidate in parsed.candidates)
-        return [value for value in values if isinstance(value, str) and value.strip()]
+        found: list[str] = []
+        for expression in self._spider.link_expressions():
+            parsed = self._parser.parse(body, self._spider.link_probe(expression), self._limits)
+            values = (candidate.values.get("link") for candidate in parsed.candidates)
+            found.extend(value for value in values if isinstance(value, str) and value.strip())
+        return found
 
 
 def _absolute(base: str, href: str) -> str:

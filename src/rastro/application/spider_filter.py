@@ -39,6 +39,7 @@ def link_refusal(
         return refusal
     if paths and (
         path_matches(link.path, spider.deny)
+        or (spider.deny_pattern and pattern_matches(link.path, spider.deny_pattern))
         or (spider.allow and not path_matches(link.path, spider.allow))
         or (spider.allow_pattern and not pattern_matches(link.path, spider.allow_pattern))
     ):

@@ -1420,6 +1420,11 @@
       "title": "Limits",
       "type": "object"
     },
+    "LinkExpression": {
+      "maxLength": 1024,
+      "minLength": 1,
+      "type": "string"
+    },
     "NumberField": {
       "additionalProperties": false,
       "properties": {
@@ -1933,6 +1938,21 @@
           "title": "Deny",
           "type": "array"
         },
+        "deny_pattern": {
+          "anyOf": [
+            {
+              "maxLength": 512,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Reject matching decoded paths before the page cap (linear-time regex).",
+          "title": "Deny Pattern"
+        },
         "link_field": {
           "anyOf": [
             {
@@ -1950,15 +1970,22 @@
         "links": {
           "anyOf": [
             {
-              "maxLength": 1024,
-              "minLength": 1,
-              "type": "string"
+              "$ref": "#/$defs/LinkExpression"
+            },
+            {
+              "items": {
+                "$ref": "#/$defs/LinkExpression"
+              },
+              "maxItems": 8,
+              "minItems": 1,
+              "type": "array"
             },
             {
               "type": "null"
             }
           ],
           "default": null,
+          "description": "One CSS attribute expression or a list (up to eight); no comma groups.",
           "title": "Links"
         },
         "max_depth": {

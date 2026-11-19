@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from rastro.domain.dataset import DatasetRecordKey, DatasetStorageError
 from rastro.domain.job_dataset import DatasetSpec
 from rastro.domain.models import ExtractionRecord, ExtractionResult, Issue, Limits, Metrics, Outcome
-from rastro.domain.provenance_url import provenance_url
+from rastro.domain.provenance_url import canonical_page_url
 
 # A normal end of the list is a complete snapshot; every other stop is partial.
 COMPLETE_STOPS = frozenset({"no_next", "repeat", "spider_complete"})
@@ -56,6 +56,30 @@ def deduplicate_pages[T: BaseModel](
     )
 
 
+def with_page_provenance[T: BaseModel](
+    result: ExtractionResult[T], url: str
+) -> ExtractionResult[T]:
+    """Attach the acquired page identity before its query is lost in source diagnostics."""
+    page_url = canonical_page_url(url)
+    return result.model_copy(
+        update={
+            "records": tuple(
+                record.model_copy(
+                    update={
+                        "evidence": {
+                            name: evidence.model_copy(update={"page_url": page_url})
+                            if evidence.page_url is None and page_url != evidence.source_url
+                            else evidence
+                            for name, evidence in record.evidence.items()
+                        }
+                    }
+                )
+                for record in result.records
+            )
+        }
+    )
+
+
 def combine_pages[T: BaseModel](
     pages: list[ExtractionResult[T]],
     stop: str,
@@ -70,7 +94,9 @@ def combine_pages[T: BaseModel](
                     name: evidence.model_copy(
                         update={
                             "source_url": first.source_url,
-                            "page_url": provenance_url(evidence.page_url or evidence.source_url),
+                            "page_url": canonical_page_url(
+                                evidence.page_url or evidence.source_url
+                            ),
                         }
                     )
                     if evidence.source_url != first.source_url
