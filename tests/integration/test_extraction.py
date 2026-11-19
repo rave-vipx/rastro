@@ -48,6 +48,7 @@ def test_explicit_extraction_supplies_regional_validation_context():
                 "egress": "direct",
                 "observed_at": observed[-1],
                 "source_url": "https://example.com/",
+                "field_issues": [],
             }
             return value
 

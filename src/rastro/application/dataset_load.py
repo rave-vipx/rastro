@@ -4,6 +4,9 @@ from collections.abc import Callable, Collection, Iterable, Iterator, Mapping, S
 from contextlib import contextmanager
 from typing import Any, Literal
 
+from pydantic import ValidationError
+from pydantic_core import PydanticSerializationError
+
 from rastro.application.consistency import History, evaluate_consistency, history_from_store
 from rastro.application.drift import snapshot_result
 from rastro.application.pagination_records import is_complete_snapshot
@@ -179,6 +182,7 @@ def _load_source(
     counts = dict.fromkeys(ChangeKind, 0)
     consistency = None
     reason = None
+    dropped: tuple[Issue, ...] = ()
     next_action: Literal["rastro recipe repair"] | None = None
     if result.status == Outcome.UNCHANGED:
         with _storage():
@@ -189,7 +193,7 @@ def _load_source(
                 result.source_url in row.origins for row in store.records(spec.name)
             )
     elif result.status in (Outcome.SUCCESS, Outcome.PARTIAL_SUCCESS):
-        observations = _observations(spec, approved, result)
+        observations, dropped = _observations(spec, approved, result)
         if rules:
             consistency = evaluate_consistency(
                 rules,
@@ -210,7 +214,7 @@ def _load_source(
                     spec.name,
                     result.source_url,
                     observations,
-                    complete=is_complete_snapshot(result),
+                    complete=is_complete_snapshot(result) and not dropped,
                     observed_at=result.completed_at,
                 ).counts
     else:
@@ -226,6 +230,7 @@ def _load_source(
         consistency=consistency,
         next_action=next_action,
         reason=reason,
+        issues=dropped,
     )
 
 
@@ -256,21 +261,26 @@ def _record_failure(
 
 def _observations(
     spec: DatasetSpec, approved: tuple[str, ...], result: ExtractionResult[Any]
-) -> list[ObservedRecord]:
+) -> tuple[list[ObservedRecord], tuple[Issue, ...]]:
+    """One observation per record; a record that cannot be stored is dropped on its own."""
     observations = []
-    for record in result.records:
-        values = record.data.model_dump(mode="json")
-        fields = {name: values[name] for name in approved if name in record.evidence}
-        observations.append(
-            ObservedRecord(
-                key=DatasetRecordKey.from_fields(spec.name, fields, spec.identity),
-                source_url=result.source_url,
-                observed_at=result.completed_at,
-                fields=fields,
-                provenance={name: record.evidence[name] for name in fields},
+    dropped = []
+    for index, record in enumerate(result.records):
+        try:
+            values = record.data.model_dump(mode="json")
+            fields = {name: values[name] for name in approved if name in record.evidence}
+            observations.append(
+                ObservedRecord(
+                    key=DatasetRecordKey.from_fields(spec.name, fields, spec.identity),
+                    source_url=result.source_url,
+                    observed_at=result.completed_at,
+                    fields=fields,
+                    provenance={name: record.evidence[name] for name in fields},
+                )
             )
-        )
-    return observations
+        except (ValidationError, PydanticSerializationError):
+            dropped.append(Issue(code="invalid_record", record_index=index))
+    return observations, tuple(dropped)
 
 
 def stale_sources(

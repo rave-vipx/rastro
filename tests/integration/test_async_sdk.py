@@ -92,6 +92,7 @@ async def test_acquired_extraction_preserves_regional_validation_context_after_r
                 "egress": "direct",
                 "observed_at": observed[-1],
                 "source_url": "https://example.com/final",
+                "field_issues": [],
             }
             return value
 

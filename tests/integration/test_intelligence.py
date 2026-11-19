@@ -73,6 +73,7 @@ async def test_learned_recipe_supplies_regional_validation_context(source):
                 "egress": "direct",
                 "observed_at": observed[-1],
                 "source_url": "https://example.com/products",
+                "field_issues": [],
             }
             return value
 
