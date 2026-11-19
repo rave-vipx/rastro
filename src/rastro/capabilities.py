@@ -142,8 +142,9 @@ CAPABILITIES: tuple[Capability, ...] = (
     Capability(
         task="Follow links from a listing to detail pages",
         use='`[spider] mode = "spider"` with `links = "a.item::attr(href)"` or `link_field`, '
-        '`max_depth`, `max_pages`, `allow`, `deny`; `seed = "sitemap"` starts from a '
-        "sitemap.xml (or .xml.gz) source and fetches its locs in document order",
+        '`max_depth`, `max_pages`, `allow`, `deny`, `allow_pattern`; `seed = "sitemap"` starts '
+        'from a sitemap.xml (or .xml.gz) source with `seed_order = "document" | "reverse" | '
+        '"lastmod"` applied before `max_pages`',
         limits="Depth 1 to 4, up to 100 pages per start URL, same host by default, robots.txt, "
         "shared budget; caps end as partial success; sitemaps parsed without DTDs or entities, "
         "one index level, plain HTTP only",

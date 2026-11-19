@@ -53,6 +53,11 @@ def test_spider_keys_have_types_defaults_and_bounds() -> None:
     pages = by_path["spider.max_pages"]
     assert (pages.type, pages.default, pages.bounds) == ("integer", "25", ">= 1, <= 100")
     assert by_path["spider.seed"].bounds == "one of page, sitemap"
+    assert (
+        by_path["spider.seed_order"].default,
+        by_path["spider.seed_order"].bounds,
+    ) == ('"document"', "one of document, reverse, lastmod")
+    assert by_path["spider.allow_pattern"].bounds == "length >= 1, length <= 512"
     assert by_path["sources[].recipe"].same_as == "recipe"
     assert {e.variant for e in ENTRIES if e.path == "recipe.strategy"} >= {'strategy = "json"'}
 
@@ -223,6 +228,31 @@ def test_unknown_key_suggests_the_closest(
     error = _validate_error(tmp_path, "zzzz = 1", capsys)
     assert error["hint"].startswith('Unknown key "zzzz" in [acquisition]; valid keys: allow_http')
     assert len(error["hint"]) <= 300
+
+
+def test_spider_seed_order_unknown_value_and_key_suggest_closest(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """N16, N18, AGENT-001: unknown seed_order value and typo key suggest the closest valid one."""
+    base = render_template("test")
+    bad_value = tmp_path / "bad-val.toml"
+    bad_value.write_text(
+        base + '\n[spider]\nmode = "spider"\nseed = "sitemap"\nseed_order = "revers"\n',
+        encoding="utf-8",
+    )
+    assert main(["job", "validate", str(bad_value)]) == 2
+    payload = json.loads(capsys.readouterr().err)
+    assert payload["location"] == "spider.seed_order"
+    assert 'did you mean "reverse"?' in payload["message"]
+
+    bad_key = tmp_path / "bad-key.toml"
+    bad_key.write_text(
+        base + '\n[spider]\nmode = "spider"\nseed = "sitemap"\nseed_ordr = "reverse"\n',
+        encoding="utf-8",
+    )
+    assert main(["job", "validate", str(bad_key)]) == 2
+    payload = json.loads(capsys.readouterr().err)
+    assert payload["hint"] == 'Unknown key "seed_ordr" in [spider]; did you mean "seed_order"?'
 
 
 def test_unknown_key_in_nested_and_variant_tables(

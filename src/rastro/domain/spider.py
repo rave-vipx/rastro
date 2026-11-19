@@ -8,10 +8,20 @@ stay with the operator (SECURITY.md), and the start URLs are the job's ``[[sourc
 
 from __future__ import annotations
 
+import difflib
 import re
-from typing import Literal, Self
+from typing import Annotated, Any, Literal, Self
 
-from pydantic import Field, StrictBool, StrictInt, StrictStr, field_validator, model_validator
+from pydantic import (
+    Field,
+    StrictBool,
+    StrictInt,
+    StrictStr,
+    TypeAdapter,
+    field_validator,
+    model_validator,
+)
+from pydantic_core import SchemaError
 
 from rastro.domain.job_contract import RedactedContract
 from rastro.domain.job_sources import UrlJobSource
@@ -20,6 +30,8 @@ from rastro.domain.selector_policy import check_untrusted_recipe
 from rastro.domain.sources import ConfigurationError
 
 LINK_EXPRESSION = re.compile(r"^.+::attr\([A-Za-z_][A-Za-z0-9_:-]{0,63}\)$", re.DOTALL)
+type SeedOrder = Literal["document", "reverse", "lastmod"]
+_SEED_ORDERS: tuple[str, ...] = ("document", "reverse", "lastmod")
 
 
 class SpiderPolicy(RedactedContract):
@@ -28,13 +40,24 @@ class SpiderPolicy(RedactedContract):
     mode: Literal["list", "spider"] = "list"
     # "sitemap": each start URL is a sitemap whose <loc>s are the depth-1 links (N16).
     seed: Literal["page", "sitemap"] = "page"
+    seed_order: SeedOrder = "document"
     max_depth: StrictInt = Field(default=2, ge=1, le=4)
     max_pages: StrictInt = Field(default=25, ge=1, le=100)
     same_host: StrictBool = True
     allow: tuple[StrictStr, ...] = Field(default=(), max_length=32)
     deny: tuple[StrictStr, ...] = Field(default=(), max_length=32)
+    allow_pattern: StrictStr | None = Field(default=None, min_length=1, max_length=512)
     links: StrictStr | None = Field(default=None, min_length=1, max_length=1024)
     link_field: StrictStr | None = Field(default=None, min_length=1, max_length=128)
+
+    @field_validator("seed_order", mode="before")
+    @classmethod
+    def check_seed_order(cls, value: Any) -> Any:
+        if isinstance(value, str) and value not in _SEED_ORDERS:
+            match = difflib.get_close_matches(value.lower(), _SEED_ORDERS, n=1, cutoff=0.6)
+            hint = f'; did you mean "{match[0]}"?' if match else ""
+            raise ValueError(f"seed_order must be one of {', '.join(_SEED_ORDERS)}{hint}")
+        return value
 
     @field_validator("allow", "deny")
     @classmethod
@@ -48,10 +71,26 @@ class SpiderPolicy(RedactedContract):
                 raise ValueError("Path prefixes start with / and carry no query or fragment")
         return tuple(dict.fromkeys(prefixes))
 
+    @field_validator("allow_pattern")
+    @classmethod
+    def check_allow_pattern(cls, value: str | None) -> str | None:
+        if value is not None:
+            # Linear-time Rust regex engine (no look-around or backreferences, SEC-008).
+            try:
+                TypeAdapter(Annotated[str, Field(pattern=value)])
+            except SchemaError:
+                raise ValueError(
+                    "Invalid or unsupported regular expression pattern "
+                    "(look-around and backreferences are not supported)"
+                ) from None
+        return value
+
     @model_validator(mode="after")
     def check_link_source(self) -> Self:
         if self.mode == "list":
             return self
+        if self.seed != "sitemap" and self.seed_order != "document":
+            raise ValueError('seed_order applies only when seed is "sitemap"')
         if self.links is not None and self.link_field is not None:
             raise ValueError("Spider mode takes one of links or link_field, not both")
         if self.seed == "page" and self.links is None and self.link_field is None:

@@ -411,11 +411,13 @@ Follow links from listing pages to detail pages. Docs: [jobs.md#spider](jobs.md#
 | --- | --- | --- | --- | --- |
 | `spider.mode` | string | `"list"` | `one of list, spider` | list reads only the sources; spider follows links from them. |
 | `spider.seed` | string | `"page"` | `one of page, sitemap` | page starts from each source; sitemap reads a sitemap source. |
+| `spider.seed_order` | string | `"document"` | `one of document, reverse, lastmod` | Order sitemap locs before max_pages: document, reverse or lastmod (newest first). |
 | `spider.max_depth` | integer | `2` | `>= 1, <= 4` | Link levels followed from a start page. |
 | `spider.max_pages` | integer | `25` | `>= 1, <= 100` | Most pages fetched per start URL. |
 | `spider.same_host` | boolean | `true` |  | Stay on the start page's host. |
 | `spider.allow` | array of string | `[]` | `items <= 32` | Path prefixes (whole segments); only matching links are followed. |
 | `spider.deny` | array of string | `[]` | `items <= 32` | Path prefixes (whole segments) that are never followed; deny wins. |
+| `spider.allow_pattern` | string | - | `length >= 1, length <= 512` | Regular expression a link's path must match; deny still wins. |
 | `spider.links` | string | - | `length >= 1, length <= 1024` | CSS expression ending in ::attr(name); every match is a link. |
 | `spider.link_field` | string | - | `length >= 1, length <= 128` | Declared field whose value in each record is a link. |
 

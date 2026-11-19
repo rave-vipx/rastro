@@ -8,10 +8,13 @@ host and path alone are what a report may say about it.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
+from typing import Annotated
 from urllib.parse import unquote, urljoin, urlsplit, urlunsplit
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, TypeAdapter, ValidationError
 
+from rastro.application.sitemap import SitemapEntry
 from rastro.domain.models import ConfigurationError, ExtractionResult, Limits, ResourceLimitError
 from rastro.domain.spider import SpiderPolicy
 from rastro.domain.spider_report import SpiderOutcome
@@ -89,13 +92,29 @@ def path_matches(path: str, prefixes: tuple[str, ...]) -> bool:
     return False
 
 
+@lru_cache(maxsize=64)
+def _compiled_pattern(pattern: str) -> TypeAdapter[str]:
+    return TypeAdapter(Annotated[str, Field(pattern=pattern)])
+
+
+def pattern_matches(path: str, pattern: str) -> bool:
+    """Linear-time regex match against the tidied, percent-decoded path."""
+    decoded = tidy_path(unquote(path))
+    try:
+        _compiled_pattern(pattern).validate_python(decoded)
+    except ValidationError:
+        return False
+    return True
+
+
 class LinkHarvest:
     """The hrefs of every document a spider page fetched, in document order."""
 
     def __init__(self, spider: SpiderPolicy, parser: DocumentParser, limits: Limits) -> None:
         self._spider, self._parser, self._limits = spider, parser, limits
         self.hrefs: list[str] = []
-        self.sitemaps: list[str] = []  # a sitemap index's child sitemaps (N16)
+        self.sitemaps: list[SitemapEntry] = []  # a sitemap index's child sitemaps (N16)
+        self.seed_entries: list[SitemapEntry] = []  # <url> entries from a sitemap seed (N16)
         self._known: set[str] = set()  # a scrolled page is added once per step
         self.failed = False
 
