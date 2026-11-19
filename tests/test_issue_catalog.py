@@ -84,3 +84,22 @@ def test_the_runtime_allowlist_matches_the_documented_codes():
     from rastro.domain.issue_codes import ISSUE_CODES
 
     assert documented(DOC.read_text(encoding="utf-8")) == ISSUE_CODES
+
+
+RESERVED = {
+    "repaired_json",
+    *("field_nulled", "null_placeholder", "list_item_dropped", "member_nulled"),
+    "naive_datetime_localized",
+    *("link_group_refused", "crawl_resumed", "crawl_time_budget", "proxy_rotated"),
+    *("blocked", "capability_refused"),
+    *("step_failed", "step_selector_missing", "capture_empty", "ladder_exhausted"),
+    *("notification_failed", "hub_candidate"),
+}
+
+
+def test_reserved_codes_are_registered_before_they_are_emitted():
+    """Codes for upcoming run-report, field, crawl and step features have a row already."""
+    from rastro.domain.issue_codes import ISSUE_CODES
+
+    assert sorted(RESERVED - ISSUE_CODES) == []
+    assert "tolerant_jsonld" not in ISSUE_CODES

@@ -18,13 +18,18 @@ grouped by theme. A test fails when a code in `src/rastro` has no row here.
 | `invalid_text` | A record holds text that cannot be stored as UTF-8. Lone surrogates in JSON and JSON-LD are already replaced with U+FFFD when decoded. | The record is rejected. Others are saved. | Check the source data or a custom validator that builds text. |
 | `invalid_json` | The response is not valid JSON. | No. | Check the URL and the content type. |
 | `embedded_json_not_found` | An `embedded_json` recipe's `source` selector matched no node, or the node lacks the attribute. | No. | Fix `source`. The page may have moved the data. |
-| `tolerant_jsonld` | A JSON-LD block parsed after raw control characters inside strings were escaped. Values and provenance are preserved; the run reports partial success so the warning stays visible. | Yes, if the records validate. | Ask the source owner to escape control characters in JSON strings. |
+| `repaired_json` | A JSON or JSON-LD block from the page parsed only after Rastro repaired it, for example by escaping raw control characters inside strings. Values and provenance are preserved; the run reports partial success so the warning stays visible. | Yes, if the records validate. | Ask the source owner to publish valid JSON. |
 | `invalid_jsonld` | A JSON-LD block could not be parsed. | The block is ignored. | Use another strategy or fix the page data. |
 | `record_path_not_found` | The recipe's `record_path` is not in the JSON. | No. | Fix `record_path`. The API may have changed. |
 | `invalid_record_path` | The `record_path` points at something that is not a list of records. | No. | Fix `record_path`. |
 | `extraction_limit` | The page is larger than the parser limits allow. | No. | Raise the limits or pick a smaller page. |
 | `not_modified` | The server says the page did not change. | Nothing new. | Nothing. This is normal. |
 | `invalid_acquisition_result` | The fetch returned no usable body. | No. | Retry. Check the source. |
+| `field_nulled` | An optional field had no usable value, so it was stored as null. `field` names it; the run report counts these per field. | Yes, with the field empty. | Nothing, if the field is often empty. Otherwise check its selector. |
+| `null_placeholder` | A field value matched one of the field's `null_values` (such as `N/A`) and was treated as missing. | Yes, if the field is optional. | Nothing. Add more placeholders to `null_values` if needed. |
+| `list_item_dropped` | One item of a list field failed validation and was left out. `field` names the list. | Yes, without that item. | Check the item selector or the item type. |
+| `member_nulled` | An optional member of an object field failed validation and was stored as null. `field` names the member. | Yes, with the member empty. | Check the member's selector or type. |
+| `naive_datetime_localized` | A date-time without an offset was read in the source's `timezone`. | Yes. | Set the source `timezone` if the result is off by hours. |
 
 ## Fetching and policy
 
@@ -68,6 +73,10 @@ grouped by theme. A test fails when a code in `src/rastro` has no row here.
 | `network_failure` | The network connection failed. | No. | Retry later. |
 | `request_timeout` | The request took too long. | No. | Retry or raise the timeout. |
 | `operation_timeout` | The whole operation took too long. | No. | Retry or raise the timeout. |
+| `blocked` | The site refused automated access (for example a login wall, a captcha or a refused cloud address). The run report says which kind and links to a guide. | No. | Follow the linked guide: change egress, render mode or the site permission you have. |
+| `capability_refused` | The job asked for a capability that was not granted for where it came from (a bundle, a registry recipe, an agent tool or model output). | No. | Grant it with `--allow-untrusted ORIGIN:CAPABILITY`, or `--allow-capability` for grant-only capabilities. |
+| `proxy_rotated` | A request moved to the next proxy after the previous one failed or was refused. | Yes. | Nothing. Check the proxy if it repeats. |
+| `ladder_exhausted` | Every acquisition level the job allows was tried and none returned the page. | No. | Allow a stronger level, or check the site in a browser. |
 
 ## Browser and scroll
 
@@ -86,6 +95,9 @@ grouped by theme. A test fails when a code in `src/rastro` has no row here.
 | `scroll_step_failed` | A scroll step failed. | Partial. | Retry. Check the page. |
 | `scroll_records_rejected` | Scrolled records failed validation. | Partial. | Check the schema. |
 | `scroll_record_limit` | The record cap was reached. | Partial. | Raise `max_records`. |
+| `step_failed` | A page step (click, type, select, scroll, wait or follow) failed. | Records from before the step, as partial. | Check the step and the page. |
+| `step_selector_missing` | A page step's selector matched nothing. | Records from before the step, as partial. | Fix the step's selector. The page may have changed. |
+| `capture_empty` | Network capture was on but no response matched its patterns. | Records from the page, if any. | Check the `capture_network` patterns. |
 
 ## Pagination and spider
 
@@ -110,6 +122,9 @@ grouped by theme. A test fails when a code in `src/rastro` has no row here.
 | `sitemap_unsupported` | The sitemap seed needs plain HTTP acquisition. | No. | Use `render = "http"` for a sitemap job. |
 | `spider_links_failed` | Links could not be read from a page. | Partial. | Check the link selector. |
 | `spider_needs_recipe` | A spider needs a saved recipe. | No. | Create a recipe first. |
+| `link_group_refused` | A group of links found on a page was not followed because it is outside the crawl's allowed hosts or patterns. | Yes. | Widen `allow_pattern`, or ignore it if intended. |
+| `crawl_resumed` | A crawl continued from a saved checkpoint instead of starting again. | Yes. | Nothing. Delete the checkpoint to start fresh. |
+| `crawl_time_budget` | The crawl stopped because its time budget ran out; its checkpoint is kept. | Partial. | Run again to resume, or raise the time budget. |
 
 ## Storage, memory and repair
 
@@ -129,6 +144,8 @@ grouped by theme. A test fails when a code in `src/rastro` has no row here.
 | `no_valid_recipe` | No candidate recipe passed the checks. | No change. | Fix the recipe by hand. |
 | `serving_recipe_extracts_no_records` | The current recipe finds no records. | No change. | Review the page and the recipe. |
 | `serving_recipe_fails_gates` | The current recipe fails the quality checks. | No change. | Review the recipe. |
+| `notification_failed` | An alert could not be delivered to its channel. | Yes. | Check the channel settings and the network. |
+| `hub_candidate` | A recipe from the hub was installed as a candidate and is not serving yet. | No change. | Review it, then promote it. |
 
 ## Security flags
 

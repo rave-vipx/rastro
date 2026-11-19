@@ -90,7 +90,7 @@ def _jsonld_payload(text: str, issues: list[Issue]) -> object:
             char = f"\\u{ord(char):04x}"
         escaped.append(char)
     payload = strict_json("".join(escaped), repair_text=True)
-    issues.append(Issue(code="tolerant_jsonld"))
+    issues.append(Issue(code="repaired_json"))
     return payload
 
 
