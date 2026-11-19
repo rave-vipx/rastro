@@ -30,7 +30,8 @@ REFERENCE_ONLY: tuple[str, ...] = (
     "rastro demo",
     *_names(
         "__version__ BooleanField CandidateEvaluation ConfigurationError DateField DateTimeField "
-        "Capability DecimalField Evidence ExtractionRecord ExtractionResult IntegerField Issue JobRunResult "
+        "Capability DecimalField Evidence ExtractionRecord ExtractionResult IntegerField Issue "
+        "JobRunResult "
         "JobRunStatus JobSummary LifecycleAction LifecycleEvent LifecycleHistory "
         "LifecycleTransitionError Metrics NumberField Outcome RastroError RecipeAttempt "
         "RecipeComparison RecipeConflictError RecipeContext RecipeKey RecipeMetadata "
