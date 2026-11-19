@@ -15,12 +15,14 @@ from pydantic import (
     BaseModel,
     BeforeValidator,
     Field,
+    SerializerFunctionWrapHandler,
     StrictBool,
     StrictInt,
     TypeAdapter,
     WrapValidator,
     create_model,
     field_validator,
+    model_serializer,
     model_validator,
 )
 from pydantic_core import SchemaError
@@ -67,6 +69,14 @@ class _FieldBase(RedactedContract):
         max_length=16,
         description="Text placeholders rejected after stripping whitespace and case folding.",
     )
+
+    @model_serializer(mode="wrap")
+    def _omit_empty_placeholders(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        # Keeps the stored form of jobs without placeholders byte-identical.
+        data: dict[str, Any] = handler(self)
+        if not self.null_values:
+            data.pop("null_values", None)
+        return data
 
     @field_validator("name")
     @classmethod

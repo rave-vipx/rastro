@@ -69,6 +69,7 @@ The record fields to extract, with their types. Docs: [jobs.md#target-fields-and
 | --- | --- | --- | --- | --- |
 | `fields[].name` | string | required | `length >= 1, length <= 64, pattern ^[A-Za-z][A-Za-z0-9_]{0,63}$` | Field name: a letter, then letters, digits or underscores. |
 | `fields[].required` | boolean | `true` |  | When true, a record without this field is rejected. |
+| `fields[].null_values` | array of string | `[]` | `items <= 16` | Text placeholders rejected after stripping whitespace and case folding. |
 | `fields[].type` | string | `"string"` | `always "string"` | Value type; it decides which of the keys below apply. |
 | `fields[].min_length` | integer | - | `>= 0, <= 1000000` | Shortest allowed text. |
 | `fields[].max_length` | integer | - | `>= 1, <= 1000000` | Longest allowed text. |
@@ -80,6 +81,7 @@ The record fields to extract, with their types. Docs: [jobs.md#target-fields-and
 | --- | --- | --- | --- | --- |
 | `fields[].name` | string | required | `length >= 1, length <= 64, pattern ^[A-Za-z][A-Za-z0-9_]{0,63}$` | Field name: a letter, then letters, digits or underscores. |
 | `fields[].required` | boolean | `true` |  | When true, a record without this field is rejected. |
+| `fields[].null_values` | array of string | `[]` | `items <= 16` | Text placeholders rejected after stripping whitespace and case folding. |
 | `fields[].type` | string | `"integer"` | `always "integer"` | Value type; it decides which of the keys below apply. |
 | `fields[].ge` | integer | - |  | Smallest allowed value. |
 | `fields[].le` | integer | - |  | Largest allowed value. |
@@ -90,6 +92,7 @@ The record fields to extract, with their types. Docs: [jobs.md#target-fields-and
 | --- | --- | --- | --- | --- |
 | `fields[].name` | string | required | `length >= 1, length <= 64, pattern ^[A-Za-z][A-Za-z0-9_]{0,63}$` | Field name: a letter, then letters, digits or underscores. |
 | `fields[].required` | boolean | `true` |  | When true, a record without this field is rejected. |
+| `fields[].null_values` | array of string | `[]` | `items <= 16` | Text placeholders rejected after stripping whitespace and case folding. |
 | `fields[].type` | string | `"number"` | `always "number"` | Value type; it decides which of the keys below apply. |
 | `fields[].ge` | number | - |  | Smallest allowed value. |
 | `fields[].le` | number | - |  | Largest allowed value. |
@@ -100,6 +103,7 @@ The record fields to extract, with their types. Docs: [jobs.md#target-fields-and
 | --- | --- | --- | --- | --- |
 | `fields[].name` | string | required | `length >= 1, length <= 64, pattern ^[A-Za-z][A-Za-z0-9_]{0,63}$` | Field name: a letter, then letters, digits or underscores. |
 | `fields[].required` | boolean | `true` |  | When true, a record without this field is rejected. |
+| `fields[].null_values` | array of string | `[]` | `items <= 16` | Text placeholders rejected after stripping whitespace and case folding. |
 | `fields[].type` | string | `"boolean"` | `always "boolean"` | Value type; it decides which of the keys below apply. |
 
 #### `type = "decimal"`
@@ -108,6 +112,7 @@ The record fields to extract, with their types. Docs: [jobs.md#target-fields-and
 | --- | --- | --- | --- | --- |
 | `fields[].name` | string | required | `length >= 1, length <= 64, pattern ^[A-Za-z][A-Za-z0-9_]{0,63}$` | Field name: a letter, then letters, digits or underscores. |
 | `fields[].required` | boolean | `true` |  | When true, a record without this field is rejected. |
+| `fields[].null_values` | array of string | `[]` | `items <= 16` | Text placeholders rejected after stripping whitespace and case folding. |
 | `fields[].type` | string | `"decimal"` | `always "decimal"` | Value type; it decides which of the keys below apply. |
 | `fields[].ge` | number or string | - |  | Smallest allowed value. |
 | `fields[].le` | number or string | - |  | Largest allowed value. |
@@ -118,6 +123,7 @@ The record fields to extract, with their types. Docs: [jobs.md#target-fields-and
 | --- | --- | --- | --- | --- |
 | `fields[].name` | string | required | `length >= 1, length <= 64, pattern ^[A-Za-z][A-Za-z0-9_]{0,63}$` | Field name: a letter, then letters, digits or underscores. |
 | `fields[].required` | boolean | `true` |  | When true, a record without this field is rejected. |
+| `fields[].null_values` | array of string | `[]` | `items <= 16` | Text placeholders rejected after stripping whitespace and case folding. |
 | `fields[].type` | string | `"date"` | `always "date"` | Value type; it decides which of the keys below apply. |
 | `fields[].localized` | boolean | `false` |  | Also parse non-ISO dates written in the source language. |
 
@@ -127,6 +133,7 @@ The record fields to extract, with their types. Docs: [jobs.md#target-fields-and
 | --- | --- | --- | --- | --- |
 | `fields[].name` | string | required | `length >= 1, length <= 64, pattern ^[A-Za-z][A-Za-z0-9_]{0,63}$` | Field name: a letter, then letters, digits or underscores. |
 | `fields[].required` | boolean | `true` |  | When true, a record without this field is rejected. |
+| `fields[].null_values` | array of string | `[]` | `items <= 16` | Text placeholders rejected after stripping whitespace and case folding. |
 | `fields[].type` | string | `"datetime"` | `always "datetime"` | Value type; it decides which of the keys below apply. |
 | `fields[].localized` | boolean | `false` |  | Also parse non-ISO dates written in the source language. |
 
@@ -136,7 +143,30 @@ The record fields to extract, with their types. Docs: [jobs.md#target-fields-and
 | --- | --- | --- | --- | --- |
 | `fields[].name` | string | required | `length >= 1, length <= 64, pattern ^[A-Za-z][A-Za-z0-9_]{0,63}$` | Field name: a letter, then letters, digits or underscores. |
 | `fields[].required` | boolean | `true` |  | When true, a record without this field is rejected. |
+| `fields[].null_values` | array of string | `[]` | `items <= 16` | Text placeholders rejected after stripping whitespace and case folding. |
 | `fields[].type` | string | `"url"` | `always "url"` | Value type; it decides which of the keys below apply. |
+
+#### `type = "list"`
+
+| Key | Type | Default | Bounds | Description |
+| --- | --- | --- | --- | --- |
+| `fields[].name` | string | required | `length >= 1, length <= 64, pattern ^[A-Za-z][A-Za-z0-9_]{0,63}$` | Field name: a letter, then letters, digits or underscores. |
+| `fields[].required` | boolean | `true` |  | When true, a record without this field is rejected. |
+| `fields[].null_values` | array of string | `[]` | `items <= 16` | Text placeholders rejected after stripping whitespace and case folding. |
+| `fields[].type` | string | `"list"` | `always "list"` | Value type; it decides which of the keys below apply. |
+| `fields[].item` | table | required |  | Scalar or object item contract; its name is ignored. Same keys as `fields[]`. |
+| `fields[].min_items` | integer | `0` | `>= 0, <= 1000` | Minimum valid items. |
+| `fields[].max_items` | integer | `100` | `>= 1, <= 1000` | Maximum input items. |
+
+#### `type = "object"`
+
+| Key | Type | Default | Bounds | Description |
+| --- | --- | --- | --- | --- |
+| `fields[].name` | string | required | `length >= 1, length <= 64, pattern ^[A-Za-z][A-Za-z0-9_]{0,63}$` | Field name: a letter, then letters, digits or underscores. |
+| `fields[].required` | boolean | `true` |  | When true, a record without this field is rejected. |
+| `fields[].null_values` | array of string | `[]` | `items <= 16` | Text placeholders rejected after stripping whitespace and case folding. |
+| `fields[].type` | string | `"object"` | `always "object"` | Value type; it decides which of the keys below apply. |
+| `fields[].members` | array of tables | required | `items >= 1, items <= 32` | Uniquely named scalar members of an object. Same keys as `fields[]`. |
 
 ### `[acquisition]`
 

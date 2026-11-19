@@ -181,3 +181,8 @@ def test_object_member_names_unique():
                 ],
             }
         )
+
+
+def test_empty_placeholders_stay_out_of_the_stored_form():
+    assert "null_values" not in StringField(name="title").model_dump()
+    assert StringField(name="title", null_values=("n/a",)).model_dump()["null_values"] == ("n/a",)

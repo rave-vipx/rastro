@@ -226,6 +226,18 @@
           "title": "Name",
           "type": "string"
         },
+        "null_values": {
+          "default": [],
+          "description": "Text placeholders rejected after stripping whitespace and case folding.",
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 16,
+          "title": "Null Values",
+          "type": "array"
+        },
         "required": {
           "default": true,
           "title": "Required",
@@ -573,6 +585,18 @@
           "title": "Name",
           "type": "string"
         },
+        "null_values": {
+          "default": [],
+          "description": "Text placeholders rejected after stripping whitespace and case folding.",
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 16,
+          "title": "Null Values",
+          "type": "array"
+        },
         "required": {
           "default": true,
           "title": "Required",
@@ -605,6 +629,18 @@
           "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$",
           "title": "Name",
           "type": "string"
+        },
+        "null_values": {
+          "default": [],
+          "description": "Text placeholders rejected after stripping whitespace and case folding.",
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 16,
+          "title": "Null Values",
+          "type": "array"
         },
         "required": {
           "default": true,
@@ -663,6 +699,18 @@
           "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$",
           "title": "Name",
           "type": "string"
+        },
+        "null_values": {
+          "default": [],
+          "description": "Text placeholders rejected after stripping whitespace and case folding.",
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 16,
+          "title": "Null Values",
+          "type": "array"
         },
         "required": {
           "default": true,
@@ -1119,6 +1167,18 @@
           "title": "Name",
           "type": "string"
         },
+        "null_values": {
+          "default": [],
+          "description": "Text placeholders rejected after stripping whitespace and case folding.",
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 16,
+          "title": "Null Values",
+          "type": "array"
+        },
         "required": {
           "default": true,
           "title": "Required",
@@ -1145,7 +1205,9 @@
           "datetime": "#/$defs/DateTimeField",
           "decimal": "#/$defs/DecimalField",
           "integer": "#/$defs/IntegerField",
+          "list": "#/$defs/ListField",
           "number": "#/$defs/NumberField",
+          "object": "#/$defs/ObjectField",
           "string": "#/$defs/StringField",
           "url": "#/$defs/UrlField"
         },
@@ -1175,6 +1237,12 @@
         },
         {
           "$ref": "#/$defs/UrlField"
+        },
+        {
+          "$ref": "#/$defs/ListField"
+        },
+        {
+          "$ref": "#/$defs/ObjectField"
         }
       ]
     },
@@ -1425,6 +1493,110 @@
       "minLength": 1,
       "type": "string"
     },
+    "ListField": {
+      "additionalProperties": false,
+      "properties": {
+        "item": {
+          "description": "Scalar or object item contract; its name is ignored.",
+          "discriminator": {
+            "mapping": {
+              "boolean": "#/$defs/BooleanField",
+              "date": "#/$defs/DateField",
+              "datetime": "#/$defs/DateTimeField",
+              "decimal": "#/$defs/DecimalField",
+              "integer": "#/$defs/IntegerField",
+              "number": "#/$defs/NumberField",
+              "object": "#/$defs/ObjectField",
+              "string": "#/$defs/StringField",
+              "url": "#/$defs/UrlField"
+            },
+            "propertyName": "type"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/StringField"
+            },
+            {
+              "$ref": "#/$defs/IntegerField"
+            },
+            {
+              "$ref": "#/$defs/NumberField"
+            },
+            {
+              "$ref": "#/$defs/BooleanField"
+            },
+            {
+              "$ref": "#/$defs/DecimalField"
+            },
+            {
+              "$ref": "#/$defs/DateField"
+            },
+            {
+              "$ref": "#/$defs/DateTimeField"
+            },
+            {
+              "$ref": "#/$defs/UrlField"
+            },
+            {
+              "$ref": "#/$defs/ObjectField"
+            }
+          ],
+          "title": "Item"
+        },
+        "max_items": {
+          "default": 100,
+          "description": "Maximum input items.",
+          "maximum": 1000,
+          "minimum": 1,
+          "title": "Max Items",
+          "type": "integer"
+        },
+        "min_items": {
+          "default": 0,
+          "description": "Minimum valid items.",
+          "maximum": 1000,
+          "minimum": 0,
+          "title": "Min Items",
+          "type": "integer"
+        },
+        "name": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "null_values": {
+          "default": [],
+          "description": "Text placeholders rejected after stripping whitespace and case folding.",
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 16,
+          "title": "Null Values",
+          "type": "array"
+        },
+        "required": {
+          "default": true,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "type": {
+          "const": "list",
+          "default": "list",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "item"
+      ],
+      "title": "ListField",
+      "type": "object"
+    },
     "NumberField": {
       "additionalProperties": false,
       "properties": {
@@ -1459,6 +1631,18 @@
           "title": "Name",
           "type": "string"
         },
+        "null_values": {
+          "default": [],
+          "description": "Text placeholders rejected after stripping whitespace and case folding.",
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 16,
+          "title": "Null Values",
+          "type": "array"
+        },
         "required": {
           "default": true,
           "title": "Required",
@@ -1475,6 +1659,95 @@
         "name"
       ],
       "title": "NumberField",
+      "type": "object"
+    },
+    "ObjectField": {
+      "additionalProperties": false,
+      "properties": {
+        "members": {
+          "description": "Uniquely named scalar members of an object.",
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "boolean": "#/$defs/BooleanField",
+                "date": "#/$defs/DateField",
+                "datetime": "#/$defs/DateTimeField",
+                "decimal": "#/$defs/DecimalField",
+                "integer": "#/$defs/IntegerField",
+                "number": "#/$defs/NumberField",
+                "string": "#/$defs/StringField",
+                "url": "#/$defs/UrlField"
+              },
+              "propertyName": "type"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/StringField"
+              },
+              {
+                "$ref": "#/$defs/IntegerField"
+              },
+              {
+                "$ref": "#/$defs/NumberField"
+              },
+              {
+                "$ref": "#/$defs/BooleanField"
+              },
+              {
+                "$ref": "#/$defs/DecimalField"
+              },
+              {
+                "$ref": "#/$defs/DateField"
+              },
+              {
+                "$ref": "#/$defs/DateTimeField"
+              },
+              {
+                "$ref": "#/$defs/UrlField"
+              }
+            ]
+          },
+          "maxItems": 32,
+          "minItems": 1,
+          "title": "Members",
+          "type": "array"
+        },
+        "name": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "null_values": {
+          "default": [],
+          "description": "Text placeholders rejected after stripping whitespace and case folding.",
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 16,
+          "title": "Null Values",
+          "type": "array"
+        },
+        "required": {
+          "default": true,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "type": {
+          "const": "object",
+          "default": "object",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "members"
+      ],
+      "title": "ObjectField",
       "type": "object"
     },
     "OllamaProvider": {
@@ -2071,6 +2344,18 @@
           "title": "Name",
           "type": "string"
         },
+        "null_values": {
+          "default": [],
+          "description": "Text placeholders rejected after stripping whitespace and case folding.",
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 16,
+          "title": "Null Values",
+          "type": "array"
+        },
         "pattern": {
           "anyOf": [
             {
@@ -2112,6 +2397,18 @@
           "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$",
           "title": "Name",
           "type": "string"
+        },
+        "null_values": {
+          "default": [],
+          "description": "Text placeholders rejected after stripping whitespace and case folding.",
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 16,
+          "title": "Null Values",
+          "type": "array"
         },
         "required": {
           "default": true,
