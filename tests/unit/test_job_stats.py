@@ -167,10 +167,38 @@ def test_never_succeeded_group_has_no_freshness_or_coverage(job):
     assert group["success_rate"] == 0 and group["error_rate"] == 1
 
 
-@pytest.mark.parametrize("since", ["7", "0d", "-1d", "d7", "7w", "1.5d", ""])
+@pytest.mark.parametrize("since", ["7", "0d", "0m", "-1d", "-5m", "d7", "7w", "1.5d", ""])
 def test_bad_since_is_a_configuration_error(job, since):
     with pytest.raises(ConfigurationError):
         stats(job, since=since)
+
+
+def test_stats_since_30m(job, capsys):
+    from datetime import UTC, datetime
+
+    now = datetime.now(UTC)
+    store = SQLiteDatasetStore(job.parent / "data.sqlite")
+    early = metric(0, A).model_copy(
+        update={
+            "started_at": now - timedelta(minutes=50),
+            "finished_at": now - timedelta(minutes=45),
+        }
+    )
+    recent = metric(1, B).model_copy(
+        update={
+            "started_at": now - timedelta(minutes=12),
+            "finished_at": now - timedelta(minutes=10),
+        }
+    )
+    store.record_run_metrics("items", [early, recent])
+    report = stats(job, now=now, since="30m")
+    assert report["since"] == "30m"
+    assert [g["key"] for g in report["groups"]] == [B]
+    assert report["groups"][0]["runs"] == 1
+    assert main(["job", "stats", str(job), "--since", "30m"]) == 0
+    cli_report = json.loads(capsys.readouterr().out)
+    assert cli_report["since"] == "30m"
+    assert [g["key"] for g in cli_report["groups"]] == [B]
 
 
 def test_postgres_datasets_are_refused_for_now(tmp_path):

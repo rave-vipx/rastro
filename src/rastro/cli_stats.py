@@ -17,7 +17,7 @@ def add_stats_command(jobs: argparse._SubParsersAction) -> None:  # type: ignore
         "stats", help="Per-source throughput, latency, error rate, freshness and coverage"
     )
     stats.add_argument("file", type=Path, help="Job file (.toml or .json)")
-    stats.add_argument("--since", help="Only runs finished within this window, e.g. 7d or 12h")
+    stats.add_argument("--since", help="Only runs finished within this window, e.g. 7d, 12h or 30m")
     stats.add_argument(
         "--by", choices=GROUPINGS, default="source", help="Grouping (default source)"
     )

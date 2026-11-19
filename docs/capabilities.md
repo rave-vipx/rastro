@@ -141,7 +141,7 @@ What Rastro already does, for people and for AI coding agents. Use these before 
 
 - **Use:** `[dataset] path = "data.sqlite"`, `identity = ["field"]`; `backend = "postgres"` with `dsn_env`. Loads track new, changed, unchanged and missing records
 - **Python:** `load_job_file`, `forget_job_source`, `JobLoadResult`, `LoadedSource`, `JobRecordData`
-- **CLI:** `rastro job load`, `rastro dataset status`, `rastro job forget-source`
+- **CLI:** `rastro job load`, `rastro dataset status`, `rastro dataset migrate`, `rastro job forget-source`
 - **MCP:** `job_load`, `dataset_records`
 - **Limits:** Only approved fields with evidence are stored; partial runs never delete rows
 - **Do not build:** your own upsert or dedup-by-key table for scraped records

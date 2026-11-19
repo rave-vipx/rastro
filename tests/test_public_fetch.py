@@ -160,3 +160,16 @@ def test_fetch_refuses_a_running_loop_and_fetch_async_works_there(transport):
 
     with asyncio.Runner(loop_factory=asyncio.SelectorEventLoop) as runner:
         assert runner.run(inside()).body == PAGE
+
+
+def test_fetched_text_decodes(transport):
+    html = "<html><body><h1>Fiesta — música</h1></body></html>"
+    transport.body = html.encode("utf-8")
+    fetched = rastro.fetch("https://events.example/fiesta")
+    assert fetched.status == Outcome.SUCCESS
+    assert fetched.text == html
+    assert fetched.text == fetched.body
+    transport.robots = b"User-agent: *\nDisallow: /\n"
+    failed = rastro.fetch("https://events.example/fiesta")
+    assert failed.status == Outcome.ACCESS_RESTRICTION
+    assert failed.text is None

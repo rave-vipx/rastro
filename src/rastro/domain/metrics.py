@@ -156,13 +156,16 @@ def percentile(values: Sequence[float], q: float) -> float:
     return ordered[low] + (ordered[high] - ordered[low]) * (position - low)
 
 
+_SINCE_UNITS = {"d": "days", "h": "hours", "m": "minutes"}
+
+
 def parse_since(text: str, now: datetime) -> datetime:
-    """``7d`` or ``12h`` back from ``now``; anything else is rejected by the caller."""
+    """``7d``, ``12h`` or ``30m`` back from ``now``; anything else is rejected by the caller."""
     unit = text[-1:]
     amount = text[:-1]
-    if unit not in {"d", "h"} or not amount.isascii() or not amount.isdigit() or int(amount) < 1:
+    if unit not in _SINCE_UNITS or not amount.isascii() or not amount.isdigit() or int(amount) < 1:
         raise ValueError(text)
-    return now - timedelta(**{"days" if unit == "d" else "hours": min(int(amount), 36_500)})
+    return now - timedelta(**{_SINCE_UNITS[unit]: min(int(amount), 36_500)})
 
 
 _KEYS: dict[str, Callable[[RunMetric], str]] = {
