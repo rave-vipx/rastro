@@ -1,10 +1,29 @@
-# Product needs N1–N12
+# Product needs
 
 Owner request, 2026-11-16, updated the same day: finish the product in this cut, including bounded scroll, a registry others can host, a spec that matches, and opt-in promote and stealth (ADR 0034). This file is the planning source. It overrides conflicting product bans in `RASTRO_MASTER_SPEC.md`, the README comparison table, and ADR 0020. It does **not** override the security model in `SECURITY.md`.
 
 `docs/roadmap.md` stays the history of what already shipped. This file is what to build next.
 
 The job key for plain HTTP, browser, and stealth is `render`, already shipped on `[acquisition]` and on each source (`http`, `browser`, `stealth`). Do not rename it to `engine`.
+
+## Needs N21–N30 (0.10, current cut)
+
+Owner request, 2026-11-19. Planning source for 0.10; design notes and cut order are in
+`docs/action-plan-0.10.md`. N1–N12 below shipped in 0.9.0; N13–N20 are in
+`docs/action-plan-adoption.md`.
+
+| ID | Need |
+| --- | --- |
+| N21 | Fixes reach users the same day (0.9.1 patch release, patch path in `docs/releasing.md`) |
+| N22 | A bad value costs one field, not a source |
+| N23 | Tolerant structured data (JSON-LD and embedded JSON as browsers read them) |
+| N24 | Dates as people write them (region timezone, null placeholders) |
+| N25 | Discovery that reaches the right pages (sitemap order and filters, link groups, query-aware provenance) |
+| N26 | Records that are not flat (list and object fields, array pointers, ItemList) |
+| N27 | AI recipes for nested data |
+| N28 | A run that explains itself (one `RunReport` for code, Studio and hooks) |
+| N29 | Read results from code (`rastro.read_records`) |
+| N30 | Predictable operation (per-host rate, crawl estimate, blocked hints, schema migrate) |
 
 ## What Rastro is for
 
