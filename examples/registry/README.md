@@ -10,6 +10,13 @@ and a reserved source URL.
 | `synthetic-listing@1.0.0` | title, location | `listing.json` |
 | `synthetic-news@1.0.0` | title, section | `news.json` |
 | `synthetic-product@1.0.0` | title, price_text | `product.json` |
+| `sitemap-crawl@1.0.0` | title, summary | `sitemap-crawl.json` (template, needs a real site) |
+| `shopify-products@1.0.0` | title, price | `shopify-products.json` (template, needs a real site) |
+| `generic-crawl@1.0.0` | title, summary | `generic-crawl.json` (template, needs a real site) |
+
+The last three are starting points for crawling: install one, point the job's URL and
+`allowed_hosts` at your site, then adjust the selectors or JSON pointers. Their `.example`
+hosts do not resolve, so only the recipe replay runs offline.
 
 Each package under `recipes/<id>/<version>/` has a format-2 public manifest with
 version, author, license, source patterns, minimum engine version and verification

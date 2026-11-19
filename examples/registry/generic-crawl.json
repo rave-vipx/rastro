@@ -1,0 +1,46 @@
+{
+  "acquisition": {
+    "allowed_hosts": [
+      "generic-crawl.example"
+    ]
+  },
+  "dataset": {
+    "identity": [
+      "title"
+    ],
+    "name": "generic_crawl",
+    "path": "generic-crawl-data.sqlite"
+  },
+  "fields": [
+    {
+      "max_length": null,
+      "min_length": 1,
+      "name": "title",
+      "pattern": null,
+      "required": true,
+      "type": "string"
+    },
+    {
+      "max_length": null,
+      "min_length": 1,
+      "name": "summary",
+      "pattern": null,
+      "required": true,
+      "type": "string"
+    }
+  ],
+  "format_version": 1,
+  "recipe_memory": "generic-crawl-recipes.sqlite",
+  "sources": [
+    {
+      "representation": "html",
+      "url": "https://generic-crawl.example/"
+    }
+  ],
+  "spider": {
+    "links": "a::attr(href)",
+    "max_depth": 2,
+    "max_pages": 25,
+    "mode": "spider"
+  }
+}

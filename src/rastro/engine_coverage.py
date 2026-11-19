@@ -193,7 +193,26 @@ SCRAPLING_FEATURES: tuple[EngineFeature, ...] = (
         "logging_format logging_level",
     ),
     # Templates (crawl & convert)
-    *_plan("crawl", "templates", "crawler shopify sitemap"),
+    *_exp(
+        "crawl",
+        "templates",
+        "recipe_strategy",
+        (
+            "crawler",
+            "examples/registry/recipes/generic-crawl",
+            "docs/crawling.md",
+        ),
+        (
+            "shopify",
+            "examples/registry/recipes/shopify-products",
+            "docs/crawling.md",
+        ),
+        (
+            "sitemap",
+            "examples/registry/recipes/sitemap-crawl",
+            "docs/crawling.md",
+        ),
+    ),
     *_no(
         "crawl",
         "templates",

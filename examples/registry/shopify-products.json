@@ -1,0 +1,40 @@
+{
+  "acquisition": {
+    "allowed_hosts": [
+      "shopify-products.example"
+    ]
+  },
+  "dataset": {
+    "identity": [
+      "title"
+    ],
+    "name": "shopify_products",
+    "path": "shopify-products-data.sqlite"
+  },
+  "fields": [
+    {
+      "max_length": null,
+      "min_length": 1,
+      "name": "title",
+      "pattern": null,
+      "required": true,
+      "type": "string"
+    },
+    {
+      "max_length": null,
+      "min_length": 1,
+      "name": "price",
+      "pattern": null,
+      "required": true,
+      "type": "string"
+    }
+  ],
+  "format_version": 1,
+  "recipe_memory": "shopify-products-recipes.sqlite",
+  "sources": [
+    {
+      "representation": "json",
+      "url": "https://shopify-products.example/products.json"
+    }
+  ]
+}

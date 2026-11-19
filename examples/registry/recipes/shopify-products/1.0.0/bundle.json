@@ -1,0 +1,38 @@
+{
+  "author": {
+    "name": "Rastro Contributors",
+    "url": null
+  },
+  "compatibility": {
+    "min_rastro": "0.9.0",
+    "source_patterns": [
+      "shopify-products.example/products.json"
+    ]
+  },
+  "context": {
+    "region": "default",
+    "schema_revision": "1",
+    "template": "page"
+  },
+  "files": {
+    "expected.json": "1b586749471e038d80b1a909b1c50a5e4302db8270d1bcc2187abaee87a65805",
+    "recipe.json": "f888de1eba39bdc3b8d1ecc045c11ef76f44c563d6f5939f3a2a6b5bdb11594f",
+    "sample.json": "795320941fb154e234b33a8605bcb1776e6c6f8c1dc3847993d16fec29b66c40",
+    "schema.json": "99884ee924044f3f21482d22d4568299587d023e9be7137d090beae5dae25beb"
+  },
+  "format_version": 2,
+  "id": "shopify-products",
+  "last_verified": "2026-11-16",
+  "license": "Apache-2.0",
+  "representation": "json",
+  "source": {
+    "currency": null,
+    "egress": "direct",
+    "languages": [],
+    "locale": "und",
+    "timezone": "UTC",
+    "url": "https://shopify-products.example/products.json"
+  },
+  "version": "1.0.0",
+  "visibility": "public"
+}

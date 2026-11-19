@@ -1,6 +1,7 @@
 """N6 / HUB-002..006: synthetic examples replay, install as candidates and deduplicate."""
 
 import json
+import shutil
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -9,6 +10,7 @@ import pytest
 from rastro.adapters.sqlite import SQLiteRecipeRepository
 from rastro.application.recipe_registry import install_from_registry, search_registry
 from rastro.domain.lifecycle import RecipeState
+from rastro.domain.recipe_bundle import BundleIntegrityError
 
 REGISTRY = Path(__file__).resolve().parents[2] / "examples" / "registry"
 
@@ -44,7 +46,7 @@ def test_example_install_replays_and_reuses_candidate(tmp_path: Path, kind: str)
 
 def test_example_registry_build_is_reproducible(tmp_path: Path) -> None:
     """N6: the export/publish services reproduce every committed package byte offline."""
-    from examples.registry.build import build
+    from examples.registry.build import STARTERS, build
 
     generated = tmp_path / "registry"
     build(generated)
@@ -52,8 +54,8 @@ def test_example_registry_build_is_reproducible(tmp_path: Path) -> None:
         if item.is_file():
             assert (generated / item.relative_to(REGISTRY)).read_bytes() == item.read_bytes()
     assert (generated / "index.json").read_bytes() == (REGISTRY / "index.json").read_bytes()
-    assert len(json.loads((generated / "index.json").read_text())) == 4
-    for kind in ("listing", "news", "product"):
+    assert len(json.loads((generated / "index.json").read_text())) == 7
+    for kind in ("listing", "news", "product", *STARTERS):
         assert (generated / f"{kind}.json").read_bytes() == (REGISTRY / f"{kind}.json").read_bytes()
 
 
@@ -83,3 +85,33 @@ def test_example_cli_promote_load_and_rerun(
     counts = json.loads(capsys.readouterr().out)["sources"][0]["counts"]
     assert counts["created"] == 0
     assert counts["unchanged"] == 2
+
+
+@pytest.mark.parametrize("starter", ["sitemap-crawl", "shopify-products", "generic-crawl"])
+def test_starter_bundles_verify(tmp_path: Path, starter: str) -> None:
+    """Each crawl starter passes the registry hash check and replays its synthetic sample."""
+    from examples.registry.build import parser_for
+    from rastro.domain.jobs import Job
+
+    (entry,) = search_registry(REGISTRY, starter)
+    assert entry.trust.replay_verified and entry.trust.has_sample
+    repo = SQLiteRecipeRepository(tmp_path / "recipes.sqlite")
+    install = install_from_registry(
+        REGISTRY, starter, repo, parser_for, at=datetime(2026, 11, 16, tzinfo=UTC)
+    )
+    assert install.trust.replay_verified
+    job = Job.model_validate_json((REGISTRY / f"{starter}.json").read_text())
+    assert job.sources[0].url.split("/")[2].endswith(".example")
+
+    copy = tmp_path / "registry"
+    shutil.copytree(REGISTRY, copy)
+    sample = next((copy / "recipes" / starter / "1.0.0").glob("sample.*"))
+    sample.write_bytes(sample.read_bytes() + b" ")
+    with pytest.raises(BundleIntegrityError):
+        install_from_registry(
+            copy,
+            starter,
+            SQLiteRecipeRepository(tmp_path / "other.sqlite"),
+            parser_for,
+            at=datetime(2026, 11, 16, tzinfo=UTC),
+        )

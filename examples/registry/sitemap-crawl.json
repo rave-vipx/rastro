@@ -1,0 +1,46 @@
+{
+  "acquisition": {
+    "allowed_hosts": [
+      "sitemap-crawl.example"
+    ]
+  },
+  "dataset": {
+    "identity": [
+      "title"
+    ],
+    "name": "sitemap_crawl",
+    "path": "sitemap-crawl-data.sqlite"
+  },
+  "fields": [
+    {
+      "max_length": null,
+      "min_length": 1,
+      "name": "title",
+      "pattern": null,
+      "required": true,
+      "type": "string"
+    },
+    {
+      "max_length": null,
+      "min_length": 1,
+      "name": "summary",
+      "pattern": null,
+      "required": true,
+      "type": "string"
+    }
+  ],
+  "format_version": 1,
+  "recipe_memory": "sitemap-crawl-recipes.sqlite",
+  "sources": [
+    {
+      "representation": "html",
+      "url": "https://sitemap-crawl.example/sitemap.xml"
+    }
+  ],
+  "spider": {
+    "deny_pattern": "/(login|cart)",
+    "max_pages": 25,
+    "mode": "spider",
+    "seed": "sitemap"
+  }
+}

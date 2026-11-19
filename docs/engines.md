@@ -170,9 +170,9 @@ upgrade adds an unmapped feature.
 | `Spider.logging_date_format` | `internal` | Used internally behind Rastro ports. | - |
 | `Spider.logging_format` | `internal` | Used internally behind Rastro ports. | - |
 | `Spider.logging_level` | `internal` | Used internally behind Rastro ports. | - |
-| `templates.crawler` | `planned` | Used internally behind Rastro ports. | - |
-| `templates.shopify` | `planned` | Used internally behind Rastro ports. | - |
-| `templates.sitemap` | `planned` | Used internally behind Rastro ports. | - |
+| `templates.crawler` | `recipe_strategy` | `examples/registry/recipes/generic-crawl` | [crawling.md](crawling.md) |
+| `templates.shopify` | `recipe_strategy` | `examples/registry/recipes/shopify-products` | [crawling.md](crawling.md) |
+| `templates.sitemap` | `recipe_strategy` | `examples/registry/recipes/sitemap-crawl` | [crawling.md](crawling.md) |
 | `templates.feed` | `not_exposed` | Rastro spiders start from HTML pages or XML sitemaps rather than syndication feeds. | - |
 
 ### Content conversion
