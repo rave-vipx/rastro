@@ -260,6 +260,7 @@ How records are found on a page; one of four strategies. Docs: [api.md#recipe-va
 | `recipe.pagination.next` | string | required | `length >= 1, length <= 1024` | Expression that finds the next-page link. |
 | `recipe.pagination.max_pages` | integer | `5` | `>= 1, <= 50` | Most pages followed per source. |
 | `recipe.record_selector` | string | required | `length >= 1, length <= 1024` | CSS selector of one record; fields are relative to it. |
+| `recipe.steps` | array of value | `[]` | `items <= 20` | Browser actions (click, type, select, scroll, wait, follow) run before extraction; data only, never code. |
 
 #### `strategy = "jsonld"`
 

@@ -69,7 +69,8 @@ class RecipeProposal(StrategyUnion):
         return Recipe.model_validate(self.model_dump())
 
 
-_DEFINITION_ONLY = frozenset({"version", "require_evidence", "fallbacks", "pagination"})
+# Page steps are recorded by navigation, not proposed with a mapping: they stay out of here.
+_DEFINITION_ONLY = frozenset({"version", "require_evidence", "fallbacks", "pagination", "steps"})
 
 
 def _proposal(variant: type[Recipe]) -> type[RecipeProposal]:
