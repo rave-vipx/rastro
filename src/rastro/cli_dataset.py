@@ -10,7 +10,7 @@ from rastro.adapters.sqlite_drift import SQLiteDriftMonitor
 from rastro.application.dataset_load import stale_sources
 from rastro.application.errors import RunInProgressError
 from rastro.application.job_dataset import load_job_file
-from rastro.cli_dataset_export import html_export, select_records
+from rastro.cli_dataset_export import csv_export, html_export, select_records
 from rastro.cli_errors import classify
 from rastro.cli_hook import add_hook_argument, hook_argv, load_summary, notify
 from rastro.cli_trust import add_trust_arguments, trust_options
@@ -45,7 +45,7 @@ def add_commands(subcommands: argparse._SubParsersAction, jobs: argparse._SubPar
         )
         parser.add_argument(
             "--format",
-            choices=("json", "jsonl", "html") if command == "export" else ("json", "jsonl"),
+            choices=("json", "jsonl", "html", "csv") if command == "export" else ("json", "jsonl"),
             default="json",
             help="Output format",
         )
@@ -104,6 +104,9 @@ def dataset_command(args: argparse.Namespace) -> int:
             }
             fields = list(dict.fromkeys(name for record in all_records for name in record.fields))
             print(html_export(records, stale, fields))
+            return 0
+        if args.format == "csv":
+            print(csv_export(records), end="")
             return 0
         items = [r.model_dump(mode="json") for r in records]
     else:
