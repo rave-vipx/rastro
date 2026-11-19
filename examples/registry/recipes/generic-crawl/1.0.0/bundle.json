@@ -1,0 +1,38 @@
+{
+  "author": {
+    "name": "Rastro Contributors",
+    "url": null
+  },
+  "compatibility": {
+    "min_rastro": "0.9.0",
+    "source_patterns": [
+      "generic-crawl.example"
+    ]
+  },
+  "context": {
+    "region": "default",
+    "schema_revision": "1",
+    "template": "page"
+  },
+  "files": {
+    "expected.json": "1c09aeb876081866104a54a978bb4413ce4cd6c742d64f5344c5abc785207e6e",
+    "recipe.json": "2fb9a0f7d378a0488ef673a9edb9225e58f2688c12dd151275c5881db0dda4c6",
+    "sample.html": "ae772f4082db6292184647ea03de4989262d885fcd45f0f041dceaa7d63f44b0",
+    "schema.json": "5368136da22003c0bdddd4266de403e715b9a7e0938add61eb721524a7c1a6c5"
+  },
+  "format_version": 2,
+  "id": "generic-crawl",
+  "last_verified": "2026-11-16",
+  "license": "Apache-2.0",
+  "representation": "html",
+  "source": {
+    "currency": null,
+    "egress": "direct",
+    "languages": [],
+    "locale": "und",
+    "timezone": "UTC",
+    "url": "https://generic-crawl.example/"
+  },
+  "version": "1.0.0",
+  "visibility": "public"
+}

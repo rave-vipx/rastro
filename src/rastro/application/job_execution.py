@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from rastro.ports.model import ModelPort
 
 
-async def _extract_one_async(
+async def extract_one_async(
     job: Job, prepared: PreparedJob, index: int, item: FileJobSource | UrlJobSource
 ) -> ExtractionResult[Any]:
     recipe = item.recipe or job.recipe
@@ -83,7 +83,7 @@ async def run_active_async(
             results=[deduplicate_pages(result, job.dataset) for result in results],
         )
     collected = [
-        await _extract_one_async(job, prepared, idx, item) for idx, item in enumerate(job.sources)
+        await extract_one_async(job, prepared, idx, item) for idx, item in enumerate(job.sources)
     ]
     return JobRunResult.from_results(
         schema_fingerprint=prepared.fingerprint,
