@@ -447,8 +447,7 @@ Follow links from listing pages to detail pages. Docs: [jobs.md#spider](jobs.md#
 | `spider.seed` | string | `"page"` | `one of page, sitemap` | page starts from each source; sitemap reads a sitemap source. |
 | `spider.seed_order` | string | `"document"` | `one of document, reverse, lastmod` | Order sitemap locs before max_pages: document, reverse or lastmod (newest first). |
 | `spider.max_depth` | integer | `2` | `>= 1, <= 4` | Link levels followed from a start page. |
-| `spider.max_pages` | integer or string | `25` | `>= 1, <= 100; always "unbounded"` | Most pages fetched per start URL (1-100), or "unbounded" to crawl until the time budget runs out and resume from a checkpoint on the next run. |
-| `spider.time_budget_seconds` | integer | `1800` | `>= 60, <= 86400` | Seconds a crawl may run per start URL; an unbounded crawl saves its checkpoint when the budget runs out. |
+| `spider.max_pages` | integer | `25` | `>= 1, <= 100` | Most pages fetched per start URL. |
 | `spider.same_host` | boolean | `true` |  | Stay on the start page's host. |
 | `spider.allow` | array of string | `[]` | `items <= 32` | Path prefixes (whole segments); only matching links are followed. |
 | `spider.deny` | array of string | `[]` | `items <= 32` | Path prefixes (whole segments) that are never followed; deny wins. |
@@ -919,48 +918,24 @@ Open the local Studio (needs rastro[studio]). Docs: [studio.md#install-and-start
 | `--model` | value | - |  | Model spec for Ask AI (default: RASTRO_MODEL); any provider works |
 | `--allow-remote` | flag | - |  | Allow sending page content to a non-loopback or hosted model |
 
-### `rastro hub`
+### `rastro model`
 
-Share recipes through the hub: publish, search by URL, install a candidate. Docs: [jobs.md#cli-commands-and-exit-codes](jobs.md#cli-commands-and-exit-codes).
+Find local AI models and test a model. Docs: [jobs.md#cli-commands-and-exit-codes](jobs.md#cli-commands-and-exit-codes).
 
-### `rastro hub publish`
+### `rastro model detect`
 
-Write a job's recipe, sample, field descriptions and engine needs into a local hub checkout, ready for a pull request. Docs: [jobs.md#cli-commands-and-exit-codes](jobs.md#cli-commands-and-exit-codes).
+List models running on this machine (loopback only). Docs: [jobs.md#cli-commands-and-exit-codes](jobs.md#cli-commands-and-exit-codes).
 
-| Flag | Value | Default | Choices | Description |
-| --- | --- | --- | --- | --- |
-| `FILE` | Path | required |  | Job file whose recipe memory holds the recipe |
-| `--source` | int | `1` |  | One-based source index |
-| `--sample` | Path | required |  | Synthetic sample you may redistribute |
-| `--registry` | Path | required |  | Local hub checkout |
-| `--id` | value | required |  | Package identifier |
-| `--version` | value | required |  | Semver |
-| `--author` | value | required |  | Package author name |
-| `--author-url` | value | - |  | Optional package author URL |
-| `--license` | value | required |  | SPDX license |
-| `--describe` | FIELD=TEXT (repeatable) | - |  | What a field holds; once per field of the job |
-| `--allow-absolute-paths` | flag | - |  | Allow absolute paths in the job file |
+### `rastro model test`
 
-### `rastro hub search`
-
-Offer hub recipes for a URL's domain. Docs: [jobs.md#cli-commands-and-exit-codes](jobs.md#cli-commands-and-exit-codes).
+Make one small call and show what it costs. Docs: [jobs.md#cli-commands-and-exit-codes](jobs.md#cli-commands-and-exit-codes).
 
 | Flag | Value | Default | Choices | Description |
 | --- | --- | --- | --- | --- |
-| `URL` | value | required |  | The page you want to scrape |
-| `--registry` | Path | - |  | Local hub checkout instead of a URL |
-| `--registry-url` | URL | - |  | https registry URL (default: the public hub, https://raw.githubusercontent.com/rave-vipx/rastro-hub/main/) |
-
-### `rastro hub install`
-
-Install a hub package as a candidate. Docs: [jobs.md#cli-commands-and-exit-codes](jobs.md#cli-commands-and-exit-codes).
-
-| Flag | Value | Default | Choices | Description |
-| --- | --- | --- | --- | --- |
-| `PACKAGE` | value | required |  | Package id or id@version |
-| `--store` | Path | required |  | Recipe SQLite file |
-| `--registry` | Path | - |  | Local hub checkout instead of a URL |
-| `--registry-url` | URL | - |  | https registry URL (default: the public hub, https://raw.githubusercontent.com/rave-vipx/rastro-hub/main/) |
+| `--model` | SPEC | - |  | Model spec, or 'env' for RASTRO_MODEL |
+| `--allow-remote` | flag | - |  | Allow a hosted model |
+| `--max-model-cost` | USD | - |  | Stop calling the model once this cost would be exceeded (needs --model-cost-per-call or the job's [model] cost_per_call; overrides max_cost) |
+| `--model-cost-per-call` | USD | - |  | Price of one model call; overrides the job's [model] cost_per_call |
 
 ### `rastro suggest`
 

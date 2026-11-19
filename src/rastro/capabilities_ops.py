@@ -58,6 +58,15 @@ OPS_CAPABILITIES: tuple[Capability, ...] = (
         docs="docs/studio.md",
     ),
     Capability(
+        task="Find a local AI model and see what a call costs",
+        use="`rastro model detect` lists models on loopback ports; `rastro model test --model "
+        "SPEC` makes one call and prints the cost; the run report totals show model calls and cost",
+        cli=("rastro model detect", "rastro model test"),
+        limits="detect probes 127.0.0.1 only; hosted models still need `--allow-remote`",
+        instead_of="guessing which local servers run or what a model costs",
+        docs="docs/ai.md#find-a-local-model-and-test-it",
+    ),
+    Capability(
         task="Drive Rastro from an AI agent",
         use="`rastro mcp --root DIR` (MCP tools), the JSON CLI, `rastro capabilities` and "
         "`rastro init --agent claude|codex|generic`",

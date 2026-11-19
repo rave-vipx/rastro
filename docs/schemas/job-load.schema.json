@@ -1214,6 +1214,33 @@
           "title": "Model Calls",
           "type": "integer"
         },
+        "model_cost": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model Cost"
+        },
+        "model_cost_per_call": {
+          "anyOf": [
+            {
+              "maximum": 1000,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model Cost Per Call"
+        },
         "pages": {
           "minimum": 0,
           "title": "Pages",
