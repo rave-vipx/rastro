@@ -13,6 +13,7 @@ from mcp.server.fastmcp.exceptions import ToolError
 from mcp.types import ToolAnnotations
 from pydantic import Field
 
+from rastro.application.operator_trust import input_origin
 from rastro.cli_errors import classify
 
 Path_ = Annotated[str, Field(min_length=1, max_length=1024, description="Workspace-relative")]
@@ -68,11 +69,13 @@ async def call(function: Callable[..., dict[str, Any]], *args: Any, **kwargs: An
 
 class RastroMCP(FastMCP):
     """FastMCP whose argument-validation failures use the same safe envelope as tool errors,
-    instead of a Pydantic message that echoes the input."""
+    instead of a Pydantic message that echoes the input. Every tool runs as ``mcp`` input:
+    the agent's jobs get only the capabilities the operator granted to that origin."""
 
     async def call_tool(self, name: str, arguments: dict[str, Any]) -> Any:
         try:
-            return await super().call_tool(name, arguments)
+            with input_origin("mcp"):
+                return await super().call_tool(name, arguments)
         except ToolError as error:
             cause = error.__cause__
             if isinstance(cause, ToolError):

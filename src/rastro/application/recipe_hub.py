@@ -21,8 +21,10 @@ from rastro.application.bundle_files import (
     read_bundle,
     write_all,
 )
+from rastro.application.capability_gate import model_capabilities, require
 from rastro.application.engine_version import running_version
 from rastro.application.extraction import extract_document, validate_recipe
+from rastro.application.operator_trust import entered_from
 from rastro.domain.job_fields import JobField, build_job_schema
 from rastro.domain.lifecycle import RecipeState
 from rastro.domain.memory import RecipeContext, RecipeKey, StoredRecipe
@@ -179,9 +181,11 @@ def import_bundle(
     reused, not duplicated. An equal retired version is not reused: the import stores
     a new candidate version so it can be reviewed and promoted again.
     """
-    if not isinstance(repository, RecipeLifecycle):
-        raise ConfigurationError("Importing recipes requires a lifecycle-aware repository")
-    manifest, _, recipe, schema = verify_bundle(directory, parser_for, limits)
+    with entered_from("bundle"):  # shared input: it cannot switch capabilities on (ADR 0037)
+        if not isinstance(repository, RecipeLifecycle):
+            raise ConfigurationError("Importing recipes requires a lifecycle-aware repository")
+        manifest, _, recipe, schema = verify_bundle(directory, parser_for, limits)
+        require(model_capabilities(recipe))
     key = RecipeKey.for_source(
         manifest.source, schema, manifest.context, representation=manifest.representation
     )

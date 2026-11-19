@@ -13,6 +13,8 @@ from typing import Any, Literal
 
 from pydantic import ValidationError
 
+from rastro.application.capability_gate import CapabilityRefused, model_capabilities, require
+from rastro.application.operator_trust import entered_from
 from rastro.application.page_digest import digest_page
 from rastro.application.proposal_prompt import build_proposal_request, schema_hints
 from rastro.domain.intelligence import InferencePolicy, ModelError, ModelRequest, RecipeProposal
@@ -39,6 +41,11 @@ def parse_proposal(output: str, policy: InferencePolicy) -> Recipe:
     if len(output.encode()) > policy.max_response_bytes:
         raise ModelError("model_response_limit")
     recipe = RecipeProposal.model_validate(strict_json(output), strict=True).recipe()
+    try:
+        with entered_from("model"):  # model output cannot switch capabilities on (ADR 0037)
+            require(model_capabilities(recipe))
+    except CapabilityRefused:
+        raise ModelError("invalid_model_response") from None
     return check_untrusted_recipe(recipe)
 
 
