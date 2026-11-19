@@ -1,11 +1,12 @@
-# ADR 0036: capability first, with Scrapling's full access and crawl features
+# ADR 0036: capability first, using everything the acquisition engine can do
 
 Status: accepted, 2026-11-19. Amends ADR 0020, ADR 0024, ADR 0032 and ADR 0034 wherever they
 limit what an operator can scrape. Product needs N31, N32 and N40.
 
 ## Context
 
-Rastro fetches, parses and crawls through Scrapling. Scrapling 0.5 already provides proxy
+Rastro fetches, parses and crawls through engines behind strategy interfaces; Scrapling is the
+default engine today and another engine can replace or join it. Scrapling 0.5 already provides proxy
 rotation (`ProxyRotator`), Cloudflare Turnstile and interstitial solving (`solve_cloudflare`),
 browser impersonation and HTTP/3 in its HTTP sessions, persistent browser sessions, and a crawl
 engine without a page cap that pauses and resumes from checkpoints.
@@ -19,15 +20,15 @@ running work against that goal.
 
 ## Decision
 
-**Capability first.** Whatever Scrapling can do, Rastro lets the operator do, by default, from
+**Capability first.** Whatever the configured engine can do, Rastro lets the operator do, by default, from
 the CLI, the Python API and Studio:
 
 1. Proxy rotation over the operator's proxies, also in browser and stealth modes.
 2. Stealth rendering and Cloudflare challenge solving whenever the job asks for them.
-3. Crawls without a page cap (`max_pages = "unbounded"`), with Scrapling's checkpoints, resume,
+3. Crawls without a page cap (`max_pages = "unbounded"`), with the engine's checkpoints, resume,
    autothrottle and per-domain concurrency, stopped by the run time budget.
-4. Browser impersonation and HTTP/3 through Scrapling's HTTP sessions (decided in detail by the
-   N37 ADR).
+4. Browser impersonation and HTTP/3 through the engine's HTTP sessions (decided in detail by
+   the N37 ADR).
 5. Robots handling becomes an operator setting (`[acquisition] robots = "obey" | "ignore"`),
    default `obey`, like other crawlers. Persistent sessions and logins use the operator's
    secret store or browser profile.
@@ -47,6 +48,8 @@ job the operator wrote from reaching a public site:
 
 ## Consequences
 
+- Engine capabilities are exposed through Rastro's strategy interfaces, never as raw engine
+  options, so jobs and recipes do not depend on one engine.
 - Defaults change: the features above are on for jobs the operator writes; the opt-in
   switches remain only as trust boundaries for content that comes from elsewhere. Studio shows
   which capabilities a run used, and every run report lists them.
