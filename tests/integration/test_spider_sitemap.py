@@ -10,7 +10,9 @@ from urllib.parse import urlsplit
 
 import pytest
 
+from rastro.adapters.sqlite_dataset import SQLiteDatasetStore
 from rastro.application.acquisition import WebAcquirer
+from rastro.application.dataset_load import load_results
 from rastro.application.jobs import run_job
 from rastro.domain.acquisition import HttpResponse
 from rastro.domain.jobs import Job
@@ -274,3 +276,23 @@ def test_links_from_detail_pages_are_followed_past_the_sitemap():
     result, _ = run(spec, pages)
     assert [r.name for r in result.items] == ["Tango", "Salsa"]
     assert rows(result)[-1] == (2, "/evento/2", "fetched")
+
+
+def test_lone_surrogate_in_jsonld_is_replaced_and_both_records_are_stored(tmp_path):
+    # A broken emoji: the JSON escape of a high surrogate without its low half.
+    broken = '{"@context": "https://schema.org", "@type": "Event", "name": "Fiesta \\ud83d"}'
+    pages = {
+        "/sitemap.xml": (200, XML, urlset("/evento/1", "/evento/2")),
+        "/evento/1": (200, "text/html", f'<script type="application/ld+json">{broken}</script>'),
+        "/evento/2": event("Salsa \U0001f483"),
+    }
+    spec = job()
+    transport = Transport(pages)
+    acquirer = WebAcquirer(spec.acquisition, transport=transport, resolver=Resolver())
+    report = run_job(spec, acquisition=acquirer, base_dir=tmp_path)
+    assert report.results[0].status == Outcome.SUCCESS
+    store = SQLiteDatasetStore(tmp_path / "events.sqlite")
+    loaded = load_results(spec.dataset, ["name"], report, store)
+    assert loaded.sources[0].issues == ()
+    names = sorted(r.fields["name"] for r in store.records("events"))
+    assert names == ["Fiesta �", "Salsa \U0001f483"]

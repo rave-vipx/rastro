@@ -9,6 +9,7 @@ from typing import Literal
 from uuid import uuid4
 
 from pydantic import BaseModel, ValidationError
+from pydantic_core import PydanticSerializationError
 
 from rastro.application.drift import capture_snapshot
 from rastro.application.success_samples import capture_success
@@ -36,6 +37,7 @@ _INVALID = {
     "invalid_json",
     "invalid_record",
     "invalid_record_path",
+    "invalid_text",
 }
 
 
@@ -123,6 +125,12 @@ def extract_document[T: BaseModel](
                         message=safe_message(detail["type"], detail["msg"]),
                     )
                 )
+            rejected += 1
+            continue
+        try:
+            data.model_dump_json()  # e.g. a lone surrogate cannot be stored as UTF-8
+        except PydanticSerializationError:
+            issues.append(Issue(code="invalid_text", record_index=index))
             rejected += 1
             continue
         evidence = {

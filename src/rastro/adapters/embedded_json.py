@@ -20,7 +20,7 @@ def parse_embedded_json(
     if not values:
         return ParsedDocument((), (Issue(code="embedded_json_not_found"),))
     try:
-        payload = load_json(values[0], limits)
+        payload = load_json(values[0], limits, repair_text=True)
     except ValueError:
         return ParsedDocument((), (Issue(code="invalid_json"),))
     target = resolve_pointer(payload, recipe.record_path)

@@ -43,6 +43,7 @@ ISSUE_CODES = frozenset(
         "invalid_proxy_route",
         "invalid_record",
         "invalid_record_path",
+        "invalid_text",
         "invalid_redirect",
         "invalid_robots",
         "invalid_url",
