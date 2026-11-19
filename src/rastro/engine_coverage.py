@@ -1,0 +1,379 @@
+"""Engine capability map for Scrapling and static coverage inspection."""
+
+from __future__ import annotations
+
+import ast
+import importlib.util
+import pkgutil
+from pathlib import Path
+
+from rastro.domain.engine_map import EngineArea, EngineFeature, Surface
+
+__all__ = ["SCRAPLING_FEATURES", "inspect_scrapling_features", "render_engines_markdown"]
+
+
+def _row(
+    area: EngineArea, name: str, surface: Surface, where: str = "", docs: str = "", reason: str = ""
+) -> EngineFeature:
+    return EngineFeature(
+        engine="scrapling",
+        area=area,
+        name=name,
+        surface=surface,
+        where=where,
+        docs=docs,
+        reason=reason,
+    )
+
+
+def _int(area: EngineArea, prefix: str, names: str) -> tuple[EngineFeature, ...]:
+    return tuple(_row(area, f"{prefix}.{n}", "internal") for n in names.split())
+
+
+def _plan(area: EngineArea, prefix: str, names: str) -> tuple[EngineFeature, ...]:
+    return tuple(_row(area, f"{prefix}.{n}", "planned") for n in names.split())
+
+
+def _no(area: EngineArea, prefix: str, *items: tuple[str, str]) -> tuple[EngineFeature, ...]:
+    return tuple(_row(area, f"{prefix}.{n}", "not_exposed", reason=r) for n, r in items)
+
+
+def _exp(
+    area: EngineArea, prefix: str, surface: Surface, *items: tuple[str, str, str]
+) -> tuple[EngineFeature, ...]:
+    return tuple(_row(area, f"{prefix}.{n}", surface, w, d) for n, w, d in items)
+
+
+_ACQ_DEFAULTS = "docs/acquisition.md#policy-defaults"
+_ACQ_EGRESS = "docs/acquisition.md#network-egress"
+_ACQ_PERMS = "docs/acquisition.md#operator-permissions"
+_ACQ_REGION = "docs/acquisition.md#metrics-and-regional-behavior"
+_JOBS_EXAMPLE = "docs/jobs.md#complete-toml-example"
+
+SCRAPLING_FEATURES: tuple[EngineFeature, ...] = (
+    # Selector & SelectorsGeneration (parser & adaptive)
+    *_exp(
+        "parser",
+        "Selector",
+        "recipe_strategy",
+        ("css", '[recipe] strategy = "css"', "docs/api.md#recipe-variants"),
+    ),
+    *_exp(
+        "adaptive",
+        "Selector",
+        "recipe_strategy",
+        ("relocate", "rastro recipe repair", "docs/repair.md"),
+    ),
+    *_int(
+        "parser",
+        "Selector",
+        "attrib below_elements body children extract extract_first find find_all find_ancestor "
+        "get get_all_text getall has_class html_content iterancestors json next parent path "
+        "prettify previous re re_first siblings tag text urljoin xpath",
+    ),
+    *_plan(
+        "adaptive",
+        "Selector",
+        "find_by_regex find_by_text find_similar generate_css_selector generate_full_css_selector "
+        "generate_full_xpath_selector generate_xpath_selector",
+    ),
+    *_no(
+        "adaptive",
+        "Selector",
+        ("retrieve", "Rastro persists relocation fingerprints in its own recipe memory."),
+        ("save", "Rastro persists relocation fingerprints in its own recipe memory."),
+    ),
+    # RequestsSession (http & proxy)
+    *_exp(
+        "http",
+        "RequestsSession",
+        "job_key",
+        ("headers", "[[acquisition.auth]]", _ACQ_PERMS),
+        ("max_redirects", "[acquisition] max_redirects", _ACQ_DEFAULTS),
+        ("retries", "[acquisition] max_retries", _ACQ_DEFAULTS),
+        ("retry_delay", "[acquisition] backoff_seconds", _ACQ_DEFAULTS),
+        ("timeout", "[acquisition] request_timeout_seconds", _ACQ_DEFAULTS),
+    ),
+    *_exp(
+        "proxy",
+        "RequestsSession",
+        "job_key",
+        ("proxies", "[acquisition.egress_profiles]", _ACQ_EGRESS),
+        ("proxy", "[acquisition.egress_profiles.<name>] proxy_url", _ACQ_EGRESS),
+        ("proxy_auth", "[acquisition.egress_profiles.<name>] username_env", _ACQ_EGRESS),
+    ),
+    *_plan("proxy", "RequestsSession", "proxy_rotator"),
+    *_plan("http", "RequestsSession", "http3 impersonate"),
+    *_int("http", "RequestsSession", "follow_redirects selector_config stealthy_headers"),
+    *_no(
+        "http",
+        "RequestsSession",
+        ("cert", "Client TLS certificate paths are not accepted from job files."),
+        ("verify", "TLS verification is mandatory and cannot be disabled."),
+    ),
+    # PlaywrightSession & PlaywrightFetchParams (browser & proxy)
+    *_exp(
+        "browser",
+        "PlaywrightSession",
+        "job_key",
+        ("cookies", "[acquisition] session", "docs/acquisition.md#sessions"),
+        ("extra_headers", "[region] languages", _ACQ_REGION),
+        ("max_pages", "[acquisition] max_concurrency", _ACQ_DEFAULTS),
+        ("timeout", "[acquisition] request_timeout_seconds", _ACQ_DEFAULTS),
+    ),
+    *_exp(
+        "browser",
+        "PlaywrightFetchParams",
+        "job_key",
+        ("extra_headers", "[region] languages", _ACQ_REGION),
+        ("timeout", "[acquisition] request_timeout_seconds", _ACQ_DEFAULTS),
+    ),
+    *_plan(
+        "browser",
+        "PlaywrightSession",
+        "block_ads blocked_domains cdp_url disable_resources locale max_recorded_requests "
+        "network_idle pierce_shadow real_chrome record_requests timezone_id user_data_dir "
+        "wait wait_selector wait_selector_state",
+    ),
+    *_plan("proxy", "PlaywrightSession", "proxy proxy_rotator"),
+    *_plan(
+        "browser",
+        "PlaywrightFetchParams",
+        "blocked_domains disable_resources network_idle pierce_shadow wait wait_selector "
+        "wait_selector_state",
+    ),
+    *_plan("proxy", "PlaywrightFetchParams", "proxy"),
+    *_int(
+        "browser",
+        "PlaywrightSession",
+        "additional_args extra_flags google_search headless load_dom page_setup retries "
+        "retry_delay selector_config useragent",
+    ),
+    *_int("browser", "PlaywrightFetchParams", "google_search load_dom page_setup selector_config"),
+    *_no(
+        "browser",
+        "PlaywrightSession",
+        ("dns_over_https", "Browser DNS goes through Rastro's pinned host resolver rules."),
+        (
+            "executable_path",
+            "Arbitrary host binary paths are not accepted from jobs or bundles.",
+        ),
+        ("init_script", "Recipes are data; arbitrary JavaScript injection is never executed."),
+        ("page_action", "Recipes use declarative page steps instead of Python callables."),
+    ),
+    *_no(
+        "browser",
+        "PlaywrightFetchParams",
+        ("page_action", "Recipes use declarative page steps instead of Python callables."),
+    ),
+    # Spider (crawl)
+    *_exp(
+        "crawl",
+        "Spider",
+        "job_key",
+        ("allowed_domains", "[acquisition] allowed_hosts", _ACQ_DEFAULTS),
+        ("concurrent_requests", "[acquisition] max_concurrency", _ACQ_DEFAULTS),
+        ("download_delay", "[acquisition] min_interval_seconds", _ACQ_DEFAULTS),
+        ("max_blocked_retries", "[acquisition] max_retries", _ACQ_DEFAULTS),
+        ("name", "name", _JOBS_EXAMPLE),
+        ("start_urls", "[[sources]] url", _JOBS_EXAMPLE),
+    ),
+    *_exp("crawl", "Spider", "grant", ("robots_txt_obey", "--ignore-robots HOST", _ACQ_PERMS)),
+    *_plan(
+        "crawl",
+        "Spider",
+        "autothrottle_block_backoff autothrottle_enabled autothrottle_max_delay "
+        "autothrottle_start_delay autothrottle_target_concurrency concurrent_requests_per_domain "
+        "development_cache_dir development_mode",
+    ),
+    *_int(
+        "crawl",
+        "Spider",
+        "fp_include_headers fp_include_kwargs fp_keep_fragments log_file logging_date_format "
+        "logging_format logging_level",
+    ),
+    # Templates (crawl & convert)
+    *_plan("crawl", "templates", "crawler shopify sitemap"),
+    *_no(
+        "crawl",
+        "templates",
+        (
+            "feed",
+            "Rastro spiders start from HTML pages or XML sitemaps rather than syndication feeds.",
+        ),
+    ),
+    *_no(
+        "convert",
+        "templates",
+        (
+            "site_to_markdown",
+            "Rastro extracts typed records with provenance rather than full-site Markdown dumps.",
+        ),
+    ),
+    # MCP server tools (mcp)
+    *_exp(
+        "mcp",
+        "mcp",
+        "python_api",
+        (
+            "make_request",
+            "rastro.fetch",
+            "docs/api.md#adapters-fetch-and-load-your-own-records",
+        ),
+    ),
+    *_plan(
+        "mcp",
+        "mcp",
+        "browser_actions browser_extract browser_fetch browser_fetch_once browser_network_request "
+        "browser_network_requests browser_open browser_screenshot close_session list_sessions",
+    ),
+    *_no(
+        "mcp",
+        "mcp",
+        ("browser_evaluate", "Arbitrary JavaScript evaluation is never exposed to agents."),
+        (
+            "browser_load_state",
+            "Filesystem storage state paths are not exposed to MCP clients.",
+        ),
+        (
+            "browser_save_state",
+            "Filesystem storage state paths are not exposed to MCP clients.",
+        ),
+        ("open_request_session", "HTTP fetches go through Rastro's pinned policy acquirer."),
+        ("session_make_request", "HTTP fetches go through Rastro's pinned policy acquirer."),
+    ),
+)
+
+_TYPED_DICTS = frozenset({"RequestsSession", "PlaywrightSession", "PlaywrightFetchParams"})
+_AREA_TITLES: dict[EngineArea, str] = {
+    "parser": "Parser and selectors",
+    "adaptive": "Adaptive relocation and selector generation",
+    "http": "HTTP sessions",
+    "browser": "Browser sessions and controls",
+    "proxy": "Proxy egress and rotation",
+    "crawl": "Spider and crawl engine",
+    "convert": "Content conversion",
+    "mcp": "Agent browser tools (MCP)",
+    "stealth": "Stealth rendering",
+    "cli": "Command line",
+}
+
+
+def _scrapling_root() -> Path:
+    spec = importlib.util.find_spec("scrapling")
+    if spec is None or spec.origin is None:
+        raise RuntimeError("scrapling is not installed")
+    return Path(spec.origin).parent
+
+
+def _class_functions(tree: ast.Module, class_name: str) -> set[str]:
+    found: set[str] = set()
+    for node in tree.body:
+        if isinstance(node, ast.ClassDef) and node.name == class_name:
+            for item in node.body:
+                if isinstance(
+                    item, ast.FunctionDef | ast.AsyncFunctionDef
+                ) and not item.name.startswith("_"):
+                    found.add(f"{class_name}.{item.name}")
+                elif isinstance(item, ast.Assign):
+                    for target in item.targets:
+                        if isinstance(target, ast.Name) and not target.id.startswith("_"):
+                            found.add(f"{class_name}.{target.id}")
+    return found
+
+
+def _class_targets(tree: ast.Module, class_names: set[str]) -> set[str]:
+    found: set[str] = set()
+    for node in tree.body:
+        if isinstance(node, ast.ClassDef) and node.name in class_names:
+            for item in node.body:
+                if isinstance(item, ast.AnnAssign) and isinstance(item.target, ast.Name):
+                    if not item.target.id.startswith("_"):
+                        found.add(f"{node.name}.{item.target.id}")
+                elif isinstance(item, ast.Assign):
+                    for target in item.targets:
+                        if isinstance(target, ast.Name) and not target.id.startswith("_"):
+                            found.add(f"{node.name}.{target.id}")
+    return found
+
+
+def _mcp_tools(tree: ast.Module) -> set[str]:
+    tools: set[str] = set()
+    for node in ast.walk(tree):
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "add_tool"
+            and node.args
+            and isinstance(node.args[0], ast.Call)
+            and node.args[0].args
+            and isinstance(node.args[0].args[0], ast.Attribute)
+        ):
+            tools.add(f"mcp.{node.args[0].args[0].attr}")
+    return tools
+
+
+def _read_ast(root: Path, rel: str) -> ast.Module:
+    return ast.parse((root / rel).read_text(encoding="utf-8"))
+
+
+def inspect_scrapling_features() -> set[str]:
+    """Discover Scrapling's public features from source files without importing optional extras."""
+    root = _scrapling_root()
+    selector = _class_functions(_read_ast(root, "parser.py"), "Selector") | {
+        f"Selector.{name.split('.', 1)[1]}"
+        for name in _class_functions(_read_ast(root, "core/mixins.py"), "SelectorsGeneration")
+    }
+    templates = {
+        f"templates.{mod.name}"
+        for mod in pkgutil.iter_modules([str(root / "spiders" / "templates")])
+        if not mod.name.startswith("_")
+    }
+    return (
+        selector
+        | _class_targets(_read_ast(root, "engines/_browsers/_types.py"), set(_TYPED_DICTS))
+        | _class_targets(_read_ast(root, "spiders/spider.py"), {"Spider"})
+        | templates
+        | _mcp_tools(_read_ast(root, "core/ai/server.py"))
+    )
+
+
+def render_engines_markdown() -> str:
+    """Render ``docs/engines.md`` from ``SCRAPLING_FEATURES``."""
+    lines = [
+        "# Acquisition and parsing engines",
+        "",
+        "<!-- Generated from src/rastro/engine_coverage.py; edit SCRAPLING_FEATURES instead. -->",
+        "",
+        "Rastro fetches, renders, parses, relocates and crawls through engines behind strategy",
+        "interfaces (`rastro.ports`). Scrapling is the default engine today; another engine can",
+        "implement the same ports without changing jobs, recipes, Studio or the public Python API.",
+        "",
+        "## Scrapling capability map",
+        "",
+        "Every public feature of Scrapling is mapped below to the Rastro surface where users",
+        "meet it, marked `internal` when Rastro drives it behind a port, `planned` while its",
+        "surface is landing, or `not_exposed` with the security or architecture reason.",
+        "A continuous-integration test inspects the installed Scrapling package and fails if an",
+        "upgrade adds an unmapped feature.",
+        "",
+    ]
+    for area, title in _AREA_TITLES.items():
+        rows = [f for f in SCRAPLING_FEATURES if f.area == area]
+        if not rows:
+            continue
+        lines += [
+            f"### {title}",
+            "",
+            "| Engine feature | Surface | Rastro location or reason | Docs |",
+            "| --- | --- | --- | --- |",
+        ]
+        for row in rows:
+            default_note = "Used internally behind Rastro ports."
+            detail = f"`{row.where}`" if row.where else (row.reason or default_note)
+            target = row.docs.removeprefix("docs/")
+            doc_link = f"[{target}]({target})" if row.docs else "-"
+            cell = detail.replace("|", "\\|")
+            lines.append(f"| `{row.name}` | `{row.surface}` | {cell} | {doc_link} |")
+        lines.append("")
+    return "\n".join(lines)

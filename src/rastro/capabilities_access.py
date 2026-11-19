@@ -22,4 +22,14 @@ ACCESS_CAPABILITIES: tuple[Capability, ...] = (
         instead_of="driving Playwright or Selenium yourself",
         docs="docs/acquisition.md#javascript-pages",
     ),
+    Capability(
+        task="See how every engine feature maps to Rastro",
+        use="`docs/engines.md` and `rastro.engine_coverage.SCRAPLING_FEATURES` map each "
+        "Scrapling selector, HTTP, browser, spider, template and MCP feature to its Rastro "
+        "surface or the reason it is not exposed",
+        limits="Engine features reach jobs only through Rastro's strategy ports and policy gates, "
+        "never as raw passthrough options",
+        instead_of="calling Scrapling fetchers, sessions or browser tools directly",
+        docs="docs/engines.md#scrapling-capability-map",
+    ),
 )

@@ -83,6 +83,13 @@ What Rastro already does, for people and for AI coding agents. Use these before 
 - **Do not build:** driving Playwright or Selenium yourself
 - **Docs:** [acquisition.md#javascript-pages](acquisition.md#javascript-pages)
 
+### See how every engine feature maps to Rastro
+
+- **Use:** `docs/engines.md` and `rastro.engine_coverage.SCRAPLING_FEATURES` map each Scrapling selector, HTTP, browser, spider, template and MCP feature to its Rastro surface or the reason it is not exposed
+- **Limits:** Engine features reach jobs only through Rastro's strategy ports and policy gates, never as raw passthrough options
+- **Do not build:** calling Scrapling fetchers, sessions or browser tools directly
+- **Docs:** [engines.md#scrapling-capability-map](engines.md#scrapling-capability-map)
+
 ### Follow next-page links
 
 - **Use:** `[recipe.pagination] next = "a[rel=next]::attr(href)"`, `max_pages = 5`
