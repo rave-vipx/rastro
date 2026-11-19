@@ -24,13 +24,38 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      - name: Require the tagged commit to be on main
+      - name: Require the tagged commit to be on main or its release branch
         run: |
+          set -eu
+          case "$GITHUB_REF_NAME" in
+            v[0-9]*.[0-9]*.[0-9]*) ;;
+            *)
+              echo "::error::Tag $GITHUB_REF_NAME is not v<major>.<minor>.<patch>"
+              exit 1
+              ;;
+          esac
+          version="${GITHUB_REF_NAME#v}"
+          patch="${version##*.}"
+          line="release/${version%.*}"
           git fetch --no-tags origin main
-          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
-            echo "::error::Tagged commit $GITHUB_SHA is not on main"
+          if git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "Tagged commit $GITHUB_SHA is on main"
+            exit 0
+          fi
+          if [ "$patch" = "0" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME is a minor or major release: cut it from main"
             exit 1
           fi
+          if ! git fetch --no-tags origin \
+            "+refs/heads/$line:refs/remotes/origin/$line" 2>/dev/null; then
+            echo "::error::Patch tag $GITHUB_REF_NAME needs a commit on main or on $line"
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" "origin/$line"; then
+            echo "::error::Patch tag $GITHUB_REF_NAME needs commit $GITHUB_SHA on main or on $line"
+            exit 1
+          fi
+          echo "Tagged commit $GITHUB_SHA is on $line"
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           version: '0.13.1'
