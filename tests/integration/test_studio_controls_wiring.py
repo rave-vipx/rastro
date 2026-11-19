@@ -134,22 +134,26 @@ def test_auto_promote_toml_keeps_comments_and_refuses_bad_input(tmp_path: Path) 
     assert "stealth" not in text  # the session grant was on; the job never records it
 
 
-def test_stealth_job_without_session_grant_is_refused_not_downgraded(tmp_path: Path) -> None:
-    """N12: engine stealth without the grant fails explicitly; no plain-browser fallback."""
+def test_stealth_job_reaches_the_stealth_renderer_without_a_session_grant(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """ADR 0037: Studio runs the operator's own jobs, so stealth needs no grant; it is never
+    downgraded to a plain browser either."""
+    import rastro.adapters.scrapling_stealth as stealth
+    from rastro.domain.models import ConfigurationError
+
+    def built(self: object) -> None:
+        raise ConfigurationError("stealth renderer built")
+
+    monkeypatch.setattr(stealth.ScraplingStealth, "__init__", built)
     (tmp_path / "job.toml").write_text(STEALTH_JOB)
     client_cm, token = _client(tmp_path)
     with client_cm as client:
         client.headers["X-Studio-Token"] = token
-        assert client.get("/api/session").json() == {
-            "allow_stealth": False,
-            "locked_by_operator": False,
-        }
-        refused = post(client, "/api/extract", {"file": "job.toml"})
-        assert refused.status_code == 400
-        assert "allow-stealth" in refused.json()["message"]
-        assert client.get("/api/progress").json()["outcome"] == "failed"
-        health = post(client, "/api/health", {"file": "job.toml"}).json()
-        assert any("stopped with an error" in message for message in health["alerts"])
+        assert client.get("/api/session").json()["allow_stealth"] is False
+        response = post(client, "/api/extract", {"file": "job.toml"})
+        assert response.status_code == 400
+        assert response.json()["message"] == "stealth renderer built"
     assert (tmp_path / "job.toml").read_text() == STEALTH_JOB
 
 

@@ -1,29 +1,50 @@
 """Operator opt-in flags for every command (security audit H1, SEC-004/005/011).
 
-``--allow-remote``, ``--allow-egress``, ``--allow-env NAME`` and the network permissions
-``--allow-private-network``, ``--allow-port N`` and ``--ignore-robots HOST`` may appear before
-or after the subcommand (``rastro mcp --allow-remote``); they are hoisted to the root parser and
+``--allow-remote``, ``--allow-egress``, ``--allow-env NAME``, the network permissions
+``--allow-private-network``, ``--allow-port N`` and ``--ignore-robots HOST``, and the capability
+grants ``--allow-capability NAME`` and ``--allow-untrusted ORIGIN:NAME`` may appear before or
+after the subcommand (``rastro mcp --allow-remote``); they are hoisted to the root parser and
 apply process-wide, so Studio and MCP servers inherit them. A job file can never make
 Rastro start a local command; a command model comes only from operator configuration.
+``--allow-stealth`` is deprecated (ADR 0037): it prints a warning and grants stealth and
+challenge solving to untrusted origins only.
 """
 
 from __future__ import annotations
 
 import argparse
+import json
+import sys
 from typing import Any
 
 from rastro.application.operator_trust import (
+    STEALTH_ENV,
+    capability_names,
+    env_flag,
     env_hosts,
     env_names,
     env_ports,
     set_process_trust,
+    untrusted_grants,
 )
 from rastro.domain.model_trust import OperatorTrust
 
 _FLAGS = frozenset(
     {"--allow-remote", "--allow-egress", "--allow-stealth", "--allow-private-network"}
 )
-_VALUED = ("--allow-env", "--allow-port", "--ignore-robots")
+_VALUED = (
+    "--allow-env",
+    "--allow-port",
+    "--ignore-robots",
+    "--allow-capability",
+    "--allow-untrusted",
+)
+STEALTH_DEPRECATED = {
+    "warning": "deprecated_flag",
+    "message": "--allow-stealth is deprecated: your own jobs use stealth without it",
+    "hint": "Grant agent tools, bundles, registry recipes or model output one capability "
+    "with --allow-untrusted ORIGIN:stealth",
+}
 
 
 def add_trust_arguments(parser: argparse.ArgumentParser, *, root: bool = False) -> None:
@@ -43,7 +64,8 @@ def add_trust_arguments(parser: argparse.ArgumentParser, *, root: bool = False) 
     group.add_argument(
         "--allow-stealth",
         action="store_true",
-        help="Allow stealth browser rendering (also RASTRO_ALLOW_STEALTH=1)",
+        help="Deprecated: your own jobs need no grant; grants stealth and challenge solving "
+        "to untrusted origins (also RASTRO_ALLOW_STEALTH=1)",
         **default,
     )
     group.add_argument(
@@ -82,6 +104,22 @@ def add_trust_arguments(parser: argparse.ArgumentParser, *, root: bool = False) 
         "permission (repeatable; also RASTRO_IGNORE_ROBOTS)",
         **({"default": []} if root else default),
     )
+    group.add_argument(
+        "--allow-capability",
+        action="append",
+        metavar="NAME",
+        help="Let your own jobs use a grant-only capability such as cdp or real_chrome "
+        "(repeatable; also RASTRO_ALLOW_CAPABILITIES)",
+        **({"default": []} if root else default),
+    )
+    group.add_argument(
+        "--allow-untrusted",
+        action="append",
+        metavar="ORIGIN:NAME",
+        help="Let jobs from mcp, bundle, registry or model input use one capability, such as "
+        "mcp:stealth (repeatable; also RASTRO_ALLOW_UNTRUSTED)",
+        **({"default": []} if root else default),
+    )
 
 
 def hoist_trust_flags(argv: list[str]) -> list[str]:
@@ -114,6 +152,8 @@ def apply_trust(args: argparse.Namespace, argv: list[str]) -> OperatorTrust:
     head = argv[: argv.index("--")] if "--" in argv else argv
     if "--allow-remote" in head:
         args.allow_remote = True
+    if getattr(args, "allow_stealth", False) is True or env_flag(STEALTH_ENV):
+        print(json.dumps(STEALTH_DEPRECATED), file=sys.stderr)
     return set_process_trust(
         OperatorTrust(
             allow_remote=bool(getattr(args, "allow_remote", False)),
@@ -122,6 +162,8 @@ def apply_trust(args: argparse.Namespace, argv: list[str]) -> OperatorTrust:
             allow_private_network=bool(getattr(args, "allow_private_network", False)),
             allowed_ports=env_ports(getattr(args, "allow_port", None) or ()),
             ignore_robots=env_hosts(getattr(args, "ignore_robots", None) or ()),
+            operator_grants=capability_names(getattr(args, "allow_capability", None) or ()),
+            untrusted_capabilities=untrusted_grants(getattr(args, "allow_untrusted", None) or ()),
         )
     )
 

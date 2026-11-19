@@ -67,6 +67,13 @@ class AcquisitionPolicy(RedactedContract):
     allowed_hosts: tuple[str, ...] = Field(min_length=1, max_length=64)
     render: Literal["http", "browser", "stealth"] = "http"
     solve_challenges: bool = False
+    robots: Literal["obey", "ignore"] = Field(
+        default="obey",
+        exclude_if=lambda value: value == "obey",
+        description='"ignore" neither fetches nor enforces robots.txt for this job: the '
+        "operator asserts permission. Jobs from agent tools, bundles, registry recipes and "
+        "model output need the robots_ignore grant.",
+    )
     allow_http: bool = False
     session: bool = False
     max_concurrency: int = Field(default=4, ge=1, le=32)

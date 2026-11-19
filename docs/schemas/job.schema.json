@@ -155,6 +155,16 @@
           "title": "Request Timeout Seconds",
           "type": "number"
         },
+        "robots": {
+          "default": "obey",
+          "description": "\"ignore\" neither fetches nor enforces robots.txt for this job: the operator asserts permission. Jobs from agent tools, bundles, registry recipes and model output need the robots_ignore grant.",
+          "enum": [
+            "obey",
+            "ignore"
+          ],
+          "title": "Robots",
+          "type": "string"
+        },
         "session": {
           "default": false,
           "title": "Session",

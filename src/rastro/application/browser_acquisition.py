@@ -18,8 +18,8 @@ from rastro.application.acquisition_state import (
 from rastro.application.browser_policy import canonical_url, page_policy
 from rastro.application.browser_scroll_step import scroll_step
 from rastro.application.browser_sessions import SOURCE_SESSIONS
+from rastro.application.capability_gate import policy_capabilities, require
 from rastro.application.destinations import permitted_url, pin_destination
-from rastro.application.stealth_grant import require_stealth_grant
 from rastro.domain.acquisition import (
     AcquisitionError,
     AcquisitionPolicy,
@@ -44,12 +44,8 @@ class BrowserAcquirer(WebAcquirer):
         resolver: Resolver,
         allow_stealth: bool = False,
     ):
-        # First, before the renderer is looked at: no grant, no stealth browser (ADR 0034).
-        require_stealth_grant(
-            stealth=policy.render == "stealth",
-            solve_challenges=policy.solve_challenges,
-            allow=allow_stealth,
-        )
+        # First, before the renderer is looked at: no grant, no stealth browser (ADR 0037).
+        require(policy_capabilities(policy), allow_stealth=allow_stealth)
         if policy.egress_profiles:
             raise ConfigurationError("Browser modes do not support egress profiles")
         if policy.auth:

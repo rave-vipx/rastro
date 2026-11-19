@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from urllib.parse import urlsplit
 
-from rastro.application.stealth_grant import require_stealth_grant
+from rastro.application.capability_gate import require_capabilities
 from rastro.domain.acquisition import AcquisitionResult
 from rastro.domain.jobs import Job, UrlJobSource
 from rastro.domain.models import ConfigurationError, Representation, Source
@@ -17,6 +17,8 @@ if TYPE_CHECKING:
 
 
 def job_render_modes(job: Job) -> dict[str, str]:
+    """Each declared URL's render mode, after the job's capabilities pass for its origin."""
+    require_capabilities(job)  # first: no grant, no renderer or client
     modes: dict[str, str] = {}
     if job.acquisition is None:
         return modes
@@ -35,12 +37,6 @@ def job_render_modes(job: Job) -> dict[str, str]:
             raise ConfigurationError(
                 "Browser modes require HTML and direct egress without profiles"
             )
-    needed = set(modes.values())
-    if needed - {"http"}:
-        needed.add(job.acquisition.render)  # undeclared URLs, such as next pages, may use it
-    require_stealth_grant(
-        stealth="stealth" in needed, solve_challenges=job.acquisition.solve_challenges
-    )
     return modes
 
 

@@ -85,6 +85,7 @@ def classify(error: BaseException) -> dict[str, Any]:
         location = error.location
     elif isinstance(error, RastroError):
         message, location = str(error) or message, error.location
+        code = getattr(error, "error_code", code)  # such as capability_refused
     elif isinstance(error, OSError):
         code, message = "file_error", f"File could not be read: {error.strerror or 'I/O error'}"
     elif isinstance(error, ValueError):

@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from rastro.application.operator_trust import input_origin
 from rastro.domain.acquisition import AcquisitionResult, HttpResponse
 from rastro.domain.models import ConfigurationError, Outcome, Source
 
@@ -65,9 +66,9 @@ def test_load_job_file_forwards_allow_stealth(tmp_path, monkeypatch):
     with pytest.raises(_Stop):
         module.load_job_file(_job(tmp_path), allow_stealth=True)
     assert seen == [True]
-    # Without consent the shared port is refused up front, before run_job, with the same error.
+    # Untrusted input without a grant is refused up front, before run_job.
     for kwargs in ({"allow_stealth": False}, {}):
-        with pytest.raises(ConfigurationError, match="--allow-stealth"):
+        with input_origin("mcp"), pytest.raises(ConfigurationError, match="for mcp input: stealth"):
             module.load_job_file(_job(tmp_path), **kwargs)
     assert seen == [True]
 
@@ -115,10 +116,11 @@ async def test_repair_evidence_fetch_renders_with_stealth_consent(tmp_path, monk
     monkeypatch.setattr(http, "CurlTransport", lambda: transport)
     monkeypatch.setattr(dns, "SystemResolver", lambda: resolver)
     source = Source(url="https://example.com/")
-    with pytest.raises(ConfigurationError, match="--allow-stealth"):
-        await RepairContext.load(_job(tmp_path), False).document(1, source)
-    context = RepairContext.load(_job(tmp_path), False, allow_stealth=True)
-    assert await context.document(1, source) == "<p>Rendered</p>"
+    with input_origin("mcp"):
+        with pytest.raises(ConfigurationError, match="for mcp input: stealth"):
+            await RepairContext.load(_job(tmp_path), False).document(1, source)
+        context = RepairContext.load(_job(tmp_path), False, allow_stealth=True)
+        assert await context.document(1, source) == "<p>Rendered</p>"
     renderer.render.assert_awaited_once()
 
 
@@ -180,8 +182,9 @@ def test_default_mode_gets_a_client_and_consent(monkeypatch):
             "acquisition": {"allowed_hosts": ["example.com"], "render": "stealth"},
         }
     )
-    with pytest.raises(ConfigurationError, match="--allow-stealth"):
+    with input_origin("mcp"), pytest.raises(ConfigurationError, match="for mcp input: stealth"):
         job_render_modes(job)
+    assert job_render_modes(job) == {"https://example.com/a": "browser"}
 
 
 @pytest.mark.asyncio

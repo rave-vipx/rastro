@@ -305,11 +305,14 @@ def test_a_shared_page_counter_caps_scroll_steps_too():
 
 
 def test_scroll_never_changes_what_the_render_mode_grants():
-    """Scroll is a browser step: it builds no stealth renderer and asks for no grant."""
-    from rastro.application.stealth_grant import require_stealth_grant
+    """Scroll is a browser step: it requests no capability, so untrusted input may use it."""
+    from rastro.application.capability_gate import requested_capabilities, require_capabilities
+    from rastro.application.operator_trust import input_origin
 
     spec = scroll_job()
-    require_stealth_grant(stealth=spec.acquisition.render == "stealth", solve_challenges=False)
+    assert requested_capabilities(spec) == frozenset()
+    with input_origin("mcp"):
+        require_capabilities(spec)
     assert spec.acquisition.render == "browser" and not spec.acquisition.solve_challenges
 
 

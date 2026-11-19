@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock
 import pytest
 from pydantic import ValidationError
 
+from rastro.application.operator_trust import input_origin
 from rastro.domain.acquisition import (
     AcquisitionPolicy,
     AcquisitionResult,
@@ -128,7 +129,7 @@ def test_consent(changes, monkeypatch):
     from rastro.application.browser_acquisition import BrowserAcquirer
 
     monkeypatch.delenv("RASTRO_ALLOW_STEALTH", raising=False)
-    with pytest.raises(ConfigurationError, match="--allow-stealth"):
+    with input_origin("bundle"), pytest.raises(ConfigurationError, match="for bundle input"):
         BrowserAcquirer(
             AcquisitionPolicy(allowed_hosts=("example.com",), **changes),
             renderer=AsyncMock(),
@@ -382,11 +383,13 @@ async def test_sdk_stealth_consent(monkeypatch):
     acquisition.acquire.return_value = AcquisitionResult(
         "https://example.com/", "<p>Rendered</p>", Outcome.SUCCESS, None
     )
-    with pytest.raises(ConfigurationError, match="--allow-stealth"):
-        await run_job_async(job, acquisition=acquisition)
-    acquisition.acquire.assert_not_awaited()
-    result = await run_job_async(job, acquisition=acquisition, allow_stealth=True)
+    with input_origin("mcp"):
+        with pytest.raises(ConfigurationError, match="for mcp input: stealth"):
+            await run_job_async(job, acquisition=acquisition)
+        acquisition.acquire.assert_not_awaited()
+        result = await run_job_async(job, acquisition=acquisition, allow_stealth=True)
     assert result.job.status == "success"
+    assert (await run_job_async(job, acquisition=acquisition)).job.status == "success"
 
 
 def test_missing_browser_extra_checked_before_http_import(monkeypatch):
