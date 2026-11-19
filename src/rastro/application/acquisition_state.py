@@ -33,6 +33,7 @@ class _Host:
     cooldown: float = 0
     denied: bool = False
     interval: float = 0
+    slots: asyncio.Semaphore = field(default_factory=lambda: asyncio.Semaphore(1))
 
 
 @dataclass
