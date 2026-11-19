@@ -17,6 +17,24 @@ if TYPE_CHECKING:
 SCHEMA_NAME = r"^[a-z_][a-z0-9_]{0,62}$"
 
 
+def _v1(db: Connection[Any]) -> None:
+    from psycopg import sql
+
+    for table, key in (("dataset_records", "key"), ("dataset_sources", "source")):
+        db.execute(
+            sql.SQL(
+                'CREATE TABLE {} (dataset TEXT COLLATE "C", {} TEXT COLLATE "C", '
+                "payload TEXT NOT NULL, identity_hash TEXT NOT NULL, "
+                "PRIMARY KEY(dataset, identity_hash))"
+            ).format(sql.Identifier(table), sql.Identifier(key))
+        )
+
+
+MIGRATIONS: tuple[Callable[[Connection[Any]], None], ...] = (_v1,)
+SCHEMA_VERSION = len(MIGRATIONS)
+KNOWN_VERSIONS = tuple(range(1, SCHEMA_VERSION + 1))
+
+
 def safe[**P, T](operation: Callable[P, T]) -> Callable[P, T]:
     @wraps(operation)
     def call(*args: P.args, **kwargs: P.kwargs) -> T:
@@ -73,9 +91,13 @@ def _local(host: str) -> bool:
         return False
 
 
-def migrate(db: Connection[Any], schema: str, *, write: bool) -> None:
+def migrate(
+    db: Connection[Any], schema: str, *, write: bool, to: int = SCHEMA_VERSION
+) -> tuple[int, int]:
     from psycopg import sql
 
+    if isinstance(to, bool) or not isinstance(to, int) or to not in KNOWN_VERSIONS:
+        raise DatasetStorageError("Unknown PostgreSQL dataset schema version; migration refused")
     # Serialize schema creation and snapshot writers, including the initial empty schema.
     db.execute("SELECT pg_advisory_xact_lock(hashtext(%s))", ("rastro:" + schema,))
     if write:
@@ -86,15 +108,22 @@ def migrate(db: Connection[Any], schema: str, *, write: bool) -> None:
     elif db.execute("SELECT to_regclass(%s)", (schema + ".rastro_schema",)).fetchone() == (None,):
         raise DatasetNotFoundError("PostgreSQL dataset schema does not exist")
     versions = db.execute("SELECT version FROM rastro_schema").fetchall()
-    if (versions and versions != [(1,)]) or (not write and not versions):
+    if (
+        len(versions) > 1
+        or (versions and versions[0][0] not in KNOWN_VERSIONS)
+        or (not write and not versions)
+    ):
         raise DatasetStorageError("Foreign or newer PostgreSQL dataset schema; migration refused")
-    if not versions:
-        for table, key in (("dataset_records", "key"), ("dataset_sources", "source")):
-            db.execute(
-                sql.SQL(
-                    'CREATE TABLE {} (dataset TEXT COLLATE "C", {} TEXT COLLATE "C", '
-                    "payload TEXT NOT NULL, identity_hash TEXT NOT NULL, "
-                    "PRIMARY KEY(dataset, identity_hash))"
-                ).format(sql.Identifier(table), sql.Identifier(key))
-            )
-        db.execute("INSERT INTO rastro_schema VALUES (1)")
+    current = int(versions[0][0]) if versions else 0
+    if not write:
+        return current, current
+    if to < current:
+        raise DatasetStorageError(
+            "PostgreSQL dataset schema migrations are forward-only; downgrade refused"
+        )
+    if current < to:
+        for step in MIGRATIONS[current:to]:
+            step(db)
+        db.execute("DELETE FROM rastro_schema")
+        db.execute("INSERT INTO rastro_schema VALUES (%s)", (to,))
+    return current, to

@@ -1,6 +1,6 @@
-"""OBS-003: transactional forward-only migrations adding ``run_metrics`` (v3) and its
-per-source rejection and cap columns (v4, N5)."""
+"""OBS-003: transactional forward-only migrations for ``run_metrics`` (v3 and v4)."""
 
+import json
 import os
 import sqlite3
 from contextlib import closing
@@ -8,9 +8,12 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
+from rastro.adapters import postgres_schema
 from rastro.adapters.sqlite_dataset import SQLiteDatasetStore
+from rastro.adapters.sqlite_dataset_admin import migrate_dataset
 from rastro.adapters.sqlite_dataset_schema import APPLICATION_ID, SCHEMA_VERSION, migrate
-from rastro.domain.dataset import DatasetStorageError
+from rastro.cli import main
+from rastro.domain.dataset import DatasetNotFoundError, DatasetStorageError
 from rastro.domain.metrics import RunMetric
 from tests.contracts.test_dataset_validators_migration import v1
 from tests.integration.test_sqlite_dataset import record
@@ -185,3 +188,62 @@ def test_an_aborted_v3_to_v4_migration_leaves_schema_3(tmp_path):
         columns = {r[1] for r in db.execute("PRAGMA table_info(run_metrics)")}
         assert "rejected" not in columns
     assert SQLiteDatasetStore(path).run_metrics("d")[0].rejected is None
+
+
+def test_migrate_v3_to_v4_preserves_records(tmp_path, capsys):
+    path = tmp_path / "d.sqlite"
+    status = to_v3(path)
+    assert main(["dataset", "migrate", str(path), "--to", "4"]) == 0
+    first = json.loads(capsys.readouterr().out)
+    assert (first["from_version"], first["to_version"], first["migrated"]) == (3, 4, True)
+    with closing(sqlite3.connect(path)) as db:
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 4
+    store = SQLiteDatasetStore(path)
+    assert store.records("agenda")[0].fields == record().fields
+    assert store.source_status("d") == (status,)
+    [old] = store.run_metrics("d")
+    assert (old.run_id, old.records, old.rejected) == ("old", 2, None)
+    assert main(["dataset", "migrate", str(path), "--to", "4"]) == 0
+    second = json.loads(capsys.readouterr().out)
+    assert (second["from_version"], second["to_version"], second["migrated"]) == (4, 4, False)
+    v09_path = tmp_path / "v09.sqlite"
+    v09_store = SQLiteDatasetStore(v09_path)
+    obs = record(source="https://a.example/", at=NOW)
+    v09_store.apply_snapshot("agenda", "https://a.example/", [obs], complete=True, observed_at=NOW)
+    assert main(["dataset", "migrate", str(v09_path)]) == 0
+    v09_out = json.loads(capsys.readouterr().out)
+    assert (v09_out["from_version"], v09_out["to_version"], v09_out["migrated"]) == (4, 4, False)
+    assert v09_store.records("agenda")[0].fields == obs.fields
+    step_path = tmp_path / "step.sqlite"
+    v1(step_path)
+    for before, target in ((1, 2), (2, 3), (3, 4)):
+        assert main(["dataset", "migrate", str(step_path), "--to", str(target)]) == 0
+        out = json.loads(capsys.readouterr().out)
+        assert (out["from_version"], out["to_version"], out["migrated"]) == (before, target, True)
+    assert SQLiteDatasetStore(step_path).records("agenda")[0].fields == record().fields
+
+
+def test_migrate_refuses_unknown_version(tmp_path):
+    path = tmp_path / "d.sqlite"
+    to_v3(path)
+    before = path.read_bytes()
+    for target in ("0", "5", "99", "-1"):
+        assert main(["dataset", "migrate", str(path), "--to", target]) == 2
+        assert path.read_bytes() == before
+    with closing(sqlite3.connect(path, isolation_level=None)) as db:
+        for bad in (0, 5, 99, -1, True):
+            with pytest.raises(DatasetStorageError):
+                migrate(db, to=bad)  # type: ignore[arg-type]
+    with pytest.raises(DatasetStorageError):
+        postgres_schema.migrate(object(), "rastro", write=True, to=99)  # type: ignore[arg-type]
+    with pytest.raises(DatasetNotFoundError):
+        migrate_dataset(tmp_path / "missing.sqlite")
+    assert main(["dataset", "migrate", str(path), "--to", "4"]) == 0
+    v4_bytes = path.read_bytes()
+    assert main(["dataset", "migrate", str(path), "--to", "3"]) == 2
+    assert path.read_bytes() == v4_bytes
+    with closing(sqlite3.connect(path)) as db:
+        db.execute("PRAGMA user_version = 99")
+    unknown_bytes = path.read_bytes()
+    assert main(["dataset", "migrate", str(path)]) == 2
+    assert path.read_bytes() == unknown_bytes

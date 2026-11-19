@@ -6,6 +6,8 @@ import sys
 from pathlib import Path
 
 from rastro.adapters.sqlite_dataset import SQLiteDatasetStore
+from rastro.adapters.sqlite_dataset_admin import migrate_dataset
+from rastro.adapters.sqlite_dataset_schema import SCHEMA_VERSION
 from rastro.adapters.sqlite_drift import SQLiteDriftMonitor
 from rastro.application.dataset_load import stale_sources
 from rastro.application.errors import RunInProgressError
@@ -20,6 +22,7 @@ from rastro.domain.models import ConfigurationError
 _DATASET_HELP = {
     "export": "Print a dataset's records as JSON, JSONL or an HTML table",
     "status": "Show each source's freshness and last load",
+    "migrate": "Migrate a dataset SQLite file forward to a schema version",
 }
 
 
@@ -59,6 +62,14 @@ def add_commands(subcommands: argparse._SubParsersAction, jobs: argparse._SubPar
             parser.add_argument(
                 "--timezone", default="UTC", help="IANA timezone that decides today"
             )
+    migrate = commands.add_parser("migrate", help=_DATASET_HELP["migrate"])
+    migrate.add_argument("path", type=Path, help="Dataset SQLite file")
+    migrate.add_argument(
+        "--to",
+        type=int,
+        default=SCHEMA_VERSION,
+        help="Target dataset schema version",
+    )
 
 
 def load_job_command(args: argparse.Namespace) -> int:
@@ -85,6 +96,9 @@ def dataset_command(args: argparse.Namespace) -> int:
             location="path",
             hint="Create it with `rastro job load <job file>` or check the path",
         )
+    if args.dataset_command == "migrate":
+        print(json.dumps(migrate_dataset(args.path, to=args.to), indent=2, ensure_ascii=True))
+        return 0
     store = SQLiteDatasetStore(args.path)
     names = store.dataset_names()
     if args.dataset is None:

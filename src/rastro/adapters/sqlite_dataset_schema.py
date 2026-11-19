@@ -39,8 +39,6 @@ def safe[**P, T](operation: Callable[P, T]) -> Callable[P, T]:
 
 
 APPLICATION_ID = 0x52534453  # RSDS
-SCHEMA_VERSION = 4
-KNOWN_VERSIONS = (1, 2, 3, SCHEMA_VERSION)
 
 CREATE_TABLE = (
     "CREATE TABLE IF NOT EXISTS run_metrics (id INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -50,10 +48,9 @@ CREATE_TABLE = (
     "retries INTEGER NOT NULL, bytes INTEGER NOT NULL, network_seconds REAL NOT NULL, "
     "processing_seconds REAL NOT NULL, render_seconds REAL NOT NULL, model_calls INTEGER NOT NULL, "
     "model_tokens INTEGER NOT NULL, records INTEGER NOT NULL, required_fields_ok INTEGER NOT NULL, "
-    "fields_validated INTEGER NOT NULL, rejected INTEGER, cap TEXT, cap_value INTEGER, "
-    "requested_url TEXT)"
+    "fields_validated INTEGER NOT NULL)"
 )
-# Schema 4 (N5): nullable, so schema 3 rows keep "not recorded" rather than a made-up 0.
+# Schema 4: nullable, so schema 3 rows keep "not recorded" rather than a made-up 0.
 ADDED_COLUMNS = (
     ("rejected", "INTEGER"),
     ("cap", "TEXT"),
@@ -74,12 +71,6 @@ def _markers(db: sqlite3.Connection) -> tuple[int, int]:
     )
 
 
-def check_schema(db: sqlite3.Connection) -> None:
-    """Reads accept schema 1 to 4 as they are; only the write path migrates forward."""
-    if _markers(db) not in {(v, APPLICATION_ID) for v in KNOWN_VERSIONS}:
-        raise DatasetStorageError("Foreign or newer database; dataset read refused")
-
-
 def has_validators(db: sqlite3.Connection) -> bool:
     """Whether the validators table exists (schema 1 files have none until written)."""
     return (
@@ -93,42 +84,77 @@ def metric_columns(db: sqlite3.Connection) -> set[str]:
     return {row[1] for row in db.execute("PRAGMA table_info(run_metrics)")}
 
 
-def migrate(db: sqlite3.Connection) -> None:
-    """Initialize within the caller's transaction; never commit independently."""
-    version, app = _markers(db)
-    if (version, app) == (SCHEMA_VERSION, APPLICATION_ID):
-        return
-    if app != APPLICATION_ID or version not in KNOWN_VERSIONS:
-        if version or app or db.execute("SELECT 1 FROM sqlite_master LIMIT 1").fetchone():
-            raise DatasetStorageError("Foreign or newer database; dataset migration refused")
-        db.execute(
-            "CREATE TABLE dataset_records (dataset TEXT, key TEXT, payload TEXT NOT NULL, "
-            "PRIMARY KEY(dataset, key)) WITHOUT ROWID"
-        )
-        db.execute(
-            "CREATE TABLE dataset_sources (dataset TEXT, source TEXT, payload TEXT NOT NULL, "
-            "PRIMARY KEY(dataset, source)) WITHOUT ROWID"
-        )
-        version = 0
-    if version < 2:
-        db.execute(
-            "CREATE TABLE dataset_validators (dataset TEXT, source TEXT, origin TEXT NOT NULL, "
-            "observed_at TEXT NOT NULL, payload TEXT NOT NULL, "
-            "PRIMARY KEY(dataset, source)) WITHOUT ROWID"
-        )
+def _v1(db: sqlite3.Connection) -> None:
+    db.execute(
+        "CREATE TABLE dataset_records (dataset TEXT, key TEXT, payload TEXT NOT NULL, "
+        "PRIMARY KEY(dataset, key)) WITHOUT ROWID"
+    )
+    db.execute(
+        "CREATE TABLE dataset_sources (dataset TEXT, source TEXT, payload TEXT NOT NULL, "
+        "PRIMARY KEY(dataset, source)) WITHOUT ROWID"
+    )
+
+
+def _v2(db: sqlite3.Connection) -> None:
+    db.execute(
+        "CREATE TABLE IF NOT EXISTS dataset_validators (dataset TEXT, source TEXT, "
+        "origin TEXT NOT NULL, observed_at TEXT NOT NULL, payload TEXT NOT NULL, "
+        "PRIMARY KEY(dataset, source)) WITHOUT ROWID"
+    )
+
+
+def _v3(db: sqlite3.Connection) -> None:
     db.execute(CREATE_TABLE)  # schema 3 (OBS-003)
+    db.execute(CREATE_INDEX)
+
+
+def _v4(db: sqlite3.Connection) -> None:
+    _v2(db)
+    _v3(db)
     present = metric_columns(db)
-    for name, kind in ADDED_COLUMNS:  # schema 4 (N5)
+    for name, kind in ADDED_COLUMNS:
         if name not in present:
             db.execute(f"ALTER TABLE run_metrics ADD COLUMN {name} {kind}")
     db.execute(CREATE_INDEX)
+
+
+# Index i migrates schema i to schema i + 1. Never reorder released steps.
+MIGRATIONS: tuple[Callable[[sqlite3.Connection], None], ...] = (_v1, _v2, _v3, _v4)
+SCHEMA_VERSION = len(MIGRATIONS)
+KNOWN_VERSIONS = tuple(range(1, SCHEMA_VERSION + 1))
+
+
+def check_schema(db: sqlite3.Connection) -> None:
+    """Reads accept schema 1 to 4 as they are; only the write path migrates forward."""
+    if _markers(db) not in {(v, APPLICATION_ID) for v in KNOWN_VERSIONS}:
+        raise DatasetStorageError("Foreign or newer database; dataset read refused")
+
+
+def migrate(db: sqlite3.Connection, *, to: int = SCHEMA_VERSION) -> tuple[int, int]:
+    """Migrate forward within the caller's transaction; never commit independently."""
+    if isinstance(to, bool) or not isinstance(to, int) or to not in KNOWN_VERSIONS:
+        raise DatasetStorageError("Unknown dataset schema version; dataset migration refused")
+    version, app = _markers(db)
+    if (version, app) == (to, APPLICATION_ID):
+        return version, to
+    if app != APPLICATION_ID or version not in KNOWN_VERSIONS:
+        if version or app or db.execute("SELECT 1 FROM sqlite_master LIMIT 1").fetchone():
+            raise DatasetStorageError("Foreign or newer database; dataset migration refused")
+        version = 0
+    if to < version:
+        raise DatasetStorageError("Dataset schema migrations are forward-only; downgrade refused")
+    for step in MIGRATIONS[version:to]:
+        step(db)
     db.execute(f"PRAGMA application_id = {APPLICATION_ID}")
-    db.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
+    db.execute(f"PRAGMA user_version = {to}")
+    return version, to
 
 
 @contextmanager
-def _transaction(path: Path, limits: Limits, *, write: bool) -> Iterator[sqlite3.Connection]:
-    """Reads open read-only and never migrate; writes create and migrate v1 -> v2."""
+def _transaction(
+    path: Path, limits: Limits, *, write: bool, auto_migrate: bool = True
+) -> Iterator[sqlite3.Connection]:
+    """Reads open read-only and never migrate; writes create and migrate forward."""
     mode = "rwc" if write else "ro"
     with closing(
         sqlite3.connect(f"{path.as_uri()}?mode={mode}", uri=True, timeout=5, isolation_level=None)
@@ -139,7 +165,8 @@ def _transaction(path: Path, limits: Limits, *, write: bool) -> Iterator[sqlite3
         try:
             if write:
                 db.execute("PRAGMA secure_delete = ON")
-                migrate(db)
+                if auto_migrate:
+                    migrate(db)
             else:
                 check_schema(db)
             yield db
@@ -150,7 +177,9 @@ def _transaction(path: Path, limits: Limits, *, write: bool) -> Iterator[sqlite3
 
 
 @contextmanager
-def connection(path: Path, limits: Limits, *, write: bool = False) -> Iterator[sqlite3.Connection]:
+def connection(
+    path: Path, limits: Limits, *, write: bool = False, auto_migrate: bool = True
+) -> Iterator[sqlite3.Connection]:
     if any(p.is_symlink() for p in (path, *path.parents)):
         raise DatasetStorageError("Dataset paths must not contain symlinks")
     with ExitStack() as cleanup:
@@ -161,7 +190,7 @@ def connection(path: Path, limits: Limits, *, write: bool = False) -> Iterator[s
             create_private(target)
         else:
             restrict(path)
-        with _transaction(target, limits, write=write) as db:
+        with _transaction(target, limits, write=write, auto_migrate=auto_migrate) as db:
             yield db
         if target != path:
             try:

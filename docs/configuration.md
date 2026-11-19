@@ -678,7 +678,7 @@ Per-source throughput, latency, error rate, freshness and coverage. Docs: [jobs.
 | Flag | Value | Default | Choices | Description |
 | --- | --- | --- | --- | --- |
 | `FILE` | Path | required |  | Job file (.toml or .json) |
-| `--since` | value | - |  | Only runs finished within this window, e.g. 7d or 12h |
+| `--since` | value | - |  | Only runs finished within this window, e.g. 7d, 12h or 30m |
 | `--by` | value | `"source"` | one of source, host, strategy, day | Grouping (default source) |
 | `--allow-absolute-paths` | flag | - |  | Allow absolute paths in the job file |
 
@@ -729,6 +729,15 @@ Show each source's freshness and last load. Docs: [dataset.md#load-inspect-and-e
 | `PATH` | Path | required |  | Dataset SQLite file |
 | `--dataset` | value | - |  | Dataset name (required if file contains multiple datasets) |
 | `--format` | value | `"json"` | one of json, jsonl | Output format |
+
+### `rastro dataset migrate`
+
+Migrate a dataset SQLite file forward to a schema version. Docs: [dataset.md#load-inspect-and-export-a-job](dataset.md#load-inspect-and-export-a-job).
+
+| Flag | Value | Default | Choices | Description |
+| --- | --- | --- | --- | --- |
+| `PATH` | Path | required |  | Dataset SQLite file |
+| `--to` | int | `4` |  | Target dataset schema version |
 
 ### `rastro health`
 

@@ -10,7 +10,12 @@ OPS_CAPABILITIES: tuple[Capability, ...] = (
         use='`[dataset] path = "data.sqlite"`, `identity = ["field"]`; `backend = "postgres"` '
         "with `dsn_env`. Loads track new, changed, unchanged and missing records",
         python=_names("load_job_file forget_job_source JobLoadResult LoadedSource JobRecordData"),
-        cli=("rastro job load", "rastro dataset status", "rastro job forget-source"),
+        cli=(
+            "rastro job load",
+            "rastro dataset status",
+            "rastro dataset migrate",
+            "rastro job forget-source",
+        ),
         mcp=_names("job_load dataset_records"),
         limits="Only approved fields with evidence are stored; partial runs never delete rows",
         instead_of="your own upsert or dedup-by-key table for scraped records",

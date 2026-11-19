@@ -31,7 +31,8 @@ _MEDIA_TYPES: dict[str, str] = {"html": "text/html", "json": "application/json"}
 
 @dataclass(frozen=True)
 class Fetched:
-    """One fetch: ``body`` is the decoded document, or None when ``status`` is not success.
+    """One fetch: ``body`` (also ``text``) is the decoded document, or None when ``status`` is not
+    success.
 
     ``url`` is the final URL after any permitted redirect. ``media_type`` names the
     representation that was validated (``text/html`` or ``application/json``) and is None
@@ -43,6 +44,11 @@ class Fetched:
     body: str | None
     media_type: str | None
     issues: tuple[Issue, ...] = ()
+
+    @property
+    def text(self) -> str | None:
+        """The decoded document text (alias for ``body``), or None on failure."""
+        return self.body
 
 
 def fetch(
