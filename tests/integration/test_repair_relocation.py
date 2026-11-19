@@ -23,7 +23,7 @@ from rastro.mocklab.mutations.html_content import HtmlChangeClasses
 from rastro.mocklab.mutations.html_structure import HtmlWrapElement
 from rastro.mocklab.mutations.plan import MutationPlan
 
-SAMPLE = Path(__file__).parents[2] / "examples/uy-dance-agenda/sample"
+SAMPLE = Path(__file__).parents[2] / "examples/event-agenda/sample"
 
 
 @pytest.mark.asyncio
@@ -35,7 +35,7 @@ async def test_relocation_candidate_recovers_moved_node_and_is_promoted_only_abo
     schema = build_job_schema(job.fields)
     recipe = job.sources[0].recipe
     source = Source(url=job.sources[0].url, **job.region.model_dump())
-    html = (SAMPLE / "sodre-cartelera.html").read_text(encoding="utf-8")
+    html = (SAMPLE / "teatro-central-cartelera.html").read_text(encoding="utf-8")
     parser, adapter, limits = ScraplingParser(), ScraplingRelocation(), Limits()
     before = extract_document(
         html, source=source, schema=schema, recipe=recipe, parser=parser, limits=limits

@@ -17,11 +17,11 @@ from tests.unit.test_recipe_registry import _parser_for, _write_sample_bundle
 
 TODAY = date(2026, 11, 15)
 AT = datetime(2026, 11, 20, tzinfo=UTC)
-SODRE = "sodre.gub.uy"
+AGENDA_HOST = "agenda.example"
 
 
 def _published(tmp_path: Path, **compat: object) -> Path:
-    settings = {"min_rastro": "0.7.0", "source_patterns": (SODRE,), **compat}
+    settings = {"min_rastro": "0.7.0", "source_patterns": (AGENDA_HOST,), **compat}
     bundle = _write_sample_bundle(
         tmp_path / "bundle",
         tmp_path,
@@ -36,7 +36,7 @@ def _install(registry: Path, tmp_path: Path, **kwargs: object):
     repo = SQLiteRecipeRepository(tmp_path / "recipes.sqlite")
     return install_from_registry(
         registry,
-        "uy-sodre-agenda",
+        "teatro-central-agenda",
         repo,
         _parser_for,
         at=AT,
@@ -69,18 +69,18 @@ def test_install_refuses_source_outside_bundle_patterns(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     ("url", "patterns", "expected"),
     [
-        ("https://sodre.gub.uy/espectaculos/", ("sodre.gub.uy",), True),
-        ("https://SODRE.gub.uy/x", ("sodre.gub.uy",), True),
-        ("https://sodre.gub.uy/espectaculos/", ("sodre.gub.uy/espectaculos",), True),
-        ("https://sodre.gub.uy/espectaculos/2026", ("sodre.gub.uy/espectaculos",), True),
-        ("https://sodre.gub.uy/espectaculos2", ("sodre.gub.uy/espectaculos",), False),
-        ("https://sodre.gub.uy/agenda", ("sodre.gub.uy/espectaculos",), False),
-        ("https://evil.example/sodre.gub.uy", ("sodre.gub.uy",), False),
-        ("https://sodre.gub.uy.evil.example/", ("sodre.gub.uy",), False),
-        ("https://sodre.gub.uy:8443/", ("sodre.gub.uy",), False),
-        ("https://sodre.gub.uy:8443/a", ("sodre.gub.uy:8443/a",), True),
-        ("https://user:pw@sodre.gub.uy/", ("sodre.gub.uy",), True),
-        ("https://sodre.gub.uy/", ("other.example", "sodre.gub.uy"), True),
+        ("https://agenda.example/espectaculos/", ("agenda.example",), True),
+        ("https://AGENDA.example/x", ("agenda.example",), True),
+        ("https://agenda.example/espectaculos/", ("agenda.example/espectaculos",), True),
+        ("https://agenda.example/espectaculos/2026", ("agenda.example/espectaculos",), True),
+        ("https://agenda.example/espectaculos2", ("agenda.example/espectaculos",), False),
+        ("https://agenda.example/agenda", ("agenda.example/espectaculos",), False),
+        ("https://evil.example/agenda.example", ("agenda.example",), False),
+        ("https://agenda.example.evil.example/", ("agenda.example",), False),
+        ("https://agenda.example:8443/", ("agenda.example",), False),
+        ("https://agenda.example:8443/a", ("agenda.example:8443/a",), True),
+        ("https://user:pw@agenda.example/", ("agenda.example",), True),
+        ("https://agenda.example/", ("other.example", "agenda.example"), True),
     ],
 )
 def test_source_matches_host_or_path_prefix(
@@ -93,7 +93,7 @@ def test_check_compatibility_skips_manifests_without_compatibility() -> None:
     manifest = BundleManifest.model_validate(
         {
             "format_version": 1,
-            "source": {"url": "https://sodre.gub.uy/"},
+            "source": {"url": "https://agenda.example/"},
             "context": {},
             "representation": "html",
             "last_verified": "2026-01-01",
@@ -127,7 +127,7 @@ def test_failed_index_write_removes_only_the_new_package_and_allows_retry(
     registry = tmp_path / "registry"
     first = _write_sample_bundle(tmp_path / "b1", tmp_path, version="1.0.0")
     publish_to_registry(first, registry, _parser_for, today=TODAY)
-    kept = registry / "recipes/uy-sodre-agenda/1.0.0"
+    kept = registry / "recipes/teatro-central-agenda/1.0.0"
     index_before = (registry / "index.json").read_bytes()
 
     second = _write_sample_bundle(tmp_path / "b2", tmp_path, version="1.1.0")
@@ -138,7 +138,7 @@ def test_failed_index_write_removes_only_the_new_package_and_allows_retry(
     monkeypatch.setattr("rastro.application.recipe_registry.write_index_atomic", disk_full)
     with pytest.raises(RegistryError, match="nothing was published"):
         publish_to_registry(second, registry, _parser_for, today=TODAY)
-    assert not (registry / "recipes/uy-sodre-agenda/1.1.0").exists()
+    assert not (registry / "recipes/teatro-central-agenda/1.1.0").exists()
     assert kept.is_dir()
     assert (registry / "index.json").read_bytes() == index_before
 
@@ -155,4 +155,4 @@ def test_printed_git_commands_quote_the_registry_path(tmp_path: Path) -> None:
         words = shlex.split(command)
         assert words[:2] == ["git", "-C"]
         assert words[2] == str(registry)
-    assert shlex.split(published.git_commands[1])[-1] == "Publish uy-sodre-agenda 1.0.0"
+    assert shlex.split(published.git_commands[1])[-1] == "Publish teatro-central-agenda 1.0.0"

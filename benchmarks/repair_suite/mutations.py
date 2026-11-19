@@ -13,7 +13,7 @@ from rastro.mocklab.mutations.html_structure import HtmlWrapElement
 from rastro.mocklab.mutations.plan import MutationPlan
 
 SALE = "2026-11-01T10:00:00-03:00"
-VENUE = "Auditorio Nelly Goitiño"
+VENUE = "Teatro Central"
 Transform = Callable[[str], str]
 
 
@@ -91,12 +91,12 @@ _EMPTY_MAIN: Transform = lambda html: re.sub(  # noqa: E731
 )
 _EMPTY_LD = _jsonld(lambda _events: [])
 
-SODRE_CARD = ".cyg--info.espectaculo"
-SODRE = (
+VENUE_CARD = ".cyg--info.espectaculo"
+VENUE_CARDS = (
     Case(
         "container_class_rename",
         "structural",
-        _plan(_classes(SODRE_CARD, rename={"espectaculo": "show-card"})),
+        _plan(_classes(VENUE_CARD, rename={"espectaculo": "show-card"})),
     ),
     Case("wrapper_around_list", "structural", _plan(_wrap("main.cartelera"))),
     Case(
@@ -116,7 +116,7 @@ SODRE = (
         "container_and_field_rename",
         "structural",
         _plan(
-            _classes(SODRE_CARD, rename={"espectaculo": "show-card"}),
+            _classes(VENUE_CARD, rename={"espectaculo": "show-card"}),
             _classes("time.cyg--dia", rename={"cyg--dia": "cyg--fecha"}),
         ),
     ),
@@ -188,7 +188,7 @@ ZITA = (
     Case(
         "title_selector_hits_venue",
         "trap",
-        _sub(r"<h3>([^<]+)</h3>", r"<h4>\1</h4><h3>Sala Zitarrosa</h3>"),
+        _sub(r"<h3>([^<]+)</h3>", r"<h4>\1</h4><h3>Sala Norte</h3>"),
     ),
     Case("container_matches_promos", "trap", _plan(_classes(".evento-promo", add=("evento",)))),
     Case("page_emptied", "trap", _EMPTY_MAIN),
@@ -202,4 +202,4 @@ TICK = (
     Case("page_emptied", "trap", _EMPTY_LD),
 )
 
-CASES = {"sodre": SODRE, "tickantel": TICK, "zitarrosa": ZITA}
+CASES = {"venue-cards": VENUE_CARDS, "jsonld-events": TICK, "list-events": ZITA}

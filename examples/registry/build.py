@@ -1,4 +1,4 @@
-"""Rebuild the synthetic N6 registry with the normal export and publish gates.
+"""Rebuild the synthetic registry with the normal export and publish gates.
 
 Run from the checkout: uv run python examples/registry/build.py /tmp/new-registry
 The destination must be new: published package versions are immutable.
@@ -46,7 +46,7 @@ def parser_for(representation: Representation) -> DocumentParser:
 def build(registry: Path) -> None:
     # Keep the original synthetic agenda package and its published verification date.
     publish_to_registry(
-        Path(__file__).parent / "recipes/uy-sodre-agenda/1.0.0",
+        Path(__file__).parent / "recipes/teatro-central-agenda/1.0.0",
         registry,
         parser_for,
         today=date(2026, 11, 15),

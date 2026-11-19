@@ -144,7 +144,7 @@ def test_goal_without_approve_writes_nothing_and_lists_proposals(tmp_path: Path)
     job_path = tmp_path / "job.toml"
     result = new_job_from_goal(
         job_path,
-        goal="cultural events in Montevideo",
+        goal="cultural events in Puerto Claro",
         provider=search,
         acquisition=acquirer,
     )

@@ -19,7 +19,7 @@ BASE: dict[str, Any] = {
     ],
 }
 DATASET: dict[str, Any] = {
-    "name": "uy_dance_agenda",
+    "name": "event_agenda",
     "path": "agenda.sqlite",
     "identity": ["title", "venue"],
 }

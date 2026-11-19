@@ -22,7 +22,7 @@ from tests.integration.test_studio import post, serving
 
 pytestmark = pytest.mark.usefixtures("offline_cli_loop")
 
-EXAMPLES = [{"title": "Tango", "venue": "Sala Verdi"}]
+EXAMPLES = [{"title": "Tango", "venue": "Sala Alba"}]
 URL = "https://agenda.example.com/events"
 QUERY_URL = "https://shop.example/search?q=lamp&page=2"
 HTTP_URL = "http://agenda.example.com/events"

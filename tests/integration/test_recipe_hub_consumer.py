@@ -21,7 +21,7 @@ def _consumer(tmp_path: Path, folder: Path, bundle: Path) -> Path:
     job = consumer / "job.toml"
     job.write_text(
         "".join(lines[:17]) + '[[sources]]\nkind = "file"\npath = "page.html"\n'
-        'url = "https://sodre.gub.uy/espectaculos/"\n\n' + "".join(lines[91:139]),
+        'url = "https://agenda.example/espectaculos/"\n\n' + "".join(lines[91:139]),
         encoding="utf-8",
     )
     return job

@@ -42,7 +42,7 @@ def _write_sample_bundle(
     directory: Path,
     tmp_path: Path,
     *,
-    bundle_id: str | None = "uy-sodre-agenda",
+    bundle_id: str | None = "teatro-central-agenda",
     version: str | None = "1.0.0",
     author: BundleAuthor | None = _DEFAULT_AUTHOR,
     spdx_license: str | None = "Apache-2.0",
@@ -59,7 +59,7 @@ def _write_sample_bundle(
     export_bundle(
         directory,
         recipe=recipe,
-        source=Source(url="https://sodre.gub.uy/espectaculos/"),
+        source=Source(url="https://agenda.example/espectaculos/"),
         context=RecipeContext(),
         fields=(StringField(name="title", min_length=1),),
         sample=sample,
@@ -171,16 +171,16 @@ def test_search_and_install_latest_and_pinned_recomputes_trust(tmp_path: Path) -
     publish_to_registry(b1, registry, _parser_for, today=date(2026, 11, 12))
     publish_to_registry(b2, registry, _parser_for, today=date(2026, 11, 12))
 
-    hits_by_id = search_registry(registry, "sodre")
+    hits_by_id = search_registry(registry, "teatro")
     assert [h.version for h in hits_by_id] == ["1.0.0", "1.1.0"]
-    hits_by_pattern = search_registry(registry, "sodre.gub.uy/espectaculos")
+    hits_by_pattern = search_registry(registry, "agenda.example/espectaculos")
     assert len(hits_by_pattern) == 2
     assert search_registry(registry, "nonexistent") == ()
 
     repo = SQLiteRecipeRepository(tmp_path / "recipes.sqlite")
     latest = install_from_registry(
         registry,
-        "uy-sodre-agenda",
+        "teatro-central-agenda",
         repo,
         _parser_for,
         at=datetime(2026, 11, 20, tzinfo=UTC),
@@ -192,7 +192,7 @@ def test_search_and_install_latest_and_pinned_recomputes_trust(tmp_path: Path) -
 
     pinned = install_from_registry(
         registry,
-        "uy-sodre-agenda@1.0.0",
+        "teatro-central-agenda@1.0.0",
         repo,
         _parser_for,
         at=datetime(2026, 11, 20, tzinfo=UTC),
@@ -207,7 +207,7 @@ def test_path_traversal_and_symlinks_in_registry_are_refused(tmp_path: Path) -> 
     with pytest.raises(RegistryError):
         parse_package_spec("../evil")
     with pytest.raises(RegistryError):
-        parse_package_spec("uy-sodre-agenda@../1.0.0")
+        parse_package_spec("teatro-central-agenda@../1.0.0")
 
     registry = tmp_path / "registry"
     registry.mkdir()

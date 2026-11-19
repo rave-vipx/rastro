@@ -121,7 +121,7 @@ def evidence() -> dict[str, Any]:
         ROOT / "benchmarks/baseline.py",
         ROOT / "benchmarks/contracts.py",
         ROOT / "uv.lock",
-        *(ROOT / "examples/uy-dance-agenda/sample").glob("*.html"),
+        *(ROOT / "examples/event-agenda/sample").glob("*.html"),
     ]
     return {
         "environment": {

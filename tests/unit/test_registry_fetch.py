@@ -30,7 +30,7 @@ pytestmark = pytest.mark.usefixtures("offline_cli_loop")
 
 EXAMPLE = Path(__file__).parents[2] / "examples/registry"
 BASE = "https://registry.example.org/catalog/"
-PACKAGE = "recipes/uy-sodre-agenda/1.0.0"
+PACKAGE = "recipes/teatro-central-agenda/1.0.0"
 AT = datetime(2026, 11, 16, tzinfo=UTC)
 
 
@@ -83,7 +83,7 @@ def served(tmp_path: Path) -> Path:
     return root
 
 
-def _search(site: Site, url: str = BASE, query: str = "sodre", resolver=None):
+def _search(site: Site, url: str = BASE, query: str = "teatro", resolver=None):
     return search_registry_url(url, query, transport=site, resolver=resolver or Resolver())
 
 
@@ -91,7 +91,7 @@ def _install(site: Site, tmp_path: Path, url: str = BASE, resolver=None):
     repository = SQLiteRecipeRepository(tmp_path / "store.sqlite")
     installed = install_from_registry_url(
         url,
-        "uy-sodre-agenda",
+        "teatro-central-agenda",
         repository,
         _parser_for,
         at=AT,
@@ -103,7 +103,7 @@ def _install(site: Site, tmp_path: Path, url: str = BASE, resolver=None):
 
 def test_search_over_https_matches_the_local_registry(served: Path) -> None:
     entries = _search(Site(served))
-    assert [(entry.id, entry.version) for entry in entries] == [("uy-sodre-agenda", "1.0.0")]
+    assert [(entry.id, entry.version) for entry in entries] == [("teatro-central-agenda", "1.0.0")]
     assert _search(Site(served), query="nothing-matches") == ()
 
 
@@ -113,7 +113,7 @@ def test_install_over_https_stores_a_candidate_only(served: Path, tmp_path: Path
     assert installed.imported.stored.metadata.state == "candidate"
     assert installed.trust.replay_verified is True
     assert installed.published_trust.replay_verified is True
-    assert (installed.id, installed.version) == ("uy-sodre-agenda", "1.0.0")
+    assert (installed.id, installed.version) == ("teatro-central-agenda", "1.0.0")
     fetched = {url.removeprefix(BASE) for url in site.requests if "robots" not in url}
     assert fetched == {
         "index.json",
@@ -201,7 +201,7 @@ def test_bad_digest_writes_nothing(served: Path, tmp_path: Path) -> None:
     with pytest.raises(ConfigurationError):
         install_from_registry_url(
             BASE,
-            "uy-sodre-agenda",
+            "teatro-central-agenda",
             SQLiteRecipeRepository(store),
             _parser_for,
             at=AT,
@@ -319,7 +319,7 @@ def test_a_missing_http_extra_is_a_configuration_error(monkeypatch: pytest.Monke
     monkeypatch.delitem(sys.modules, "rastro.adapters.dns", raising=False)
     monkeypatch.setitem(sys.modules, "curl_cffi", None)
     with pytest.raises(ConfigurationError, match=r"rastro-engine\[http\].*--registry-url"):
-        search_registry_url(BASE, "sodre")
+        search_registry_url(BASE, "teatro")
 
 
 def _robots_requests(site: Site) -> int:

@@ -1,0 +1,38 @@
+{
+  "author": {
+    "name": "Rastro Contributors",
+    "url": null
+  },
+  "compatibility": {
+    "min_rastro": "0.7.0",
+    "source_patterns": [
+      "agenda.example/espectaculos"
+    ]
+  },
+  "context": {
+    "region": "default",
+    "schema_revision": "1",
+    "template": "page"
+  },
+  "files": {
+    "expected.json": "96e409def542acb8cc47e1d35ef16015e044b1ff896d8e6ecb684b2981ec0328",
+    "recipe.json": "dfaa039fcff7eb623b86b6ab02b42bedcbf16f5065a54f612663b52440b8b064",
+    "sample.html": "ff95ae2ef518d2bcab528cfb875d3c3ada0036a36346ae15cc4d479ac3e51255",
+    "schema.json": "fcfcc3b4dd9b3d2fef9161e37a06eebbcdf1b8e0b0fb0e2eb4bf3e2241efb450"
+  },
+  "format_version": 2,
+  "id": "teatro-central-agenda",
+  "last_verified": "2026-11-15",
+  "license": "Apache-2.0",
+  "representation": "html",
+  "source": {
+    "currency": null,
+    "egress": "direct",
+    "languages": [],
+    "locale": "es-UY",
+    "timezone": "Etc/GMT+3",
+    "url": "https://agenda.example/espectaculos/"
+  },
+  "version": "1.0.0",
+  "visibility": "public"
+}

@@ -45,9 +45,9 @@ def serve(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
 
 
 def test_search_by_url(serve, capsys: pytest.CaptureFixture[str]) -> None:
-    assert main(["recipe", "search", "sodre", "--registry-url", URL]) == 0
+    assert main(["recipe", "search", "teatro", "--registry-url", URL]) == 0
     out = json.loads(capsys.readouterr().out)
-    assert [item["id"] for item in out["results"]] == ["uy-sodre-agenda"]
+    assert [item["id"] for item in out["results"]] == ["teatro-central-agenda"]
 
 
 def test_install_by_url_is_a_candidate_and_never_touches_jobs(
@@ -56,7 +56,15 @@ def test_install_by_url_is_a_candidate_and_never_touches_jobs(
     job = tmp_path / "job.toml"
     job.write_text("format_version = 1\n[repair]\nauto_promote = true\n", encoding="utf-8")
     store = tmp_path / "recipes.sqlite"
-    argv = ["recipe", "install", "uy-sodre-agenda", "--registry-url", URL, "--store", str(store)]
+    argv = [
+        "recipe",
+        "install",
+        "teatro-central-agenda",
+        "--registry-url",
+        URL,
+        "--store",
+        str(store),
+    ]
     assert main(argv) == 0
     out = json.loads(capsys.readouterr().out)
     assert out["state"] == "candidate" and out["package_version"] == "1.0.0"
@@ -67,9 +75,9 @@ def test_registry_and_registry_url_are_mutually_exclusive(
     serve, tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     both = ["--registry", str(EXAMPLE), "--registry-url", URL]
-    assert main(["recipe", "search", "sodre", *both]) != 0
+    assert main(["recipe", "search", "teatro", *both]) != 0
     assert "not allowed with" in capsys.readouterr().err
-    assert main(["recipe", "search", "sodre"]) != 0
+    assert main(["recipe", "search", "teatro"]) != 0
     assert "usage_error" in capsys.readouterr().err
 
 
@@ -83,5 +91,5 @@ def test_unsafe_url_and_private_address_fail_with_a_stable_error(
     assert serve["seen"] == []
     captured = capsys.readouterr()
     assert "10.0.0.5" not in captured.out + captured.err
-    granted = ["--allow-private-network", "recipe", "search", "sodre", "--registry-url", URL]
+    granted = ["--allow-private-network", "recipe", "search", "teatro", "--registry-url", URL]
     assert main(granted) == 0

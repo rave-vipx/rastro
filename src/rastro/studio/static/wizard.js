@@ -80,7 +80,7 @@ function confidenceText(note) {
   return parts.join("; ");
 }
 
-// "Agenda de fiestas · Uruguay" -> "agenda-de-fiestas-uruguay": letters, digits, "-" only.
+// "Agenda de fiestas · Valle Azul" -> "agenda-de-fiestas-valle-azul": letters, digits, "-" only.
 export function slug(name) {
   const plain = name.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
   return plain.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60);

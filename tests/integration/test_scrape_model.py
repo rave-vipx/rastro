@@ -19,20 +19,20 @@ pytestmark = pytest.mark.usefixtures("offline_cli_loop")
 
 URL = "https://acme.example/careers"
 V1 = """<main><ul>
-<li class="job"><h3 class="title">Engineer</h3><span class="city">Montevideo</span></li>
+<li class="job"><h3 class="title">Engineer</h3><span class="city">Puerto Claro</span></li>
 <li class="job"><h3 class="title">Designer</h3><span class="city">Salto</span></li>
 </ul></main>"""
 V2 = V1.replace('<h3 class="title">', '<h2 class="heading">').replace("</h3>", "</h2>")
 # The renamed title now sits next to a district label that no field ever read.
 V2_AREA = V2.replace(
-    '<span class="city">Montevideo</span>',
-    '<span class="city">Montevideo</span><i class="area">Centro</i>',
+    '<span class="city">Puerto Claro</span>',
+    '<span class="city">Puerto Claro</span><i class="area">Centro</i>',
 ).replace(
     '<span class="city">Salto</span>', '<span class="city">Salto</span><i class="area">Norte</i>'
 )
 # Fully rewritten: list items became a grid of cards with new tags and classes.
 V3 = """<main><div class="grid">
-<div class="card"><p class="name">Engineer</p><em class="place">Montevideo</em></div>
+<div class="card"><p class="name">Engineer</p><em class="place">Puerto Claro</em></div>
 <div class="card"><p class="name">Designer</p><em class="place">Salto</em></div>
 </div></main>"""
 # The model sees only the new page; Rastro unions each locator with the serving one.
@@ -87,7 +87,7 @@ def test_model_rescues_a_rewrite_relocation_cannot_repair(tmp_path):
     healed = _scrape(V3, memory, model)
     assert healed.status == Outcome.SUCCESS
     assert [(o.title, o.city) for o in healed.items] == [
-        ("Engineer", "Montevideo"),
+        ("Engineer", "Puerto Claro"),
         ("Designer", "Salto"),
     ]
     assert healed.repair.promoted and healed.repair.origin == "model"

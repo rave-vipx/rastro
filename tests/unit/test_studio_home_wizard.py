@@ -93,7 +93,7 @@ wizard.goStep(3);
 const shown = [1, 2, 3, 4].filter((n) => !document.getElementById(`wiz-step-${n}`).hidden);
 assert.deepEqual(shown, [3]);
 assert.equal(document.focused, document.getElementById("wiz-next-3"));
-assert.equal(wizard.slug("Agenda de fiestas · Uruguay"), "agenda-de-fiestas-uruguay");
+assert.equal(wizard.slug("Agenda de fiestas · Valle Azul"), "agenda-de-fiestas-valle-azul");
 assert.equal(wizard.slug("../../etc"), "etc");
 """)
     page = html.fromstring((STATIC / "index.html").read_text(encoding="utf-8"))

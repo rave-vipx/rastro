@@ -61,11 +61,11 @@
       "name": "Rastro Contributors",
       "url": null
     },
-    "id": "uy-sodre-agenda",
+    "id": "teatro-central-agenda",
     "last_verified": "2026-11-15",
     "license": "Apache-2.0",
     "source_patterns": [
-      "sodre.gub.uy/espectaculos"
+      "agenda.example/espectaculos"
     ],
     "trust": {
       "days_since_verified": 0,

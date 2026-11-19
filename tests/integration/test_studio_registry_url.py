@@ -61,13 +61,13 @@ def test_url_search_and_install_real_candidate(
     tmp_path: Path,
     site: Site,
 ) -> None:
-    response = client.post("/api/registry/search", json={"registry": BASE, "query": "sodre"})
+    response = client.post("/api/registry/search", json={"registry": BASE, "query": "teatro"})
     assert response.status_code == 200, response.text
     assert len(response.json()["entries"]) == 1
     before = (tmp_path / "job.toml").read_bytes()
     response = client.post(
         "/api/registry/install",
-        json={"registry": BASE, "spec": "uy-sodre-agenda", "file": "job.toml"},
+        json={"registry": BASE, "spec": "teatro-central-agenda", "file": "job.toml"},
     )
     assert response.status_code == 200, response.text
     assert response.json()["state"] == "candidate"
@@ -108,8 +108,8 @@ def test_registry_url_requires_operator_grants(
         grants = {"ignore_robots": ["registry.example"]}
     before = (tmp_path / "job.toml").read_bytes()
     for endpoint, extra in [
-        ("search", {"query": "sodre"}),
-        ("install", {"file": "job.toml", "spec": "uy-sodre-agenda"}),
+        ("search", {"query": "teatro"}),
+        ("install", {"file": "job.toml", "spec": "teatro-central-agenda"}),
     ]:
         payload = {"registry": url, **extra, **grants}
         refused = client.post(f"/api/registry/{endpoint}", json=payload)
@@ -117,8 +117,8 @@ def test_registry_url_requires_operator_grants(
     assert not (tmp_path / "memory.sqlite").exists()
     studio.trust.update(grants)
     for endpoint, extra in [
-        ("search", {"query": "sodre"}),
-        ("install", {"file": "job.toml", "spec": "uy-sodre-agenda"}),
+        ("search", {"query": "teatro"}),
+        ("install", {"file": "job.toml", "spec": "teatro-central-agenda"}),
     ]:
         allowed = client.post(f"/api/registry/{endpoint}", json={"registry": url, **extra})
         assert allowed.status_code == 200, allowed.text
@@ -132,10 +132,10 @@ def test_bad_digest_does_not_write_memory(
     tmp_path: Path,
     site: Site,
 ) -> None:
-    (site.root / "recipes/uy-sodre-agenda/1.0.0/sample.html").write_text("tampered")
+    (site.root / "recipes/teatro-central-agenda/1.0.0/sample.html").write_text("tampered")
     response = client.post(
         "/api/registry/install",
-        json={"registry": BASE, "spec": "uy-sodre-agenda", "file": "job.toml"},
+        json={"registry": BASE, "spec": "teatro-central-agenda", "file": "job.toml"},
     )
     assert response.status_code == 400 and not response.json()["ok"]
     assert not (tmp_path / "memory.sqlite").exists()

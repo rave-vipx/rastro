@@ -32,7 +32,7 @@ def test_repair_report_explicitly_uses_utf8(tmp_path, capsys, monkeypatch):
 
 
 def test_repair_demo_preserves_spanish_text_under_cp1252_default(tmp_path, monkeypatch, capsys):
-    demo = runpy.run_path("examples/uy-dance-agenda/repair_demo.py")
+    demo = runpy.run_path("examples/event-agenda/repair_demo.py")
     read_text, write_text = Path.read_text, Path.write_text
 
     def locale_read(path, encoding=None, errors=None):
@@ -46,5 +46,5 @@ def test_repair_demo_preserves_spanish_text_under_cp1252_default(tmp_path, monke
     folder = tmp_path / "sample"
     demo["run_demo"](folder)
     assert "All assertions passed" in capsys.readouterr().out
-    records = SQLiteDatasetStore(folder / "agenda.sqlite").records("uy_dance_agenda")
+    records = SQLiteDatasetStore(folder / "agenda.sqlite").records("event_agenda")
     assert any("Área Tango" in str(r.fields["title"]) for r in records)

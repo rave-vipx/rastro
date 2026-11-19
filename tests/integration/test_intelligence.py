@@ -68,7 +68,7 @@ async def test_learned_recipe_supplies_regional_validation_context(source):
             assert info.context == {
                 "locale": "es-UY",
                 "languages": ("es-UY", "en"),
-                "timezone": "America/Montevideo",
+                "timezone": "Etc/GMT+3",
                 "currency": "UYU",
                 "egress": "direct",
                 "observed_at": observed[-1],
@@ -80,7 +80,7 @@ async def test_learned_recipe_supplies_regional_validation_context(source):
     regional = source.model_copy(
         update={
             "languages": ("es-UY", "en"),
-            "timezone": "America/Montevideo",
+            "timezone": "Etc/GMT+3",
             "currency": "UYU",
         }
     )

@@ -1,46 +1,46 @@
 [
   {
-    "city": "Montevideo",
+    "city": "Puerto Claro",
     "currency": "UYU",
     "performance_id": "candombe-1",
     "performers": "Compañía Sur de Danza",
     "price": "450",
     "starts_at": "2026-11-20T20:30:00-03:00",
-    "ticket_url": "https://tickantel.com.uy/ng/espectaculo/9900101/candombe-de-invierno",
+    "ticket_url": "https://tickets.example/ng/espectaculo/9900101/candombe-de-invierno",
     "title": "Candombe de Invierno",
-    "venue": "Auditorio Nelly Goitiño"
+    "venue": "Teatro Central"
   },
   {
-    "city": "Montevideo",
+    "city": "Puerto Claro",
     "currency": "UYU",
     "performance_id": "candombe-2",
     "performers": "Compañía Sur de Danza",
     "price": "450",
     "starts_at": "2026-11-21T20:30:00-03:00",
-    "ticket_url": "https://tickantel.com.uy/ng/espectaculo/9900101/candombe-de-invierno",
+    "ticket_url": "https://tickets.example/ng/espectaculo/9900101/candombe-de-invierno",
     "title": "Candombe de Invierno",
-    "venue": "Auditorio Nelly Goitiño"
+    "venue": "Teatro Central"
   },
   {
-    "city": "Montevideo",
+    "city": "Puerto Claro",
     "currency": "UYU",
-    "performance_id": "gala-sodre",
+    "performance_id": "gala-venue",
     "performers": "Escuela Nacional de Danza — Área Tango",
     "price": "350",
     "starts_at": "2026-11-26T20:00:00-03:00",
-    "ticket_url": "https://tickantel.com.uy/ng/espectaculo/9900102/gala-anual-2026-area-tango-y-milonga",
+    "ticket_url": "https://tickets.example/ng/espectaculo/9900102/gala-anual-2026-area-tango-y-milonga",
     "title": "Gala Anual 26: Tango y Milonga",
-    "venue": "Auditorio Nelly Goitiño"
+    "venue": "Teatro Central"
   },
   {
-    "city": "Montevideo",
+    "city": "Puerto Claro",
     "currency": "UYU",
-    "performance_id": "suite-sodre",
-    "performers": "Ballet Contemporáneo de Montevideo",
+    "performance_id": "suite-venue",
+    "performers": "Ballet Contemporáneo de Puerto Claro",
     "price": "600",
     "starts_at": "2026-11-28T20:00:00-03:00",
-    "ticket_url": "https://tickantel.com.uy/ng/espectaculo/9900103/suite-del-rio-de-la-plata",
-    "title": "Suite del Río de la Plata",
-    "venue": "Auditorio Nacional Adela Reta"
+    "ticket_url": "https://tickets.example/ng/espectaculo/9900103/suite-del-valle-azul",
+    "title": "Suite del Valle Azul",
+    "venue": "Auditorio Horizonte"
   }
 ]
