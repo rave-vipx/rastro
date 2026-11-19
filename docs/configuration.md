@@ -715,7 +715,7 @@ Print a dataset's records as JSON, JSONL or an HTML table. Docs: [dataset.md#loa
 | --- | --- | --- | --- | --- |
 | `PATH` | Path | required |  | Dataset SQLite file |
 | `--dataset` | value | - |  | Dataset name (required if file contains multiple datasets) |
-| `--format` | value | `"json"` | one of json, jsonl, html | Output format |
+| `--format` | value | `"json"` | one of json, jsonl, html, csv | Output format |
 | `--sort-field` | value | - |  | Field to sort records by (ISO date for --upcoming) |
 | `--upcoming` | flag | - |  | Only records dated today or later |
 | `--timezone` | value | `"UTC"` |  | IANA timezone that decides today |
