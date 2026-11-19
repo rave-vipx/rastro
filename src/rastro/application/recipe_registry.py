@@ -14,6 +14,8 @@ from rastro.application.bundle_files import read_bounded, write_all
 from rastro.application.recipe_hub import GITATTRIBUTES, ParserFor, verify_bundle
 from rastro.application.registry_install import InstalledPackage, install_package_dir
 from rastro.application.registry_store import (
+    CARD_FILE,
+    HubCard,
     check_registry_root,
     load_index,
     package_path,
@@ -59,11 +61,16 @@ def publish_to_registry(
     *,
     today: date,
     limits: Limits | None = None,
+    card: HubCard | None = None,
 ) -> PublishedPackage:
-    """Verify a public bundle, scan for secrets, copy files and atomically rewrite index.json."""
+    """Verify a public bundle, scan for secrets, copy files and atomically rewrite index.json.
+
+    A ``card`` (field descriptions and engine needs) is scanned too and written as
+    ``card.json`` in the same package directory, so it lands or fails with the package."""
     manifest, files, _, _ = verify_bundle(bundle_dir, parser_for, limits)
     entry = _build_entry(manifest, files, today=today)
-    _scan_for_secrets(manifest, files)
+    extra = {} if card is None else {CARD_FILE: canonical_json(card.model_dump(mode="json"))}
+    _scan_for_secrets(manifest, {**files, **extra})
     check_registry_root(registry_dir, create=True)
     existing = load_index(registry_dir)
     if any(item.id == entry.id and item.version == entry.version for item in existing):
@@ -73,7 +80,7 @@ def publish_to_registry(
         raise RegistryError(f"Package directory for {entry.id}@{entry.version} already exists")
     raw_manifest = read_bounded(bundle_dir / MANIFEST_FILE, MAX_METADATA_BYTES, bundle=True)
     updated = sorted((*existing, entry), key=lambda item: (item.id, semver_key(item.version)))
-    contents = {**files, MANIFEST_FILE: raw_manifest, GITATTRIBUTES: b"* -text\n"}
+    contents = {**files, **extra, MANIFEST_FILE: raw_manifest, GITATTRIBUTES: b"* -text\n"}
     index = canonical_json([item.model_dump(mode="json") for item in updated])
     _write_package(registry_dir, package_dir, contents, index)
     commands = _git_commands(registry_dir, entry)
