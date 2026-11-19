@@ -1,6 +1,6 @@
 # ADR 0037: input origin decides which capabilities a job may use
 
-Status: proposed, 2026-11-18. Builds on ADR 0035 and ADR 0036; refines ADR 0031 and ADR 0034.
+Status: accepted, 2026-11-19. Builds on ADR 0035 and ADR 0036; refines ADR 0031 and ADR 0034.
 
 ## Context
 
@@ -25,14 +25,17 @@ claim to be the operator's.
 
    | Entry point | Origin |
    | --- | --- |
-   | `rastro job run`, `job load`, `job preview`; the Python API | `operator` |
+   | `rastro job run`, `job load`, `job preview`; Studio; the Python API | `operator` |
    | `rastro mcp` tools | `mcp` |
-   | Registry or hub install | `registry` |
-   | Bundle import | `bundle` |
-   | Recipes and settings proposed by a model | `model` |
+   | `rastro recipe install` from a registry (CLI or Studio) | `registry` |
+   | `rastro recipe import` of a bundle | `bundle` |
+   | Recipes proposed by a model | `model` |
 
-   The origin is set once, where input enters, and carried through the run. Nothing read
-   from a job, recipe, bundle or page can change it.
+   The origin is set once, where input enters, and carried through the run in a context
+   variable that defaults to `operator`. The MCP server sets `mcp` around every tool call; a
+   registry install sets `registry` and keeps it while it imports the package's bundle.
+   Inside an untrusted block nothing can switch back to `operator`, and nothing read from a
+   job, recipe, bundle or page can change the origin.
 
 2. **Capabilities are a closed vocabulary.** A job requests capabilities through the
    settings it uses (for example, `render = "stealth"` requests `stealth`, a page step
@@ -53,15 +56,23 @@ claim to be the operator's.
 
 5. **Refusal is explicit and safe to print.** Before any network work, Rastro compares the
    requested capabilities with the grants for the origin. A refused capability stops the
-   job with a configuration error that names the origin, each refused capability and the
-   flag that would grant it. Names outside the vocabulary are refused and counted, never
-   echoed. Run reports list the capabilities each source used.
+   job with the error `capability_refused`, which names the origin, each refused
+   capability and the flag that would grant it. Names outside the vocabulary are refused
+   and counted, never echoed. A bundle or registry recipe that requests a capability not
+   granted to its origin is not imported; a model proposal that does is rejected as an
+   invalid model response. Run reports list the capabilities each source used.
 
 6. **Existing operator grants stay as they are.** Private-network targets, extra ports,
    environment variable names, command models, the failure hook and `--allow-egress` remain
    operator grants that no job can widen. `--allow-stealth` remains as a deprecated alias:
    it changes nothing for operator jobs and grants `stealth` and `solve_challenges` to
-   untrusted origins.
+   untrusted origins; the CLI prints a `deprecated_flag` warning when it is used.
+
+7. **Robots is an operator setting.** `[acquisition] robots = "ignore"` skips robots.txt
+   for the whole job and requests `robots_ignore`, so it is honored for operator jobs and
+   refused for every other origin without a grant. It is logged once per run, and checked
+   again at each request so a policy built outside a job cannot bypass the gate. The
+   per-host `--ignore-robots HOST` grant is unchanged.
 
 ## Alternatives considered
 
@@ -80,5 +91,10 @@ claim to be the operator's.
   operator can widen a single origin without widening others.
 - Every new engine feature that changes what a job can reach adds one name to the
   vocabulary, and the gate covers it without a new flag.
-- `SECURITY.md` and the capability guide are updated in the change that wires the gate
-  into the run path.
+- Operator jobs that used `render = "stealth"` keep working without the flag; jobs run
+  by an MCP client that relied on `rastro mcp --allow-stealth` keep working through the
+  alias, and can move to `--allow-untrusted mcp:stealth`.
+- Studio's stealth switch is now only the deprecated alias, because Studio runs the
+  operator's own jobs.
+- The grants have no new Python keyword: SDK callers are the operator, and grant-only
+  capabilities come from `RASTRO_ALLOW_CAPABILITIES`.

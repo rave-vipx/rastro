@@ -275,12 +275,14 @@ These controls sit in the Jobs view and call the existing services. Jobs with
   Without one, **Fix this site** stores the candidate, keeps the current recipe serving
   and says why, so you promote with a reason. Off, you always promote with a reason.
   Installing a registry package never changes it.
-- **Allow stealth for this Studio session** (a switch, off by default) grants the running
-  Studio process, like `--allow-stealth` or `RASTRO_ALLOW_STEALTH=1`, and applies to
-  preview, extract, load, repair and promote. It is never written to a job or a bundle.
-  When the process was started with that grant the switch shows on and is locked. A job
-  asking for `render = "stealth"` without the grant fails with a refusal; Studio does not
-  fall back to a plain browser. Browser rendering and scroll do not enable stealth.
+- **Allow stealth for this Studio session** (a switch, off by default) is the deprecated
+  stealth grant, like `--allow-stealth` or `RASTRO_ALLOW_STEALTH=1`. Studio runs your own
+  jobs, so a job asking for `render = "stealth"` renders in the stealth browser without it;
+  the switch only widens untrusted input (see
+  [Capabilities and input origin](acquisition.md#capabilities-and-input-origin)). It is
+  never written to a job or a bundle. When the process was started with that grant the
+  switch shows on and is locked. Studio never falls back to a plain browser, and browser
+  rendering and scroll do not enable stealth.
 - **Progress.** While an extract, load, repair or promote runs, the Run card shows which
   operation is running for which job file, then its real outcome. The engine does not
   report source, page or scroll steps yet, so Studio shows none and does not estimate

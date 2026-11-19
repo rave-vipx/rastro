@@ -333,6 +333,46 @@ exact host over HTTPS (or loopback HTTP when the private network is granted), ne
 robots.txt, a redirect to another host, or a proxy, and never appears in a log, error,
 repr, result or digest. The browser engine does not support it.
 
+## Capabilities and input origin
+
+Rastro decides where a job came from by how it entered, never by what the job says
+([ADR 0037](decisions/0037-input-origin-and-capabilities.md)):
+
+| Entry point | Origin |
+| --- | --- |
+| `rastro job run`, `job load`, `job preview`, Studio, the Python API | `operator` |
+| `rastro mcp` tools | `mcp` |
+| `rastro recipe install` from a registry, Studio installs | `registry` |
+| `rastro recipe import` of a bundle | `bundle` |
+| Recipes proposed by a model | `model` |
+
+A job requests capabilities through the settings it uses: `render = "stealth"` requests
+`stealth`, `solve_challenges = true` requests `solve_challenges`, `[acquisition] robots =
+"ignore"` requests `robots_ignore`, page steps request `page_actions`. Your own jobs get
+every capability except four that touch your own browser, profile or installed code:
+`persistent_session`, `real_chrome`, `cdp` and `solver_plugins`. Those need
+`--allow-capability NAME` (repeatable; `RASTRO_ALLOW_CAPABILITIES="cdp,real_chrome"`).
+
+The other origins get nothing until you grant one capability to one origin with
+`--allow-untrusted ORIGIN:NAME` (repeatable; `RASTRO_ALLOW_UNTRUSTED="mcp:stealth"`). A
+refused job stops before any renderer, client or request exists with the error
+`capability_refused`, which names the origin, each refused capability and the flag that
+grants it, never a job value. A bundle or registry package whose recipe requests a
+capability that is not granted is not imported.
+
+**Robots as a job setting.** `[acquisition] robots = "ignore"` neither fetches nor enforces
+robots.txt for any host of the job (the default is `"obey"`). It is honored for your own
+jobs and logged once per run as a `robots_ignored` INFO line without hosts or URLs; the
+result's `metrics.robots_overridden` is `true`. For other origins it needs
+`--allow-untrusted ORIGIN:robots_ignore`. Allowlist, destination checks, pacing and the
+401/403/451/429 handling still apply, and by setting it you assert permission to fetch.
+
+`--allow-stealth` (`RASTRO_ALLOW_STEALTH`, `allow_stealth=True`) is deprecated: it
+changes nothing for your own jobs and grants `stealth` and `solve_challenges` to every
+untrusted origin. The CLI prints a `deprecated_flag` warning on stderr when it is used.
+Private networks, extra ports, robots overrides per host, secret names, egress profiles and
+commands stay the operator grants described above; no capability widens them.
+
 ## Sessions
 
 `[acquisition] session = true` enables a bounded, in-memory cookie jar for one job
@@ -433,16 +473,17 @@ url = "https://example.com/events"
 render = "stealth"
 ```
 
-Stealth additionally needs operator consent: `rastro --allow-stealth job run job.toml`,
-`run_job_file("job.toml", allow_stealth=True)` (`load_job_file` and the `repair_job_*`
-functions take the same keyword), or `RASTRO_ALLOW_STEALTH=1` (also `true`
-or `yes`). A job file cannot grant consent. Cloudflare solving is off unless
-`[acquisition] solve_challenges = true` and consent is present. Challenge domains must
-also be explicitly allowlisted; there is no third-party solver or rotation.
+Your own jobs, run from the CLI, the Python API or Studio, use stealth without any flag.
+A job that arrives through an agent tool, a bundle, a registry recipe or model output
+needs the grant for its origin, such as `--allow-untrusted mcp:stealth` (see
+[Capabilities and input origin](#capabilities-and-input-origin)). Cloudflare solving is
+off unless `[acquisition] solve_challenges = true`; it is the `solve_challenges`
+capability. Challenge domains must also be explicitly allowlisted; there is no
+third-party solver.
 
 A URL the job does not declare (for example a next page) uses the render mode shared by
 the declared sources on the same exact host, else the `[acquisition]` default; a stealth
-default therefore needs consent whenever the job renders at all.
+default therefore counts as a stealth request whenever the job renders at all.
 
 Robots, pacing, public DNS checks and request budgets still apply. Robots are checked
 again for the final URL when the browser was redirected to another path. A spent
