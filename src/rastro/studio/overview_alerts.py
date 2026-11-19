@@ -101,8 +101,11 @@ def report_alerts(report: RunReport) -> list[dict[str, Any]]:
 
 def alerts(state: JobState, report: RunReport | None = None) -> list[dict[str, Any]]:
     items = _failures(state) + _caps(state) + _logged(state)
-    if report is not None:
-        items += report_alerts(report)
+    if report is not None:  # the report repeats what the dataset already shows: keep one
+        known = {(a["kind"], a["source"], a["code"]) for a in items}
+        items += [
+            a for a in report_alerts(report) if (a["kind"], a["source"], a["code"]) not in known
+        ]
     items += [
         _alert(d.observed_at, "drift", url, code(d.verdict), "fix")
         for url, d in state.drift.items()

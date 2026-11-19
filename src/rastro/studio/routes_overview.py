@@ -77,7 +77,7 @@ def routes(studio: Studio) -> list[Route]:
         data = await body(request)
         path, _, job = studio.load(text(data, "file"))
         state = await run_in_threadpool(job_state, studio.root, path, job)
-        return reply({"alerts": alerts(state)})
+        return reply({"alerts": alerts(state, state.report)})
 
     return [
         studio.route("/api/projects", listing),

@@ -25,6 +25,7 @@ from rastro.domain.jobs import Job
 from rastro.domain.lifecycle import RecipeState
 from rastro.domain.metrics import RunMetric
 from rastro.domain.models import Outcome
+from rastro.domain.run_report import RunReport
 from rastro.studio.run_log import LoggedRun, LoggedSource, read_runs
 
 FAILED = frozenset(o.value for o in Outcome) - {"success", "unchanged", "partial_success"}
@@ -60,6 +61,8 @@ class JobState:
     records: int = 0
     # Configured URL -> the final URL a redirect stored it under (from the run metrics).
     redirects: dict[str, str] = field(default_factory=dict)
+    # The run report of the latest logged load, if Studio kept one.
+    report: RunReport | None = None
 
 
 def _dataset(state: JobState, root: Path, path: Path) -> None:
@@ -100,6 +103,7 @@ def job_state(root: Path, path: Path, job: Job) -> JobState:
     _dataset(state, root, path)
     _candidates(state, root, path)
     state.runs = read_runs(root, path)
+    state.report = next((r.report for r in reversed(state.runs) if r.report), None)
     return state
 
 
