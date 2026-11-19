@@ -18,7 +18,7 @@ from rastro.domain.job_results import JobExitCode
 from rastro.domain.models import ConfigurationError
 
 _DATASET_HELP = {
-    "export": "Print a dataset's records as JSON, JSONL, CSV or an HTML table",
+    "export": "Print a dataset's records as JSON, JSONL or an HTML table",
     "status": "Show each source's freshness and last load",
 }
 
