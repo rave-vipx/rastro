@@ -198,10 +198,10 @@ Observed stdout (2026-11-07; observation times vary on later runs):
 {"counts":[{"created":4,"updated":0,"unchanged":0,"missing":0,"uncertain":0},{"created":2,"updated":0,"unchanged":1,"missing":0,"uncertain":0}],"stale_sources":[]}
 {"counts":[{"created":0,"updated":0,"unchanged":4,"missing":0,"uncertain":0},{"created":0,"updated":0,"unchanged":3,"missing":0,"uncertain":0}],"stale_sources":[]}
 {"counts":[{"created":0,"updated":1,"unchanged":3,"missing":0,"uncertain":0},{"created":0,"updated":1,"unchanged":2,"missing":0,"uncertain":0}],"stale_sources":[]}
-2026-11-20T20:30:00-03:00|Candombe de Invierno|Auditorio Nelly Goitiño|2026-11-07T20:35:08.627915Z
-2026-11-21T20:30:00-03:00|Candombe de Invierno|Auditorio Nelly Goitiño|2026-11-07T20:35:08.627296Z
-2026-11-26T20:00:00-03:00|Gala Anual 2026: Área Tango y Milonga|Auditorio Nelly Goitiño|2026-11-07T20:35:08.627915Z
-2026-11-26T20:00:00-03:00|Gala Anual 26: Tango y Milonga|Auditorio Nelly Goitiño|2026-11-07T20:35:08.627296Z
+2026-11-20T20:30:00-03:00|Candombe de Invierno|Auditorio Horizonte|2026-11-07T20:35:08.627915Z
+2026-11-21T20:30:00-03:00|Candombe de Invierno|Auditorio Horizonte|2026-11-07T20:35:08.627296Z
+2026-11-26T20:00:00-03:00|Gala Anual 2026: Área Tango y Milonga|Auditorio Horizonte|2026-11-07T20:35:08.627915Z
+2026-11-26T20:00:00-03:00|Gala Anual 26: Tango y Milonga|Auditorio Horizonte|2026-11-07T20:35:08.627296Z
 2026-11-28T21:00:00-03:00|Suite del Río de la Plata|Auditorio Nacional Adela Reta|2026-11-07T20:35:08.627296Z
 2026-11-28T21:00:00-03:00|Suite del Río de la Plata|Auditorio Nacional Adela Reta|2026-11-07T20:35:08.627915Z
 {"status":"partial_success","stale_sources":[{"source_url":"https://tickets.example/event/9900102/annual-gala-tango-and-milonga","last_success":"2026-11-07T20:35:08.627915Z","affected_records":3}]}
