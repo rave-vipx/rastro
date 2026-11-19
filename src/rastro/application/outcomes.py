@@ -22,6 +22,7 @@ from rastro.domain.models import (
     Source,
     schema_fingerprint,
 )
+from rastro.domain.source_notes import AcquisitionUse, SourceNotes
 
 _PROVIDED: dict[Representation, Literal["provided_html", "provided_json"]] = {
     "html": "provided_html",
@@ -126,8 +127,31 @@ def stamp_acquired[T: BaseModel](
             "requested_url": source.evidence_url,
             "http_status": fetched.http_status,
             "retry_after_seconds": fetched.retry_after_seconds,
+            "notes": acquisition_notes(result.notes, fetched),
         }
     )
+
+
+def acquisition_notes(notes: SourceNotes | None, fetched: AcquisitionResult) -> SourceNotes | None:
+    """``notes`` plus the block hint, proxy rotation and solved challenge of ``fetched``."""
+    update: dict[str, object] = {}
+    if fetched.blocked is not None:
+        update["blocked"] = fetched.blocked
+    if fetched.proxy_rotation or fetched.challenge_solved:
+        update["acquisition"] = AcquisitionUse(
+            render=fetched.render,
+            egress=fetched.egress,
+            proxy_rotation=fetched.proxy_rotation,
+            proxies_used=fetched.proxies_used,
+            challenge_solved=fetched.challenge_solved,
+            robots="overridden" if fetched.robots_overridden else "obeyed",
+        )
+    if fetched.proxy_rotation:
+        used = notes.capabilities_used if notes else ()
+        update["capabilities_used"] = tuple(dict.fromkeys((*used, "proxy_rotation")))
+    if not update:
+        return notes
+    return (notes or SourceNotes()).model_copy(update=update)
 
 
 def stamp_learning[T: BaseModel](

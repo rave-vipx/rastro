@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 from contextvars import ContextVar
 from dataclasses import dataclass, field
 from time import perf_counter
 from urllib.parse import urlsplit
 
 from rastro.application.auth_headers import request_auth
+from rastro.application.blocked_hint import blocked_hint, response_marker
 from rastro.application.cookie_jar import CookieJar
 from rastro.application.http_policy import TRANSIENT_STATUSES, retry_after
 from rastro.application.robots_cache import RobotsCache, current_robots_cache
@@ -21,6 +23,7 @@ from rastro.domain.acquisition import (
     ProxyRoute,
 )
 from rastro.domain.models import Outcome
+from rastro.domain.source_notes import BlockKind
 
 
 @dataclass
@@ -50,6 +53,16 @@ class _Operation:
     auth: dict[str, dict[str, str]] = field(default_factory=dict, repr=False)
     robots_fetch: bool = False  # robots.txt is fetched without credentials
     overridden: set[str] = field(default_factory=set)
+    rotation: Callable[[], ProxyRoute] | None = None  # set when the source rotates proxies
+    proxies_used: set[str] = field(default_factory=set)
+    block_marker: BlockKind | None = None  # what the last refusal looked like
+    challenge_solved: bool = False  # a browser cleared a challenge on the way to the page
+
+    def rotate(self) -> None:
+        """Route the next transfer through the next rotated profile, if the source rotates."""
+        if self.rotation is not None:
+            self.proxy = self.rotation()
+            self.proxies_used.add(self.proxy.name)
 
     def result(
         self,
@@ -76,6 +89,10 @@ class _Operation:
             retry_after_seconds=self.retry_after_seconds,
             egress=egress,
             robots_overridden=bool(self.overridden),
+            proxy_rotation=self.rotation is not None,
+            proxies_used=len(self.proxies_used),
+            challenge_solved=self.challenge_solved,
+            blocked=blocked_hint(issue, self.http_status, self.block_marker),
             raw_body=raw_body,
         )
 
@@ -86,6 +103,7 @@ def record_response(
     """Account for one response and apply the host's denial, rate-limit and retry-after state."""
     operation.bytes_received += response.bytes_received
     operation.http_status = response.status
+    operation.block_marker = response_marker(response)
     if response.status in {401, 403, 451}:
         host.denied = True
     if response.status == 429:

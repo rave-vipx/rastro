@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Mapping
 from contextvars import ContextVar
 from dataclasses import replace
 from time import perf_counter
@@ -16,6 +17,7 @@ from rastro.application.acquisition_state import (
     check_page_request,
 )
 from rastro.application.browser_policy import canonical_url, page_policy
+from rastro.application.browser_proxy import BROWSER_PROXY
 from rastro.application.browser_scroll_step import scroll_step
 from rastro.application.browser_sessions import SOURCE_SESSIONS
 from rastro.application.capability_gate import policy_capabilities, require
@@ -43,31 +45,33 @@ class BrowserAcquirer(WebAcquirer):
         transport: HttpTransport,
         resolver: Resolver,
         allow_stealth: bool = False,
+        environ: Mapping[str, str] | None = None,
     ):
         # First, before the renderer is looked at: no grant, no stealth browser (ADR 0037).
         require(policy_capabilities(policy), allow_stealth=allow_stealth)
-        if policy.egress_profiles:
-            raise ConfigurationError("Browser modes do not support egress profiles")
         if policy.auth:
             raise ConfigurationError("auth headers are HTTP-engine only")
         super().__init__(
-            policy.model_copy(update={"max_retries": 0}), transport=transport, resolver=resolver
+            policy.model_copy(update={"max_retries": 0}),
+            transport=transport,
+            resolver=resolver,
+            environ=environ,
         )
         self._renderer = renderer
-        self._http = WebAcquirer(policy, transport=transport, resolver=resolver)
+        self._http = WebAcquirer(policy, transport=transport, resolver=resolver, environ=environ)
         self._http._hosts = self._hosts
 
     async def acquire(
         self, source: Source, *, max_bytes: int, representation: Representation = "html"
     ) -> AcquisitionResult:
-        if source.egress != "direct" or representation != "html":
-            raise ConfigurationError("Browser modes require direct egress and HTML representation")
+        if representation != "html":
+            raise ConfigurationError("Browser modes require the HTML representation")
         token = _render_seconds.set(0)
         try:
             result = await super().acquire(
                 source, max_bytes=max_bytes, representation=representation
             )
-            return replace(result, render_seconds=_render_seconds.get())
+            return replace(result, render_seconds=_render_seconds.get(), render=self.policy.render)
         finally:
             _render_seconds.reset(token)
 
@@ -103,6 +107,7 @@ class BrowserAcquirer(WebAcquirer):
                     operation.url = result.url
                     if result.url != url:
                         await self._robots(result.url, operation)
+                    operation.challenge_solved |= result.challenge_solved
                     if result.status != Outcome.SUCCESS:
                         raise AcquisitionError(
                             result.issue_code or "browser_failure", result.status
@@ -136,6 +141,7 @@ class BrowserAcquirer(WebAcquirer):
         if scope is not None:  # the navigation is already charged: it stays inside the allowance
             allowance = min(allowance, scope.remaining + 1)
         policy = policy.model_copy(update={"max_requests": allowance})
+        token = BROWSER_PROXY.set(operation.proxy)  # the target was pinned and checked above
         try:
             result = await self._render_once(target, targets, policy, max_bytes)
         except AcquisitionError as error:
@@ -144,6 +150,8 @@ class BrowserAcquirer(WebAcquirer):
         except BaseException:  # a timeout or crash lost the browser's count: charge the allowance
             self._charge(operation, allowance)
             raise
+        finally:
+            BROWSER_PROXY.reset(token)
         self._charge(operation, result.requests)
         return result
 

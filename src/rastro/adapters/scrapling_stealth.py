@@ -1,4 +1,8 @@
-"""Explicitly consented Scrapling stealth browser, with no retry or proxy rotation."""
+"""Scrapling stealth browser behind Rastro's grants, guard and proxy routes.
+
+Rastro picks the proxy (one per render, or one per source context) and checks every target
+itself, so Scrapling's own retry and proxy rotation stay off.
+"""
 
 from __future__ import annotations
 
@@ -9,12 +13,14 @@ from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from typing import Any
 
-from rastro.adapters.playwright_browser import INSTALL, NetworkGuard, browser_flags
+from rastro.adapters.playwright_browser import INSTALL, NetworkGuard, browser_flags, proxy_option
+from rastro.application.browser_proxy import BROWSER_PROXY
 from rastro.domain.acquisition import (
     AcquisitionError,
     AcquisitionPolicy,
     AcquisitionResult,
     PinnedTarget,
+    ProxyRoute,
 )
 from rastro.domain.models import ConfigurationError, Outcome
 
@@ -27,11 +33,16 @@ class _RedactBrowserLogs(logging.Filter):
 
 
 def _options(
-    guard: NetworkGuard, policy: AcquisitionPolicy, targets: tuple[PinnedTarget, ...]
+    guard: NetworkGuard,
+    policy: AcquisitionPolicy,
+    targets: tuple[PinnedTarget, ...],
+    proxy: ProxyRoute | None,
 ) -> dict[str, Any]:
+    route = proxy_option(proxy)
     return {
+        **({"proxy": route} if route is not None else {}),
         "page_setup": guard.setup,
-        "extra_flags": browser_flags(targets),
+        "extra_flags": browser_flags(targets, proxy),
         "additional_args": {
             "service_workers": "block",
             "accept_downloads": False,
@@ -75,7 +86,7 @@ class ScraplingStealth:
         token = _active.set(True)
         try:
             response = await self.fetcher.async_fetch(
-                target.url, **_options(guard, policy, targets)
+                target.url, **_options(guard, policy, targets, BROWSER_PROXY.get())
             )
             return guard.result(response.url, response.html_content, response.status, max_bytes)
         except AcquisitionError:
@@ -97,7 +108,7 @@ class ScraplingStealth:
         guard = NetworkGuard(policy)
         token = _active.set(True)
         try:
-            manager = self.session_class(**_options(guard, policy, targets))
+            manager = self.session_class(**_options(guard, policy, targets, BROWSER_PROXY.get()))
             engine = await manager.__aenter__()
         except Exception:
             raise AcquisitionError("browser_navigation_failed", Outcome.TRANSIENT_FAILURE) from None
