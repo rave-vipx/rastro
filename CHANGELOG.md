@@ -1,65 +1,78 @@
 # Changelog
 
-All notable user-facing changes are recorded here. The project follows [Semantic Versioning](docs/stability.md) from 0.6.0. Versions before 0.6.0 were never published to a package registry.
+All notable user-facing changes to Rastro are documented in this file.
 
-## Unreleased
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](docs/stability.md). Versions before 0.6.0 were never published to a package registry.
+
+## [Unreleased]
 
 ### Added
 
-- Sitemap seed ordering and link pattern filtering (N16, N3, SEC-001, AGENT-001): `[spider]` adds `seed_order = "document" | "reverse" | "lastmod"` (default `"document"`; `"lastmod"` sorts newest UTC first with undated entries last in document order, and orders `<sitemapindex>` children consistently) and `allow_pattern` (linear-time regex on each link's normalized path; `deny` still wins). Both apply before `max_pages`, unknown `seed_order` values are refused with the closest valid option, and `rastro config`, `rastro capabilities`, `docs/schemas/job.schema.json` and docs are updated.
-
-### Fixed
-
-- JSON-LD blocks with raw newlines or other control characters inside strings are retried once with those characters escaped; recovered records retain provenance and report `tolerant_jsonld` (INT-002, N17). Malformed structure, duplicate keys and non-finite numbers remain rejected. HTML-parser normalization of other controls varies by platform; decoder regression tests cover all controls before HTML parsing (N23).
+- Sitemap seed ordering and link pattern filtering (SEC-001, AGENT-001): `[spider]` adds `seed_order = "document" | "reverse" | "lastmod"` (default `"document"`; `"lastmod"` sorts newest UTC first with undated entries last in document order, and orders `<sitemapindex>` children consistently) and `allow_pattern` (linear-time regex on each link's normalized path; `deny` still wins). Both apply before `max_pages`, unknown `seed_order` values are refused with the closest valid option, and `rastro config`, `rastro capabilities`, `docs/schemas/job.schema.json` and docs are updated.
 
 ### Changed
 
-- `rastro init --agent`, `llms.txt` and `docs/capabilities.md` explain how results reach Studio: keep them in a job's dataset (`rastro job load` or `rastro.load_records`) and open `rastro studio --root`, instead of building an ad hoc database (N18).
+- `rastro init --agent`, `llms.txt` and `docs/capabilities.md` explain how results reach Studio: keep them in a job's dataset (`rastro job load` or `rastro.load_records`) and open `rastro studio --root`, instead of building an ad hoc database.
+- Planning documents are no longer kept in the repository. Public documentation, ADRs, `AGENTS.md` and the repository templates were rewritten for 1.0: one tagline, no internal process wording, GitHub private vulnerability reporting for security reports, and invented site names on `.example` hosts in the documentation.
 
-## 0.9.0 — 2026-11-17
+### Fixed
 
-Studio redesign, the agent configuration reference, the adoption cut (N15–N19) and the N1–N12 product cut. 0.8.0 was never tagged; its work ships here.
+- Lone UTF-16 surrogates in page JSON (a JSON-LD escape such as `\ud83d` without its low half) no longer fail a whole source: JSON-LD, embedded JSON and JSON parsing and discovery replace them with U+FFFD, valid pairs stay their real character, and a record that still cannot be serialized is rejected with the new `invalid_text` issue and counted in `rejected` instead of failing later (#151).
+- JSON-LD blocks with raw newlines or other control characters inside strings are retried once with those characters escaped; recovered records retain provenance and report `tolerant_jsonld` (INT-002). Malformed structure, duplicate keys and non-finite numbers remain rejected. HTML-parser normalization of other controls varies by platform; decoder regression tests cover all controls before HTML parsing.
 
-### Studio redesign
+## [0.9.0] - 2026-11-17
 
-#### Added
+Studio redesign, the agent configuration reference, the agent capability contract and the URL-first product work: bounded spider, scroll, registry URL, plain-language alerts. 0.8.0 was never tagged; its work ships here.
 
-- Configuration reference (N18, AGENT-001): `rastro config [--output json|markdown]`, the generated `docs/configuration.md` and the MCP resource `rastro://configuration` list every job key, Python keyword argument, operator grant, environment variable and CLI flag with type, default, bounds, description and docs link, introspected from the models, signatures and parser. `rastro job template [--all]` prints an annotated job file that validates as printed. `rastro init --agent` snippets gain a configuration map and the rule to check the reference before writing an option; `rastro job validate` names the closest valid key for an unknown one. Tests fail when a field or flag lacks a description or the page is stale.
+### Added
 
-#### Changed
+- Configuration reference (AGENT-001): `rastro config [--output json|markdown]`, the generated `docs/configuration.md` and the MCP resource `rastro://configuration` list every job key, Python keyword argument, operator grant, environment variable and CLI flag with type, default, bounds, description and docs link, introspected from the models, signatures and parser. `rastro job template [--all]` prints an annotated job file that validates as printed. `rastro init --agent` snippets gain a configuration map and the rule to check the reference before writing an option; `rastro job validate` names the closest valid key for an unknown one. Tests fail when a field or flag lacks a description or the page is stale.
+- Agent capability contract: `rastro capabilities [--output json|markdown|llms]`, `rastro init --agent claude|codex|generic [--format block|skill]`, the MCP resource `rastro://capabilities`, and generated `llms.txt` and `docs/capabilities.md`. MCP server instructions are URL-first and list every capability; tests fail when they go stale.
+- Public adapter API: `rastro.fetch` / `rastro.fetch_async` return a `Fetched` result for one URL under an `AcquisitionPolicy` (same acquirer, robots, egress, budgets and byte limit as jobs; refusals are explicit outcomes), and `rastro.load_records(job, records, *, source_url, observed_at=None)` writes caller-built records into the job's dataset with job-load validation, identity, snapshot semantics and provenance (`method = "json"`, `locator = "adapter"`, `recipe_version = 0`). See `examples/adapter.py`.
+- `JsonLdRecipe.item_type` accepts several types, e.g. `("Event", "MusicEvent")`.
+- `embedded_json` recipe strategy (`EmbeddedJsonRecipe`) reads JSON from one HTML attribute or script, such as `input[name=GXState]::attr(value)` or `script#__NEXT_DATA__::text`, under the JSON limits and the untrusted-recipe selector policy; zero or several matches, invalid JSON or a missing path are explicit failures. Job JSON schemas regenerated.
+- Spider sitemap seed: `[spider] seed = "sitemap"` reads each source as a sitemap.xml (or .xml.gz) under the same allowlist, robots, budget and byte caps, parses it without DTDs or entities, follows a sitemap index one level, and fetches its locs in document order within `max_pages` (SEC-001).
+- `docs/issues.md` lists every issue code with its meaning and next step; a test keeps it complete.
+- Bounded spider follows allowed links from URL sources with depth and page caps, same-host defaults, robots enforcement and a shared request budget (SEC-001).
+- Bounded browser scroll stops when no new records appear or the step cap is reached; it does not enable stealth.
+- Browser pages of one source reuse one context during a run, then close it; sources keep separate contexts.
+- Stealth requests require the operator grant before any renderer starts, including custom renderers (SEC-005).
+- `rastro recipe search` and `install --registry-url HTTPS_URL` consume a hostable static registry with SSRF checks, digest verification and candidate-only installation (SEC-001, SEC-005).
+- Studio **Next page** setting: pick a recipe, type a next-link selector and a page cap (1–50); Studio writes the existing `pagination` fields (ADR 0026) after the untrusted selector policy, a digest check and a reparse that must show only that change. TOML and JSON jobs (P-008).
+- Studio alerts and progress: extract, load, repair and promote answer with plain-language alerts for failure, open drift, stale sources, quarantine, a refused promotion and pagination caps; Health adds last success, why a source is stale, open drift, the last run's alerts and the exact `rastro job load ... --on-failure 'python notify.py'` command for the README hook. `GET /api/progress` reports the running operation, its job file and its real outcome; no page or scroll ordinal is invented and no body, query or secret is included. One operation at a time (`operation_in_progress`) (OBS-002).
+- **Fix this site** (formerly **Propose repair**) passes the configured Studio model to `repair_job_source`; promotion still needs a reason when auto-promote is off (REPAIR-005).
+- Two switches, both off: **Auto-promote** writes only `[repair] auto_promote` on the opened job (digest and reparse checked), and Studio's **Fix this site** promotes only when a model (Studio `--model`, the job's `[model]`, or `[repair] model` with `RASTRO_MODEL`) can act as the semantic judge, otherwise it keeps the candidate and explains why; **Allow stealth for this Studio session** changes the process grant passed to preview, extract, load, repair and promote, is never written to a job, and is locked on when the process was started with `--allow-stealth` or `RASTRO_ALLOW_STEALTH`. `create_app(..., allow_stealth=)` and `rastro studio --allow-stealth` pass it; `preview_job` accepts `allow_stealth` (ADR 0034, SEC-005).
+- Studio registry section: search a local registry directory, install a package as a candidate into the open job's recipe memory (never promotes, never edits the job), and publish an exported public bundle into a local registry without Git or push. HTTPS search and install use the same policy-bound fetcher as `--registry-url`, including operator grants for private networks, extra ports and robots overrides (HUB-002–006).
+- Three synthetic public registry bundles under `examples/registry/` (listing, news card, product card) with offline consumer jobs; the README leads with the five-minute Studio path and a copy-paste failure hook.
+- Studio job page controls for `[spider]` and `[scroll]`, bounded by the job models and written through the comment-preserving editor; scroll is shown disabled with its reason when the source renders over HTTP, and a run's spider outcome, host and path appear without page content (SEC-008).
 
-- Studio shell (stage 1): design tokens with system, light and dark themes, an English/Spanish dictionary (English default), and views for Results, Sources, Alerts, Fix, Settings and New scraper; every token pair meets AA contrast (N1, N5, N8).
-- Studio Results (stage 2): records load when a project opens, with search, source/status/date filters, 25/50/100 per page, JSON and HTML export; empty cells say why (not published, source failed, no reason reported), several prices show a summary with the tier count, and links or images from data never load on their own (N5, DATA-004).
-- Studio provenance panel (stage 3): each field's page, observation time, extraction and recipe version; per-tier prices with availability; an *Imported snapshot* line for adapter records; a *Looks like instructions* marker with its explanation for flagged values (N5, N19, DATA-004).
-- Studio Sources and Alerts (stage 4): per-source status in words with last fetch, read/rejected counts, caps, warnings and one next step; alerts newest first, grouped by day, each with a sentence from its kind and issue code and one action; a missing or failing endpoint is shown as an error, never as an empty list (N5).
-- Studio Fix a site (stage 5): **Find a fix** shows each proposal's checks and a before/after of how every field is read; **Apply fix** needs a reason and re-runs every check through `/api/promote`, **Discard** writes nothing, **Also write it to the job file** uses `/api/apply`; the automatic switch moves here and stays off by default; run, health and correction messages now come from the dictionary (N7, N12, N8).
-- Studio wizard and Home (stage 6): New scraper is four steps (URL, fields, preview, name and save) with file names derived from the project name and folded as advanced; Studio opens on Projects with one card per project (health in words, last update, records, sources with problems, **View results**) and explains an empty folder, unrecognized SQLite files and loading (N1, N2, N5).
-- Studio Settings, registry, mobile and Spanish (stage 7): Settings are folded groups showing only real CLI commands and flags; the registry is **Registry (URL)** with local publish; at 40rem and below tables become labelled cards and the provenance panel a bottom sheet; every JS-built message now comes from the English/Spanish dictionary (N8, N10, N12).
-- Run metrics record per source `rejected` records and the collection cap reached (`cap`, `cap_value`: pagination, spider, scroll and record limits) for every `rastro job load` and `rastro.load_records`; `rastro job stats` adds `rejected` and `capped_runs`. Dataset files move to schema 4 on their first write (older files still read; their rows report `null`, not 0); Rastro 0.7 refuses a schema 4 file, so keep a copy before writing if you may downgrade. Studio's `/api/sources` reads `read`, `rejected`, `cap` and `capped` from these metrics, so command-line loads show caps and rejections too, and `/api/projects` adds a readable `name` and the raw `dataset` (N5, OBS-003..007, SYNC-002).
+### Changed
 
-### adoption cut (N15–N19)
+- Studio shell: design tokens with system, light and dark themes, an English/Spanish dictionary (English default), and views for Results, Sources, Alerts, Fix, Settings and New scraper; every token pair meets AA contrast.
+- Studio Results: records load when a project opens, with search, source/status/date filters, 25/50/100 per page, JSON and HTML export; empty cells say why (not published, source failed, no reason reported), several prices show a summary with the tier count, and links or images from data never load on their own (DATA-004).
+- Studio provenance panel: each field's page, observation time, extraction and recipe version; per-tier prices with availability; an *Imported snapshot* line for adapter records; a *Looks like instructions* marker with its explanation for flagged values (DATA-004).
+- Studio Sources and Alerts: per-source status in words with last fetch, read/rejected counts, caps, warnings and one next step; alerts newest first, grouped by day, each with a sentence from its kind and issue code and one action; a missing or failing endpoint is shown as an error, never as an empty list.
+- Studio Fix a site: **Find a fix** shows each proposal's checks and a before/after of how every field is read; **Apply fix** needs a reason and re-runs every check through `/api/promote`, **Discard** writes nothing, **Also write it to the job file** uses `/api/apply`; the automatic switch moves here and stays off by default; run, health and correction messages now come from the dictionary.
+- Studio wizard and Home: New scraper is four steps (URL, fields, preview, name and save) with file names derived from the project name and folded as advanced; Studio opens on Projects with one card per project (health in words, last update, records, sources with problems, **View results**) and explains an empty folder, unrecognized SQLite files and loading.
+- Studio Settings, registry, mobile and Spanish: Settings are folded groups showing only real CLI commands and flags; the registry is **Registry (URL)** with local publish; at 40rem and below tables become labelled cards and the provenance panel a bottom sheet; every JS-built message now comes from the English/Spanish dictionary.
+- Run metrics record per source `rejected` records and the collection cap reached (`cap`, `cap_value`: pagination, spider, scroll and record limits) for every `rastro job load` and `rastro.load_records`; `rastro job stats` adds `rejected` and `capped_runs`. Dataset files move to schema 4 on their first write (older files still read; their rows report `null`, not 0); Rastro 0.7 refuses a schema 4 file, so keep a copy before writing if you may downgrade. Studio's `/api/sources` reads `read`, `rejected`, `cap` and `capped` from these metrics, so command-line loads show caps and rejections too, and `/api/projects` adds a readable `name` and the raw `dataset` (OBS-003..007, SYNC-002).
+- `evidence_retention_failed` carries `field` and `message = "sensitive_data:<category>"` when the sanitizer refuses a value, so the cause is visible without the value.
+- `llms.txt` no longer says Rastro does not crawl (the bounded spider exists).
+- robots.txt is fetched once per origin for each user operation (run, registry search or install, Studio or SDK URL start, `rastro new --site/--goal`, repair, review and promotion) and cached only in memory for that operation; a registry install no longer fetches it once per file (SEC-008).
+- Studio reads the spider, scroll and next-page limits from the job models instead of copies in the page, and shows each link-following control on its own row.
+- Studio no longer offers **Override failed gates**: `/api/promote` refuses `override_gates` with `gate_override_refused`. Operators who need it run `rastro recipe promote --override-gates` themselves (ADR 0034).
 
-Driven by the first real adoption report from an external project.
+### Fixed
 
-#### Added
+- `records[].evidence.page_url` keeps only scheme, host, port and path; userinfo, `;params`, query and fragment are no longer stored for later pagination, spider or scroll pages (SEC-008).
+- The Studio URL preview expires after 10 minutes and is reused only for the exact URL it was fetched for.
+- Studio preserves CRLF line endings when saving pagination and auto-promote settings in Windows TOML jobs (SEC-005). Synthetic registry inputs and rebuilds keep identical bytes across platforms.
 
-- Agent capability contract (N18): `rastro capabilities [--output json|markdown|llms]`, `rastro init --agent claude|codex|generic [--format block|skill]`, the MCP resource `rastro://capabilities`, and generated `llms.txt` and `docs/capabilities.md`. MCP server instructions are URL-first and list every capability; tests fail when they go stale.
-- Public adapter API (N15): `rastro.fetch` / `rastro.fetch_async` return a `Fetched` result for one URL under an `AcquisitionPolicy` (same acquirer, robots, egress, budgets and byte limit as jobs; refusals are explicit outcomes), and `rastro.load_records(job, records, *, source_url, observed_at=None)` writes caller-built records into the job's dataset with job-load validation, identity, snapshot semantics and provenance (`method = "json"`, `locator = "adapter"`, `recipe_version = 0`). See `examples/adapter.py`.
-- `JsonLdRecipe.item_type` accepts several types, e.g. `("Event", "MusicEvent")` (N16).
-- `embedded_json` recipe strategy (`EmbeddedJsonRecipe`) reads JSON from one HTML attribute or script, such as `input[name=GXState]::attr(value)` or `script#__NEXT_DATA__::text`, under the JSON limits and the untrusted-recipe selector policy; zero or several matches, invalid JSON or a missing path are explicit failures. Job JSON schemas regenerated (N16).
-- Spider sitemap seed: `[spider] seed = "sitemap"` reads each source as a sitemap.xml (or .xml.gz) under the same allowlist, robots, budget and byte caps, parses it without DTDs or entities, follows a sitemap index one level, and fetches its locs in document order within `max_pages` (N16, N3, SEC-001).
-- `docs/issues.md` lists every issue code with its meaning and next step; a test keeps it complete (N17).
+### Security
 
-#### Changed
+- Prompt-injection defense: hidden page content (hidden elements, comments, templates, invisible characters) is removed before a page reaches a model. Values that look like instructions are flagged `instruction_like_content` in model contexts and MCP record payloads, never altered. Automatic promotion is refused for such candidates, which stay quarantined until an operator promotes them with a reason and `--override-gates`. See `SECURITY.md` and ADR 0035.
 
-- `evidence_retention_failed` carries `field` and `message = "sensitive_data:<category>"` when the sanitizer refuses a value, so the cause is visible without the value (N17).
-- `llms.txt` no longer says Rastro does not crawl (bounded spider since N3).
-
-#### Security
-
-- Prompt-injection defense (N19): hidden page content (hidden elements, comments, templates, invisible characters) is removed before a page reaches a model. Values that look like instructions are flagged `instruction_like_content` in model contexts and MCP record payloads, never altered. Automatic promotion is refused for such candidates, which stay quarantined until an operator promotes them with a reason and `--override-gates`. See `SECURITY.md` and ADR 0035.
-
-#### Known limitations
+### Known limitations
 
 - `embedded_json` is not produced by model proposals, discovery or repair relocation, and Mock Lab bundles do not support it yet.
 - Browser-rendered jobs report `sitemap_unsupported`; the sitemap URL is named as the source, not read from robots.txt.
@@ -67,43 +80,14 @@ Driven by the first real adoption report from an external project.
 - Injection detection is a pattern list; `job_extract` MCP payloads carry no flags yet.
 - `rastro init --agent` is POSIX-only: on Windows it fails closed (no race-free directory-relative writes); use `rastro capabilities --output markdown`.
 
-### N1–N12 product cut
+## [0.7.0] - 2026-11-15
 
-#### Added
-
-- Bounded spider follows allowed links from URL sources with depth and page caps, same-host defaults, robots enforcement and a shared request budget (N3, SEC-001).
-- Bounded browser scroll stops when no new records appear or the step cap is reached; it does not enable stealth (N9).
-- Browser pages of one source reuse one context during a run, then close it; sources keep separate contexts (N2).
-- Stealth requests require the operator grant before any renderer starts, including custom renderers (N12, SEC-005).
-- `rastro recipe search` and `install --registry-url HTTPS_URL` consume a hostable static registry with SSRF checks, digest verification and candidate-only installation (N10, SEC-001, SEC-005).
-- Studio **Next page** setting: pick a recipe, type a next-link selector and a page cap (1–50); Studio writes the existing `pagination` fields (ADR 0026) after the untrusted selector policy, a digest check and a reparse that must show only that change. TOML and JSON jobs (N4, P-008).
-- Studio alerts and progress: extract, load, repair and promote answer with plain-language alerts for failure, open drift, stale sources, quarantine, a refused promotion and pagination caps; Health adds last success, why a source is stale, open drift, the last run's alerts and the exact `rastro job load ... --on-failure 'python notify.py'` command for the README hook. `GET /api/progress` reports the running operation, its job file and its real outcome; no page or scroll ordinal is invented and no body, query or secret is included. One operation at a time (`operation_in_progress`) (N5, OBS-002).
-- **Fix this site** (formerly **Propose repair**) passes the configured Studio model to `repair_job_source`; promotion still needs a reason when auto-promote is off (N7, REPAIR-005).
-- Two switches, both off: **Auto-promote** writes only `[repair] auto_promote` on the opened job (digest and reparse checked), and Studio's **Fix this site** promotes only when a model (Studio `--model`, the job's `[model]`, or `[repair] model` with `RASTRO_MODEL`) can act as the semantic judge, otherwise it keeps the candidate and explains why; **Allow stealth for this Studio session** changes the process grant passed to preview, extract, load, repair and promote, is never written to a job, and is locked on when the process was started with `--allow-stealth` or `RASTRO_ALLOW_STEALTH`. `create_app(..., allow_stealth=)` and `rastro studio --allow-stealth` pass it; `preview_job` accepts `allow_stealth` (N12, ADR 0034, SEC-005).
-- Studio registry section: search a local registry directory, install a package as a candidate into the open job's recipe memory (never promotes, never edits the job), and publish an exported public bundle into a local registry without Git or push. HTTPS search and install use the same policy-bound fetcher as `--registry-url`, including operator grants for private networks, extra ports and robots overrides (N10, HUB-002–006).
-- Three synthetic public registry bundles under `examples/registry/` (listing, news card, product card) with offline consumer jobs; the README leads with the five-minute Studio path and a copy-paste failure hook; the master spec Amendment Log cites ADR 0032–0034 (N6, N8, N11).
-- Studio job page controls for `[spider]` and `[scroll]`, bounded by the job models and written through the comment-preserving editor; scroll is shown disabled with its reason when the source renders over HTTP, and a run's spider outcome, host and path appear without page content (N3, N9, SEC-008).
-
-#### Fixed
-
-- `records[].evidence.page_url` keeps only scheme, host, port and path; userinfo, `;params`, query and fragment are no longer stored for later pagination, spider or scroll pages (N3, SEC-008).
-- The Studio URL preview expires after 10 minutes and is reused only for the exact URL it was fetched for (N1).
-- Studio preserves CRLF line endings when saving pagination and auto-promote settings in Windows TOML jobs (N4, N12, SEC-005). Synthetic registry inputs and rebuilds keep identical bytes across platforms (N6).
-
-#### Changed
-
-- robots.txt is fetched once per origin for each user operation (run, registry search or install, Studio or SDK URL start, `rastro new --site/--goal`, repair, review and promotion) and cached only in memory for that operation; a registry install no longer fetches it once per file (N1, N10, SEC-008).
-- Studio reads the spider, scroll and next-page limits from the job models instead of copies in the page, and shows each link-following control on its own row (N3, N4, N9).
-- Studio no longer offers **Override failed gates**: `/api/promote` refuses `override_gates` with `gate_override_refused`. Operators who need it run `rastro recipe promote --override-gates` themselves (N7, ADR 0034).
-
-## 0.7.0 — 2026-11-15
-
-Bring your own AI: any model or agent proposes recipes and repairs while Rastro verifies. Operators also hear about drift and stuck state, not only hard failures; see [Monitoring and alerts](docs/operations.md) and ADR 0023. The release also completes the v0.3–v0.5 roadmap: JavaScript pages, sessions, pagination, scheduling, PostgreSQL, start-from-a-goal, run metrics and cost limits, Hub phase 2 and operator network permissions.
+Bring your own AI: any model or agent proposes recipes and repairs while Rastro verifies. Operators also hear about drift and stuck state, not only hard failures; see [Monitoring and alerts](docs/operations.md) and ADR 0023. The release also adds JavaScript pages, sessions, pagination, scheduling, PostgreSQL datasets, recipe registries and operator network permissions.
 
 ### Added
 
-- Studio new-scraper wizard starts from a URL: it fetches the page, suggests a recipe from examples, and writes a `kind = "url"` job with `allowed_hosts` so later runs scrape that address again. Uploading saved HTML is no longer required; a local page remains available for offline replay (N1, P-008, JOB-001, INT-002).
-- Opt-in JavaScript page rendering (`pip install "rastro-engine[browser]"`): `[acquisition] render = "browser"` (or per source) renders with plain Chromium behind the same allowlist, DNS pinning, per-request destination checks, robots rules and budgets; `render = "stealth"` (Scrapling, `solve_challenges` included) only with the operator's `--allow-stealth`, `allow_stealth=True` or `RASTRO_ALLOW_STEALTH`. Render timing in metrics. ADR 0024 records the owner's 2026-11-15 amendment of SCR-003; no automatic proxy rotation and no paid CAPTCHA services (SCR-003 amended, SEC-005, SEC-008, OBS-001).
+- Studio new-scraper wizard starts from a URL: it fetches the page, suggests a recipe from examples, and writes a `kind = "url"` job with `allowed_hosts` so later runs scrape that address again. Uploading saved HTML is no longer required; a local page remains available for offline replay (P-008, JOB-001, INT-002).
+- Opt-in JavaScript page rendering (`pip install "rastro-engine[browser]"`): `[acquisition] render = "browser"` (or per source) renders with plain Chromium behind the same allowlist, DNS pinning, per-request destination checks, robots rules and budgets; `render = "stealth"` (Scrapling, `solve_challenges` included) only with the operator's `--allow-stealth`, `allow_stealth=True` or `RASTRO_ALLOW_STEALTH`. Render timing in metrics. ADR 0024 records the 2026-11-15 amendment of SCR-003; no automatic proxy rotation and no paid CAPTCHA services (SCR-003 amended, SEC-005, SEC-008, OBS-001).
 - Run-local HTTP sessions (`[acquisition] session = true`) and conditional requests for dataset loads with an explicit `unchanged` outcome (`Outcome.UNCHANGED`); validators are bound to an inputs digest that includes the engine version, and paginated sources never send them. Dataset schema 2 adds `dataset_validators`; ADR 0030 (SCHED-005, SYNC-004, SEC-005).
 - Bounded recipe pagination: `[recipe.pagination] next` / `max_pages` follows next links within the source host and one request budget; a missing next link or a repeated page completes, an empty later page succeeds but is reported incomplete, and any other early stop is partial (exit 3); ADR 0026 (SYNC-002, SEC-008).
 - Optional PostgreSQL datasets (`pip install "rastro-engine[postgres]"`, `[dataset] backend = "postgres"` with a DSN from an allowed environment variable): transactional snapshots and source health; operational state (locks, checkpoints, metrics) stays local. ADR 0025. Studio and MCP dataset views still assume SQLite (DATA-001, DATA-003, SYNC-002, SYNC-003, SYNC-006, SEC-011).
@@ -150,6 +134,11 @@ Bring your own AI: any model or agent proposes recipes and repairs while Rastro 
 - Drift storage moves to schema 2 (adds `drift_open`, `drift_rebase`). Schema 1 files upgrade on the first drift write; 0.6.0 refuses a schema 2 file explicitly (DRIFT-001).
 - A clock that goes backwards no longer fails every run with "Out-of-order": source status, records, drift runs and repair samples clamp to the last recorded time (DATA-004, DRIFT-001).
 
+### Fixed
+
+- Model repair candidates (scrape, job repair, Studio Ask AI) and MCP `recipe_propose` candidates must pass the relocation value checks (`value_type_changed`, `value_shape_changed`, `value_matches_other_field`) before the semantic judge; a failure rejects the candidate and feeds the retry. The judge still reviews every would-be promotion, relocated ones included, and can only veto; without a model, repair makes no calls. On the AI repair benchmark a swapped recipe with an approve-all judge now promotes 0/28 wrong (6/28 before); the correct oracle still recovers 23/28 with 44 model calls (REPAIR-002, QUAL-005, QUAL-006, AI-001).
+- The semantic judge's response schema keeps `$defs` at its root, so schema-enforcing providers such as Ollama accept it; before, every judge call failed and every automatic promotion with a model was quarantined as `semantic_judge_failed` (QUAL-005, AI-005).
+
 ### Security
 
 - The 0.6.0 `[model]` trust check now covers every model surface, so a job file can no longer exfiltrate secrets or start programs through `[model]`: a job-declared model uses a non-loopback endpoint, an endpoint outside the local model ports (11434, 1234, 8000, 8080), `base_url_env` or `allow_remote = true` only with operator consent (`--allow-remote` on any command including `rastro mcp` and `rastro studio`, SDK `allow_remote=True` on `run_job`, `run_job_async`, `run_job_file`, `load_job_file`, `repair_job_source(s)`, or `RASTRO_ALLOW_REMOTE=1`); a `provider = "command"` model is always refused, because a command model comes only from operator configuration (`rastro.model`, `--model`, `RASTRO_MODEL`); `api_key_env` and `base_url_env` must match `RASTRO_*` unless allowed with `--allow-env NAME`, `allow_env=[...]` or `RASTRO_ALLOWED_ENV`, and the refusal never echoes the name. Runs fail closed before any request, naming the flag. **Migration:** 0.5 jobs with a remote model need the operator flag, and keys such as `OPENAI_API_KEY` need `--allow-env OPENAI_API_KEY` or a `RASTRO_` name (security audit H1; SEC-004, SEC-005, SEC-011, P-001).
@@ -159,16 +148,11 @@ Bring your own AI: any model or agent proposes recipes and repairs while Rastro 
 - MCP `recipe_promote(override_gates=true)` is refused unless the operator starts the server with `rastro mcp --allow-override-gates` (`build_server`/`serve(..., allow_override_gates=True)`): page content can prompt-inject the client agent, which could otherwise activate a quarantined candidate, including one the semantic judge vetoed. The error tells the user to run `rastro recipe promote --override-gates` themselves; the CLI is unchanged. `docs/mcp.md` documents what `recipe_apply` writes (REPAIR-005, AGENT-003, SEC-011).
 - Studio Ask AI reports the model's real remoteness: with `RASTRO_MODEL` naming a hosted endpoint and `RASTRO_ALLOW_REMOTE=1` but no `--allow-remote`, `/api/ai` said `remote: false` and the terminal said page content "stays on loopback models". The built-in transports now expose `remote` (`rastro.model_factory.is_remote`), and Studio uses it; the flag only speaks for a custom `ModelPort` (P-001, P-008).
 - Dataset and recipe-memory files and their SQLite sidecars are created 0600 on POSIX, and existing files the user owns are tightened when opened; datasets hold sanitized page samples (SEC-009, SEC-004).
-- `.gitignore` keeps local agent, editor and tool state (`.claude/`, `.codex/`, `.opencode/`, `opencode.json`, `.orca/`, `.cursor/`, `.mcp.json`, `*.local.json`, IDE folders) and credential files (`.envrc`, `.netrc`, `.pypirc`, private keys) out of the repository and the sdist; none were ever committed (SEC-004).
+- `.gitignore` keeps local agent, editor and tool state (coding-agent and IDE folders, `.mcp.json`, `*.local.json`) and credential files (`.envrc`, `.netrc`, `.pypirc`, private keys) out of the repository and the sdist; none were ever committed (SEC-004).
 
-### Fixed
+## [0.6.0] - 2026-11-12
 
-- Model repair candidates (scrape, job repair, Studio Ask AI) and MCP `recipe_propose` candidates must pass the relocation value checks (`value_type_changed`, `value_shape_changed`, `value_matches_other_field`) before the semantic judge; a failure rejects the candidate and feeds the retry. The judge still reviews every would-be promotion, relocated ones included, and can only veto; without a model, repair makes no calls. On the AI repair benchmark a swapped recipe with an approve-all judge now promotes 0/28 wrong (6/28 before); the correct oracle still recovers 23/28 with 44 model calls (REPAIR-002, QUAL-005, QUAL-006, AI-001).
-- The semantic judge's response schema keeps `$defs` at its root, so schema-enforcing providers such as Ollama accept it; before, every judge call failed and every automatic promotion with a model was quarantined as `semantic_judge_failed` (QUAL-005, AI-005).
-
-## 0.6.0 — 2026-11-12
-
-First public release of `rastro-engine` on PyPI: one-call typed scraping with `rastro.scrape`, selectors suggested from example values, verified self-repair, a complete MCP server for AI agents and a local Studio GUI.
+First public release on PyPI as `rastro-engine`. Versions before 0.6.0 were never published.
 
 ### Added
 
@@ -197,18 +181,6 @@ First public release of `rastro-engine` on PyPI: one-call typed scraping with `r
 - `rastro new --allow-partial` writes a job even when the recipe preview is only a partial success; `Suggestion.status` reports the preview outcome (JOB-001, INT-002).
 - `rastro recipe show job.toml --source N [--version V]` prints a stored recipe version as JSON, read-only; `recipe compare` reports `changed_settings` (such as `record_selector`); `rastro recipe --help` describes every subcommand (REC-006).
 - Rejected repair candidates report `blocking` issues: record index, field and issue code, never values (REPAIR-002).
-
-### Security
-
-- A job file can no longer send a model key or page content to an endpoint its author chose: a job-declared remote model needs the operator's `RASTRO_ALLOW_REMOTE=1`, and `[model]` `api_key_env`/`base_url_env` must be `RASTRO_*` or listed in `RASTRO_ALLOWED_ENV` (security audit H1; SEC-004).
-- A job file is configuration: a proxy it declares in `[acquisition.egress_profiles]` is used only with operator opt-in (`--allow-egress` on `rastro job run|preview|load`, `rastro recipe repair|promote`, `rastro mcp` and `rastro studio`; `allow_egress=True` in Python; or `RASTRO_ALLOW_EGRESS=1`), and its `username_env`/`password_env` must be `RASTRO_*` names or listed by the operator (`RASTRO_ALLOWED_ENV`, `--allow-env NAME`, `allow_env=`). Before, a hostile job could send any environment variable, such as `GITHUB_TOKEN`, to its own proxy as `Proxy-Authorization`. Jobs without egress profiles are unchanged. Proxy credential references must be uppercase, as documented (SEC-002, SEC-011, AGENT-003). Migration: rename proxy credential variables to `RASTRO_*` or allow-list them, and pass `--allow-egress` to jobs you trust.
-- Recipes in job files, Hub bundles (checked before the replay), MCP `scrape_file`, Studio selector edits and model proposals refuse CSS selectors with `:has()`, sibling combinators (`~`, `+`), more than 8 chained compounds, more than 8 alternatives or pseudo-class nesting deeper than 2. A 48 KB bundle using `p ~ p ~ p ~ b` took 105 s of CPU to import. Hub bundles give integrity, not authenticity (HUB-001, AGENT-002, P-008).
-- Counting the elements a selector matches is linear: 200,000 sibling matches took minutes and now take under a second (SEC-008).
-- The MCP `job_preview` tool is no longer annotated `readOnlyHint`: it writes nothing, but a job can fetch URLs or call a model (AGENT-002).
-- The source distribution no longer ships `benchmarks/recovery/sealed/` (ADR 0011).
-- `rastro new`, MCP `job_new` and Studio create resolve the dataset and `recipe_memory` paths against the job folder and refuse either one when it is the job file, the page or the other (`./data.sqlite` and `data.sqlite` count as one file) (JOB-001, REC-006, SEC-008).
-- Studio refuses a `POST` without an `Origin` header even with a valid token; GET requests are unchanged (P-008, SEC-008).
-- Studio requires the session token on every `/api` request, reads included (job and page lists, connect commands); the page and its static files stay public. Saving a selector and writing a serving recipe compare the expected digest with the bytes being replaced inside the write step, so a file changed after the check fails with `file_changed` instead of being overwritten. Dataset pages and downloads cut field and identity values longer than 2,000 characters and mark the record `truncated` (P-008, SEC-008, DATA-004, REC-006).
 
 ### Changed
 
@@ -253,9 +225,21 @@ First public release of `rastro-engine` on PyPI: one-call typed scraping with `r
 - Job runs, loads and previews refuse a symlinked `recipe_memory` path; run and load open a current-schema store read-only while choosing recipes, and a pinned `recipe_version` is reported only when the store holds it (SEC-008, REC-006).
 - `rastro recipe apply` refuses a symlink in any directory between the working directory (or, for a job outside it, the job's own directory) and the job file, and atomic writes sync the parent directory on POSIX (SEC-008).
 
-## 0.5.0 — not published (2026-11-11)
+### Security
 
-Nothing from this project is published to PyPI. Versions 0.4 (Studio, MCP) and 0.5 (Hub step 1) land together; see [ADR 0020](docs/decisions/0020-studio-mcp-hub-minimal.md).
+- A job file can no longer send a model key or page content to an endpoint its author chose: a job-declared remote model needs the operator's `RASTRO_ALLOW_REMOTE=1`, and `[model]` `api_key_env`/`base_url_env` must be `RASTRO_*` or listed in `RASTRO_ALLOWED_ENV` (security audit H1; SEC-004).
+- A job file is configuration: a proxy it declares in `[acquisition.egress_profiles]` is used only with operator opt-in (`--allow-egress` on `rastro job run|preview|load`, `rastro recipe repair|promote`, `rastro mcp` and `rastro studio`; `allow_egress=True` in Python; or `RASTRO_ALLOW_EGRESS=1`), and its `username_env`/`password_env` must be `RASTRO_*` names or listed by the operator (`RASTRO_ALLOWED_ENV`, `--allow-env NAME`, `allow_env=`). Before, a hostile job could send any environment variable, such as `GITHUB_TOKEN`, to its own proxy as `Proxy-Authorization`. Jobs without egress profiles are unchanged. Proxy credential references must be uppercase, as documented (SEC-002, SEC-011, AGENT-003). Migration: rename proxy credential variables to `RASTRO_*` or allow-list them, and pass `--allow-egress` to jobs you trust.
+- Recipes in job files, Hub bundles (checked before the replay), MCP `scrape_file`, Studio selector edits and model proposals refuse CSS selectors with `:has()`, sibling combinators (`~`, `+`), more than 8 chained compounds, more than 8 alternatives or pseudo-class nesting deeper than 2. A 48 KB bundle using `p ~ p ~ p ~ b` took 105 s of CPU to import. Hub bundles give integrity, not authenticity (HUB-001, AGENT-002, P-008).
+- Counting the elements a selector matches is linear: 200,000 sibling matches took minutes and now take under a second (SEC-008).
+- The MCP `job_preview` tool is no longer annotated `readOnlyHint`: it writes nothing, but a job can fetch URLs or call a model (AGENT-002).
+- The source distribution no longer ships `benchmarks/recovery/sealed/` (ADR 0011).
+- `rastro new`, MCP `job_new` and Studio create resolve the dataset and `recipe_memory` paths against the job folder and refuse either one when it is the job file, the page or the other (`./data.sqlite` and `data.sqlite` count as one file) (JOB-001, REC-006, SEC-008).
+- Studio refuses a `POST` without an `Origin` header even with a valid token; GET requests are unchanged (P-008, SEC-008).
+- Studio requires the session token on every `/api` request, reads included (job and page lists, connect commands); the page and its static files stay public. Saving a selector and writing a serving recipe compare the expected digest with the bytes being replaced inside the write step, so a file changed after the check fails with `file_changed` instead of being overwritten. Dataset pages and downloads cut field and identity values longer than 2,000 characters and mark the record `truncated` (P-008, SEC-008, DATA-004, REC-006).
+
+## 0.5.0 - 2026-11-11
+
+Not published. Studio, the MCP server and recipe bundles; see [ADR 0020](docs/decisions/0020-studio-mcp-hub-minimal.md).
 
 ### Added
 
@@ -263,9 +247,9 @@ Nothing from this project is published to PyPI. Versions 0.4 (Studio, MCP) and 0
 - `rastro recipe export` and `rastro recipe import` share recipes as bundles (recipe, schema, sample, expected records, hashes) verified offline before storage (HUB-001; see `docs/hub.md`).
 - `rastro studio` (optional `studio` extra) serves a loopback-only page to validate, preview, correct a selector, accept and copy connect commands for a job; see `docs/studio.md` (P-008).
 
-## 0.3.0 — not published (2026-11-11)
+## 0.3.0 - 2026-11-11
 
-Nothing from this project is published to PyPI.
+Not published.
 
 ### Added
 
@@ -277,7 +261,7 @@ Nothing from this project is published to PyPI.
 
 ### Removed
 
-- Live-site pilot material (the live job, pilot reports and the agenda publication) moved out of the repository; it is an internal use-case test, not part of the engine.
+- Live-site pilot material (the live job, pilot reports and the agenda publication) moved out of the repository.
 
 ### Fixed
 
@@ -285,7 +269,9 @@ Nothing from this project is published to PyPI.
 - Acquisition falls back across validated DNS addresses on connection failure only, within the same timeout and request budget, and never through a proxy.
 - Blank text nodes no longer count as field matches; uniqueness is decided on elements.
 
-## 0.2.0rc1 — not published
+## 0.2.0rc1 - 2026-11-08
+
+Not published.
 
 ### Added
 
@@ -293,12 +279,10 @@ Nothing from this project is published to PyPI.
 - Offline repair candidates from Scrapling relocation, fallbacks and discovery, plus explicitly enabled bounded models; recipe CI replays sanitized last-success and Mock Lab fixtures, checks schema, provenance and generic consistency rules, and promotes only a unique candidate meeting configured thresholds (REPAIR-001–005, SCR-002, QUAL-005/006).
 - `rastro recipe repair|promote|compare|rollback`, machine-readable comparisons and per-run repair reports; failed/quarantined candidates keep the serving recipe and dataset records (REC-005/006, REPAIR-003–006).
 - Optional job `[[consistency]]` and `[repair]` fields, published schemas, and latest-success relocation/sample tables in the dataset file with an independent version row (ADR 0019). Existing jobs without these fields keep their validation output.
-
 - Separate SQLite dataset with approved fields, provenance, origins, stable identity, update/missing/uncertain outcomes and failure retention (DATA-001/004/005, SYNC-002/003/005/006; #56; ADR 0017).
 - Declarative `[dataset]` configuration and read-only `rastro job preview` with observed values, provenance and approval decisions (DATA-002, JOB-002, AGENT-001; #55).
-- Uruguay dance agenda pilot with dated live obstacle evidence and synthetic offline v1/v2 samples (COST-001; #59).
+- Events agenda example with synthetic offline v1/v2 samples (COST-001; #59).
 - `rastro job load`, per-source change counts and stale keys with last-success times, plus labeled `rastro dataset status` and JSON/JSONL export; shipped upcoming-events SQL and the executed README path (DATA-001/003, SYNC-002/006/008, COST-001; #61). The sample now includes synthetic stable performance IDs for repeat/reschedule proof; live jobs retain their original schema. Optional `dataset.match_fields` configures generic near-match field names.
-
 - Recipe lifecycle states (`candidate`, `active`, `degraded`, `retired`), the `RecipeLifecycle` port (`save_candidate`, `transition`, `rollback`, `history`, `next_version`), and machine-readable lifecycle history. Candidates do not displace the serving version; rollback restores a previously served version (REC-005, REC-006, REPAIR-006; #46; ADR 0015).
 - Mock Lab structural mutations: seeded, reproducible HTML and JSON operators for every MOCK-002 category (reordering, class changes, wrapping, missing fields, duplicates, empty containers, changed labels, pagination), each reporting machine-readable changes or an explicit no-target reason, composed by a versioned `MutationPlan` whose outputs carry the synthetic label. `lxml` and `cssselect`, already installed with Scrapling, are now declared dependencies (MOCK-002, MOCK-006; #48; ADR 0014).
 - Synthetic failure scenarios with explicit outcomes and versioned labels (MOCK-003, MOCK-004; #40).
@@ -308,20 +292,50 @@ Nothing from this project is published to PyPI.
 ### Changed
 
 - With recipe memory configured, `job load` uses the lifecycle's serving version after bootstrap, so promotion/rollback controls the next load; `job run` and SDK explicit-recipe precedence are unchanged. Dataset files gain additive `relocation_*` tables; no recipe-memory migration. The dance example's consistency rules now live in its job files instead of `consistency.toml` (REPAIR-006, QUAL-005/006).
-
 - SQLite recipe memory migrates to schema 2 on first open through a forward-only transaction. Existing 0.1.0 payloads keep loading: the highest version per key remains active and older versions become retired rollback targets. Version 0.1.0 cannot read migrated files; back up before upgrading. `RecipeRepository` remains unchanged from 0.1.0 (REC-005, REC-006, REPAIR-006; #46; ADR 0015).
 
-### Known limitations
+## [0.1.0rc1] - 2026-11-03
 
-- DIFF-002 product-task comparison: one offline synthetic task; human effort unmeasured; see docs/comparison-v02.md.
-- DIFF-002 remains partial: human effort / minutes to a correct database were not measured (`human_minutes: null`); development-agent usage was not instrumented.
-- DIFF-001 sealed-corpus recovery evaluation has not been run; no recovery result is claimed. The release candidate has not been tagged or promoted.
-- The live pilot did not establish a complete two-source dataset; SODRE Spanish date text yielded zero live records, and sale dates can be confused with event dates. (Pilot report kept outside the repository.)
-- Live-source repair, retention pruning, drift calibration and heterogeneous relocation remain future work.
+Release candidate tagged on `main`; not published to a package registry. First Rastro Engine release: schema-first, verifiable extraction with optional policy-aware HTTP acquisition, structured JSON responses, explicit egress profiles, SQLite recipe memory and optional bounded Ollama assistance.
 
-## 0.1.0rc1 — 2026-11-03
+### Added
 
-Release candidate tagged on `main`; not published to any package registry. Final `0.1.0` waits on the release gates in issue #5.
+- Declarative job files (`format_version = 1`) in TOML or JSON with closed field types, deterministic dynamic `JobRecord` schemas and fingerprints, path containment and environment-only credential references, non-widening HTTP host allowlists, `rastro job validate|run|schema` with distinct exit codes (`0`/`1`/`2`/`3`) and `untrusted_source_data` labelling, and committed JSON Schemas under `docs/schemas/` (JOB-001, JOB-002, AGENT-001, AGENT-003, INT-001, P-008). See ADR 0013.
+- Job files are parsed strictly (no string-to-bool or string-to-number coercion, including inside `acquisition`, `limits` and `inference_policy`), `string` patterns are checked with Pydantic's regex engine, `*_env` references must be uppercase, `openai_compatible` `base_url_env` requires `allow_remote = true`, `rastro job validate` redacts `*_env` values, and every `rastro job` configuration or usage error is one JSON object `{"error", "message", "location"}` on stderr with exit code `2` (JOB-002, AGENT-001, AGENT-003, SEC-004, SEC-011).
+- Deterministic discovery also matches exact declared Pydantic field aliases (`Field(alias=...)`, string `validation_alias` and `AliasChoices`) and an opt-in typed `discovery_aliases` per-field map for JSON-LD, microdata and JSON responses; recipes still map the model field name, so provenance shows the matched source key, and an aliased schema no longer raises `ConfigurationError` (INT-002).
+- Frozen v0.2 recovery benchmark protocol (`docs/recovery-benchmark.md`, ADR 0011) with exact detection, restoration, false-promotion, silent-error, model-call and human-approval metrics, pass criteria for a DIFF-001 recovery claim and anti-tuning rules, plus hashed synthetic development and sealed corpora of epoch sequences (`benchmarks/recovery/`) and an offline integrity test. No executor or repair code, no measured result, and no public SDK change (DIFF-001, REPAIR-001–006, DRIFT-001–005, QUAL-005/006, MOCK-002/003).
+- `OpenAICompatibleModel`, a Chat Completions `ModelPort` strategy for OpenAI, OpenRouter, vLLM, LM Studio, llama.cpp server and Ollama's `/v1`, behind a new `openai` extra. It sends `json_schema` structured outputs (or explicit `response_format="json_object"`), never tools; loopback endpoints work without opt-in while any other host requires `allow_remote=True` and HTTPS; API keys are referenced only through `api_key_env`; `InferencePolicy` deadline, context, response-byte, token and concurrency budgets are enforced in the adapter and failures map to `ModelError` categories (AI-001–005, SEC-004/005/011, P-001, P-007). See ADR 0010.
+- `rastro.OllamaModel` and `rastro.OpenAICompatibleModel` lazy public exports; core `import rastro` still does not import HTTPX, and a missing extra raises an `ImportError` naming it (P-002).
+- `OpenAICompatibleModel(token_limit="max_completion_tokens", temperature=None)` for OpenAI reasoning models that reject `max_tokens` and sampling parameters (AI-005, AI-007).
+- "Choosing or writing a model provider" documentation with provider examples and the custom `ModelPort` contract.
+- Held-out DIFF-001 evaluation (`python -m benchmarks.heldout`): five new synthetic sources with 24 structural mutations, measuring source-specific configuration, silent errors when re-running working integrations, scripted-model calls per successful record with SQLite memory, an observed visibility checklist and latency against a schema-generic baseline with a structured-data adapter. Results show partial DIFF-001 evidence and no silent-error or latency advantage (DIFF-001, QUAL-003, OBS-001).
+- Multi-model live Ollama harness (`--model` repeatable, `--trials`, `--keep-previous`) with recorded `qwen3:4b` and `llama3.2:3b` runs, a versioned report that keeps earlier runs, and a `--probe` mode that records raw proposals for diagnosis (AI-001–004, REC-001, REC-004).
+- Permitted structured JSON responses: a declarative `json` recipe strategy with an RFC 6901 `record_path` and relative field pointers, `Rastro.extract_json`/`extract_json_async`, and opt-in `representation="json"` HTTP acquisition that sends `Accept: application/json` and rejects non-JSON content types as permanent failures (INT-001–004, SEC-001/005).
+- Strict JSON budgets (`max_json_bytes`, `max_json_depth`, `max_json_nodes`), duplicate-key rejection, `json` evidence with absolute pointer locators, explicit `invalid_json`/`invalid_record`/`invalid_record_path`/`record_path_not_found` issues, and the public `Representation` type (QUAL-001–004, SEC-008).
+- Deterministic JSON recipe discovery by exact field names over the root object and arrays of objects. JSON recipe memory uses representation-isolated keys, and existing HTML keys and legacy payloads are unchanged (INT-002, REC-001–004). Includes the offline `examples/structured_api.py` and ADR 0007.
+- Explicit network egress profiles: `AcquisitionPolicy.egress_profiles` declares named HTTP(S) proxies selected per `Source.egress`, with environment-variable credential references, pre-DNS configuration failures, unchanged target validation, no rotation or fallback, egress-isolated recipe memory and `metrics.egress` (GEO-001–003, GEO-005, SEC-001–005, SEC-008, SEC-011). `Source` rejects `geolocation` explicitly.
+- Opt-in live Ollama harness and recorded `qwen3:4b` evidence: cross-process learning and zero-inference reuse, plus labelled live/controlled failure scenarios (AI-001–004, REC-004).
+- Explicit ordered language preferences with descending Accept-Language weights, currency, timezone and direct-egress context through Pydantic's supported `model_validate` path; early rejection of invalid headers and unsupported egress (GEO-001/002).
+- Regional recipe isolation by language order, currency and egress with unchanged default canonical keys for existing SQLite memory (GEO-003, REC-001).
+- Reproducible offline comparison against an independent Scrapling + Pydantic baseline: synthetic corpus, multiset quality scoring, raw timing samples and source hashes (DIFF-001, QUAL-003).
+- Public demo-site end-to-end example with persistent recipe reuse and offline regression coverage; recorded live results, runtime license inventory and explicit v0.1 release gates (OBS-001, REC-001–003, specification sections 17–18).
+- Opt-in deterministic recipe discovery, asynchronous supplied-HTML extraction and optional local Ollama assistance through `ModelPort`.
+- Structured model proposals, bounded calls/corrections/deadline/context/response/concurrency, and source/schema validation before activation (AI-001–004, REC-004, INT-002).
+- Learned recipes retain required-field evidence checks across restarts; M3 payloads remain reusable without false version conflicts.
+- Inference metrics, attempt origins, an inspectable learned recipe, offline example, adapter/attack/budget tests and a separate `ollama` dependency extra.
+- Optional SQLite recipe memory with exact source/template/schema/region identity, immutable versions, success metadata, retention and deletion.
+- Deterministic reuse across restarts in offline and asynchronous SDKs, with worker-thread storage and explicit persistence failures.
+- Bounded explicit fallback recipes; only the alternative validated successfully becomes reusable.
+- Recipe version/reuse/attempt metadata, storage timings, a repeated-extraction example and persistence/security/concurrency tests.
+- Optional policy-aware HTTP SDK with exact host allowlists, DNS pinning, robots rules, redirect checks, bounded retries and host pacing.
+- Asynchronous single-source and ordered batch extraction, cancellation, request/body budgets, and explicit network outcomes.
+- Acquisition metrics, regional Accept-Language, HTTP example, and offline transport/security regression tests.
+- Offline HTML extraction with explicit JSON-LD and CSS recipes through Scrapling.
+- Typed Pydantic results, field provenance, safe diagnostics, resource limits, and processing timings.
+- CLI demo, environment diagnostics, and declarative recipe validation.
+- Offline regression and property tests, strict typing, package checks, and documentation.
+- Public contribution and security policies.
+- Release evidence records built wheel/sdist contents and a bundled native notice review for `lxml` and `curl-cffi` on macOS arm64 (spec section 18 release gates).
 
 ### Changed
 
@@ -335,63 +349,6 @@ Release candidate tagged on `main`; not published to any package registry. Final
 - Internal: `schema_fingerprint` caches canonical JSON Schema digests per model class (invalidating on `model_rebuild`) and `extract_document` computes `source.evidence_url` and validates shared `Evidence` metadata once per extraction, cutting unprofiled p50 latency on `static` (0.326 → 0.172 ms), `metadata` (0.251 → 0.118 ms) and `large` (12.033 → 9.135 ms; same-run gap over baseline 3.530 → 1.822 ms) with byte-identical serialized results, issues and provenance (P-010, DIFF-001).
 - The README, getting-started and acquisition guides now construct `CssRecipe`, `JsonLdRecipe` and `JsonRecipe` directly instead of `Recipe(strategy=...)`, so every documented example is the typed form (REC-002, QUAL-001).
 - Internal: split `domain.models` (`sources`, `recipes`, `results` with `domain.models` re-exporting all contracts) and extracted cohesive `application` helpers (`http_policy`, `proposals`, `outcomes`, `batch`) from `acquisition`, `intelligence`, `service` and `engine` so every module stays within the 250-line budget with unchanged public imports, SQLite payloads, schema fingerprints and serialized results (P-006, REC-001, REC-002, INT-003, QUAL-004).
-- The roadmap recorded the merged pre-v0.2 hardening slices (#21–#25, #28–#32), the work still in progress (declarative jobs and JSON CLI, module splits for the clean-code size budget) and the maintainer-owned gates (issues #2–#5, promotion to `main`) (P-010, DIFF-001, INT-002, JOB-001/002, AGENT-001).
-
-### Added
-
-- Declarative job files (`format_version = 1`) in TOML or JSON with closed field types, deterministic dynamic `JobRecord` schemas and fingerprints, path containment and environment-only credential references, non-widening HTTP host allowlists, `rastro job validate|run|schema` with distinct exit codes (`0`/`1`/`2`/`3`) and `untrusted_source_data` labelling, and committed JSON Schemas under `docs/schemas/` (JOB-001, JOB-002, AGENT-001, AGENT-003, INT-001, P-008). See ADR 0013.
-- Job files are parsed strictly (no string-to-bool or string-to-number coercion, including inside `acquisition`, `limits` and `inference_policy`), `string` patterns are checked with Pydantic's regex engine, `*_env` references must be uppercase, `openai_compatible` `base_url_env` requires `allow_remote = true`, `rastro job validate` redacts `*_env` values, and every `rastro job` configuration or usage error is one JSON object `{"error", "message", "location"}` on stderr with exit code `2` (JOB-002, AGENT-001, AGENT-003, SEC-004, SEC-011).
-- Deterministic discovery also matches exact declared Pydantic field aliases (`Field(alias=...)`, string `validation_alias` and `AliasChoices`) and an opt-in typed `discovery_aliases` per-field map for JSON-LD, microdata and JSON responses; recipes still map the model field name, so provenance shows the matched source key, and an aliased schema no longer raises `ConfigurationError` (INT-002).
-- Frozen v0.2 recovery benchmark protocol (`docs/recovery-benchmark.md`, ADR 0011) with exact detection, restoration, false-promotion, silent-error, model-call and human-approval metrics, pass criteria for a DIFF-001 recovery claim and anti-tuning rules, plus hashed synthetic development and sealed corpora of epoch sequences (`benchmarks/recovery/`) and an offline integrity test. No executor or repair code, no measured result, and no public SDK change (DIFF-001, REPAIR-001–006, DRIFT-001–005, QUAL-005/006, MOCK-002/003).
-- `OpenAICompatibleModel`, a Chat Completions `ModelPort` strategy for OpenAI, OpenRouter, vLLM, LM Studio, llama.cpp server and Ollama's `/v1`, behind a new `openai` extra. It sends `json_schema` structured outputs (or explicit `response_format="json_object"`), never tools; loopback endpoints work without opt-in while any other host requires `allow_remote=True` and HTTPS; API keys are referenced only through `api_key_env`; `InferencePolicy` deadline, context, response-byte, token and concurrency budgets are enforced in the adapter and failures map to `ModelError` categories (AI-001–005, SEC-004/005/011, P-001, P-007). See ADR 0010.
-- `rastro.OllamaModel` and `rastro.OpenAICompatibleModel` lazy public exports; core `import rastro` still does not import HTTPX, and a missing extra raises an `ImportError` naming it (P-002).
-- `OpenAICompatibleModel(token_limit="max_completion_tokens", temperature=None)` for OpenAI reasoning models that reject `max_tokens` and sampling parameters (AI-005, AI-007).
-- "Choosing or writing a model provider" documentation with provider examples and the custom `ModelPort` contract.
-
-## Before 0.1.0rc1 — prepared as 0.1.0 (2026-10-30), never tagged
-
-These entries were drafted as `0.1.0` and shipped in the `0.1.0rc1` tag above; `0.1.0` itself
-was never tagged. First Rastro Engine release candidate: schema-first, verifiable extraction with
-optional policy-aware HTTP acquisition, structured JSON responses, explicit egress
-profiles, SQLite recipe memory and optional bounded Ollama assistance. A release
-date, tag and registry publication await maintainer approval.
-
-### Added
-
-- Held-out DIFF-001 evaluation (`python -m benchmarks.heldout`): five new synthetic sources with 24 structural mutations, measuring source-specific configuration, silent errors when re-running working integrations, scripted-model calls per successful record with SQLite memory, an observed visibility checklist and latency against a schema-generic baseline with a structured-data adapter. Results show partial DIFF-001 evidence and no silent-error or latency advantage (DIFF-001, QUAL-003, OBS-001).
-- Multi-model live Ollama harness (`--model` repeatable, `--trials`, `--keep-previous`) with recorded `qwen3:4b` and `llama3.2:3b` runs, a versioned report that keeps earlier runs, and a `--probe` mode that records raw proposals for diagnosis (AI-001–004, REC-001, REC-004).
-- Permitted structured JSON responses: a declarative `json` recipe strategy with an RFC 6901 `record_path` and relative field pointers, `Rastro.extract_json`/`extract_json_async`, and opt-in `representation="json"` HTTP acquisition that sends `Accept: application/json` and rejects non-JSON content types as permanent failures (INT-001–004, SEC-001/005).
-- Strict JSON budgets (`max_json_bytes`, `max_json_depth`, `max_json_nodes`), duplicate-key rejection, `json` evidence with absolute pointer locators, explicit `invalid_json`/`invalid_record`/`invalid_record_path`/`record_path_not_found` issues, and the public `Representation` type (QUAL-001–004, SEC-008).
-- Deterministic JSON recipe discovery by exact field names over the root object and arrays of objects. JSON recipe memory uses representation-isolated keys, and existing HTML keys and legacy payloads are unchanged (INT-002, REC-001–004). Includes the offline `examples/structured_api.py` and ADR 0007.
-- Explicit network egress profiles: `AcquisitionPolicy.egress_profiles` declares named HTTP(S) proxies selected per `Source.egress`, with environment-variable credential references, pre-DNS configuration failures, unchanged target validation, no rotation or fallback, egress-isolated recipe memory and `metrics.egress` (GEO-001–003, GEO-005, SEC-001–005, SEC-008, SEC-011). `Source` rejects `geolocation` explicitly.
-
-- Opt-in live Ollama harness and recorded `qwen3:4b` evidence: cross-process learning and zero-inference reuse, plus labelled live/controlled failure scenarios (AI-001–004, REC-004).
-- Explicit ordered language preferences with descending Accept-Language weights, currency, timezone and direct-egress context through Pydantic's supported `model_validate` path; early rejection of invalid headers and unsupported egress (GEO-001/002).
-- Regional recipe isolation by language order, currency and egress with unchanged default canonical keys for existing SQLite memory (GEO-003, REC-001).
-
-- Reproducible offline comparison against an independent Scrapling + Pydantic baseline: synthetic corpus, multiset quality scoring, raw timing samples and source hashes (DIFF-001, QUAL-003).
-- Public demo-site end-to-end example with persistent recipe reuse and offline regression coverage; recorded live results, runtime license inventory and explicit v0.1 release gates (OBS-001, REC-001–003, specification sections 17–18).
-
-- Opt-in deterministic recipe discovery, asynchronous supplied-HTML extraction and optional local Ollama assistance through `ModelPort`.
-- Structured model proposals, bounded calls/corrections/deadline/context/response/concurrency, and source/schema validation before activation (AI-001–004, REC-004, INT-002).
-- Learned recipes retain required-field evidence checks across restarts; M3 payloads remain reusable without false version conflicts.
-- Inference metrics, attempt origins, an inspectable learned recipe, offline example, adapter/attack/budget tests and a separate `ollama` dependency extra.
-
-- Optional SQLite recipe memory with exact source/template/schema/region identity, immutable versions, success metadata, retention and deletion.
-- Deterministic reuse across restarts in offline and asynchronous SDKs, with worker-thread storage and explicit persistence failures.
-- Bounded explicit fallback recipes; only the alternative validated successfully becomes reusable.
-- Recipe version/reuse/attempt metadata, storage timings, a repeated-extraction example and persistence/security/concurrency tests.
-
-- Optional policy-aware HTTP SDK with exact host allowlists, DNS pinning, robots rules, redirect checks, bounded retries and host pacing.
-- Asynchronous single-source and ordered batch extraction, cancellation, request/body budgets, and explicit network outcomes.
-- Acquisition metrics, regional Accept-Language, HTTP example, and offline transport/security regression tests.
-
-- Offline HTML extraction with explicit JSON-LD and CSS recipes through Scrapling.
-- Typed Pydantic results, field provenance, safe diagnostics, resource limits, and processing timings.
-- CLI demo, environment diagnostics, and declarative recipe validation.
-- Offline regression and property tests, strict typing, package checks, and documentation.
-- Public contribution and security policies and an incremental v0.1 roadmap.
-- Release evidence records built wheel/sdist contents and a bundled native notice review for `lxml` and `curl-cffi` on macOS arm64 (spec section 18 release gates).
 
 ### Fixed
 
@@ -400,11 +357,8 @@ date, tag and registry publication await maintainer approval.
 - The Ollama adapter disables thinking. Capable models no longer spend the output budget and deadline on hidden reasoning (AI-003).
 - The decoding schema now requires `record_selector` for CSS proposals and forbids it for JSON-LD, matching recipe validation (AI-002, REC-004).
 
-### Known limitations
-
-- DIFF-001 is partially demonstrated: configuration ties an adapted Scrapling + Pydantic baseline, visibility and memory-backed inference use improve, but accuracy and silent-error detection are equal and latency is higher. See `docs/comparison.md`.
-- Live Ollama evidence covers two small local models on synthetic inputs; both fail safely on a page with distractors. Broader model quality remains unmeasured.
-- HTTP supports public standard-port HTML and JSON sources with direct or explicit HTTP(S) proxy egress; no JavaScript rendering, browser geolocation, authentication, SOCKS, or discovery crawling. Proxied connections cannot use the local DNS pin.
-- Recipe memory requires explicit template/region/validator revisions and stores successful-run metadata, not a durable job history (v0.3). Lifecycle, repair and drift belong to v0.2.
-- Pydantic models with a custom `__init__` retain Pydantic's constructor semantics and must handle validation context themselves; Rastro does not bypass user constructors.
-- Schema aliases, API endpoint discovery, JSON embedded in HTML, automatic stored-recipe repair, and cross-document synchronization are not supported. Discovery is limited to exact JSON-LD names, simple microdata and exact JSON field names.
+[Unreleased]: https://github.com/rave-vipx/rastro/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/rave-vipx/rastro/compare/v0.7.0...v0.9.0
+[0.7.0]: https://github.com/rave-vipx/rastro/releases/tag/v0.7.0
+[0.6.0]: https://pypi.org/project/rastro-engine/0.6.0/
+[0.1.0rc1]: https://github.com/rave-vipx/rastro/releases/tag/v0.1.0rc1
