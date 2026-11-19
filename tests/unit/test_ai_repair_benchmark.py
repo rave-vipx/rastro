@@ -22,7 +22,7 @@ from benchmarks.ai_repair.scoring import summarize, wilson
 from rastro.application.proposals import build_proposal_request
 from rastro.domain.intelligence import InferencePolicy, ModelError
 
-pytestmark = pytest.mark.usefixtures("offline_cli_loop")
+pytestmark = pytest.mark.usefixtures("offline_cli_loop", "model_path_only")
 CASE = {case.name: case for case in CASES}
 
 

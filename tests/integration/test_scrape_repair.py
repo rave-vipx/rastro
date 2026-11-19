@@ -95,9 +95,10 @@ def test_off_returns_the_failure_and_stores_nothing(tmp_path):
 def test_auto_never_promotes_when_a_gate_fails(tmp_path, monkeypatch, decision):
     real = scrape_memory.evaluate_candidate
 
-    def failing_gate(*args, **kwargs):
-        evaluation = real(*args, **kwargs)
-        assert evaluation.decision == "promote"  # the candidate itself would pass
+    def failing_gate(candidate, *args, **kwargs):
+        evaluation = real(candidate, *args, **kwargs)
+        if candidate.origin == "scrapling_relocation":
+            assert evaluation.decision == "promote"  # the candidate itself would pass
         return evaluation.model_copy(update={"decision": decision, "reasons": ("gate_failed",)})
 
     monkeypatch.setattr(scrape_memory, "evaluate_candidate", failing_gate)
@@ -270,7 +271,8 @@ def test_auto_never_gives_a_thinned_record_its_siblings_value(tmp_path, missing)
     result = _scrape(_stocked("qty", missing, "item-card"), memory, "auto", Stocked)
     assert result.repair is not None
     # With record 0 thinned, relocation has no matching text to support the field and
-    # refuses; either way no record may read its sibling.
-    assert result.repair.promoted is (missing != 0)
+    # refuses, and matching the retained values repairs it instead. Either way no record
+    # may read its sibling.
+    assert result.repair.promoted
     assert all(item.stock != item.price for item in result.items)
     assert all((item.stock is None) == (i == missing) for i, item in enumerate(result.items))

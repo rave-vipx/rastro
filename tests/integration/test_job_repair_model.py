@@ -12,7 +12,7 @@ import pytest
 import rastro
 from rastro.cli import main
 
-pytestmark = pytest.mark.usefixtures("offline_cli_loop")
+pytestmark = pytest.mark.usefixtures("offline_cli_loop", "model_path_only")
 
 JOB = """format_version = 1
 recipe_memory = "recipes.sqlite"

@@ -13,7 +13,7 @@ from rastro.cli import main
 from rastro.domain.models import ConfigurationError
 from tests.integration.test_job_repair_model import PROPOSAL, make_job
 
-pytestmark = pytest.mark.usefixtures("offline_cli_loop")
+pytestmark = pytest.mark.usefixtures("offline_cli_loop", "model_path_only")
 
 
 class Fake:

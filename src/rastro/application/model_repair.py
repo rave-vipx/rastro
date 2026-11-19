@@ -1,12 +1,15 @@
-"""Model fallback and semantic gate for repair, after deterministic relocation (REPAIR-001/002).
+"""Adaptive candidates, then model fallback and semantic gate for repair (REPAIR-001/002).
 
-Relocation, fallbacks and discovery run first. Only when none of their candidates would
-pass every gate does the model propose recipes, within the policy's call budget; each
-proposal is gated by the same evaluator as a deterministic one plus the deterministic
-value checks (types, shape, values borrowed from another field's history), and a
-rejected proposal triggers a retry carrying only a failure category. Every candidate
-that would still promote, relocated or proposed, then meets the semantic judge, which can
-veto but never promote on its own. Without a model nothing here runs.
+Relocation, fallbacks and discovery run first. When none of their candidates would pass
+every gate, the engine's adaptive tools propose recipes anchored on the retained values
+(``application/adaptive_candidates``); one that passes recipe CI and the strict value
+checks is kept and no model is called. Only when these fail too does the model propose
+recipes, within the policy's call budget; each proposal is gated by the same evaluator
+as a deterministic one plus the deterministic value checks (types, shape, values
+borrowed from another field's history), and a rejected proposal triggers a retry
+carrying only a failure category. Every relocated or proposed candidate that would
+still promote then meets the semantic judge, which can veto but never promote on its
+own. Without a model only the deterministic and adaptive stages run.
 """
 
 from __future__ import annotations
@@ -14,24 +17,38 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
+from functools import partial
 from typing import Literal
 
 from pydantic import BaseModel, JsonValue, ValidationError
 
+from rastro.application.adaptive_candidates import (
+    PASSING_REASONS,
+    adaptive_repair,
+    passing,
+)
+from rastro.application.adaptive_candidates import with_history as with_history
 from rastro.application.extraction import validate_recipe
 from rastro.application.proposals import propose_with_model, schema_hints
 from rastro.application.semantic_judge import apply_verdicts, judge, judge_request
 from rastro.domain.intelligence import InferencePolicy
-from rastro.domain.models import ConfigurationError, CssRecipe, Issue, Recipe, RecipeAttempt
+from rastro.domain.models import (
+    ConfigurationError,
+    CssRecipe,
+    Issue,
+    Limits,
+    Recipe,
+    RecipeAttempt,
+)
 from rastro.domain.recipe_compare import CandidateEvaluation, RecipeComparison
-from rastro.domain.recipes import FieldMapping, scalar_expression
 from rastro.domain.repair import RepairCandidate
 from rastro.domain.value_consistency import value_consistency
+from rastro.ports.engine import AdaptiveLocator
 from rastro.ports.model import ModelPort
 
 type Evaluated = list[tuple[RepairCandidate, CandidateEvaluation]]
 type Rows = list[dict[str, JsonValue]]
-_PASSING_REASONS = {"all_gates_passed", "automatic_promotion_disabled"}
+type Origin = Literal["relocation", "adaptive", "model"]
 
 
 @dataclass(frozen=True)
@@ -45,14 +62,9 @@ class ModelAssist:
 @dataclass(frozen=True)
 class AssistedRepair:
     evaluated: Evaluated
-    origin: Literal["relocation", "model"] | None
+    origin: Origin | None
     model_calls: int
     issues: tuple[Issue, ...]
-
-
-def passing(evaluation: CandidateEvaluation) -> bool:
-    """Would promote if promotion were enabled: no rejection and no quarantine gate failed."""
-    return evaluation.decision != "reject" and set(evaluation.reasons) <= _PASSING_REASONS
 
 
 async def assist_repair(
@@ -65,12 +77,30 @@ async def assist_repair(
     gate: Callable[[RepairCandidate], CandidateEvaluation],
     rows: Callable[[Recipe], Rows],
     history: Sequence[Mapping[str, JsonValue]],
+    adaptive: AdaptiveLocator | None = None,
+    limits: Limits | None = None,
 ) -> AssistedRepair:
-    """Add gated model proposals when needed, then judge every would-be promotion."""
-    origin: Literal["relocation", "model"] | None = "relocation" if evaluated else None
+    """Try adaptive candidates, then gated model proposals; judge every would-be promotion.
+
+    ``adaptive`` defaults to the engine's locator. A passing adaptive candidate ends
+    repair without any model call; failing ones are dropped, not stored.
+    """
+    origin: Origin | None = "relocation" if evaluated else None
+    evaluated = list(evaluated)
+
+    def strict_gate(candidate: RepairCandidate) -> CandidateEvaluation:
+        evaluation = gate(candidate)
+        return check_values(evaluation, candidate.recipe, schema, previous, rows, history)
+
+    if isinstance(previous, CssRecipe) and not any(passing(e) for _, e in evaluated):
+        normalize = partial(_candidate, schema=schema, previous=previous, origin="adaptive")
+        rescued = await adaptive_repair(
+            adaptive, html, previous, history, limits or Limits(), normalize, strict_gate
+        )
+        if rescued:
+            return AssistedRepair([*evaluated, *rescued], "adaptive", 0, ())
     if assist is None:
         return AssistedRepair(evaluated, origin, 0, ())
-    evaluated = list(evaluated)
     calls = 0
     issues: tuple[Issue, ...] = ()
     if previous.representation == "html" and not any(passing(e) for _, e in evaluated):
@@ -79,13 +109,8 @@ async def assist_repair(
             if not await asyncio.to_thread(rows, previous)
             else "serving_recipe_fails_gates"
         )
-
-        def model_gate(candidate: RepairCandidate) -> CandidateEvaluation:
-            evaluation = gate(candidate)
-            return check_values(evaluation, candidate.recipe, schema, previous, rows, history)
-
         proposed, calls, issues = await _propose(
-            assist, html, schema, previous, model_gate, samples=history, failure=failure
+            assist, html, schema, previous, strict_gate, samples=history, failure=failure
         )
         if proposed:
             origin = "model"
@@ -121,7 +146,7 @@ def check_values(
     failed = value_consistency(rows(recipe), history, changed or tuple(schema.model_fields))
     if not failed:
         return evaluation
-    kept = tuple(r for r in evaluation.reasons if r not in _PASSING_REASONS)
+    kept = tuple(r for r in evaluation.reasons if r not in PASSING_REASONS)
     reasons = tuple(dict.fromkeys((*kept, *failed)))
     return evaluation.model_copy(update={"decision": "reject", "reasons": reasons})
 
@@ -201,39 +226,11 @@ async def _judge(
     return apply_verdicts(evaluation, await judge(assist.model, assist.policy, request, fields))
 
 
-def with_history(proposal: Recipe, previous: Recipe) -> Recipe:
-    """Prefix each changed CSS locator with the serving one, as relocation does.
-
-    ``"old, new"`` keeps historical pages matching, so fixture replay can pass; any
-    union that does not validate falls back to the plain proposal.
-    """
-    if not (isinstance(proposal, CssRecipe) and isinstance(previous, CssRecipe)):
-        return proposal
-    fields = {
-        name: _union(_scalar(previous.fields.get(name)), scalar_expression(sel))
-        for name, sel in proposal.fields.items()
-    }
-    record = _union(previous.record_selector, proposal.record_selector)
-    try:
-        return Recipe.model_validate(
-            {**proposal.model_dump(), "fields": fields, "record_selector": record}
-        )
-    except ValidationError:
-        return proposal
-
-
-def _scalar(mapping: FieldMapping | None) -> str | None:
-    return mapping if isinstance(mapping, str) else None
-
-
-def _union(old: str | None, new: str) -> str:
-    if old is None or old == new or new.startswith(old + ","):
-        return new
-    return f"{old}, {new}"
-
-
 def _candidate(
-    proposal: Recipe, schema: type[BaseModel], previous: Recipe
+    proposal: Recipe,
+    schema: type[BaseModel],
+    previous: Recipe,
+    origin: Literal["adaptive", "model"] = "model",
 ) -> RepairCandidate | None:
     if previous.pagination is not None and proposal.strategy != previous.strategy:
         return None
@@ -251,6 +248,7 @@ def _candidate(
     baseline = previous.model_copy(update={"require_evidence": True, "fallbacks": ()})
     if recipe == baseline:
         return None
+    rationale = "Model proposal" if origin == "model" else "Adaptive match on retained values"
     return RepairCandidate(
-        recipe=recipe, origin="model", rationale="Model proposal; requires recipe CI"
+        recipe=recipe, origin=origin, rationale=rationale + "; requires recipe CI"
     )

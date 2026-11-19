@@ -114,7 +114,9 @@ class SelfRepair(Contract):
     promoted_version: int | None = None
     candidates: tuple[RepairProposal, ...] = ()
     # With a model: where the candidates came from, and the model calls repair made.
-    origin: Literal["relocation", "model"] | None = Field(default=None, exclude_if=_absent)
+    origin: Literal["relocation", "adaptive", "model"] | None = Field(
+        default=None, exclude_if=_absent
+    )
     model_calls: int = Field(default=0, ge=0, exclude_if=lambda v: not v)
 
 

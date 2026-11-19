@@ -21,7 +21,7 @@ from rastro.studio.app import create_app
 from tests.integration.test_job_api import JOB, board
 from tests.integration.test_studio import post, serving
 
-pytestmark = pytest.mark.usefixtures("offline_cli_loop")
+pytestmark = pytest.mark.usefixtures("offline_cli_loop", "model_path_only")
 BASE = "http://127.0.0.1:8765"
 FIELDS = {"job_id": "::attr(data-id)", "title": "h2::text", "salary": "span.salary::text"}
 RIGHT = {"strategy": "css", "record_selector": "article.card", "fields": FIELDS}
