@@ -174,7 +174,7 @@ def test_without_dir_fd_init_fails_closed(tmp_path: Path, monkeypatch: pytest.Mo
 
 
 def test_snippet_tells_the_agent_how_results_reach_studio() -> None:
-    """N18, Rave adoption: results go through a job dataset; no ad hoc database for Studio."""
+    """N18: results go through a job dataset; no ad hoc database for Studio."""
     from rastro.capabilities_render import render_llms
     from rastro.config_catalog import STUDIO_RESULTS_RULE
 

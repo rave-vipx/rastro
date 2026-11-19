@@ -1,0 +1,50 @@
+"""Configuration catalog entries."""
+
+from __future__ import annotations
+
+SECTIONS: dict[str, str] = {
+    "sources": "the pages to read (URLs or local files)",
+    "fields": "record fields and their types",
+    "acquisition": "allowed hosts, JavaScript rendering, pacing, retries, budgets, proxies",
+    "region": "locale, timezone, currency and egress profile",
+    "recipe": "how records are found: css, json, jsonld or embedded_json, plus pagination",
+    "limits": "page, JSON and record size limits",
+    "context": "recipe-memory identity (with recipe_memory, recipe_version)",
+    "model": "optional AI model (ollama, http, command) that proposes selectors",
+    "inference_policy": "model call, size and time budgets",
+    "dataset": "SQLite or PostgreSQL storage, identity, approved fields",
+    "consistency": "semantic rules on extracted values",
+    "repair": "gates a repaired recipe must pass",
+    "schedule": "run interval for `rastro job watch`",
+    "scroll": "scroll rendered pages for more records",
+    "spider": "follow links to detail pages, or start from a sitemap",
+}
+
+JOB_DOCS: dict[str, str] = {
+    "": "docs/jobs.md#complete-toml-example",
+    "sources": "docs/jobs.md#sources-recipes-memory-and-providers",
+    "fields": "docs/jobs.md#target-fields-and-dynamic-schema",
+    "acquisition": "docs/acquisition.md#policy-defaults",
+    "acquisition.render": "docs/acquisition.md#javascript-pages",
+    "acquisition.solve_challenges": "docs/acquisition.md#javascript-pages",
+    "acquisition.session": "docs/acquisition.md#sessions",
+    "acquisition.egress_profiles": "docs/acquisition.md#network-egress",
+    "acquisition.auth": "docs/jobs.md#auth-header-from-the-environment",
+    "region": "docs/acquisition.md#metrics-and-regional-behavior",
+    "context": "docs/memory.md#identity-and-validation",
+    "recipe_memory": "docs/memory.md#identity-and-validation",
+    "recipe_version": "docs/memory.md#versions-and-explicit-fallbacks",
+    "limits": "docs/api.md#inputs",
+    "recipe": "docs/api.md#recipe-variants",
+    "recipe.pagination": "docs/jobs.md#pagination",
+    "model": "docs/ai.md#connect-a-model",
+    "inference_policy": "docs/ai.md#cost-and-call-budgets",
+    "dataset": "docs/jobs.md#dataset-block-and-preview",
+    "consistency": "docs/consistency.md#rules",
+    "repair": "docs/repair.md",
+    "schedule": "docs/operations.md#scheduler",
+    "scroll": "docs/jobs.md#scroll",
+    "spider": "docs/jobs.md#spider",
+    "spider.seed": "docs/jobs.md#start-from-a-sitemap",
+    "spider.seed_order": "docs/jobs.md#start-from-a-sitemap",
+}
