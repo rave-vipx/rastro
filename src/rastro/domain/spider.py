@@ -30,6 +30,7 @@ from rastro.domain.selector_policy import check_untrusted_recipe
 from rastro.domain.sources import ConfigurationError
 
 LINK_EXPRESSION = re.compile(r"^.+::attr\([A-Za-z_][A-Za-z0-9_:-]{0,63}\)$", re.DOTALL)
+type LinkExpression = Annotated[StrictStr, Field(min_length=1, max_length=1024)]
 type SeedOrder = Literal["document", "reverse", "lastmod"]
 _SEED_ORDERS: tuple[str, ...] = ("document", "reverse", "lastmod")
 
@@ -47,7 +48,20 @@ class SpiderPolicy(RedactedContract):
     allow: tuple[StrictStr, ...] = Field(default=(), max_length=32)
     deny: tuple[StrictStr, ...] = Field(default=(), max_length=32)
     allow_pattern: StrictStr | None = Field(default=None, min_length=1, max_length=512)
-    links: StrictStr | None = Field(default=None, min_length=1, max_length=1024)
+    deny_pattern: StrictStr | None = Field(
+        default=None,
+        min_length=1,
+        max_length=512,
+        description="Reject matching decoded paths before the page cap (linear-time regex).",
+    )
+    links: (
+        LinkExpression
+        | Annotated[tuple[LinkExpression, ...], Field(min_length=1, max_length=8)]
+        | None
+    ) = Field(
+        default=None,
+        description="One CSS attribute expression or a list (up to eight); no comma groups.",
+    )
     link_field: StrictStr | None = Field(default=None, min_length=1, max_length=128)
 
     @field_validator("seed_order", mode="before")
@@ -71,9 +85,9 @@ class SpiderPolicy(RedactedContract):
                 raise ValueError("Path prefixes start with / and carry no query or fragment")
         return tuple(dict.fromkeys(prefixes))
 
-    @field_validator("allow_pattern")
+    @field_validator("allow_pattern", "deny_pattern")
     @classmethod
-    def check_allow_pattern(cls, value: str | None) -> str | None:
+    def check_pattern(cls, value: str | None) -> str | None:
         if value is not None:
             # Linear-time Rust regex engine (no look-around or backreferences, SEC-008).
             try:
@@ -95,19 +109,23 @@ class SpiderPolicy(RedactedContract):
             raise ValueError("Spider mode takes one of links or link_field, not both")
         if self.seed == "page" and self.links is None and self.link_field is None:
             raise ValueError("Spider mode needs links or link_field unless seed is sitemap")
-        if self.links is not None:
-            if not LINK_EXPRESSION.fullmatch(self.links):
-                raise ValueError("links must be a CSS expression ending in ::attr(name)")
+        for expression in self.link_expressions():
+            if _has_link_group(expression):
+                raise ValueError("link_group_refused: use a list of CSS attribute expressions")
+            if not LINK_EXPRESSION.fullmatch(expression):
+                raise ValueError("links must be CSS expressions ending in ::attr(name)")
             try:  # the same cost policy as any job recipe (SECURITY.md)
-                check_untrusted_recipe(self.link_probe())
+                check_untrusted_recipe(self.link_probe(expression))
             except ConfigurationError as error:
                 raise ValueError(str(error)) from None
         return self
 
-    def link_probe(self) -> CssRecipe:
+    def link_expressions(self) -> tuple[str, ...]:
+        return (self.links,) if isinstance(self.links, str) else self.links or ()
+
+    def link_probe(self, expression: str) -> CssRecipe:
         """A recipe whose every match becomes one record holding one link."""
-        assert self.links is not None
-        return CssRecipe(record_selector="html", fields={"link": f"expand:{self.links}"})
+        return CssRecipe(record_selector="html", fields={"link": f"expand:{expression}"})
 
     def check_against(self, declared: set[str], sources: tuple[object, ...]) -> None:
         """Raise ``ValueError`` when the table cannot run against this job."""
@@ -117,3 +135,25 @@ class SpiderPolicy(RedactedContract):
             raise ValueError("Spider mode follows links from URL sources only")
         if self.link_field is not None and self.link_field not in declared:
             raise ValueError("link_field must name a declared field")
+
+
+def _has_link_group(expression: str) -> bool:
+    """Commas inside quoted attributes or pseudo-classes are not selector groups."""
+    depth, quote, escaped = 0, "", False
+    for char in expression:
+        if escaped:
+            escaped = False
+        elif char == "\\":
+            escaped = True
+        elif quote:
+            if char == quote:
+                quote = ""
+        elif char in "\"'":
+            quote = char
+        elif char in "[(":
+            depth += 1
+        elif char in "])":
+            depth -= 1
+        elif char == "," and depth <= 0:
+            return True
+    return False

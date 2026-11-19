@@ -418,7 +418,8 @@ Follow links from listing pages to detail pages. Docs: [jobs.md#spider](jobs.md#
 | `spider.allow` | array of string | `[]` | `items <= 32` | Path prefixes (whole segments); only matching links are followed. |
 | `spider.deny` | array of string | `[]` | `items <= 32` | Path prefixes (whole segments) that are never followed; deny wins. |
 | `spider.allow_pattern` | string | - | `length >= 1, length <= 512` | Regular expression a link's path must match; deny still wins. |
-| `spider.links` | string | - | `length >= 1, length <= 1024` | CSS expression ending in ::attr(name); every match is a link. |
+| `spider.deny_pattern` | string | - | `length >= 1, length <= 512` | Reject matching decoded paths before the page cap (linear-time regex). |
+| `spider.links` | value or array of value | - | `items >= 1, items <= 8` | One CSS attribute expression or a list (up to eight); no comma groups. |
 | `spider.link_field` | string | - | `length >= 1, length <= 128` | Declared field whose value in each record is a link. |
 
 ## Python keyword arguments

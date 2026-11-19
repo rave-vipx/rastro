@@ -15,7 +15,7 @@ from rastro.application.acquisition_state import (
     pagination_boundary,
 )
 from rastro.application.outcomes import failure_result, stamp_acquired
-from rastro.application.pagination_records import combine_pages
+from rastro.application.pagination_records import combine_pages, with_page_provenance
 from rastro.application.scroll import pages_left, spend_page
 from rastro.domain.acquisition import AcquisitionPolicy, AcquisitionResult
 from rastro.domain.models import (
@@ -30,6 +30,7 @@ from rastro.domain.models import (
     ResourceLimitError,
     Source,
 )
+from rastro.domain.provenance_url import canonical_page_url
 from rastro.domain.selector_policy import check_untrusted_recipe
 from rastro.ports.acquisition import AcquisitionPort
 from rastro.ports.parser import DocumentParser
@@ -112,7 +113,7 @@ async def _traverse[T: BaseModel](
     current = source
     stop: str | None = "page_failure"
     for _ in range(recipe.pagination.max_pages):
-        visited.add(urldefrag(current.url)[0])
+        visited.add(canonical_page_url(current.url))
         started, started_at = perf_counter(), datetime.now(UTC)
         remaining = scope.remaining
         fetched = await acquisition.acquire(
@@ -122,7 +123,7 @@ async def _traverse[T: BaseModel](
         )
         scope.remaining = min(scope.remaining, remaining - fetched.requests)
         try:
-            result = await extract_page(fetched)
+            result = with_page_provenance(await extract_page(fetched), fetched.url)
         except (ConfigurationError, ResourceLimitError):
             if not pages:
                 raise
@@ -146,7 +147,7 @@ async def _traverse[T: BaseModel](
             stop = "record_limit"
         if stop:
             break
-        visited.add(urldefrag(fetched.url)[0])
+        visited.add(canonical_page_url(fetched.url))
         try:
             cursor = next_url(fetched.body or "", recipe, parser, limits)
             if cursor is None:
@@ -156,7 +157,7 @@ async def _traverse[T: BaseModel](
             following = Source.model_validate({**source.model_dump(), "url": target})
             target = following.url
             stop = pagination_boundary(target, urlsplit(source.url).hostname, scope.secure)
-            if not stop and target in visited:
+            if not stop and canonical_page_url(target) in visited:
                 stop = "repeat"
             if not stop and len(pages) >= recipe.pagination.max_pages:
                 stop = "max_pages"

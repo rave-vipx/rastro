@@ -212,14 +212,18 @@ def test_cross_page_conflicts_keep_first_and_report_count(tmp_path):
     assert store.records("agenda")[0].fields["title"] == "first"
 
 
-def test_query_cursors_are_distinct_but_provenance_is_redacted():
+def test_query_cursors_are_distinct_and_provenance_filters_secrets():
     transport = Transport({})
 
     async def get(target, **kwargs):
         transport.urls.append(target.url)
         if target.url.endswith("robots.txt"):
             return HttpResponse(404, {}, b"", 0)
-        body = page("A", next="?cursor=secret#private") if "?" not in target.url else page("B")
+        body = (
+            page("A", next="?cursor=second&token=secret#private")
+            if "?" not in target.url
+            else page("B")
+        )
         raw = body.encode()
         return HttpResponse(200, {"content-type": "text/html"}, raw, len(raw))
 
@@ -234,6 +238,7 @@ def test_query_cursors_are_distinct_but_provenance_is_redacted():
     assert [r.name for r in result.items] == ["A", "B"]
     assert "secret" not in result.model_dump_json()
     assert "private" not in result.model_dump_json()
+    assert result.records[-1].evidence["name"].page_url.endswith("?cursor=second")
     assert [r.page_index for r in result.records] == [1, 2]
 
 
@@ -342,7 +347,7 @@ def test_other_host_with_trailing_dot_is_still_refused():
     assert report.results[0].pagination_stop == "off_host"
 
 
-def test_later_page_provenance_drops_query_and_fragment(tmp_path):
+def test_later_page_provenance_keeps_page_query_without_secrets(tmp_path):
     spec = job()
     pages = {
         "/one": (200, page("A", next="/two?page=2&token=abc#f")),
@@ -353,7 +358,7 @@ def test_later_page_provenance_drops_query_and_fragment(tmp_path):
     assert "https://agenda.test/two?page=2&token=abc" in transport.urls
     assert result.records[0].evidence["name"].source_url == "https://agenda.test/one"
     assert "page_url" not in result.records[0].evidence["name"].model_dump(mode="json")
-    assert result.records[-1].evidence["name"].page_url == "https://agenda.test/two"
+    assert result.records[-1].evidence["name"].page_url == "https://agenda.test/two?page=2"
     assert "token=" not in result.model_dump_json()
     store = SQLiteDatasetStore(tmp_path / "agenda.sqlite")
     load_results(spec.dataset, ["name"], report, store)
