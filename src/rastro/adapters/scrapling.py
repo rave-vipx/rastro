@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-from json import JSONDecodeError
 
 from cssselect import SelectorError, parse
 from lxml.etree import LxmlError  # type: ignore[import-untyped]
 from scrapling.parser import Selector
 
 from rastro.adapters.embedded_json import parse_embedded_json
-from rastro.domain.json import MISSING, resolve_pointer, strict_json
+from rastro.domain.json import MISSING, resolve_pointer
 from rastro.domain.models import (
     ConfigurationError,
     CssRecipe,
@@ -22,6 +21,7 @@ from rastro.domain.models import (
     ResourceLimitError,
 )
 from rastro.domain.recipes import DOCUMENT_PREFIX, EXPAND_PREFIX
+from rastro.domain.tolerant_json import tolerant_json
 from rastro.ports.parser import Candidate, ParsedDocument
 
 
@@ -71,31 +71,26 @@ def _matches(scope: Selector, selector: str) -> tuple[int, list[str]]:
 
 
 def _jsonld_payload(text: str, issues: list[Issue]) -> object:
-    try:
-        return strict_json(text, repair_text=True)
-    except JSONDecodeError:
-        pass
-    # Escape controls only inside strings; preserve escapes and structural whitespace.
-    escaped: list[str] = []
-    in_string = False
-    after_backslash = False
-    for char in text:
-        if after_backslash:
-            after_backslash = False
-        elif char == '"':
-            in_string = not in_string
-        elif in_string and char == "\\":
-            after_backslash = True
-        elif in_string and ord(char) < 32:
-            char = f"\\u{ord(char):04x}"
-        escaped.append(char)
-    payload = strict_json("".join(escaped), repair_text=True)
-    issues.append(Issue(code="repaired_json"))
+    payload, repaired = tolerant_json(text)
+    if repaired:
+        issues.append(Issue(code="repaired_json"))
     return payload
 
 
+def _list_items(current: dict[str, object], locator: str) -> list[tuple[object, str]]:
+    """The ``item`` of each ListItem in an ItemList, with its pointer."""
+    elements = current["itemListElement"]
+    if not isinstance(elements, list):
+        elements = [elements]
+    return [
+        (element["item"], f"{locator}/itemListElement/{i}/item")
+        for i, element in enumerate(elements)
+        if isinstance(element, dict) and isinstance(element.get("item"), dict)
+    ]
+
+
 def _objects(value: object, path: str = "") -> Iterator[tuple[dict[str, object], str]]:
-    """Traverse root arrays and @graph containers, never nested field values."""
+    """Traverse root arrays, @graph containers and ItemList items, never other nested values."""
     pending = [(value, path)]
     while pending:
         current, locator = pending.pop()
@@ -106,8 +101,16 @@ def _objects(value: object, path: str = "") -> Iterator[tuple[dict[str, object],
         elif isinstance(current, dict):
             if "@graph" in current:
                 pending.append((current["@graph"], f"{locator}/@graph"))
+            elif _is_item_list(current):
+                pending.extend(reversed(_list_items(current, locator)))
             else:
                 yield current, locator
+
+
+def _is_item_list(current: dict[str, object]) -> bool:
+    kind = current.get("@type")
+    kinds = kind if isinstance(kind, list) else [kind]
+    return "ItemList" in kinds and "itemListElement" in current
 
 
 def _node_candidates(
