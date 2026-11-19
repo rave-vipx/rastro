@@ -28,6 +28,7 @@ CAP_CODES = frozenset(
         "spider_page_limit",
         "spider_depth_limit",
         "spider_budget",
+        "crawl_time_budget",
         "scroll_max_steps",
         "scroll_budget",
         "scroll_record_limit",

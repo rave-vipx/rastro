@@ -68,6 +68,7 @@ nav:
       - Clean code and module size: development/clean-code.md
   - Engineering decisions:
       - Overview: decisions/index.md
+      - Crawl checkpoints: decisions/0040-crawl-checkpoint.md
       - HTTP transport and impersonation: decisions/0038-http-transport.md
       - Input origin and capabilities: decisions/0037-input-origin-and-capabilities.md
       - Capability first: decisions/0036-scrapling-access-and-unbounded-crawl.md

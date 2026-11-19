@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 from rastro.application.active_recipes import active_job
 from rastro.application.auth_headers import check_job_auth
+from rastro.application.crawl_checkpoint import crawl_key, crawl_state
 from rastro.application.egress_trust import check_job_egress
 from rastro.application.job_execution import run_active, run_active_async
 from rastro.application.job_loader import (
@@ -68,6 +69,7 @@ async def run_job_async(
         ),
         model_cost_override(max_model_cost, model_cost_per_call),
         robots_cache(),
+        crawl_state(base_dir, crawl_key(job)),
     ):
         check_job_egress(job, allow_egress=allow_egress, allow_env=allow_env)
         check_job_auth(job, allow_env=allow_env)
@@ -125,6 +127,7 @@ def run_job(
         ),
         model_cost_override(max_model_cost, model_cost_per_call),
         robots_cache(),
+        crawl_state(base_dir, crawl_key(job)),
     ):
         check_job_egress(job, allow_egress=allow_egress, allow_env=allow_env)
         check_job_auth(job, allow_env=allow_env)
