@@ -127,7 +127,7 @@ class BrowserAcquirer(WebAcquirer):
                         len(body),
                     )
             finally:
-                host.next_request = perf_counter() + host.interval
+                host.next_request = max(host.next_request, perf_counter() + host.interval)
 
     async def _render(
         self,

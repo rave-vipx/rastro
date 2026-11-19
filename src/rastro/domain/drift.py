@@ -7,6 +7,8 @@ from pydantic import Field, model_validator
 
 from rastro.domain.models import Contract, Outcome
 
+MAX_STRUCTURE_FIELDS = 256  # fields plus nested members (``field.member``) per snapshot
+
 type Rate = Annotated[float, Field(ge=0, le=1, allow_inf_nan=False)]
 type Digest = Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
 
@@ -22,6 +24,8 @@ class FieldStructure(Contract):
 
 
 class StructuralSnapshot(Contract):
+    """Per-field structure; a nested member is keyed ``field.member``."""
+
     source_url: str
     run_id: str = Field(min_length=1, max_length=128)
     observed_at: datetime
@@ -30,7 +34,7 @@ class StructuralSnapshot(Contract):
     timezone: str = "UTC"
     egress: str = "direct"
     status: Outcome
-    fields: dict[str, FieldStructure] = Field(max_length=256)
+    fields: dict[str, FieldStructure] = Field(max_length=MAX_STRUCTURE_FIELDS)
 
     @property
     def context(self) -> tuple[str, ...]:

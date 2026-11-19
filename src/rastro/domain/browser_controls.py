@@ -27,19 +27,56 @@ _PROFILE_NAME = r"^[a-z][a-z0-9_-]{0,63}$"
 class BrowserControls(RedactedContract):
     """How a browser source loads and observes its page."""
 
-    wait_selector: StrictStr | None = Field(default=None, min_length=1, max_length=1024)
-    wait_state: WaitState = "attached"
-    network_idle: StrictBool = False
-    disable_resources: StrictBool = True
-    block_ads: StrictBool = False
-    blocked_domains: tuple[str, ...] = Field(default=(), max_length=64)
-    pierce_shadow: StrictBool = False
-    screenshot: StrictBool = False
-    capture_network: tuple[StrictStr, ...] = Field(default=(), max_length=8)
-    """Path regular expressions; matching responses are captured."""
-    session_profile: StrictStr | None = Field(default=None, pattern=_PROFILE_NAME)
-    real_chrome: StrictBool = False
-    cdp_url_env: StrictStr | None = Field(default=None, pattern=ENVIRONMENT_NAME)
+    wait_selector: StrictStr | None = Field(
+        default=None,
+        min_length=1,
+        max_length=1024,
+        description="CSS selector to wait for before the page is read, instead of network quiet.",
+    )
+    wait_state: WaitState = Field(
+        default="attached", description="State the wait_selector element must reach."
+    )
+    network_idle: StrictBool = Field(
+        default=False,
+        description="Also wait for network quiet when a wait_selector is set.",
+    )
+    disable_resources: StrictBool = Field(
+        default=True, description="Skip images, media and fonts; false loads them."
+    )
+    block_ads: StrictBool = Field(
+        default=False, description="Refuse requests to a built-in list of ad-serving domains."
+    )
+    blocked_domains: tuple[str, ...] = Field(
+        default=(),
+        max_length=64,
+        description="Hosts (and their subdomains) the page may not request.",
+    )
+    pierce_shadow: StrictBool = Field(
+        default=False, description="Let selectors reach into closed shadow roots (stealth only)."
+    )
+    screenshot: StrictBool = Field(
+        default=False,
+        description="Keep one PNG of the rendered page as evidence; needs the screenshots grant.",
+    )
+    capture_network: tuple[StrictStr, ...] = Field(
+        default=(),
+        max_length=8,
+        description="Path regular expressions; matching responses are captured.",
+    )
+    session_profile: StrictStr | None = Field(
+        default=None,
+        pattern=_PROFILE_NAME,
+        description="Name of a persistent browser profile under RASTRO_PROFILE_DIR; grant-only.",
+    )
+    real_chrome: StrictBool = Field(
+        default=False,
+        description="Drive the installed Chrome instead of bundled Chromium; grant-only.",
+    )
+    cdp_url_env: StrictStr | None = Field(
+        default=None,
+        pattern=ENVIRONMENT_NAME,
+        description="Environment variable holding a remote browser DevTools URL; grant-only.",
+    )
 
     @field_validator("blocked_domains")
     @classmethod
@@ -73,8 +110,13 @@ class BrowserControls(RedactedContract):
 class HttpOptions(RedactedContract):
     """How the HTTP transport presents itself: browser impersonation and protocol version."""
 
-    impersonate: Literal["off"] | BrowserFamily = "off"
-    http_version: HttpVersion = "1.1"
+    impersonate: Literal["off"] | BrowserFamily = Field(
+        default="off",
+        description="Browser whose TLS and header fingerprint the HTTP client copies.",
+    )
+    http_version: HttpVersion = Field(
+        default="1.1", description="HTTP protocol version the transport asks for."
+    )
 
     def requested_capabilities(self) -> frozenset[Capability]:
         """The capabilities these options need."""

@@ -74,6 +74,10 @@
           "title": "Backoff Seconds",
           "type": "number"
         },
+        "browser": {
+          "$ref": "#/$defs/BrowserControls",
+          "description": "How browser sources load and observe a page: wait selector, resource and ad blocking, screenshot, and the operator-granted real Chrome, remote browser and persistent session."
+        },
         "egress_profiles": {
           "additionalProperties": {
             "$ref": "#/$defs/EgressProfile"
@@ -90,6 +94,10 @@
           "maxProperties": 64,
           "title": "Hosts",
           "type": "object"
+        },
+        "http": {
+          "$ref": "#/$defs/HttpOptions",
+          "description": "HTTP transport settings: which browser to impersonate and which protocol version to ask for."
         },
         "max_concurrency": {
           "default": 4,
@@ -284,6 +292,127 @@
       ],
       "title": "BooleanField",
       "type": "object"
+    },
+    "BrowserControls": {
+      "additionalProperties": false,
+      "description": "How a browser source loads and observes its page.",
+      "properties": {
+        "block_ads": {
+          "default": false,
+          "description": "Refuse requests to a built-in list of ad-serving domains.",
+          "title": "Block Ads",
+          "type": "boolean"
+        },
+        "blocked_domains": {
+          "default": [],
+          "description": "Hosts (and their subdomains) the page may not request.",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 64,
+          "title": "Blocked Domains",
+          "type": "array"
+        },
+        "capture_network": {
+          "default": [],
+          "description": "Path regular expressions; matching responses are captured.",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 8,
+          "title": "Capture Network",
+          "type": "array"
+        },
+        "cdp_url_env": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Z_][A-Z0-9_]{0,127}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Environment variable holding a remote browser DevTools URL; grant-only.",
+          "title": "Cdp Url Env"
+        },
+        "disable_resources": {
+          "default": true,
+          "description": "Skip images, media and fonts; false loads them.",
+          "title": "Disable Resources",
+          "type": "boolean"
+        },
+        "network_idle": {
+          "default": false,
+          "description": "Also wait for network quiet when a wait_selector is set.",
+          "title": "Network Idle",
+          "type": "boolean"
+        },
+        "pierce_shadow": {
+          "default": false,
+          "description": "Let selectors reach into closed shadow roots (stealth only).",
+          "title": "Pierce Shadow",
+          "type": "boolean"
+        },
+        "real_chrome": {
+          "default": false,
+          "description": "Drive the installed Chrome instead of bundled Chromium; grant-only.",
+          "title": "Real Chrome",
+          "type": "boolean"
+        },
+        "screenshot": {
+          "default": false,
+          "description": "Keep one PNG of the rendered page as evidence; needs the screenshots grant.",
+          "title": "Screenshot",
+          "type": "boolean"
+        },
+        "session_profile": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Name of a persistent browser profile under RASTRO_PROFILE_DIR; grant-only.",
+          "title": "Session Profile"
+        },
+        "wait_selector": {
+          "anyOf": [
+            {
+              "maxLength": 1024,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "CSS selector to wait for before the page is read, instead of network quiet.",
+          "title": "Wait Selector"
+        },
+        "wait_state": {
+          "$ref": "#/$defs/WaitState",
+          "default": "attached",
+          "description": "State the wait_selector element must reach."
+        }
+      },
+      "title": "BrowserControls",
+      "type": "object"
+    },
+    "BrowserFamily": {
+      "enum": [
+        "chrome",
+        "firefox",
+        "safari",
+        "edge"
+      ],
+      "type": "string"
     },
     "ClickStep": {
       "additionalProperties": false,
@@ -1224,6 +1353,41 @@
           "$ref": "#/$defs/EmbeddedJsonRecipe"
         }
       ]
+    },
+    "HttpOptions": {
+      "additionalProperties": false,
+      "description": "How the HTTP transport presents itself: browser impersonation and protocol version.",
+      "properties": {
+        "http_version": {
+          "$ref": "#/$defs/HttpVersion",
+          "default": "1.1",
+          "description": "HTTP protocol version the transport asks for."
+        },
+        "impersonate": {
+          "anyOf": [
+            {
+              "const": "off",
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/BrowserFamily"
+            }
+          ],
+          "default": "off",
+          "description": "Browser whose TLS and header fingerprint the HTTP client copies.",
+          "title": "Impersonate"
+        }
+      },
+      "title": "HttpOptions",
+      "type": "object"
+    },
+    "HttpVersion": {
+      "enum": [
+        "1.1",
+        "2",
+        "3"
+      ],
+      "type": "string"
     },
     "InferencePolicy": {
       "additionalProperties": false,

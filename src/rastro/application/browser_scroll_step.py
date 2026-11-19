@@ -55,7 +55,7 @@ async def scroll_step(
                 await scope.discard(renderer)  # the page's host is unknown now
                 raise
             finally:
-                host.next_request = perf_counter() + host.interval
+                host.next_request = max(host.next_request, perf_counter() + host.interval)
         refusal = refused_step(result, policy, max_bytes, page=canonical)
         if await scope.leave_foreign(renderer, result.url):
             refusal = refusal or AcquisitionError(

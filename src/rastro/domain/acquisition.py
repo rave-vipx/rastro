@@ -16,7 +16,7 @@ from pydantic import (
 
 from rastro.domain.acquisition_auth import AcquisitionAuth, NetworkGrants
 from rastro.domain.acquisition_base import ENVIRONMENT_NAME, RedactedContract, exact_host
-from rastro.domain.browser_controls import HostLimits
+from rastro.domain.browser_controls import BrowserControls, HostLimits, HttpOptions
 from rastro.domain.models import EGRESS_NAME, Outcome
 from rastro.domain.source_notes import BlockedHint, RenderMode
 
@@ -102,6 +102,19 @@ class AcquisitionPolicy(RedactedContract):
         exclude_if=lambda value: value == {},
         description="Pacing and concurrency for one allowed host, overriding the job-wide "
         "min_interval_seconds and max_concurrency for it.",
+    )
+    browser: BrowserControls = Field(
+        default_factory=BrowserControls,
+        exclude_if=lambda value: value == BrowserControls(),
+        description="How browser sources load and observe a page: wait selector, resource "
+        "and ad blocking, screenshot, and the operator-granted real Chrome, remote browser "
+        "and persistent session.",
+    )
+    http: HttpOptions = Field(
+        default_factory=HttpOptions,
+        exclude_if=lambda value: value == HttpOptions(),
+        description="HTTP transport settings: which browser to impersonate and which protocol "
+        "version to ask for.",
     )
     auth: tuple[AcquisitionAuth, ...] = Field(default=(), max_length=8)
     _grants: NetworkGrants = PrivateAttr(default_factory=NetworkGrants)
@@ -221,6 +234,7 @@ class AcquisitionResult:
     proxies_used: int = 0  # distinct rotated profiles; names and counts only, never routes
     challenge_solved: bool = False
     blocked: BlockedHint | None = None
+    screenshot: bytes | None = field(default=None, repr=False)  # PNG evidence; browser only
     raw_body: bytes | None = field(default=None, repr=False)  # set only by acquire_raw
 
 

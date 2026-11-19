@@ -199,6 +199,22 @@ How URLs are fetched: allowed hosts, rendering, pacing, budgets. Docs: [acquisit
 | `acquisition.hosts.<name>.min_interval_seconds` | number or integer | - | `>= 0, <= 60` | Seconds between requests to this host; unset keeps the job-wide value. |
 | `acquisition.hosts.<name>.max_concurrency` | integer | - | `>= 1, <= 32` | Transfers in flight to this host at once; unset keeps the job-wide value. |
 | `acquisition.hosts.<name>.autothrottle` | boolean | `false` |  | Widen the spacing when the host slows down or answers 429. |
+| `acquisition.browser` | table | - |  | How browser sources load and observe a page: wait selector, resource and ad blocking, screenshot, and the operator-granted real Chrome, remote browser and persistent session. |
+| `acquisition.browser.wait_selector` | string | - | `length >= 1, length <= 1024` | CSS selector to wait for before the page is read, instead of network quiet. |
+| `acquisition.browser.wait_state` | string | `"attached"` | `one of attached, visible, hidden, detached` | State the wait_selector element must reach. |
+| `acquisition.browser.network_idle` | boolean | `false` |  | Also wait for network quiet when a wait_selector is set. |
+| `acquisition.browser.disable_resources` | boolean | `true` |  | Skip images, media and fonts; false loads them. |
+| `acquisition.browser.block_ads` | boolean | `false` |  | Refuse requests to a built-in list of ad-serving domains. |
+| `acquisition.browser.blocked_domains` | array of string | `[]` | `items <= 64` | Hosts (and their subdomains) the page may not request. |
+| `acquisition.browser.pierce_shadow` | boolean | `false` |  | Let selectors reach into closed shadow roots (stealth only). |
+| `acquisition.browser.screenshot` | boolean | `false` |  | Keep one PNG of the rendered page as evidence; needs the screenshots grant. |
+| `acquisition.browser.capture_network` | array of string | `[]` | `items <= 8` | Path regular expressions; matching responses are captured. |
+| `acquisition.browser.session_profile` | string | - | `pattern ^[a-z][a-z0-9_-]{0,63}$` | Name of a persistent browser profile under RASTRO_PROFILE_DIR; grant-only. |
+| `acquisition.browser.real_chrome` | boolean | `false` |  | Drive the installed Chrome instead of bundled Chromium; grant-only. |
+| `acquisition.browser.cdp_url_env` | string | - | `pattern ^[A-Z_][A-Z0-9_]{0,127}$` | Environment variable holding a remote browser DevTools URL; grant-only. |
+| `acquisition.http` | table | - |  | HTTP transport settings: which browser to impersonate and which protocol version to ask for. |
+| `acquisition.http.impersonate` | string or value | `"off"` | `always "off"` | Browser whose TLS and header fingerprint the HTTP client copies. |
+| `acquisition.http.http_version` | string | `"1.1"` | `one of 1.1, 2, 3` | HTTP protocol version the transport asks for. |
 | `acquisition.auth` | array of tables | `[]` | `items <= 8` | Request headers whose values come from environment variables. |
 | `acquisition.auth[].host` | string | required |  | Allowed host that receives the header. |
 | `acquisition.auth[].header` | string | `"Authorization"` | `` pattern ^[!#$%&'*+.^_`\|~0-9A-Za-z-]{1,64}$ `` | Header name. |
@@ -558,6 +574,7 @@ Besides the grant variables above. Values are never stored in job files.
 | `RASTRO_MODEL` | Default model spec, such as "ollama:qwen3"; used by scrape(model="env"), Studio Ask AI, `new --search model` and [repair] model = true. | [ai.md#connect-a-model](ai.md#connect-a-model) |
 | `RASTRO_MODEL_LOCAL` | Set to 1 to declare that a RASTRO_MODEL command keeps content local. | [ai.md#privacy](ai.md#privacy) |
 | `RASTRO_ON_FAILURE` | Command run with a JSON summary when job load, run or watch needs attention. | [operations.md#failure-hook](operations.md#failure-hook) |
+| `RASTRO_PROFILE_DIR` | Directory holding the persistent browser profiles that browser.session_profile names. | [browser.md#persistent-sessions](browser.md#persistent-sessions) |
 | `RASTRO_SEARXNG_URL` | SearXNG endpoint for `rastro new --goal --search searxng`. | [jobs.md#start-from-a-goal](jobs.md#start-from-a-goal) |
 
 ## Command line

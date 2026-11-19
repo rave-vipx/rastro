@@ -64,6 +64,7 @@ async def propose_with_model(
     previous: Recipe | None = None,
     samples: Sequence[Mapping[str, object]] = (),
     limits: Limits | None = None,
+    timezone: str | None = None,
 ) -> tuple[bool, str, int, float]:
     calls = 0
     complete = False
@@ -75,6 +76,7 @@ async def propose_with_model(
         "hints": hints,
         "previous": previous,
         "samples": samples,
+        "timezone": timezone,
     }
     try:
         async with asyncio.timeout(policy.timeout_seconds):

@@ -20,6 +20,7 @@ from rastro.application.auth_headers import resolve_auth
 from rastro.application.conditional import ConditionalRequests
 from rastro.application.cookie_jar import CookieJar
 from rastro.application.destinations import permitted_url, pin_destination
+from rastro.application.host_limits import admit, build_hosts
 from rastro.application.http_policy import (
     REDIRECT_STATUSES,
     TRANSIENT_STATUSES,
@@ -68,9 +69,7 @@ class WebAcquirer:
         self._cookies = CookieJar() if policy.session else None
         self._rotation = ProxyRotation()
         self._slots = asyncio.Semaphore(policy.max_concurrency)
-        self._hosts = {
-            host: _Host(interval=policy.min_interval_seconds) for host in policy.allowed_hosts
-        }
+        self._hosts = build_hosts(policy)
 
     async def acquire(
         self, source: Source, *, max_bytes: int, representation: Representation = "html"
@@ -190,20 +189,12 @@ class WebAcquirer:
     async def _attempt_request(
         self, url: str, host: _Host, operation: _Operation, *, max_bytes: int
     ) -> HttpResponse:
-        # Waiting jobs for one host cannot occupy all global transfer slots.
-        async with host.lock:
-            if host.denied:
-                raise AcquisitionError("host_access_restricted", Outcome.ACCESS_RESTRICTION)
-            remaining = host.cooldown - perf_counter()
-            if remaining > 0:
-                operation.retry_after_seconds = remaining
-                raise AcquisitionError("retry_after_pending", Outcome.ACCESS_RESTRICTION)
-            await asyncio.sleep(max(0, host.next_request - perf_counter()))
-            if operation.requests >= self.policy.max_requests:
-                raise AcquisitionError("request_limit", Outcome.PERMANENT_FAILURE)
-            operation.rotate()
+        # The host's slots cap its transfers; the lock only orders checks and pacing.
+        async with host.slots:
+            await admit(host, operation, self.policy)
             response = await self._pinned_get(url, host, operation, max_bytes=max_bytes)
-            record_response(response, host, operation, self.policy)
+            async with host.lock:
+                record_response(response, host, operation, self.policy)
             return response
 
     async def _pinned_get(
@@ -258,7 +249,7 @@ class WebAcquirer:
                         finally:
                             operation.network_seconds += perf_counter() - network_start
             finally:
-                host.next_request = perf_counter() + host.interval
+                host.next_request = max(host.next_request, perf_counter() + host.interval)
         raise AssertionError("Address loop must return or raise")  # pragma: no cover
 
 
