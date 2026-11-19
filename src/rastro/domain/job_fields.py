@@ -15,17 +15,27 @@ from pydantic import (
     BaseModel,
     BeforeValidator,
     Field,
+    SerializerFunctionWrapHandler,
     StrictBool,
     StrictInt,
     TypeAdapter,
+    WrapValidator,
     create_model,
     field_validator,
+    model_serializer,
     model_validator,
 )
 from pydantic_core import SchemaError
 
 from rastro.domain.job_contract import RedactedContract
-from rastro.domain.job_field_values import localized_date, relative_url, strip_text
+from rastro.domain.job_field_values import (
+    bounded_list,
+    localized_date,
+    null_placeholder,
+    recover_field,
+    relative_url,
+    strip_text,
+)
 from rastro.domain.models import ConfigurationError
 
 type JobFieldType = Literal[
@@ -37,6 +47,8 @@ type JobFieldType = Literal[
     "date",
     "datetime",
     "url",
+    "list",
+    "object",
 ]
 _FIELD_NAME = r"^[A-Za-z][A-Za-z0-9_]{0,63}$"
 
@@ -52,6 +64,19 @@ def _reject_bool_bound(value: Any) -> Any:
 class _FieldBase(RedactedContract):
     name: str = Field(min_length=1, max_length=64, pattern=_FIELD_NAME)
     required: StrictBool = True
+    null_values: tuple[Annotated[str, Field(min_length=1, max_length=64)], ...] = Field(
+        default=(),
+        max_length=16,
+        description="Text placeholders rejected after stripping whitespace and case folding.",
+    )
+
+    @model_serializer(mode="wrap")
+    def _omit_empty_placeholders(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        # Keeps the stored form of jobs without placeholders byte-identical.
+        data: dict[str, Any] = handler(self)
+        if not self.null_values:
+            data.pop("null_values", None)
+        return data
 
     @field_validator("name")
     @classmethod
@@ -64,6 +89,16 @@ class _FieldBase(RedactedContract):
         # Blank text is stripped before validation, so constraints see the real value and
         # a blank required value is a validation issue (QUAL-004).
         blank = BeforeValidator(partial(strip_text, required=self.required))
+        if self.null_values:
+            annotation = Annotated[
+                annotation,
+                BeforeValidator(
+                    partial(
+                        null_placeholder,
+                        values=frozenset(v.strip().casefold() for v in self.null_values),
+                    )
+                ),
+            ]
         if self.required:
             return (Annotated[annotation, blank], ...)
         return (Annotated[annotation | None, blank], None)
@@ -196,8 +231,11 @@ class DateTimeField(_FieldBase):
     localized: StrictBool = False
 
     def field_definition(self) -> tuple[Any, Any]:
-        target = Annotated[datetime, BeforeValidator(partial(localized_date, want_time=True))]
-        return self._wrap_required(target if self.localized else datetime)
+        target = Annotated[
+            datetime,
+            BeforeValidator(partial(localized_date, want_time=True, localized=self.localized)),
+        ]
+        return self._wrap_required(target)
 
 
 class UrlField(_FieldBase):
@@ -207,6 +245,98 @@ class UrlField(_FieldBase):
         return self._wrap_required(Annotated[AnyHttpUrl, BeforeValidator(relative_url)])
 
 
+type ScalarField = (
+    StringField
+    | IntegerField
+    | NumberField
+    | BooleanField
+    | DecimalField
+    | DateField
+    | DateTimeField
+    | UrlField
+)
+
+
+class ObjectField(_FieldBase):
+    type: Literal["object"] = "object"
+    members: tuple[Annotated[ScalarField, Field(discriminator="type")], ...] = Field(
+        min_length=1,
+        max_length=32,
+        description="Uniquely named scalar members of an object.",
+    )
+
+    @model_validator(mode="after")
+    def check_members(self) -> Self:
+        if len({member.name for member in self.members}) != len(self.members):
+            raise ValueError("Object member names must be unique")
+        return self
+
+    def field_definition(self) -> tuple[Any, Any]:
+        definitions: dict[str, Any] = {}
+        for member in sorted(self.members, key=lambda m: m.name):
+            annotation, default = member.field_definition()
+            if not member.required:
+                annotation = Annotated[
+                    annotation,
+                    WrapValidator(
+                        partial(
+                            recover_field,
+                            code="member_nulled",
+                            name=member.name,
+                        )
+                    ),
+                ]
+            definitions[member.name] = annotation, default
+        target = create_model("JobObject", __module__=__name__, **definitions)
+        return self._wrap_required(target)
+
+
+class ListField(_FieldBase):
+    type: Literal["list"] = "list"
+    item: Annotated[
+        StringField
+        | IntegerField
+        | NumberField
+        | BooleanField
+        | DecimalField
+        | DateField
+        | DateTimeField
+        | UrlField
+        | ObjectField,
+        Field(discriminator="type"),
+    ] = Field(
+        description="Scalar or object item contract; its name is ignored.",
+    )
+    min_items: StrictInt = Field(default=0, ge=0, le=1000, description="Minimum valid items.")
+    max_items: StrictInt = Field(default=100, ge=1, le=1000, description="Maximum input items.")
+
+    @model_validator(mode="after")
+    def check_item_limits(self) -> Self:
+        if self.min_items > self.max_items:
+            raise ValueError("min_items must not exceed max_items")
+        return self
+
+    def field_definition(self) -> tuple[Any, Any]:
+        annotation, _ = self.item.field_definition()
+        item = Annotated[
+            annotation,  # type: ignore[valid-type]
+            WrapValidator(
+                partial(
+                    recover_field,
+                    code="list_item_dropped",
+                    name=self.name,
+                )
+            ),
+        ]
+        target = Annotated[
+            list[item],
+            Field(min_length=self.min_items, max_length=self.max_items),
+            BeforeValidator(partial(bounded_list, maximum=self.max_items)),
+        ]
+        return self._wrap_required(target)
+
+
+# Spelled out: a discriminated union nested in another reports a doubled tag in error paths.
 type JobField = Annotated[
     StringField
     | IntegerField
@@ -215,7 +345,9 @@ type JobField = Annotated[
     | DecimalField
     | DateField
     | DateTimeField
-    | UrlField,
+    | UrlField
+    | ListField
+    | ObjectField,
     Field(discriminator="type"),
 ]
 
