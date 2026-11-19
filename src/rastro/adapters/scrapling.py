@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+from json import JSONDecodeError
 
 from cssselect import SelectorError, parse
 from lxml.etree import LxmlError  # type: ignore[import-untyped]
@@ -67,6 +68,30 @@ def _matches(scope: Selector, selector: str) -> tuple[int, list[str]]:
     if elements == 1 and "::text" in selector:
         values = [value for value in values if value.strip()] or values[:1]
     return elements, values
+
+
+def _jsonld_payload(text: str, issues: list[Issue]) -> object:
+    try:
+        return strict_json(text, repair_text=True)
+    except JSONDecodeError:
+        pass
+    # Escape controls only inside strings; preserve escapes and structural whitespace.
+    escaped: list[str] = []
+    in_string = False
+    after_backslash = False
+    for char in text:
+        if after_backslash:
+            after_backslash = False
+        elif char == '"':
+            in_string = not in_string
+        elif in_string and char == "\\":
+            after_backslash = True
+        elif in_string and ord(char) < 32:
+            char = f"\\u{ord(char):04x}"
+        escaped.append(char)
+    payload = strict_json("".join(escaped), repair_text=True)
+    issues.append(Issue(code="tolerant_jsonld"))
+    return payload
 
 
 def _objects(value: object, path: str = "") -> Iterator[tuple[dict[str, object], str]]:
@@ -170,7 +195,7 @@ class ScraplingParser:
         wanted = recipe.item_types
         for block_index, block in enumerate(blocks):
             try:
-                payload = strict_json(str(block), repair_text=True)
+                payload = _jsonld_payload(str(block), issues)
             except (ValueError, RecursionError):
                 issues.append(Issue(code="invalid_jsonld"))
                 continue
