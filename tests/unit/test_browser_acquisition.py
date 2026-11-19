@@ -171,11 +171,6 @@ def test_missing_extra(monkeypatch):
         PlaywrightBrowser()
 
 
-def test_egress_rejected():
-    with pytest.raises(ConfigurationError, match="egress"):
-        setup(egress_profiles={"proxy": "https://proxy.test"})
-
-
 def test_job_routing_and_conflicts():
     from rastro.browser import job_render_modes
     from rastro.domain.jobs import Job

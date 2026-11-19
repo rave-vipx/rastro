@@ -79,6 +79,7 @@ emit a warning; use the selector configuration above when warnings are errors.
 | `backoff_seconds` | `1` | Initial exponential retry delay. |
 | `max_retry_delay_seconds` | `30` | Cap on local backoff; fallback cooldown for 429 with missing/invalid Retry-After. Never shortens a valid server delay. |
 | `egress_profiles` | `{}` | Up to 16 named, administrator-declared HTTP(S) proxies. See [network egress](#network-egress). |
+| `rotate_egress` | `[]` | Profile names to rotate over, one transfer each, for sources on `direct` egress. See [rotation](egress.md#rotation). |
 
 `Limits.max_html_bytes` (`max_json_bytes` for JSON requests) bounds decoded response bytes during transfer and UTF-8
 input bytes before extraction. Redirect bodies obey the same limit. Robots bodies
@@ -222,10 +223,12 @@ source = Source(url="https://example.com/article", egress="eu-office")
 - **Fail before network.** An unknown profile name returns `permanent_failure` with
   `unsupported_egress`, and a missing, empty or control-character credential
   returns `egress_credentials_unavailable`, both before DNS or any request.
-- **No rotation or fallback.** There are no proxy pools, rotation or automatic
-  fallback to another egress. A 401/403/429/451 through a proxy remains an
-  `access_restriction`; the client's per-host denial and cooldown also apply to
-  later sources using a different egress, so changing origin cannot bypass it.
+- **Rotation, no fallback.** `rotate_egress` cycles a source's transfers over listed
+  profiles and retries a proxy failure on the next one; see [rotation](egress.md#rotation).
+  There is no automatic fallback to direct egress. A 401/403/429/451 through a proxy
+  remains an `access_restriction`; the client's per-host denial and cooldown also apply
+  to later transfers through another profile or egress, so changing origin cannot bypass
+  it. The source's run report entry carries a [blocked hint](egress.md#reading-a-blocked-source).
 - **Same target checks.** Every hop, including robots and redirects, is allowlisted,
   resolved locally and rejected if any address is non-public **before** it is sent to
   the proxy. The proxy is used as a CONNECT tunnel (also for `http://` targets), TLS
@@ -252,8 +255,8 @@ hostname for TLS verification. IPv4/IPv6 private, loopback, metadata, reserved,
 multicast, mapped, and known transition addresses are rejected. Standard ports
 only. The operator can widen the first and the last
 ([Operator permissions](#operator-permissions)); a job file never can. Ambient (environment) proxies, ambient cookies, netrc, impersonation, and
-automatic redirects or transport retries are disabled; only an explicitly selected egress
-profile uses a proxy. There is no identity rotation or restriction bypass.
+automatic redirects or transport retries are disabled; only a selected or rotated egress
+profile uses a proxy. Rotation never retries a refusal elsewhere: there is no restriction bypass.
 
 For direct egress, connection failures can fall back sequentially to up to three
 validated addresses in DNS order (SEC-001/002/003). All resolved addresses are
@@ -283,7 +286,7 @@ call may finish after cancellation. Parsing/validation runs in a worker thread a
 can also finish after cancellation. Acquisition deadlines do not forcibly stop
 trusted validators or native parsers. Use process isolation for hostile workloads.
 
-Browser geolocation and SOCKS or rotating proxies are not implemented. Following
+Browser geolocation and SOCKS proxies are not implemented. Following
 discovered links is the job of the bounded [spider](jobs.md#spider); JavaScript
 rendering and sessions are opt-in (see below). Optional [recipe memory](memory.md) and
 [recipe learning](intelligence.md) integrate with the async SDK. See the
@@ -460,8 +463,9 @@ scrapling install
 Set `[acquisition] render = "browser"` for a job default, or set `render` on an
 individual URL source. An explicit source value overrides the default. Values are
 `"http"` (the normal default), `"browser"` (plain Chromium, honest Rastro User-Agent)
-and `"stealth"` (Scrapling's browser fingerprints). Browser modes require HTML and
-direct egress; they reject egress profiles.
+and `"stealth"` (Scrapling's browser fingerprints). Browser modes require HTML. They
+use egress profiles and rotation like HTTP; see [browser and stealth
+modes](egress.md#browser-and-stealth-modes).
 
 ```toml
 [acquisition]

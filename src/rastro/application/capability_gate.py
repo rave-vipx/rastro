@@ -2,9 +2,10 @@
 
 A job requests capabilities through the settings it uses: ``render = "stealth"`` requests
 ``stealth``, ``robots = "ignore"`` requests ``robots_ignore``, page steps request
-``page_actions``, and any setting model with a ``requested_capabilities()`` method adds its
-own. The check runs before any renderer, client or request exists, and a refusal names the
-origin, each refused capability and the flag that grants it, never a job value.
+``page_actions``, ``rotate_egress`` requests ``proxy_rotation``, and any setting model with
+a ``requested_capabilities()`` method adds its own. The check runs before any renderer,
+client or request exists, and a refusal names the origin, each refused capability and the
+flag that grants it, never a job value.
 """
 
 from __future__ import annotations
@@ -90,6 +91,8 @@ def policy_capabilities(policy: AcquisitionPolicy) -> frozenset[Capability]:
         requested.add("solve_challenges")
     if policy.robots == "ignore":
         requested.add("robots_ignore")
+    if policy.rotate_egress:
+        requested.add("proxy_rotation")
     return frozenset(requested)
 
 

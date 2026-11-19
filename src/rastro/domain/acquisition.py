@@ -16,7 +16,9 @@ from pydantic import (
 
 from rastro.domain.acquisition_auth import AcquisitionAuth, NetworkGrants
 from rastro.domain.acquisition_base import ENVIRONMENT_NAME, RedactedContract, exact_host
+from rastro.domain.browser_controls import HostLimits
 from rastro.domain.models import EGRESS_NAME, Outcome
+from rastro.domain.source_notes import BlockedHint, RenderMode
 
 
 class EgressProfile(RedactedContract):
@@ -87,6 +89,20 @@ class AcquisitionPolicy(RedactedContract):
     backoff_seconds: float = Field(default=1, gt=0, le=30, allow_inf_nan=False)
     max_retry_delay_seconds: float = Field(default=30, gt=0, le=120, allow_inf_nan=False)
     egress_profiles: dict[str, EgressProfile] = Field(default_factory=dict, max_length=16)
+    rotate_egress: tuple[str, ...] = Field(
+        default=(),
+        max_length=16,
+        exclude_if=lambda value: value == (),
+        description="Egress profile names to rotate over, in order: each transfer of a source "
+        'whose egress is "direct" uses the next one, and a proxy failure retries on the next.',
+    )
+    hosts: dict[str, HostLimits] = Field(
+        default_factory=dict,
+        max_length=64,
+        exclude_if=lambda value: value == {},
+        description="Pacing and concurrency for one allowed host, overriding the job-wide "
+        "min_interval_seconds and max_concurrency for it.",
+    )
     auth: tuple[AcquisitionAuth, ...] = Field(default=(), max_length=8)
     _grants: NetworkGrants = PrivateAttr(default_factory=NetworkGrants)
 
@@ -120,6 +136,20 @@ class AcquisitionPolicy(RedactedContract):
             name: {"proxy_url": value} if isinstance(value, str) else value
             for name, value in profiles.items()
         }
+
+    @field_validator("hosts")
+    @classmethod
+    def normalize_host_limits(cls, hosts: dict[str, HostLimits]) -> dict[str, HostLimits]:
+        return {exact_host(host): limits for host, limits in hosts.items()}
+
+    @model_validator(mode="after")
+    def check_rotation_and_hosts(self) -> Self:
+        names = self.rotate_egress
+        if len(set(names)) != len(names) or not set(names) <= self.egress_profiles.keys():
+            raise ValueError("rotate_egress lists distinct names of declared egress profiles")
+        if not self.hosts.keys() <= set(self.allowed_hosts):
+            raise ValueError("Each hosts entry must name an allowed host")
+        return self
 
     @model_validator(mode="after")
     def check_auth(self) -> Self:
@@ -186,6 +216,11 @@ class AcquisitionResult:
     egress: str = "direct"
     render_seconds: float = 0
     robots_overridden: bool = False
+    render: RenderMode = "http"
+    proxy_rotation: bool = False
+    proxies_used: int = 0  # distinct rotated profiles; names and counts only, never routes
+    challenge_solved: bool = False
+    blocked: BlockedHint | None = None
     raw_body: bytes | None = field(default=None, repr=False)  # set only by acquire_raw
 
 

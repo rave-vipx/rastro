@@ -29,14 +29,8 @@ def job_render_modes(job: Job) -> dict[str, str]:
         if item.url in modes and modes[item.url] != mode:
             raise ConfigurationError("Identical source URLs have conflicting render modes")
         modes[item.url] = mode
-        if mode != "http" and (
-            item.representation != "html"
-            or (item.region or job.region).egress != "direct"
-            or job.acquisition.egress_profiles
-        ):
-            raise ConfigurationError(
-                "Browser modes require HTML and direct egress without profiles"
-            )
+        if mode != "http" and item.representation != "html":
+            raise ConfigurationError("Browser modes require the HTML representation")
     return modes
 
 
@@ -130,6 +124,7 @@ def job_acquisition(
             resolver=resolver,
         )
         client._hosts = client._http._hosts = http._hosts
+        client._rotation = http._rotation  # one cyclic order across render modes
         client._slots = http._slots
         clients[mode] = client
     return _JobAcquisition(modes, clients, job.acquisition.render)

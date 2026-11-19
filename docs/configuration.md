@@ -194,6 +194,11 @@ How URLs are fetched: allowed hosts, rendering, pacing, budgets. Docs: [acquisit
 | `acquisition.egress_profiles.<name>.proxy_url` | string | required | `length >= 1, length <= 2048` | Proxy URL, without credentials. |
 | `acquisition.egress_profiles.<name>.username_env` | string | - | `pattern ^[A-Z_][A-Z0-9_]{0,127}$` | Environment variable holding the proxy user name. |
 | `acquisition.egress_profiles.<name>.password_env` | string | - | `pattern ^[A-Z_][A-Z0-9_]{0,127}$` | Environment variable holding the proxy password. |
+| `acquisition.rotate_egress` | array of string | `[]` | `items <= 16` | Egress profile names to rotate over, in order: each transfer of a source whose egress is "direct" uses the next one, and a proxy failure retries on the next. |
+| `acquisition.hosts` | map of tables | - | `keys <= 64` | Pacing and concurrency for one allowed host, overriding the job-wide min_interval_seconds and max_concurrency for it. |
+| `acquisition.hosts.<name>.min_interval_seconds` | number or integer | - | `>= 0, <= 60` | Seconds between requests to this host; unset keeps the job-wide value. |
+| `acquisition.hosts.<name>.max_concurrency` | integer | - | `>= 1, <= 32` | Transfers in flight to this host at once; unset keeps the job-wide value. |
+| `acquisition.hosts.<name>.autothrottle` | boolean | `false` |  | Widen the spacing when the host slows down or answers 429. |
 | `acquisition.auth` | array of tables | `[]` | `items <= 8` | Request headers whose values come from environment variables. |
 | `acquisition.auth[].host` | string | required |  | Allowed host that receives the header. |
 | `acquisition.auth[].header` | string | `"Authorization"` | `` pattern ^[!#$%&'*+.^_`\|~0-9A-Za-z-]{1,64}$ `` | Header name. |

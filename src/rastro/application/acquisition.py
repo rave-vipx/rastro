@@ -23,6 +23,7 @@ from rastro.application.destinations import permitted_url, pin_destination
 from rastro.application.http_policy import (
     REDIRECT_STATUSES,
     TRANSIENT_STATUSES,
+    ProxyRotation,
     check_status,
     decode_body,
     redirect_target,
@@ -65,6 +66,7 @@ class WebAcquirer:
         self._conditional = conditional
         self._environ = environ
         self._cookies = CookieJar() if policy.session else None
+        self._rotation = ProxyRotation()
         self._slots = asyncio.Semaphore(policy.max_concurrency)
         self._hosts = {
             host: _Host(interval=policy.min_interval_seconds) for host in policy.allowed_hosts
@@ -108,6 +110,7 @@ class WebAcquirer:
         status = Outcome.SUCCESS
         try:
             operation.proxy = resolve_proxy(source.egress, self.policy, self._environ)
+            operation.rotation = self._rotation.picker(source.egress, self.policy, self._environ)
             operation.auth = resolve_auth(self.policy, self._environ)
             operation.headers = request_headers(source, representation)
             async with asyncio.timeout(self.policy.operation_timeout_seconds):
@@ -198,6 +201,7 @@ class WebAcquirer:
             await asyncio.sleep(max(0, host.next_request - perf_counter()))
             if operation.requests >= self.policy.max_requests:
                 raise AcquisitionError("request_limit", Outcome.PERMANENT_FAILURE)
+            operation.rotate()
             response = await self._pinned_get(url, host, operation, max_bytes=max_bytes)
             record_response(response, host, operation, self.policy)
             return response

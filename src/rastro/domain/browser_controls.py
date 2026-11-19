@@ -88,6 +88,19 @@ class HttpOptions(RedactedContract):
 class HostLimits(RedactedContract):
     """Politeness for one host: spacing, concurrency and adaptive throttling."""
 
-    min_interval_seconds: StrictFloat | StrictInt | None = Field(default=None, ge=0, le=60)
-    max_concurrency: StrictInt | None = Field(default=None, ge=1, le=32)
-    autothrottle: StrictBool = False
+    min_interval_seconds: StrictFloat | StrictInt | None = Field(
+        default=None,
+        ge=0,
+        le=60,
+        description="Seconds between requests to this host; unset keeps the job-wide value.",
+    )
+    max_concurrency: StrictInt | None = Field(
+        default=None,
+        ge=1,
+        le=32,
+        description="Transfers in flight to this host at once; unset keeps the job-wide value.",
+    )
+    autothrottle: StrictBool = Field(
+        default=False,
+        description="Widen the spacing when the host slows down or answers 429.",
+    )
