@@ -9,6 +9,66 @@ or any HTTPS URL that serves the same layout. Rastro never runs `git`; it makes
 network requests for a registry only when you pass `--registry-url`, under the same
 network safeguards as a scrape.
 
+## The shared hub (`rastro hub`)
+
+The hub is a registry shared between users: a static Git repository with the registry
+layout below, served raw over HTTPS. Rastro points at the public hub by default
+(`https://raw.githubusercontent.com/rave-vipx/rastro-hub/main/`, the constant
+`rastro.application.registry_url.DEFAULT_HUB_URL`); `--registry-url URL` points at a
+self-hosted hub with the same layout and `--registry DIR` at a local checkout. There are no
+accounts, no Rastro-operated server and no telemetry.
+
+### Find a recipe for a URL
+
+```console
+$ rastro hub search https://listing.example/cards/page-2
+{"schema_version": 1, "candidates": [{"id": "synthetic-listing", "version": "1.0.0", "state": "candidate", "card": {...}, "health": {...}, ...}]}
+```
+
+Search matches the URL's domain (`host[:port]`, case-insensitive; the path is ignored, a
+subdomain is a different domain) against each package's `source_patterns` and offers the newest
+version of at most five packages. An offer is only a `candidate`: search never writes to a
+recipe store. The SDK equivalent is `rastro.application.hub_search.hub_candidates(url)`, and
+`install_candidate(offer, repository, parser_for, at=...)` installs the offered version.
+
+`rastro hub install ID[@VERSION] --store recipes.sqlite` runs exactly the gates of
+`rastro recipe install` (digests, selector policy, offline replay, index match, compatibility)
+and stores a `candidate`. Nothing serves until `rastro recipe promote` passes the candidate gate
+on your own page. A failed gate leaves the store unchanged.
+
+### Publish in one step
+
+```console
+$ rastro hub publish job.toml --source 1 --sample synthetic-page.html --registry ./rastro-hub \
+    --id listing-cards --version 1.0.0 --author "Your Name" --license Apache-2.0 \
+    --describe title="The card's headline" --describe price_text="Price as printed"
+```
+
+`publish` takes the job's serving recipe and writes, into the local checkout, the verified
+bundle, the sample you chose, and `card.json` with a description of every top-level field and
+the recipe's engine needs (representation, render mode and capabilities such as page actions or
+stealth). Every field must be described, and nothing else; descriptions are one line of 1-500
+printable characters. All gates of `export` and `publish` below apply, including the secret
+and personal-data scan, which also covers `card.json`. The sample must be synthetic or yours to
+redistribute: Rastro never copies a page on its own. Publish never uses the network; it prints
+the `git` commands to commit, push and open a pull request against the hub.
+
+### Cards and health
+
+Two optional files sit beside the registry layout. Both are untrusted, size-bounded and
+validated strictly; an invalid one stops the search with `RegistryError` rather than being
+ignored.
+
+| File | Written by | Content |
+| --- | --- | --- |
+| `recipes/<id>/<version>/card.json` | `rastro hub publish` | `format` (`1`), `fields` (`name`, `description`), `engine_needs` (`representation`, `render`, `capabilities`). At most 64 KiB. |
+| `health.json` | the hub's CI | `format` (`1`) and `packages`: `id`, `version`, `last_verified` (date), `rastro_version`, `passed`. Read-only in Rastro. |
+
+The engine needs in a card are informative: an install grants nothing, and a recipe that
+needs a capability is still refused unless the operator granted it for registry input. Health
+says when the hub last re-ran a package's replay and with which Rastro version; your install
+recomputes trust itself.
+
 ## Bundle layout (format 2)
 
 `rastro recipe export` writes five files with deterministic bytes (sorted keys, LF,

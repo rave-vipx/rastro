@@ -15,9 +15,6 @@ from rastro.application.recipe_registry import (
     publish_to_registry,
     search_registry,
 )
-from rastro.application.repair_context import safe_path
-from rastro.domain.jobs import FileJobSource
-from rastro.domain.memory import RecipeKey
 from rastro.domain.models import ConfigurationError, Representation
 from rastro.domain.recipe_bundle import BundleAuthor
 from rastro.ports.parser import DocumentParser
@@ -108,37 +105,21 @@ def _author(args: argparse.Namespace) -> BundleAuthor | None:
 
 
 def _export(args: argparse.Namespace) -> int:
-    from rastro.adapters.sqlite import SQLiteRecipeRepository
-    from rastro.application.job_loader import load_job
+    from rastro.application.hub_publish import serving_source_recipe
 
-    if args.file.is_symlink():
-        raise ConfigurationError("Recipe command paths must not contain symlinks")
-    base = args.file.parent.resolve()
-    job = load_job(base / args.file.name, allow_absolute_paths=args.allow_absolute_paths)
-    if job.recipe_memory is None:
-        raise ConfigurationError("Exporting a recipe requires recipe_memory")
-    if not 1 <= args.source <= len(job.sources):
-        raise ConfigurationError("Source index is outside the job sources")
-    item = job.sources[args.source - 1]
-    url = item.resolved_source_url() if isinstance(item, FileJobSource) else item.url
-    source = (item.region or job.region).to_source(url)
-    key = RecipeKey.for_source(
-        source, job.build_schema(), job.context, representation=item.representation
+    found = serving_source_recipe(
+        args.file, args.source, allow_absolute_paths=args.allow_absolute_paths
     )
-    memory = safe_path(job.recipe_memory, base, args.allow_absolute_paths)
-    stored = SQLiteRecipeRepository(memory).get(key)
-    if stored is None:
-        raise ConfigurationError("No serving recipe is stored for this source")
     manifest = export_bundle(
         args.to,
-        recipe=stored.validated_recipe,
-        source=source,
-        context=key.context,
-        fields=job.fields,
+        recipe=found.stored.validated_recipe,
+        source=found.source,
+        context=found.context,
+        fields=found.job.fields,
         sample=args.sample,
-        parser=_parser_for(item.representation),
+        parser=_parser_for(found.item.representation),
         verified_on=datetime.now(UTC).date(),
-        limits=job.limits,
+        limits=found.job.limits,
         bundle_id=args.bundle_id,
         version=args.package_version,
         author=_author(args),

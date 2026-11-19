@@ -1,4 +1,4 @@
-"""Search and install from a registry URL (N10; HUB-002..HUB-006, SEC-001, SEC-005, SEC-008).
+"""Search and install from a registry URL (HUB-002..HUB-006, SEC-001, SEC-005, SEC-008).
 
 The bytes come through ``WebAcquirer`` (https only, public addresses unless the operator
 granted otherwise, DNS pinning, every redirect re-checked, robots enforced). They are written
@@ -57,6 +57,14 @@ _HINTS = {
 }
 
 
+class RegistryFetchError(RegistryError):
+    """A registry file could not be fetched; ``code`` is the short acquisition category."""
+
+    def __init__(self, code: str) -> None:
+        super().__init__(f"Registry fetch failed: {code}", hint=_HINTS.get(code))
+        self.code = code
+
+
 class WebRegistryFetcher:
     """``RegistryFetcher`` over a policy-bound ``WebAcquirer``; errors carry a category only."""
 
@@ -66,20 +74,20 @@ class WebRegistryFetcher:
     async def fetch(self, url: str, *, max_bytes: int) -> bytes:
         result = await self._acquirer.acquire_raw(Source(url=url), max_bytes=max_bytes)
         if result.status != Outcome.SUCCESS or result.raw_body is None:
-            code = result.issue_code or str(result.status)
-            raise RegistryError(f"Registry fetch failed: {code}", hint=_HINTS.get(code))
+            raise RegistryFetchError(result.issue_code or str(result.status))
         return result.raw_body
 
 
-class _Budget:
-    """At most ``MAX_PACKAGE_FILES`` files and ``total`` bytes for one search or install."""
+class FetchBudget:
+    """At most ``files`` files and ``total`` bytes for one search or install."""
 
-    def __init__(self, total: int) -> None:
+    def __init__(self, total: int, files: int = MAX_PACKAGE_FILES) -> None:
         self.files = 0
+        self.max_files = files
         self.remaining = total
 
     async def get(self, fetcher: RegistryFetcher, url: str, cap: int) -> bytes:
-        if self.files >= MAX_PACKAGE_FILES or self.remaining <= 0:
+        if self.files >= self.max_files or self.remaining <= 0:
             raise RegistryError("Registry download budget exceeded; nothing was installed")
         self.files += 1
         limit = min(cap, self.remaining)
@@ -89,8 +97,18 @@ class _Budget:
         self.remaining -= len(data)
         return data
 
+    async def get_optional(self, fetcher: RegistryFetcher, url: str, cap: int) -> bytes | None:
+        """``None`` when the host answers that the file is not there (an HTTP 4xx); every
+        other refusal (address, port, robots, size) still raises."""
+        try:
+            return await self.get(fetcher, url, cap)
+        except RegistryFetchError as error:
+            if error.code == "http_permanent_failure":
+                return None
+            raise
 
-def _fetcher(
+
+def registry_fetcher(
     location: RegistryLocation, transport: HttpTransport | None, resolver: Resolver | None
 ) -> RegistryFetcher:
     if transport is None or resolver is None:
@@ -106,18 +124,18 @@ def _fetcher(
     return WebRegistryFetcher(acquirer)
 
 
-def _run[T](coroutine: Coroutine[Any, Any, T]) -> T:
-    """One search or install shares one robots.txt answer per origin (N10)."""
+def run_fetch[T](coroutine: Coroutine[Any, Any, T]) -> T:
+    """One search or install shares one robots.txt answer per origin."""
     with robots_cache(), asyncio.Runner(loop_factory=asyncio.SelectorEventLoop) as runner:
         return runner.run(coroutine)
 
 
-def _budget(limits: Limits) -> _Budget:
-    return _Budget(MAX_METADATA_BYTES * 5 + max(limits.max_html_bytes, limits.max_json_bytes))
+def _budget(limits: Limits) -> FetchBudget:
+    return FetchBudget(MAX_METADATA_BYTES * 5 + max(limits.max_html_bytes, limits.max_json_bytes))
 
 
-async def _index(
-    location: RegistryLocation, fetcher: RegistryFetcher, budget: _Budget
+async def fetch_index(
+    location: RegistryLocation, fetcher: RegistryFetcher, budget: FetchBudget
 ) -> tuple[RegistryEntry, ...]:
     raw = await budget.get(fetcher, location.base + INDEX_FILE, MAX_METADATA_BYTES)
     return parse_index(raw)
@@ -134,7 +152,9 @@ def search_registry_url(
     """Entries of the registry at ``url`` matching ``query`` (same rules as a local search)."""
     location = parse_registry_url(url)
     budget = _budget(limits or Limits())
-    entries = _run(_index(location, _fetcher(location, transport, resolver), budget))
+    entries = run_fetch(
+        fetch_index(location, registry_fetcher(location, transport, resolver), budget)
+    )
     matched = [entry for entry in entries if matches_query(entry, query)]
     return tuple(sorted(matched, key=lambda item: (item.id, semver_key(item.version))))
 
@@ -156,7 +176,7 @@ async def _download(
     destination: Path,
 ) -> RegistryEntry:
     budget = _budget(limits)
-    selected = select_entry(await _index(location, fetcher, budget), pkg_id, pinned)
+    selected = select_entry(await fetch_index(location, fetcher, budget), pkg_id, pinned)
     root = f"{location.base}{RECIPES_DIR}/{selected.id}/{selected.version}/"
     manifest = await budget.get(fetcher, root + MANIFEST_FILE, MAX_METADATA_BYTES)
     representation = _representation(manifest)
@@ -189,10 +209,10 @@ def install_from_registry_url(
     pkg_id, pinned = parse_package_spec(spec)
     location = parse_registry_url(url)
     limits = limits or Limits()
-    fetcher = _fetcher(location, transport, resolver)
+    fetcher = registry_fetcher(location, transport, resolver)
     with tempfile.TemporaryDirectory(prefix="rastro-registry-") as scratch:
         package_dir = Path(scratch) / "package"
-        selected = _run(_download(location, pkg_id, pinned, limits, fetcher, package_dir))
+        selected = run_fetch(_download(location, pkg_id, pinned, limits, fetcher, package_dir))
         return install_package_dir(
             package_dir,
             selected,
@@ -204,4 +224,12 @@ def install_from_registry_url(
         )
 
 
-__all__ = ["WebRegistryFetcher", "install_from_registry_url", "search_registry_url"]
+__all__ = [
+    "FetchBudget",
+    "RegistryFetchError",
+    "WebRegistryFetcher",
+    "install_from_registry_url",
+    "registry_fetcher",
+    "run_fetch",
+    "search_registry_url",
+]
