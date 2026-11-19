@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pydantic import ValidationError
 
+from rastro.adapters.nested_json import extract_json_field
 from rastro.domain.json import MISSING, escape_token, resolve_pointer, strict_json
 from rastro.domain.models import (
     ConfigurationError,
@@ -13,7 +14,7 @@ from rastro.domain.models import (
     Recipe,
     ResourceLimitError,
 )
-from rastro.domain.recipes import scalar_expression
+from rastro.domain.recipes import NestedMapping, scalar_expression
 from rastro.ports.discovery import AliasMap
 from rastro.ports.parser import Candidate, ParsedDocument
 
@@ -78,12 +79,20 @@ class JsonParser:
                 continue
             values: dict[str, object] = {}
             locators: dict[str, str] = {}
+            notes: list[Issue] = []
             for field, pointer in recipe.fields.items():
-                value = resolve_pointer(item, scalar_expression(pointer))
+                if isinstance(pointer, NestedMapping):
+                    value, found = extract_json_field(
+                        item, pointer, field=field, limits=limits, record_index=index
+                    )
+                    notes.extend(found)
+                    pointer = pointer.each
+                else:
+                    value = resolve_pointer(item, scalar_expression(pointer))
                 if value is not MISSING:
                     values[field] = value
                     locators[field] = f"json#{path}{pointer}"
-            candidates.append(Candidate(values, locators))
+            candidates.append(Candidate(values, locators, tuple(notes)))
         return ParsedDocument(tuple(candidates))
 
 

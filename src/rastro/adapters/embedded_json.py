@@ -6,10 +6,11 @@ from json import JSONDecodeError
 
 from scrapling.parser import Selector
 
+from rastro.adapters.nested_json import extract_json_field
 from rastro.adapters.structured import load_json
 from rastro.domain.json import MISSING, escape_token, resolve_pointer
 from rastro.domain.models import EmbeddedJsonRecipe, Issue, Limits, ResourceLimitError
-from rastro.domain.recipes import scalar_expression
+from rastro.domain.recipes import NestedMapping, scalar_expression
 from rastro.domain.tolerant_json import repaired_text
 from rastro.ports.parser import Candidate, ParsedDocument
 
@@ -52,10 +53,18 @@ def parse_embedded_json(
             continue
         found: dict[str, object] = {}
         locators: dict[str, str] = {}
+        item_issues: list[Issue] = []
         for field, pointer in recipe.fields.items():
-            value = resolve_pointer(item, scalar_expression(pointer))
+            if isinstance(pointer, NestedMapping):
+                value, extra = extract_json_field(
+                    item, pointer, field=field, limits=limits, record_index=index
+                )
+                item_issues.extend(extra)
+                pointer = pointer.each
+            else:
+                value = resolve_pointer(item, scalar_expression(pointer))
             if value is not MISSING:
                 found[field] = value
                 locators[field] = f"embedded_json[{escape_token(recipe.source)}]#{path}{pointer}"
-        candidates.append(Candidate(found, locators))
+        candidates.append(Candidate(found, locators, tuple(item_issues)))
     return ParsedDocument(tuple(candidates), notes)

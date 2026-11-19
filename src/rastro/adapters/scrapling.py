@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
-
 from cssselect import SelectorError, parse
 from lxml.etree import LxmlError  # type: ignore[import-untyped]
 from scrapling.parser import Selector
 
+from rastro.adapters.css_nested import extract_css_field
 from rastro.adapters.embedded_json import parse_embedded_json
+from rastro.adapters.jsonld_objects import jsonld_objects
+from rastro.adapters.nested_json import extract_json_field
 from rastro.domain.json import MISSING, resolve_pointer
 from rastro.domain.models import (
     ConfigurationError,
@@ -20,7 +21,13 @@ from rastro.domain.models import (
     Recipe,
     ResourceLimitError,
 )
-from rastro.domain.recipes import DOCUMENT_PREFIX, EXPAND_PREFIX, pointer_list, scalar_expression
+from rastro.domain.recipes import (
+    DOCUMENT_PREFIX,
+    EXPAND_PREFIX,
+    NestedMapping,
+    pointer_list,
+    scalar_expression,
+)
 from rastro.domain.tolerant_json import tolerant_json
 from rastro.ports.parser import Candidate, ParsedDocument
 
@@ -77,44 +84,8 @@ def _jsonld_payload(text: str, issues: list[Issue]) -> object:
     return payload
 
 
-def _list_items(current: dict[str, object], locator: str) -> list[tuple[object, str]]:
-    """The ``item`` of each ListItem in an ItemList, with its pointer."""
-    elements = current["itemListElement"]
-    if not isinstance(elements, list):
-        elements = [elements]
-    return [
-        (element["item"], f"{locator}/itemListElement/{i}/item")
-        for i, element in enumerate(elements)
-        if isinstance(element, dict) and isinstance(element.get("item"), dict)
-    ]
-
-
-def _objects(value: object, path: str = "") -> Iterator[tuple[dict[str, object], str]]:
-    """Traverse root arrays, @graph containers and ItemList items, never other nested values."""
-    pending = [(value, path)]
-    while pending:
-        current, locator = pending.pop()
-        if isinstance(current, list):
-            pending.extend(
-                (item, f"{locator}/{i}") for i, item in reversed(list(enumerate(current)))
-            )
-        elif isinstance(current, dict):
-            if "@graph" in current:
-                pending.append((current["@graph"], f"{locator}/@graph"))
-            elif _is_item_list(current):
-                pending.extend(reversed(_list_items(current, locator)))
-            else:
-                yield current, locator
-
-
-def _is_item_list(current: dict[str, object]) -> bool:
-    kind = current.get("@type")
-    kinds = kind if isinstance(kind, list) else [kind]
-    return "ItemList" in kinds and "itemListElement" in current
-
-
 def _node_candidates(
-    page: Selector, node: Selector, index: int, recipe: CssRecipe, max_records: int
+    page: Selector, node: Selector, index: int, recipe: CssRecipe, limits: Limits
 ) -> list[Candidate]:
     """One candidate per record node, or one per value of its single ``expand:`` field."""
     values: dict[str, object] = {}
@@ -123,13 +94,22 @@ def _node_candidates(
     expanded: tuple[str, str, list[str]] | None = None
     base = f"{recipe.record_selector} [match {index}] >> "
     for field, mapping in recipe.fields.items():
+        if isinstance(mapping, NestedMapping):
+            nested, notes = extract_css_field(
+                page, node, mapping, _matches, field=field, limits=limits, record_index=index
+            )
+            issues.extend(notes)
+            if nested is not None:
+                values[field] = nested
+                locators[field] = f"{base}{mapping.each} [each]"
+            continue
         selector = scalar_expression(mapping)
         scope, css = field_scope(selector, page, node)
         if selector.startswith(EXPAND_PREFIX):
             found = [str(v) for v in scope.css(css).getall()]
             if "::text" in css:
                 found = [v for v in found if v.strip()]
-            if len(found) > max_records:
+            if len(found) > limits.max_records:
                 raise ResourceLimitError("Record count exceeds max_records")
             expanded = (field, selector, found)
             continue
@@ -177,7 +157,7 @@ class ScraplingParser:
             raise ResourceLimitError("Record count exceeds max_records")
         candidates: list[Candidate] = []
         for index, node in enumerate(nodes):
-            for candidate in _node_candidates(page, node, index, recipe, limits.max_records):
+            for candidate in _node_candidates(page, node, index, recipe, limits):
                 # Issues point at the record position, which expand: shifts past the card.
                 position = len(candidates)
                 issues = tuple(
@@ -203,7 +183,7 @@ class ScraplingParser:
             except (ValueError, RecursionError):
                 issues.append(Issue(code="invalid_jsonld"))
                 continue
-            for item, path in _objects(payload):
+            for item, path in jsonld_objects(payload):
                 examined += 1
                 if examined > limits.max_records:
                     raise ResourceLimitError("JSON-LD object count exceeds max_records")
@@ -217,7 +197,21 @@ class ScraplingParser:
                     continue
                 values: dict[str, object] = {}
                 locators: dict[str, str] = {}
+                issues_here: list[Issue] = []
                 for field, mapping in recipe.fields.items():
+                    if isinstance(mapping, NestedMapping):
+                        nested, notes = extract_json_field(
+                            item,
+                            mapping,
+                            field=field,
+                            limits=limits,
+                            record_index=len(candidates),
+                        )
+                        issues_here.extend(notes)
+                        if nested is not MISSING:
+                            values[field] = nested
+                            locators[field] = f"jsonld[{block_index}]#{path}{mapping.each}"
+                        continue
                     pointers = pointer_list(mapping)
                     for position, pointer in enumerate(pointers, 1):
                         value = resolve_pointer(item, pointer)
@@ -228,5 +222,5 @@ class ScraplingParser:
                             values[field] = value
                             locators[field] = f"jsonld[{block_index}]#{path}{pointer}"
                             break
-                candidates.append(Candidate(values, locators))
+                candidates.append(Candidate(values, locators, tuple(issues_here)))
         return ParsedDocument(tuple(candidates), tuple(issues))

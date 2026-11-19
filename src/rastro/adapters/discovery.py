@@ -7,7 +7,8 @@ import re
 from pydantic import ValidationError
 from scrapling.parser import Selector
 
-from rastro.adapters.scrapling import _objects, _parse_html
+from rastro.adapters.jsonld_objects import jsonld_objects
+from rastro.adapters.scrapling import _parse_html
 from rastro.domain.models import CssRecipe, JsonLdRecipe, Limits, Recipe, ResourceLimitError
 from rastro.domain.tolerant_json import tolerant_json
 from rastro.ports.discovery import AliasMap
@@ -48,7 +49,7 @@ class ScraplingDiscovery:
                 payload, _ = tolerant_json(str(block))
             except (ValueError, RecursionError):
                 continue
-            for item, _ in _objects(payload):
+            for item, _ in jsonld_objects(payload):
                 examined += 1
                 if examined > limits.max_records:
                     raise ResourceLimitError("JSON-LD object count exceeds max_records")

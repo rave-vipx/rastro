@@ -6,7 +6,8 @@ import pytest
 from pydantic import BaseModel
 
 from rastro import Outcome, Rastro, Source
-from rastro.adapters.scrapling import ScraplingParser, _jsonld_payload, _objects
+from rastro.adapters.jsonld_objects import jsonld_objects
+from rastro.adapters.scrapling import ScraplingParser, _jsonld_payload
 from rastro.application.job_loader import parse_job
 from rastro.domain.models import EmbeddedJsonRecipe, JsonLdRecipe, Limits
 from rastro.domain.tolerant_json import tolerant_json
@@ -73,7 +74,7 @@ def test_itemlist_traversed():
             ],
         }
     )
-    objects = list(_objects(json.loads(raw)))
+    objects = list(jsonld_objects(json.loads(raw)))
     assert [obj["name"] for obj, _ in objects] == ["P0", "P1", "P2"]
     assert objects[1][1] == "/itemListElement/1/item"
     result = Rastro().extract_html(
