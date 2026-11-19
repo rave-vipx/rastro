@@ -8,17 +8,41 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- Sitemap seed ordering and link pattern filtering (SEC-001, AGENT-001): `[spider]` adds `seed_order = "document" | "reverse" | "lastmod"` (default `"document"`; `"lastmod"` sorts newest UTC first with undated entries last in document order, and orders `<sitemapindex>` children consistently) and `allow_pattern` (linear-time regex on each link's normalized path; `deny` still wins). Both apply before `max_pages`, unknown `seed_order` values are refused with the closest valid option, and `rastro config`, `rastro capabilities`, `docs/schemas/job.schema.json` and docs are updated.
+- Run report: every `rastro job run` and `rastro job load` result carries a content-free `report` (`rastro.RunReport`, `rastro.SourceReport`) saying per source why it ended as it did: outcome, reason, pages, accepted and rejected counts by code, fields nulled, what was stored, acquisition, crawl, repair and timings. It also reaches the failure hook payload and Studio, and its JSON Schema is `docs/schemas/run-report.schema.json`. See `docs/run-report.md`.
+- List and object fields (`type = "list"` and `"object"`, `rastro.ListField`, `rastro.ObjectField`, `rastro.ScalarField`), `null_values` placeholders for missing values, and regional datetimes (`localized = true`) in job files. See `docs/fields.md`.
+- Nested recipes and pointers: a recipe field can be a `NestedMapping` (repeated child elements or a JSON array with one wildcard) and JSON pointers can be relative. CSS, JSON-LD, JSON and embedded JSON recipes extract nested lists and objects with bounded depth and item counts.
+- Tolerant page JSON: a BOM, trailing commas and raw control characters no longer fail a source, and JSON-LD `ItemList` wrappers are traversed. Recovered records report `repaired_json`.
+- Field isolation: a bad optional value nulls that field and a bad record is rejected alone, each reported as an issue, instead of failing the whole source.
+- Spider link lists: `spider.links` accepts a list of up to eight CSS attribute expressions (a comma selector group is refused with `link_group_refused`), `spider.deny_pattern` rejects paths by regular expression before `max_pages`, and sitemap seeds take `seed_order = "document" | "reverse" | "lastmod"` and `allow_pattern`. Page identity keeps the query keys that distinguish pages (`?state=CA`) while evidence still drops secret-like and tracking keys. See `docs/crawling.md`.
+- `[acquisition] robots = "obey" | "ignore"` lets your own job skip robots.txt for its hosts; agent tools, bundles, registry recipes and model proposals need the `robots_ignore` grant.
+- Engine capability map: `docs/engines.md` and `rastro.engine_coverage` map every Scrapling selector, HTTP, browser, spider, template and MCP feature to its Rastro setting or the reason it is not exposed.
+- Capability-first trust model: jobs from your own files use stealth, browser and solver features without a grant; input from MCP tools, bundles, the registry and model proposals starts with none. `--allow-untrusted ORIGIN:NAME` grants one capability to one origin and `--allow-capability NAME` lets your own jobs use `persistent_session`, `real_chrome`, `cdp` or `solver_plugins`. Capability use is listed in the run report.
+- `rastro.read_records(job_path)` reads a job's dataset back as validated `ReadRecord` models with per-field evidence and source origins (`rastro.DatasetRead`), and `rastro dataset export` adds `--format csv` with nested values flattened into one column per member or list item. See `docs/reading-results.md`.
+- Discovery report and crawl estimate: sitemap and spider runs report how many links were found and kept, `rastro job estimate` and `rastro.estimate_crawl` (`rastro.CrawlEstimate`) give an offline upper bound on requests and minutes before any fetch.
+- Repair in the run report: a source's report says whether a repair was promoted, quarantined or rejected, why promotion was refused and whether it needed a model, and Studio's Alerts view shows the latest stored report's repair and drift alerts.
+- Synthetic examples: the examples, benchmarks and documentation use invented event-agenda sources on `.example` hosts.
+- `rastro.Capability` and the catalog rows for the new public names, so `rastro capabilities` and `llms.txt` list them.
 
 ### Changed
 
 - `rastro init --agent`, `llms.txt` and `docs/capabilities.md` explain how results reach Studio: keep them in a job's dataset (`rastro job load` or `rastro.load_records`) and open `rastro studio --root`, instead of building an ad hoc database.
 - Planning documents are no longer kept in the repository. Public documentation, ADRs, `AGENTS.md` and the repository templates were rewritten for 1.0: one tagline, no internal process wording, GitHub private vulnerability reporting for security reports, and invented site names on `.example` hosts in the documentation.
+- `docs/issues.md`: `link_group_refused` now describes the refused comma selector group, `invalid_record` also covers evidence building and storage serialization, and `extraction_limit` also covers a nested list cut at its limit. The `tolerant_jsonld` issue is now `repaired_json`.
+- Release process: patch releases can be tagged from a maintenance branch; see `docs/releasing.md`.
+
+### Deprecated
+
+- `--allow-stealth`, `RASTRO_ALLOW_STEALTH` and `allow_stealth=`: your own jobs need no grant. The flag still grants stealth to untrusted origins; prefer `--allow-untrusted ORIGIN:stealth`.
 
 ### Fixed
 
+- A job file with invalid JSON raises `ConfigurationError` naming the line and column, not a raw decoder exception; the command line still prints the `syntax_error` envelope.
 - Lone UTF-16 surrogates in page JSON (a JSON-LD escape such as `\ud83d` without its low half) no longer fail a whole source: JSON-LD, embedded JSON and JSON parsing and discovery replace them with U+FFFD, valid pairs stay their real character, and a record that still cannot be serialized is rejected with the new `invalid_text` issue and counted in `rejected` instead of failing later (#151).
-- JSON-LD blocks with raw newlines or other control characters inside strings are retried once with those characters escaped; recovered records retain provenance and report `repaired_json` (INT-002). Malformed structure, duplicate keys and non-finite numbers remain rejected. HTML-parser normalization of other controls varies by platform; decoder regression tests cover all controls before HTML parsing.
+- JSON-LD blocks with raw newlines or other control characters inside strings are retried once with those characters escaped; recovered records retain provenance and report `repaired_json`. Malformed structure, duplicate keys and non-finite numbers remain rejected.
+
+### Security
+
+- Prompt-injection and trust boundaries: model proposals, MCP tool input, registry installs and bundle imports run as untrusted input and cannot use stealth, solvers, robots overrides or other grants unless the operator names the origin and capability. Details in `SECURITY.md`.
 
 ## [0.9.0] - 2026-11-17
 
