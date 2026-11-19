@@ -4,6 +4,12 @@
 
 v0.1 remains the reference release. It is complete: `0.1.0rc1` is its release candidate, with M1–M4 implemented, the M5 technical evidence recorded, every section 18 acceptance criterion evidenced, and DIFF-001 partially demonstrated. Publication (namespace ownership, legal/trademark review, tag and Trusted Publishing) awaits maintainer approval through the release gates in issue #5; nothing has been published.
 
+## Next: 0.10 plan (approved 2026-11-19)
+
+N21–N30 in `docs/product-needs.md`, cuts in `docs/action-plan-0.10.md`: patch release 0.9.1,
+robust extraction, discovery, run contract and dataset reader, nested records with AI support,
+operations. The lone-surrogate fix (#151) is on dev.
+
 ## Studio redesign and configuration reference (2026-11-17, released in 0.9.0)
 
 Studio rebuilt on design tokens with system/light/dark themes and an English/Spanish dictionary: Home with project health, Results with empty-cell reasons and a provenance panel, Sources and Alerts (N5), Fix a site (N7, N12), a four-step URL wizard (N1, N2), folded Settings and Registry (URL) (N10). The engine now keeps per-source rejected counts and caps in run metrics. `rastro config`, `rastro job template` and `rastro://configuration` give agents every configurable point (N18).

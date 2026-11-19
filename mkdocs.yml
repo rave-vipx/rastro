@@ -57,6 +57,7 @@ nav:
   - API and outcomes: api.md
   - Issue codes: issues.md
   - Adoption action plan: action-plan-adoption.md
+  - 0.10 action plan: action-plan-0.10.md
   - Architecture: architecture.md
   - Roadmap: roadmap.md
   - Release checklist: releasing.md
