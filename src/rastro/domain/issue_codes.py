@@ -37,6 +37,7 @@ ISSUE_CODES = frozenset(
         "invalid_encoding",
         "invalid_json",
         "invalid_jsonld",
+        "tolerant_jsonld",
         "invalid_locale",
         "invalid_model_candidate",
         "invalid_model_response",
