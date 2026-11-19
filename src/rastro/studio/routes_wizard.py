@@ -28,7 +28,7 @@ from rastro.application.suggest import suggest
 from rastro.domain.job_fields import StringField
 from rastro.domain.models import ConfigurationError, Limits
 from rastro.domain.suggest import MAX_EXAMPLES, Suggestion
-from rastro.studio import files
+from rastro.studio import files, routes_pick
 from rastro.studio.web import Refused, Studio, body, integer, optional_text, reply, text
 
 MAX_ROWS = 50
@@ -171,6 +171,7 @@ def routes(studio: Studio) -> list[Route]:
         studio.route("/api/pages", pages),
         studio.route("/api/suggest", suggested, post=True),
         studio.route("/api/create", create, post=True),
+        *routes_pick.routes(studio),
     ]
 
 
