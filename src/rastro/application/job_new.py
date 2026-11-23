@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import json
-import re
 from collections.abc import Sequence
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any, Literal
@@ -14,14 +12,14 @@ import rastro.application.source_proposals as sp
 from rastro.application.engine import Rastro
 from rastro.application.field_proposals import _TYPED, FieldProposal, ProposedFields, propose_fields
 from rastro.application.job_loader import _read_local_source
+from rastro.application.job_render import render_job as render_job  # re-exported
 from rastro.application.model_choice import ModelChoice
+from rastro.application.navigation_offer import ExplorationOffer, exploration_offer
 from rastro.application.suggest import suggest
-from rastro.domain.acquisition import AcquisitionPolicy
 from rastro.domain.job_fields import JobField, StringField, build_job_schema
 from rastro.domain.job_sources import FileJobSource, UrlJobSource, validate_job_path_syntax
 from rastro.domain.jobs import parse_job
-from rastro.domain.models import ConfigurationError, Contract, CssRecipe, Limits, Outcome, Source
-from rastro.domain.recipes import scalar_expression
+from rastro.domain.models import ConfigurationError, Contract, Limits, Outcome, Source
 from rastro.domain.suggest import Example, check_examples, infer_field_type
 from rastro.ports.acquisition import AcquisitionPort
 from rastro.ports.search import SearchProvider
@@ -36,6 +34,8 @@ class GoalJobResult(Contract):
     fields: tuple[FieldProposal, ...] = ()
     preview: tuple[dict[str, Any], ...] = ()
     status: Outcome = Outcome.SUCCESS
+    exploration: ExplorationOffer | None = None
+    """Set when the first page may hide records behind clicks; ``explore_job`` can find them."""
 
 
 def _validate_target(job: Path, page: Path | None, opts: dict[str, Any]) -> None:
@@ -264,6 +264,9 @@ def _build_approved_job(
         "allowed_hosts": hosts,
         "proposals": proposals,
         "fields": tuple(proposed),
+        "exploration": exploration_offer(
+            pages[0][1], len(preview_rows), opts.get("records_min", 2), url=pages[0][0]
+        ),
     }
     return GoalJobResult(created=path, preview=tuple(preview_rows), **res_kw)
 
@@ -281,60 +284,3 @@ def _typed_fields(
             if (res.status, len(res.records)) == base:
                 typed = trial
     return typed
-
-
-def _quote(value: str) -> str:
-    return json.dumps(value, ensure_ascii=False).replace("\x7f", "\\u007f")
-
-
-def render_job(job_fields: Sequence[JobField], recipe: CssRecipe, source: Any, **opts: Any) -> str:
-    """TOML text for a local or HTTP job; field names are validated identifiers."""
-    ds, ident, mem = opts.get("dataset"), opts.get("identity") or (), opts.get("recipe_memory")
-    policy: AcquisitionPolicy | None = opts.get("policy")
-    sources = (source,) if isinstance(source, FileJobSource) else tuple(source)
-    lines = [
-        "# Created by `rastro new`. Review the recipe, then preview it with",
-        "# `rastro job run <this file>` (prints records, no writes)."
-        + (" Store approved records with `rastro job load <this file>`." if ds else ""),
-        "format_version = 1",
-        *([f"recipe_memory = {_quote(mem)}"] if mem is not None else []),
-        "",
-    ]
-    if policy is not None:
-        hosts_toml = ", ".join(_quote(h) for h in policy.allowed_hosts)
-        lines += ["[acquisition]", f"allowed_hosts = [{hosts_toml}]"]
-        if policy.allow_http:
-            lines.append("allow_http = true")
-        lines.append("")
-    lines += [
-        "[recipe]",
-        'strategy = "css"',
-        f"record_selector = {_quote(recipe.record_selector)}",
-        "",
-        "[recipe.fields]",
-        *(
-            f"{name} = {_quote(scalar_expression(selector))}"
-            for name, selector in recipe.fields.items()
-        ),
-        "",
-    ]
-    if ds is not None:
-        stem = re.sub(r"[^a-z0-9_]", "_", Path(ds).stem.lower())
-        ds_name = (stem if stem[:1].isalpha() else f"data_{stem}")[:64]
-        lines += [
-            "[dataset]",
-            f"name = {_quote(ds_name)}",
-            f"path = {_quote(ds)}",
-            f"identity = [{', '.join(_quote(name) for name in ident)}]",
-            "",
-        ]
-    for item in sources:
-        if isinstance(item, FileJobSource):
-            lines += ["[[sources]]", 'kind = "file"', f"path = {_quote(item.path)}"]
-            if item.url is not None:
-                lines.append(f"url = {_quote(item.url)}")
-        else:
-            lines += ["[[sources]]", 'kind = "url"', f"url = {_quote(item.url)}"]
-    for field in job_fields:
-        lines += ["", "[[fields]]", f"name = {_quote(field.name)}", f"type = {_quote(field.type)}"]
-    return "\n".join(lines) + "\n"
