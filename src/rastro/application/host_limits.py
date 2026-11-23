@@ -8,7 +8,7 @@ from time import perf_counter
 from rastro.application.acquisition_state import _Host, _Operation
 from rastro.application.http_policy import TRANSIENT_STATUSES, retry_after
 from rastro.domain.acquisition import AcquisitionError, AcquisitionPolicy, HttpResponse
-from rastro.domain.models import ConfigurationError, Outcome
+from rastro.domain.models import Outcome
 from rastro.ports.engine import CrawlThrottle
 
 __all__ = ["HostThrottle", "admit", "build_hosts"]
@@ -95,12 +95,6 @@ class HostThrottle:
 
 
 def _engine_throttle() -> CrawlThrottle:
-    try:
-        from rastro.adapters.scrapling_throttle import ScraplingThrottle
-    except ImportError:
-        raise ConfigurationError(
-            "Host autothrottle needs the crawl engine, which could not be loaded",
-            location="acquisition.hosts",
-            hint="Install the browser extra, or set autothrottle = false.",
-        ) from None
-    return ScraplingThrottle()
+    from rastro.adapters.scrapling_throttle import default_throttle
+
+    return default_throttle()

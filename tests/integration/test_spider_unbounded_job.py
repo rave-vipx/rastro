@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -134,3 +135,14 @@ def test_unbounded_job_resumes_without_refetch(tmp_path, monkeypatch):
     assert second.notes.crawl.resumed
     names = [r.name for r in first.items] + [r.name for r in second.items]
     assert sorted(names) == ["Chair", "Desk", "Lamp", "List", "Shade"]
+
+
+def test_unbounded_crawl_runs_without_the_crawl_engine(monkeypatch):
+    """An HTTP-only install (no browser extra) paces with the stdlib throttle."""
+    monkeypatch.setitem(sys.modules, "scrapling.spiders.throttle", None)
+    monkeypatch.setitem(sys.modules, "scrapling.spiders", None)
+    transport = Transport(SITE)
+    result = run(job(), transport)
+    assert result.status == Outcome.SUCCESS
+    assert result.notes is not None and result.notes.crawl is not None
+    assert result.notes.crawl.stop == "complete"

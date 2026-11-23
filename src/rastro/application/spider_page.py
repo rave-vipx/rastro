@@ -73,9 +73,9 @@ def _throttle(spider: SpiderPolicy) -> CrawlThrottle | None:
     """An unbounded crawl adapts its pace per host; a bounded crawl keeps its fixed interval."""
     if not spider.unbounded:
         return None
-    from rastro.adapters.scrapling_throttle import ScraplingThrottle
+    from rastro.adapters.scrapling_throttle import default_throttle
 
-    return ScraplingThrottle()
+    return default_throttle()
 
 
 def _may_render_in_browser(acquisition: AcquisitionPort, url: str) -> bool:
