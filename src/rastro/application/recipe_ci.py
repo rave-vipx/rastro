@@ -42,7 +42,7 @@ def evaluate_candidate(
     schema: type[BaseModel],
     parser: DocumentParser,
     limits: Limits,
-    observed_at: datetime,
+    observed_at: datetime | None = None,
     fixtures: Sequence[FixtureBundle] = (),
     rules: Sequence[ConsistencyRule] = (),
     history: History | None = None,
@@ -56,6 +56,8 @@ def evaluate_candidate(
     Completeness counts required fields, plus optional fields as often as the stored
     success samples had a value for them.
     No declared consistency rules means the semantic gate is inapplicable, not passed.
+    An omitted ``observed_at`` uses the current extraction's own observation time, the
+    same clock the load path uses; callers may still supply one explicitly.
     ``allow_fallbacks`` admits a recipe with fallbacks: only for adopting a verified
     shared recipe on a store with nothing serving, where every gate still applies.
     """
@@ -72,7 +74,7 @@ def evaluate_candidate(
     indicators = evaluate_consistency(
         rules,
         rows,
-        observed_at,
+        observed_at or current.completed_at,
         declared_fields=tuple(schema.model_fields),
         history=history,
         rejected=current.metrics.rejected,
