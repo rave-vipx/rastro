@@ -29,8 +29,11 @@ def job_render_modes(job: Job) -> dict[str, str]:
         if item.url in modes and modes[item.url] != mode:
             raise ConfigurationError("Identical source URLs have conflicting render modes")
         modes[item.url] = mode
-        if mode != "http" and item.representation != "html":
-            raise ConfigurationError("Browser modes require the HTML representation")
+        captures = bool(job.acquisition.browser.capture_network)
+        if mode != "http" and item.representation != "html" and not captures:
+            raise ConfigurationError(
+                "Browser JSON sources read captured responses: set capture_network"
+            )
     return modes
 
 

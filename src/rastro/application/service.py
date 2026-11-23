@@ -12,9 +12,9 @@ import structlog
 from pydantic import BaseModel
 
 from rastro.application.batch import run_batch
-from rastro.application.browser_sessions import source_session
 from rastro.application.intelligence import RecipeLearner
 from rastro.application.memory import PreparedRecipe, RecipeMemory
+from rastro.application.network_recipes import recipe_session
 from rastro.application.outcomes import failure_result, stamp_acquired, stamp_provided
 from rastro.application.page_steps import recipe_steps, stepped
 from rastro.application.pagination import extract_paginated
@@ -154,7 +154,7 @@ class ExtractionService:
                 limits=self._limits,
                 owns_scope=not paginated,
             )
-        async with source_session():  # one browser context for this source, closed after it
+        async with recipe_session(prepared.definition):  # one browser context per source
             if paginated:
                 assert prepared.definition is not None
                 return await extract_paginated(

@@ -23,6 +23,7 @@ from rastro.application.browser_scroll_step import scroll_step
 from rastro.application.browser_sessions import SOURCE_SESSIONS
 from rastro.application.capability_gate import policy_capabilities, require
 from rastro.application.destinations import permitted_url, pin_destination
+from rastro.application.network_recipes import acquire_captured, record_captured
 from rastro.application.operator_trust import current_trust
 from rastro.domain.acquisition import (
     AcquisitionError,
@@ -67,8 +68,12 @@ class BrowserAcquirer(WebAcquirer):
     async def acquire(
         self, source: Source, *, max_bytes: int, representation: Representation = "html"
     ) -> AcquisitionResult:
+        if representation == "json":  # the page's own JSON, captured while it renders
+            return await acquire_captured(
+                self.policy, lambda: self.acquire(source, max_bytes=max_bytes)
+            )
         if representation != "html":
-            raise ConfigurationError("Browser modes require the HTML representation")
+            raise ConfigurationError("Browser modes require the HTML or JSON representation")
         token = _render_seconds.set(0)
         region = BROWSER_REGION.set((source.locale, source.timezone))  # the job's [region]
         try:
@@ -181,6 +186,7 @@ class BrowserAcquirer(WebAcquirer):
                 scope.mark_rendered(self._renderer, None)  # unknown until this render returns
                 try:
                     result = await session.render(target, policy=policy, max_bytes=max_bytes)
+                    record_captured(session)
                 except BaseException:
                     await scope.discard(self._renderer)  # its final host is unknown: never reuse
                     raise

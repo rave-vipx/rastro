@@ -1,5 +1,7 @@
 """Opt-in, execution-scoped capture; extraction data never enters drift persistence.
 
+A JSON recipe also records each field's value shape, so a type change is drift.
+
 List and object fields add one ``field.member`` entry per member, with the share of items
 that member was filled in, so losing a member is drift even when the item count holds.
 """
@@ -9,6 +11,7 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 from typing import Any
 
+from rastro.application.json_shape import json_shapes
 from rastro.domain.drift import MAX_STRUCTURE_FIELDS, FieldStructure, StructuralSnapshot
 from rastro.domain.models import ConfigurationError, ExtractionResult, Limits, Recipe
 from rastro.ports.drift import StructuralProbe
@@ -35,8 +38,22 @@ def capture_snapshot(
     capture = _CAPTURE.get()
     if capture is not None:
         probe, snapshots = capture
-        fields = probe.measure(body, recipe, limits)
-        snapshots[result.job_id] = snapshot_result(result, tuple(recipe.fields), fields=fields)
+        snapshots[result.job_id] = snapshot_from_document(result, body, recipe, limits, probe)
+
+
+def snapshot_from_document(
+    result: ExtractionResult[Any],
+    body: str,
+    recipe: Recipe,
+    limits: Limits,
+    probe: StructuralProbe | None = None,
+) -> StructuralSnapshot:
+    """Measure ``body`` with ``probe``; a JSON recipe adds each field's value shape."""
+    fields = dict(probe.measure(body, recipe, limits)) if probe is not None else {}
+    for name, digest in json_shapes(body, recipe, limits).items():
+        known = fields.get(name) or FieldStructure(field_coverage=0, validation_failure_rate=0)
+        fields[name] = known.model_copy(update={"subtree_fingerprint": digest})
+    return snapshot_result(result, tuple(recipe.fields), fields=fields)
 
 
 def snapshot_result(

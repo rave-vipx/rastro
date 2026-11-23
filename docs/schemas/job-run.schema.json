@@ -163,6 +163,11 @@
       ],
       "type": "string"
     },
+    "CapturePattern": {
+      "maxLength": 256,
+      "minLength": 1,
+      "type": "string"
+    },
     "ChangeKind": {
       "enum": [
         "created",
@@ -1067,8 +1072,20 @@
     },
     "JsonRecipe": {
       "additionalProperties": false,
-      "description": "Select JSON records at ``record_path``; fields are pointers relative to each record.",
+      "description": "Select JSON records at ``record_path``; fields are pointers relative to each record.\n\n``capture`` reads the first JSON response the page loaded whose path matches it.",
       "properties": {
+        "capture": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CapturePattern"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Path regular expression choosing a captured network response to read."
+        },
         "fallbacks": {
           "default": [],
           "items": {
