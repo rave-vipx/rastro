@@ -7,7 +7,6 @@ from contextlib import AbstractContextManager, nullcontext
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from rastro.adapters.sqlite import SQLiteRecipeRepository
 from rastro.adapters.sqlite_drift import SQLiteDriftMonitor
 from rastro.application.auth_headers import check_job_auth
 from rastro.application.checkpointed_load import run_checkpointed_load
@@ -17,10 +16,10 @@ from rastro.application.dataset_open import dataset_location, open_dataset
 from rastro.application.drift import collect_snapshots
 from rastro.application.egress_trust import check_job_egress
 from rastro.application.job_ladder import JobLadder
+from rastro.application.job_ladder_run import job_memory, job_web_acquirer
 from rastro.application.job_loader import (
     build_job_model,
     load_job,
-    recipe_memory_path,
 )
 from rastro.application.jobs import run_job
 from rastro.application.model_budget import model_cost_override
@@ -131,12 +130,12 @@ def load_job_file(
         ladder = JobLadder(
             job,
             acquisition,
-            build=lambda rung_job: _web_acquirer(rung_job, conditional),
+            build=lambda rung_job: job_web_acquirer(rung_job, conditional),
             scope=lambda: operator_trust(
                 allow_remote=allow_remote, allow_stealth=allow_stealth, allow_env=allow_env
             ),
             rotate=allow_egress,
-            memory=_memory(job, file, allow_absolute_paths),
+            memory=job_memory(job, file.parent, allow_absolute_paths),
         )
         with capture as snapshots, collect_successes() as successes:
             report, loaded, ran = run_checkpointed_load(
@@ -200,12 +199,6 @@ def load_job_file(
     return loaded.model_copy(update={"report": report_for_load(file.name, report, loaded, price)})
 
 
-def _memory(job: Job, file: Path, allow_absolute_paths: bool) -> SQLiteRecipeRepository | None:
-    """The job's recipe memory, where the ladder keeps each recipe's start level."""
-    path = recipe_memory_path(job, base_dir=file.parent, allow_absolute_paths=allow_absolute_paths)
-    return SQLiteRecipeRepository(path) if path is not None else None
-
-
 def _load_acquirer(job: Job, conditional: ConditionalRequests | None) -> AcquisitionPort | None:
     """The load's one acquisition port: host pacing, robots and the cookie session span sources.
 
@@ -213,32 +206,7 @@ def _load_acquirer(job: Job, conditional: ConditionalRequests | None) -> Acquisi
     """
     if job.acquisition is None or not any(isinstance(s, UrlJobSource) for s in job.sources):
         return None
-    return _web_acquirer(job, conditional)
-
-
-def _web_acquirer(job: Job, conditional: ConditionalRequests | None) -> AcquisitionPort:
-    """HTTP acquisition, or the browser composition when a source renders (SCR-003).
-
-    Also builds each acquisition ladder level above the job's own, from a copy of the job
-    at that level.
-    """
-    try:
-        from rastro.adapters.dns import SystemResolver
-        from rastro.adapters.http import CurlTransport
-        from rastro.application.acquisition import WebAcquirer
-        from rastro.browser import job_acquisition
-
-        assert job.acquisition is not None
-        return job_acquisition(job, None, conditional=conditional) or WebAcquirer(
-            job.acquisition,
-            transport=CurlTransport(),
-            resolver=SystemResolver(),
-            conditional=conditional,
-        )
-    except ModuleNotFoundError as error:
-        if error.name not in {"curl_cffi", "protego"}:
-            raise
-        raise ConfigurationError("Install rastro-engine[http] for HTTP acquisition") from None
+    return job_web_acquirer(job, conditional)
 
 
 def _commit_validators(

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from contextlib import AbstractContextManager
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -11,7 +12,9 @@ from rastro.application.auth_headers import check_job_auth
 from rastro.application.crawl_checkpoint import crawl_key, crawl_state
 from rastro.application.egress_trust import check_job_egress
 from rastro.application.job_execution import run_active, run_active_async
+from rastro.application.job_ladder_run import laddered_run, uses_ladder
 from rastro.application.job_loader import (
+    build_job_model,
     load_job,
     resolve_job_path,
     validate_job_paths,
@@ -166,21 +169,38 @@ def run_job_file(
     """Load and execute a declarative job file; see ``run_job`` for the ``allow_*`` options."""
     file_path = Path(path)
     job = load_job(file_path, allow_absolute_paths=allow_absolute_paths)
-    result = run_job(
+    allow_env = tuple(allow_env)
+    options: dict[str, Any] = {
+        "base_dir": file_path.parent,
+        "allow_absolute_paths": allow_absolute_paths,
+        "allow_remote": allow_remote,
+        "allow_egress": allow_egress,
+        "allow_stealth": allow_stealth,
+        "allow_env": allow_env,
+        "allow_private_network": allow_private_network,
+        "allow_ports": allow_ports,
+        "ignore_robots": ignore_robots,
+        "max_model_cost": max_model_cost,
+        "model_cost_per_call": model_cost_per_call,
+    }
+    if acquisition is not None or not uses_ladder(job):
+        result = run_job(job, acquisition=acquisition, model=model, **options)
+        return named(result, file_path.name)
+
+    def scope() -> AbstractContextManager[object]:
+        return operator_trust(
+            allow_remote=allow_remote, allow_stealth=allow_stealth, allow_env=allow_env
+        )
+
+    with scope(), model_cost_override(max_model_cost, model_cost_per_call):
+        model = model or build_job_model(job)  # one budget and one notice for every source
+    result = laddered_run(
         job,
+        lambda sub_job, port: run_job(sub_job, acquisition=port, model=model, **options),
         base_dir=file_path.parent,
         allow_absolute_paths=allow_absolute_paths,
-        acquisition=acquisition,
-        model=model,
-        allow_remote=allow_remote,
-        allow_egress=allow_egress,
-        allow_stealth=allow_stealth,
-        allow_env=allow_env,
-        allow_private_network=allow_private_network,
-        allow_ports=allow_ports,
-        ignore_robots=ignore_robots,
-        max_model_cost=max_model_cost,
-        model_cost_per_call=model_cost_per_call,
+        scope=scope,
+        rotate=allow_egress,
     )
     return named(result, file_path.name)
 

@@ -5,7 +5,9 @@ from __future__ import annotations
 import asyncio
 
 import pytest
+from pydantic import BaseModel
 
+import rastro
 from rastro import scrape_target
 from rastro.application.blocked_hint import blocked_hint
 from rastro.domain.acquisition import AcquisitionResult
@@ -76,3 +78,27 @@ def test_a_target_blocked_at_every_level_keeps_the_explicit_refusal(monkeypatch)
     assert page.document is None
     assert page.fetched is not None and page.fetched.status == Outcome.ACCESS_RESTRICTION
     assert page.ladder[-1].outcome == "blocked"
+
+
+class Item(BaseModel):
+    title: str
+
+
+def test_scrape_reports_the_ladder_in_the_source_notes(monkeypatch) -> None:
+    site(monkeypatch, {"http", "impersonation"})
+    result = rastro.scrape(URL, Item, records="p", fields={"title": "::text"})
+    assert result.status == Outcome.SUCCESS and result.items[0].title == "page"
+    use = result.notes.acquisition
+    assert [(s.level, s.outcome) for s in use.ladder] == [
+        ("http", "blocked"),
+        ("impersonation", "blocked"),
+        ("browser", "ok"),
+    ]
+
+
+def test_scrape_blocked_at_every_level_is_ladder_exhausted(monkeypatch) -> None:
+    site(monkeypatch, {"http", "impersonation", "browser", "stealth", "challenge"})
+    result = rastro.scrape(URL, Item, records="p", fields={"title": "::text"})
+    assert result.status == Outcome.ACCESS_RESTRICTION
+    assert "ladder_exhausted" in {issue.code for issue in result.issues}
+    assert result.notes.acquisition.ladder[-1].outcome == "blocked"
