@@ -23,11 +23,12 @@ from starlette.routing import Route
 from rastro.application.hub_search import hub_candidates, url_domain
 from rastro.application.job_from_url import FetchedUrl, html_from_url, prepare_url_policy
 from rastro.application.source_proposals import default_acquirer
-from rastro.domain.acquisition import AcquisitionResult
+from rastro.browser import browser_acquirer
+from rastro.domain.acquisition import AcquisitionPolicy, AcquisitionResult
 from rastro.domain.browser_controls import BrowserControls
 from rastro.domain.intelligence import InferencePolicy, ModelRequest
 from rastro.domain.job_fields import StringField
-from rastro.domain.models import Limits, RastroError, Representation, Source
+from rastro.domain.models import ConfigurationError, Limits, RastroError, Representation, Source
 from rastro.ports.acquisition import AcquisitionPort
 from rastro.studio.pick_element import match_count, pick_element
 from rastro.studio.web import Refused, Studio, body, flag, reply, text
@@ -100,13 +101,21 @@ def _selectors(data: dict[str, Any]) -> dict[str, str]:
     return dict(raw)
 
 
+def _page_acquirer(rendering: AcquisitionPolicy) -> AcquisitionPort:
+    """A browser renders the page; without the browser extra, plain HTTP shows no screenshot."""
+    try:
+        return browser_acquirer(rendering)
+    except ConfigurationError:
+        return default_acquirer(rendering.model_copy(update={"render": "http"}))
+
+
 def _render(url: str, studio: Studio) -> tuple[FetchedUrl, bytes | None, AcquisitionPort]:
     """Fetch and render once; the page is kept on the Studio run for the picks that follow."""
     _, policy = prepare_url_policy(url)
     rendering = policy.model_copy(
         update={"render": "browser", "browser": BrowserControls(screenshot=True)}
     )
-    inner = studio.acquisition or default_acquirer(rendering)
+    inner = studio.acquisition or _page_acquirer(rendering)
     keeper = _Screenshots(inner)
     fetched = html_from_url(url, acquisition=keeper)
     studio.url_preview = (url, studio.clock(), fetched)

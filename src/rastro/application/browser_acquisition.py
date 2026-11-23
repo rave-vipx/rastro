@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from contextvars import ContextVar
 from dataclasses import replace
 from time import perf_counter
@@ -16,6 +16,7 @@ from rastro.application.acquisition_state import (
     charge_extra_requests,
     check_page_request,
 )
+from rastro.application.browser_boxes import measure_rendered
 from rastro.application.browser_page_steps import run_page_steps
 from rastro.application.browser_policy import BROWSER_REGION, canonical_url, page_policy
 from rastro.application.browser_proxy import BROWSER_PROXY
@@ -198,6 +199,12 @@ class BrowserAcquirer(WebAcquirer):
         return await self._renderer.render(
             target, policy=policy, max_bytes=max_bytes, targets=targets
         )
+
+    async def element_boxes(
+        self, url: str, selectors: Sequence[str]
+    ) -> Mapping[str, Sequence[Mapping[str, float]]]:
+        """Render ``url`` under this acquirer's policy and measure each selector's matches."""
+        return await measure_rendered(self, self._renderer, url, selectors)
 
     def renders_in_browser(self, url: str) -> bool:
         return True

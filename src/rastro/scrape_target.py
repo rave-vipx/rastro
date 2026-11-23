@@ -139,18 +139,9 @@ def ladder_port(rung: Rung) -> AcquisitionPort:
         return port
     if rung.policy.render == "http":
         return web_acquirer(rung.policy)
-    try:
-        from rastro.adapters.dns import SystemResolver
-        from rastro.adapters.http import CurlTransport
-        from rastro.application.browser_acquisition import BrowserAcquirer
-        from rastro.browser import _renderer as renderer_for
+    from rastro.browser import browser_acquirer
 
-        renderer = renderer_for(rung.policy.render)
-    except ModuleNotFoundError:
-        raise ConfigurationError("This level needs rastro-engine[browser]") from None
-    return BrowserAcquirer(
-        rung.policy, renderer=renderer, transport=CurlTransport(), resolver=SystemResolver()
-    )
+    return browser_acquirer(rung.policy)
 
 
 def looks_like_path(target: str) -> bool:

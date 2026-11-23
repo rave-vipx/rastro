@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from urllib.parse import urlsplit
 
 from rastro.application.capability_gate import require_capabilities
-from rastro.domain.acquisition import AcquisitionResult
+from rastro.domain.acquisition import AcquisitionPolicy, AcquisitionResult
 from rastro.domain.jobs import Job, UrlJobSource
 from rastro.domain.models import ConfigurationError, Representation, Source
 from rastro.domain.page_steps import PageStep
@@ -102,7 +102,7 @@ class _JobAcquisition:
         return result
 
 
-def _renderer(mode: str) -> BrowserRenderer:
+def renderer_for(mode: str) -> BrowserRenderer:
     """Import and build only the renderer this mode needs: stealth stays unbuilt unless asked."""
     if mode == "stealth":
         from rastro.adapters.scrapling_stealth import ScraplingStealth
@@ -111,6 +111,21 @@ def _renderer(mode: str) -> BrowserRenderer:
     from rastro.adapters.playwright_browser import PlaywrightBrowser
 
     return PlaywrightBrowser()
+
+
+def browser_acquirer(policy: AcquisitionPolicy) -> AcquisitionPort:
+    """A browser acquirer for ``policy.render``; needs the ``browser`` extra."""
+    try:
+        from rastro.adapters.dns import SystemResolver
+        from rastro.adapters.http import CurlTransport
+        from rastro.application.browser_acquisition import BrowserAcquirer
+
+        renderer = renderer_for(policy.render)
+    except ModuleNotFoundError:
+        raise ConfigurationError("This needs rastro-engine[browser]") from None
+    return BrowserAcquirer(
+        policy, renderer=renderer, transport=CurlTransport(), resolver=SystemResolver()
+    )
 
 
 def job_acquisition(
@@ -125,7 +140,7 @@ def job_acquisition(
         return supplied
     assert job.acquisition is not None
     renderers = {
-        mode: _renderer(mode) for mode in {*modes.values(), job.acquisition.render} - {"http"}
+        mode: renderer_for(mode) for mode in {*modes.values(), job.acquisition.render} - {"http"}
     }
     from rastro.adapters.dns import SystemResolver
     from rastro.adapters.http import CurlTransport
