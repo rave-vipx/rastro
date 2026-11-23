@@ -1149,6 +1149,7 @@
     "LadderLevel": {
       "enum": [
         "http",
+        "impersonation",
         "browser",
         "stealth",
         "challenge",

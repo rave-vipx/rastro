@@ -87,6 +87,22 @@ request `page_actions`; the vocabulary also covers `proxy_rotation`, `impersonat
 - `--allow-stealth` (`RASTRO_ALLOW_STEALTH`, `allow_stealth=True`) is deprecated: it
   changes nothing for operator jobs and grants `stealth` and `solve_challenges` to every
   untrusted origin. The CLI prints a `deprecated_flag` warning.
+- **Acquisition ladder.** A refused source is fetched again one level up (impersonation,
+  browser, stealth, challenge solving, proxy rotation, solver plugins) until a level returns
+  it ([ADR 0039](docs/decisions/0039-acquisition-ladder.md)). Each level passes this same
+  check for the job's origin first; a level that is not granted is skipped and reported as
+  `not_granted`, so the ladder never gives untrusted input a capability it was not granted.
+  A robots.txt refusal never climbs. Proxy rotation is tried only with declared egress
+  profiles and `--allow-egress`. Recipe memory keeps only the level name that last worked.
+- **Solver plugins** are Python entry points in the `rastro.solvers` group of a package the
+  operator installed. No job, recipe, bundle, registry entry, agent argument or model output
+  can name, load or configure one. The ladder imports plugins only when it reaches that level
+  and `solver_plugins` is granted (grant-only, even for the operator). A plugin is the
+  operator's own code and makes its own requests, outside Rastro's DNS pinning and
+  private-network guard: Rastro never passes it a source outside the job's allowed hosts,
+  discards a result that ends outside them, uses plain HTTP without `allow_http` or exceeds
+  the byte limit, and treats a plugin that raises as unsolved. Install a plugin only from a
+  source you would trust with the operator's network and credentials.
 
 **Operator grants that no capability widens.** A job file is configuration and may come
 from someone else: a shared repository, an agent using the MCP server, a Studio workspace.

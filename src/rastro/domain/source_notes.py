@@ -66,7 +66,7 @@ type BlockKind = Literal[
 ]
 """The kind of refusal a site gave to automated access."""
 type LadderLevel = Literal[
-    "http", "browser", "stealth", "challenge", "proxy_rotation", "solver_plugin"
+    "http", "impersonation", "browser", "stealth", "challenge", "proxy_rotation", "solver_plugin"
 ]
 """One level of the acquisition ladder, from plain HTTP to an operator solver plugin."""
 type RenderMode = Literal["http", "browser", "stealth"]

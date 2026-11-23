@@ -2,19 +2,23 @@
 
 A target is HTML text, a ``pathlib.Path`` or an ``http(s)://`` URL. Files are read
 with a byte bound and never through a symlink. A URL is fetched once, under a
-policy that allows only that URL's host; the response is then reused offline.
+policy that allows only that URL's host; the response is then reused offline. A
+refused URL climbs the acquisition ladder (ADR 0039) before it counts as blocked.
 """
 
 from __future__ import annotations
 
 import os
 import stat
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from urllib.parse import urlsplit
 
 from pydantic import ValidationError
 
+from rastro.application.acquisition_ladder import StepOutcome, climb_async, fetch_outcome, gate
+from rastro.application.ladder_levels import Rung, ladder_rungs
+from rastro.application.solver_plugins import any_solver_installed, solver_port
 from rastro.domain.acquisition import AcquisitionPolicy, AcquisitionResult
 from rastro.domain.models import (
     ConfigurationError,
@@ -24,6 +28,7 @@ from rastro.domain.models import (
     ResourceLimitError,
     Source,
 )
+from rastro.domain.source_notes import LadderStep
 from rastro.ports.acquisition import AcquisitionPort
 
 DEFAULT_URL = "https://localhost/"
@@ -38,6 +43,8 @@ class Page:
     representation: Representation = "html"
     fetched: AcquisitionResult | None = None
     policy: AcquisitionPolicy | None = None
+    ladder: tuple[LadderStep, ...] = field(default=())
+    """Every ladder level tried after a refusal; empty when the first fetch was not refused."""
 
     @property
     def final_source(self) -> Source:
@@ -93,11 +100,57 @@ async def load_page(
         )
     except ValidationError:
         raise ConfigurationError("The target URL needs an exact host name") from None
-    fetched = await web_acquirer(policy).acquire(
+    fetched, ladder = await _fetch(policy, source, max_bytes, representation)
+    document = fetched.body if fetched.status == Outcome.SUCCESS else None
+    return Page(source, document, representation, fetched, policy, ladder)
+
+
+async def _fetch(
+    policy: AcquisitionPolicy, source: Source, max_bytes: int, representation: Representation
+) -> tuple[AcquisitionResult, tuple[LadderStep, ...]]:
+    """Fetch at the job's own level; on a refusal, climb until a level returns the page."""
+    first = await web_acquirer(policy).acquire(
         source, max_bytes=max_bytes, representation=representation
     )
-    document = fetched.body if fetched.status == Outcome.SUCCESS else None
-    return Page(source, document, representation, fetched, policy)
+    if fetch_outcome(first) != "blocked":
+        return first, ()
+    rungs = ladder_rungs(
+        policy, html=representation == "html", rotate=False, solvers=any_solver_installed()
+    )
+
+    async def attempt(rung: Rung) -> tuple[AcquisitionResult, StepOutcome]:
+        fetched = await ladder_port(rung).acquire(
+            source, max_bytes=max_bytes, representation=representation
+        )
+        return fetched, fetch_outcome(fetched)
+
+    if len(rungs) < 2:
+        return first, (LadderStep(level=rungs[0].level, outcome="blocked"),)
+    climbed, steps, _ = await climb_async(rungs[1:], rungs[1].level, attempt, gate)
+    return climbed or first, (LadderStep(level=rungs[0].level, outcome="blocked"), *steps)
+
+
+def ladder_port(rung: Rung) -> AcquisitionPort:
+    """The port for one ladder level above plain HTTP."""
+    if rung.level == "solver_plugin":
+        port = solver_port(rung.policy)
+        if port is None:
+            raise ConfigurationError("No solver plugin is installed")
+        return port
+    if rung.policy.render == "http":
+        return web_acquirer(rung.policy)
+    try:
+        from rastro.adapters.dns import SystemResolver
+        from rastro.adapters.http import CurlTransport
+        from rastro.application.browser_acquisition import BrowserAcquirer
+        from rastro.browser import _renderer as renderer_for
+
+        renderer = renderer_for(rung.policy.render)
+    except ModuleNotFoundError:
+        raise ConfigurationError("This level needs rastro-engine[browser]") from None
+    return BrowserAcquirer(
+        rung.policy, renderer=renderer, transport=CurlTransport(), resolver=SystemResolver()
+    )
 
 
 def looks_like_path(target: str) -> bool:

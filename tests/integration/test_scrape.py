@@ -196,7 +196,9 @@ def test_url_target_failures_return_explicit_outcomes(monkeypatch):
         status=Outcome.ACCESS_RESTRICTION,
         issue_code="robots_disallowed",
     )
-    seen, _ = _fake_web(monkeypatch, blocked)
+    seen, acquirer = _fake_web(monkeypatch, blocked)
+    # A refusal climbs the acquisition ladder; here every level refuses too.
+    monkeypatch.setattr(scrape_target, "ladder_port", lambda rung: acquirer)
     for schema in (Offer, Product):
         result = rastro.scrape("http://acme.example/", schema)
         assert result.status == Outcome.ACCESS_RESTRICTION

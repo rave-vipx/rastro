@@ -12,13 +12,13 @@ pytestmark = pytest.mark.usefixtures("offline_cli_loop")
 
 @pytest.mark.parametrize("component", ["dataset", "drift", "history"])
 def test_cli_forwards_job_limits_to_storage(tmp_path, capsys, monkeypatch, component):
-    from rastro.application import job_dataset
+    from rastro.application import dataset_open, job_dataset
 
     _, job = setup_sample(tmp_path)
     job.write_text(
         job.read_text(encoding="utf-8") + "\n[limits]\nmax_records = 17\n", encoding="utf-8"
     )
-    module = job_dataset
+    module = job_dataset if component == "drift" else dataset_open
     name = "SQLiteDriftMonitor" if component == "drift" else "SQLiteDatasetStore"
     constructor = getattr(module, name)
     budgets = []
