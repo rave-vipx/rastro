@@ -7,6 +7,7 @@ from typing import Annotated, ClassVar, Literal, Self
 
 from pydantic import Field, StrictInt, field_validator, model_validator
 
+from rastro.domain.capture_pattern import CapturePattern
 from rastro.domain.json import POINTER
 from rastro.domain.page_steps import PageSteps
 from rastro.domain.recipe_nested import (
@@ -75,8 +76,11 @@ class Recipe(StrategyUnion):
     @model_validator(mode="after")
     def check_mapping(self) -> Self:
         # Fallback variants are typed per representation; only flatness needs checking.
-        if any(item.fallbacks or getattr(item, "steps", ()) for item in self.fallbacks):
-            raise ValueError("Fallbacks must be flat and cannot carry page steps")
+        if any(
+            item.fallbacks or getattr(item, "steps", ()) or getattr(item, "capture", None)
+            for item in self.fallbacks
+        ):
+            raise ValueError("Fallbacks must be flat and cannot carry page steps or a capture")
         if any(item.version != self.version for item in self.fallbacks):
             raise ValueError("Fallbacks must be flat and share the recipe version")
         if any(item.pagination is not None for item in self.fallbacks):
@@ -199,11 +203,18 @@ class JsonLdRecipe(Recipe):
 
 
 class JsonRecipe(Recipe):
-    """Select JSON records at ``record_path``; fields are pointers relative to each record."""
+    """Select JSON records at ``record_path``; fields are pointers relative to each record.
+
+    ``capture`` reads the first JSON response the page loaded whose path matches it."""
 
     strategy: Literal["json"] = "json"
     fallbacks: tuple[JsonRecipe, ...] = Field(default=(), max_length=3)
     record_path: str = Field(max_length=1024)
+    capture: CapturePattern | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+        description="Path regular expression choosing a captured network response to read.",
+    )
     representation: ClassVar[Representation] = "json"
     check_expression = staticmethod(check_pointer)
 

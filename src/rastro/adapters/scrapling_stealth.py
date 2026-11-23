@@ -19,6 +19,7 @@ from rastro.adapters.browser_controls_apply import (
     scrapling_controls,
     steps_performer,
 )
+from rastro.adapters.network_capture import CaptureListener, with_capture
 from rastro.adapters.playwright_browser import INSTALL, NetworkGuard, browser_flags, proxy_option
 from rastro.application.browser_proxy import BROWSER_PROXY
 from rastro.application.page_steps import steps_budget_ms
@@ -31,6 +32,7 @@ from rastro.domain.acquisition import (
 )
 from rastro.domain.browser_controls import BrowserControls
 from rastro.domain.models import ConfigurationError, Outcome
+from rastro.ports.engine import CapturedResponse
 
 _active: ContextVar[bool] = ContextVar("stealth_logging", default=False)
 
@@ -45,11 +47,12 @@ def _options(
     policy: AcquisitionPolicy,
     targets: tuple[PinnedTarget, ...],
     proxy: ProxyRoute | None,
+    capture: CaptureListener | None = None,
 ) -> dict[str, Any]:
     route = proxy_option(proxy)
     return {
         **({"proxy": route} if route is not None else {}),
-        "page_setup": guard.setup,
+        "page_setup": with_capture(guard.setup, capture),
         "extra_flags": browser_flags(targets, proxy),
         "additional_args": {
             "service_workers": "block",
@@ -145,16 +148,18 @@ class ScraplingStealth:
     ) -> AsyncIterator[StealthSession]:
         """One stealth context for one source (pages share its cookies); same guard and flags."""
         guard = NetworkGuard(policy)
+        capture = CaptureListener() if policy.browser.capture_network else None
         token = _active.set(True)
         try:
-            manager = self.session_class(**_options(guard, policy, targets, BROWSER_PROXY.get()))
+            proxy = BROWSER_PROXY.get()
+            manager = self.session_class(**_options(guard, policy, targets, proxy, capture))
             engine = await manager.__aenter__()
         except Exception:
             raise AcquisitionError("browser_navigation_failed", Outcome.TRANSIENT_FAILURE) from None
         finally:
             _active.reset(token)
         try:
-            yield StealthSession(engine, guard)
+            yield StealthSession(engine, guard, capture)
         finally:
             token = _active.set(True)
             try:
@@ -166,9 +171,15 @@ class ScraplingStealth:
 class StealthSession:
     """Pages of one source share a context; scrolling a live page is not supported here."""
 
-    def __init__(self, engine: Any, guard: NetworkGuard) -> None:
+    def __init__(
+        self, engine: Any, guard: NetworkGuard, capture: CaptureListener | None = None
+    ) -> None:
         self._engine, self._guard = engine, guard
+        self._capture = capture or CaptureListener()
         self._target: PinnedTarget | None = None
+
+    def captured(self) -> tuple[CapturedResponse, ...]:
+        return self._capture.last  # the responses captured by the last fetch
 
     async def render(
         self, target: PinnedTarget, *, policy: AcquisitionPolicy, max_bytes: int
@@ -198,6 +209,7 @@ class StealthSession:
     ) -> AcquisitionResult:
         """Load ``target``, run page steps through Scrapling's after-navigation hook."""
         self._guard.begin(policy)
+        self._capture.start(policy)
         evidence: list[bytes] = []
         token = _active.set(True)
         try:
@@ -219,6 +231,7 @@ class StealthSession:
         finally:
             self._guard.end()  # Scrapling keeps the page pooled: nothing runs between fetches
             _active.reset(token)
+            await self._capture.finish()
 
     async def scroll(
         self, *, policy: AcquisitionPolicy, max_bytes: int, settle_ms: int

@@ -12,6 +12,7 @@ from rastro.adapters.browser_controls_apply import (
     wait_until,
 )
 from rastro.adapters.browser_network import launch_options
+from rastro.adapters.network_capture import page_document
 from rastro.application.browser_policy import cdp_endpoint, profile_directory
 from rastro.application.browser_proxy import BROWSER_PROXY
 from rastro.application.http_policy import USER_AGENT
@@ -66,7 +67,6 @@ async def load_page(
     timeout_ms = policy.request_timeout_seconds * 1000
     response = await page.goto(url, timeout=timeout_ms, wait_until=wait_until(controls))
     await settle(page, controls, timeout_ms)
-    result = guard.result(
-        page.url, await page.content(), response.status if response else 0, max_bytes
-    )
+    document = await page_document(page, controls)  # open shadow roots with pierce_shadow
+    result = guard.result(page.url, document, response.status if response else 0, max_bytes)
     return await attach_screenshot(result, page, controls)

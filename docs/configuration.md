@@ -301,6 +301,7 @@ How records are found on a page; one of four strategies. Docs: [api.md#recipe-va
 | `recipe.fallbacks` | array of tables | `[]` | `items <= 3` | Up to 3 other recipes, tried in order when this one finds nothing. Same keys as `recipe`. |
 | `recipe.pagination` | table | - |  | Follow next-page links with this recipe (keys below). Same keys as `recipe.pagination`. |
 | `recipe.record_path` | string | required | `length <= 1024` | JSON pointer to the list of records; empty means the whole document. |
+| `recipe.capture` | string | - | `length >= 1, length <= 256` | Path regular expression choosing a captured network response to read. |
 
 #### `strategy = "embedded_json"`
 
