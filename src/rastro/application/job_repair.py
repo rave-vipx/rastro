@@ -314,6 +314,8 @@ async def _repair_source(
         gate=evidence.evaluate,
         rows=evidence.rows,
         history=evidence.history,
+        limits=context.job.limits or Limits(),
+        timezone=evidence.source.timezone,
     )
     decided = {id(c): e for c, e in assisted.evaluated}
     comparisons = repair_candidates(

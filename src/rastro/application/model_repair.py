@@ -79,11 +79,13 @@ async def assist_repair(
     history: Sequence[Mapping[str, JsonValue]],
     adaptive: AdaptiveLocator | None = None,
     limits: Limits | None = None,
+    timezone: str | None = None,
 ) -> AssistedRepair:
     """Try adaptive candidates, then gated model proposals; judge every would-be promotion.
 
     ``adaptive`` defaults to the engine's locator. A passing adaptive candidate ends
-    repair without any model call; failing ones are dropped, not stored.
+    repair without any model call; failing ones are dropped, not stored. ``timezone`` is the
+    source's region timezone, given to the model so local dates parse as the site means them.
     """
     origin: Origin | None = "relocation" if evaluated else None
     evaluated = list(evaluated)
@@ -110,7 +112,14 @@ async def assist_repair(
             else "serving_recipe_fails_gates"
         )
         proposed, calls, issues = await _propose(
-            assist, html, schema, previous, strict_gate, samples=history, failure=failure
+            assist,
+            html,
+            schema,
+            previous,
+            strict_gate,
+            samples=history,
+            failure=failure,
+            timezone=timezone,
         )
         if proposed:
             origin = "model"
@@ -160,6 +169,7 @@ async def _propose(
     *,
     samples: Sequence[Mapping[str, JsonValue]],
     failure: str,
+    timezone: str | None = None,
 ) -> tuple[Evaluated, int, tuple[Issue, ...]]:
     proposed: Evaluated = []
 
@@ -205,6 +215,7 @@ async def _propose(
         hints=schema_hints(schema),
         previous=previous,
         samples=samples,
+        timezone=timezone,
     )
     return proposed, calls, () if complete else (Issue(code=failure),)
 

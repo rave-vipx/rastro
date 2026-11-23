@@ -167,6 +167,8 @@ class ScrapeMemory:
             gate=evaluate,
             rows=rows,
             history=history,
+            limits=self._limits,
+            timezone=source.timezone,
         )
         comparisons = await asyncio.to_thread(
             store_candidates,
