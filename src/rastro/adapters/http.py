@@ -1,16 +1,23 @@
-"""Public curl_cffi transport: fresh pinned or proxied connections and bounded bodies."""
+"""Public curl_cffi transport: fresh pinned or proxied connections and bounded bodies.
+
+Browser impersonation and the HTTP version (ADR 0038) change only the fingerprint and the
+protocol. The guard options below are passed as ``curl_options``, which curl_cffi applies
+after impersonation, so pinning, redirects, protocols and the size cap always hold.
+"""
 
 from __future__ import annotations
 
 import ipaddress
 
-from curl_cffi import CurlECode, CurlHttpVersion, CurlInfo, CurlOpt
+from curl_cffi import CurlECode, CurlInfo, CurlOpt
 from curl_cffi.curl import CURL_WRITEFUNC_ERROR
 from curl_cffi.requests import AsyncSession
 from curl_cffi.requests.exceptions import RequestException
 
+from rastro.adapters.http_options import profile
 from rastro.domain.acquisition import AcquisitionError, HttpResponse, PinnedTarget, ProxyRoute
 from rastro.domain.models import Outcome
+from rastro.domain.source_notes import BrowserFamily, HttpVersion
 
 _PROXY_TYPES = {"http": 0, "https": 2}  # CURLPROXY_HTTP and CURLPROXY_HTTPS
 _HEADERS_SEPARATE = 1  # CURLHEADER_SEPARATE
@@ -25,6 +32,8 @@ class CurlTransport:
         timeout: float,
         max_bytes: int,
         proxy: ProxyRoute | None = None,
+        impersonate: BrowserFamily | None = None,
+        http_version: HttpVersion | None = None,
     ) -> HttpResponse:
         if timeout <= 0:
             raise AcquisitionError("request_timeout", Outcome.TRANSIENT_FAILURE)
@@ -50,6 +59,12 @@ class CurlTransport:
             CurlOpt.REDIR_PROTOCOLS_STR: b"http,https",
             CurlOpt.MAXFILESIZE_LARGE: max_bytes,
         }
+        chosen = profile(impersonate, http_version, proxied=proxy is not None)
+        if chosen.version is not None:
+            options[CurlOpt.HTTP_VERSION] = chosen.version
+        if chosen.target is not None:
+            # The browser's own User-Agent; the job's auth, cookies and Accept stay.
+            headers = {k: v for k, v in headers.items() if k.lower() != "user-agent"}
         if proxy is None:
             if target.alternates:
                 # Leave time for sequential fallback within the shared request deadline.
@@ -100,9 +115,9 @@ class CurlTransport:
                     allow_redirects=False,
                     max_redirects=0,
                     verify=True,
-                    impersonate=None,
-                    default_headers=False,
-                    http_version=CurlHttpVersion.V1_1,
+                    impersonate=chosen.target,
+                    default_headers=chosen.target is not None,
+                    http_version=chosen.version,
                     content_callback=receive,
                     discard_cookies=True,
                 )

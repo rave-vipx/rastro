@@ -16,12 +16,14 @@ from rastro.application.acquisition_state import (
     charge_extra_requests,
     check_page_request,
 )
-from rastro.application.browser_policy import canonical_url, page_policy
+from rastro.application.browser_page_steps import run_page_steps
+from rastro.application.browser_policy import BROWSER_REGION, canonical_url, page_policy
 from rastro.application.browser_proxy import BROWSER_PROXY
 from rastro.application.browser_scroll_step import scroll_step
 from rastro.application.browser_sessions import SOURCE_SESSIONS
 from rastro.application.capability_gate import policy_capabilities, require
 from rastro.application.destinations import permitted_url, pin_destination
+from rastro.application.operator_trust import current_trust
 from rastro.domain.acquisition import (
     AcquisitionError,
     AcquisitionPolicy,
@@ -30,6 +32,7 @@ from rastro.domain.acquisition import (
     PinnedTarget,
 )
 from rastro.domain.models import ConfigurationError, Outcome, Representation, Source
+from rastro.domain.page_steps import PageStep
 from rastro.ports.acquisition import HttpTransport, Resolver
 from rastro.ports.browser import BrowserRenderer, BrowserSessions
 
@@ -67,12 +70,14 @@ class BrowserAcquirer(WebAcquirer):
         if representation != "html":
             raise ConfigurationError("Browser modes require the HTML representation")
         token = _render_seconds.set(0)
+        region = BROWSER_REGION.set((source.locale, source.timezone))  # the job's [region]
         try:
             result = await super().acquire(
                 source, max_bytes=max_bytes, representation=representation
             )
             return replace(result, render_seconds=_render_seconds.get(), render=self.policy.render)
         finally:
+            BROWSER_REGION.reset(region)
             _render_seconds.reset(token)
 
     async def _robots(self, url: str, operation: _Operation) -> None:
@@ -210,4 +215,27 @@ class BrowserAcquirer(WebAcquirer):
             source,
             settle_ms=settle_ms,
             max_bytes=max_bytes,
+        )
+
+    def runs_steps(self, url: str) -> bool:
+        return True  # every render mode keeps the source's page open for its steps
+
+    async def run_steps(
+        self, source: Source, steps: tuple[PageStep, ...], *, max_bytes: int
+    ) -> AcquisitionResult:
+        """Run a recipe's page steps in the source's open page, under the same budget."""
+        policy = self.policy.with_grants(current_trust().network_grants())
+
+        async def robots(url: str) -> None:
+            await self._robots(url, _Operation(url, policy))
+
+        return await run_page_steps(
+            self._renderer,
+            self.policy,
+            self._hosts,
+            self._slots,
+            source,
+            steps,
+            max_bytes=max_bytes,
+            robots=robots,
         )

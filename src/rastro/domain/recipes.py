@@ -5,14 +5,10 @@ from __future__ import annotations
 import re
 from typing import Annotated, ClassVar, Literal, Self
 
-from pydantic import (
-    Field,
-    StrictInt,
-    field_validator,
-    model_validator,
-)
+from pydantic import Field, StrictInt, field_validator, model_validator
 
 from rastro.domain.json import POINTER
+from rastro.domain.page_steps import PageSteps
 from rastro.domain.recipe_nested import (
     MAX_POINTERS,
     FieldMapping,
@@ -22,6 +18,7 @@ from rastro.domain.recipe_nested import (
     pointer_list,
     scalar_expression,
 )
+from rastro.domain.recipe_steps import check_recipe_steps
 from rastro.domain.recipe_union import StrategyUnion, seal_union
 from rastro.domain.sources import ConfigurationError, Contract, Representation
 
@@ -78,7 +75,9 @@ class Recipe(StrategyUnion):
     @model_validator(mode="after")
     def check_mapping(self) -> Self:
         # Fallback variants are typed per representation; only flatness needs checking.
-        if any(item.fallbacks or item.version != self.version for item in self.fallbacks):
+        if any(item.fallbacks or getattr(item, "steps", ()) for item in self.fallbacks):
+            raise ValueError("Fallbacks must be flat and cannot carry page steps")
+        if any(item.version != self.version for item in self.fallbacks):
             raise ValueError("Fallbacks must be flat and share the recipe version")
         if any(item.pagination is not None for item in self.fallbacks):
             raise ConfigurationError("Fallback recipes cannot declare pagination")
@@ -128,15 +127,22 @@ def _check_record_path(value: str) -> str:
 
 
 class CssRecipe(Recipe):
-    """Select HTML records with ``record_selector``; fields end in ::text or ::attr(name)."""
+    """Records at ``record_selector``; fields end in ::text or ::attr(name); steps run first."""
 
     strategy: Literal["css"] = "css"
     fallbacks: tuple[HtmlRecipe, ...] = Field(default=(), max_length=3)
     record_selector: str = Field(min_length=1, max_length=1024)
+    steps: PageSteps = Field(
+        default=(),
+        exclude_if=lambda value: not value,
+        description="Browser actions (click, type, select, scroll, wait, follow) run before "
+        "extraction; data only, never code.",
+    )
     representation: ClassVar[Representation] = "html"
 
     @model_validator(mode="after")
     def check_expand(self) -> Self:
+        check_recipe_steps(self.steps)
         if (
             sum(
                 isinstance(value, str) and value.startswith(EXPAND_PREFIX)

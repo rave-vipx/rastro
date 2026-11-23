@@ -233,4 +233,7 @@ async def test_steps_run_through_the_page_steps_module(browser, monkeypatch):
         module = SimpleNamespace(perform_steps=perform_steps)
         monkeypatch.setitem(sys.modules, "rastro.adapters.browser_steps", module)
         result = await session.run_steps(("a",), policy=current, max_bytes=1000)
-    assert seen == [(("a",), 15000.0)] and result.body == "<p>ok</p>"
+    from rastro.application.page_steps import steps_budget_ms
+
+    budget = steps_budget_ms(("a",), current)  # type: ignore[arg-type]
+    assert seen == [(("a",), budget)] and result.body == "<p>ok</p>"

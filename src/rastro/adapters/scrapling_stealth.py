@@ -21,6 +21,7 @@ from rastro.adapters.browser_controls_apply import (
 )
 from rastro.adapters.playwright_browser import INSTALL, NetworkGuard, browser_flags, proxy_option
 from rastro.application.browser_proxy import BROWSER_PROXY
+from rastro.application.page_steps import steps_budget_ms
 from rastro.domain.acquisition import (
     AcquisitionError,
     AcquisitionPolicy,
@@ -75,7 +76,7 @@ def _page_action(
     async def action(page: Any) -> Any:
         if steps:
             await steps_performer()(
-                page, steps, guard=guard, timeout_ms=policy.request_timeout_seconds * 1000
+                page, steps, guard=guard, timeout_ms=steps_budget_ms(tuple(steps), policy)
             )
         if controls.screenshot:
             try:
@@ -167,13 +168,27 @@ class StealthSession:
 
     def __init__(self, engine: Any, guard: NetworkGuard) -> None:
         self._engine, self._guard = engine, guard
+        self._target: PinnedTarget | None = None
 
     async def render(
         self, target: PinnedTarget, *, policy: AcquisitionPolicy, max_bytes: int
     ) -> AcquisitionResult:
-        return await self.run_steps(target, (), policy=policy, max_bytes=max_bytes)
+        self._target = target
+        return await self._fetch(target, (), policy=policy, max_bytes=max_bytes)
 
     async def run_steps(
+        self, steps: Sequence[Any], *, policy: AcquisitionPolicy, max_bytes: int
+    ) -> AcquisitionResult:
+        """Reload the page last rendered and run ``steps`` in Scrapling's after-navigation hook.
+
+        Scrapling does not hand out the live page between fetches, so the steps act on a fresh
+        load of the same URL; its transfers spend the step's budget like any other.
+        """
+        if self._target is None:
+            raise AcquisitionError("step_failed", Outcome.PERMANENT_FAILURE)
+        return await self._fetch(self._target, steps, policy=policy, max_bytes=max_bytes)
+
+    async def _fetch(
         self,
         target: PinnedTarget,
         steps: Sequence[Any],
