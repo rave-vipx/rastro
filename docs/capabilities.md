@@ -147,18 +147,18 @@ What Rastro already does, for people and for AI coding agents. Use these before 
 - **Do not build:** your own upsert or dedup-by-key table for scraped records
 - **Docs:** [dataset.md#load-inspect-and-export-a-job](dataset.md#load-inspect-and-export-a-job)
 
-### Export a dataset as JSON, JSONL, CSV or an HTML table
+### Export a dataset as JSON, JSONL, CSV, XLSX or an HTML table, or list what changed
 
-- **Use:** `rastro dataset export data.sqlite --format json|jsonl|csv|html`
-- **CLI:** `rastro dataset export`
+- **Use:** `rastro dataset export data.sqlite --format json|jsonl|csv|xlsx|html`; `rastro dataset changes data.sqlite --against older.sqlite`
+- **CLI:** `rastro dataset export`, `rastro dataset changes`
 - **Limits:** `--upcoming` needs an ISO date `--sort-field`
 - **Do not build:** your own HTML view or CSV dump of scraped records
 - **Docs:** [scheduling.md](scheduling.md)
 
 ### Run sources on a schedule
 
-- **Use:** `[schedule] every = "6h"` plus `rastro job watch job.toml` (or `--once` from cron)
-- **CLI:** `rastro job watch`
+- **Use:** `[schedule] every = "6h"` (or `every = "1d"`, `at = "08:00"`) plus `rastro job watch job.toml` (or `--once` from cron); `rastro job schedule "every day at 8:00"` reads words
+- **CLI:** `rastro job watch`, `rastro job schedule`
 - **Limits:** Lock file prevents overlapping runs; jitter at most a quarter of `every`
 - **Do not build:** your own scheduler loop or overlap lock
 - **Docs:** [operations.md#scheduler](operations.md#scheduler)

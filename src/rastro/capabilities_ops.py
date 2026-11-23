@@ -22,17 +22,20 @@ OPS_CAPABILITIES: tuple[Capability, ...] = (
         docs="docs/dataset.md#load-inspect-and-export-a-job",
     ),
     Capability(
-        task="Export a dataset as JSON, JSONL, CSV or an HTML table",
-        use="`rastro dataset export data.sqlite --format json|jsonl|csv|html`",
-        cli=("rastro dataset export",),
+        task="Export a dataset as JSON, JSONL, CSV, XLSX or an HTML table, or list what changed",
+        use="`rastro dataset export data.sqlite --format json|jsonl|csv|xlsx|html`; "
+        "`rastro dataset changes data.sqlite --against older.sqlite`",
+        cli=("rastro dataset export", "rastro dataset changes"),
         limits="`--upcoming` needs an ISO date `--sort-field`",
         instead_of="your own HTML view or CSV dump of scraped records",
         docs="docs/scheduling.md",
     ),
     Capability(
         task="Run sources on a schedule",
-        use='`[schedule] every = "6h"` plus `rastro job watch job.toml` (or `--once` from cron)',
-        cli=("rastro job watch",),
+        use='`[schedule] every = "6h"` (or `every = "1d"`, `at = "08:00"`) plus '
+        "`rastro job watch job.toml` (or `--once` from cron); "
+        '`rastro job schedule "every day at 8:00"` reads words',
+        cli=("rastro job watch", "rastro job schedule"),
         limits="Lock file prevents overlapping runs; jitter at most a quarter of `every`",
         instead_of="your own scheduler loop or overlap lock",
         docs="docs/operations.md#scheduler",

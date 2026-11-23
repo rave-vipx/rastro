@@ -2511,8 +2511,21 @@
     },
     "ScheduleSpec": {
       "additionalProperties": false,
-      "description": "Optional `[schedule]` block in a job file (`every` and bounded `jitter`).",
+      "description": "Optional `[schedule]` block: `every`, an optional `at` time of day, bounded `jitter`.",
       "properties": {
+        "at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Time of day as \"HH:MM\" in the job timezone; needs every in whole days.",
+          "title": "At"
+        },
         "every": {
           "title": "Every",
           "type": "string"

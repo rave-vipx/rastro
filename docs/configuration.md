@@ -447,6 +447,7 @@ Run interval for `rastro job watch`. Docs: [operations.md#scheduler](operations.
 | Key | Type | Default | Bounds | Description |
 | --- | --- | --- | --- | --- |
 | `schedule.every` | string | required |  | Run interval such as "30m", "6h" or "1d". |
+| `schedule.at` | string | - |  | Time of day as "HH:MM" in the job timezone; needs every in whole days. |
 | `schedule.jitter` | string | - |  | Random delay added to each run, at most a quarter of every. |
 
 ### `[scroll]`
@@ -734,6 +735,15 @@ Per-source throughput, latency, error rate, freshness and coverage. Docs: [jobs.
 | `--by` | value | `"source"` | one of source, host, strategy, day | Grouping (default source) |
 | `--allow-absolute-paths` | flag | - |  | Allow absolute paths in the job file |
 
+### `rastro job schedule`
+
+Read a schedule in words and show its next runs. Docs: [jobs.md#cli-commands-and-exit-codes](jobs.md#cli-commands-and-exit-codes).
+
+| Flag | Value | Default | Choices | Description |
+| --- | --- | --- | --- | --- |
+| `WORDS` | value | required |  | For example "every day at 8:00" or "cada 6 horas" |
+| `--timezone` | value | `"UTC"` |  | IANA timezone for the time of day |
+
 ### `rastro job watch`
 
 Run due job sources on their [schedule]. Docs: [jobs.md#cli-commands-and-exit-codes](jobs.md#cli-commands-and-exit-codes).
@@ -762,13 +772,14 @@ Read dataset records and freshness. Docs: [dataset.md#load-inspect-and-export-a-
 
 ### `rastro dataset export`
 
-Print a dataset's records as JSON, JSONL or an HTML table. Docs: [dataset.md#load-inspect-and-export-a-job](dataset.md#load-inspect-and-export-a-job).
+Print a dataset's records as JSON, JSONL, CSV, XLSX or an HTML table. Docs: [dataset.md#load-inspect-and-export-a-job](dataset.md#load-inspect-and-export-a-job).
 
 | Flag | Value | Default | Choices | Description |
 | --- | --- | --- | --- | --- |
 | `PATH` | Path | required |  | Dataset SQLite file |
 | `--dataset` | value | - |  | Dataset name (required if file contains multiple datasets) |
-| `--format` | value | `"json"` | one of json, jsonl, html, csv | Output format |
+| `--format` | value | `"json"` | one of json, jsonl, html, csv, xlsx | Output format |
+| `--output` | Path | - |  | File to write (needed for xlsx) |
 | `--sort-field` | value | - |  | Field to sort records by (ISO date for --upcoming) |
 | `--upcoming` | flag | - |  | Only records dated today or later |
 | `--timezone` | value | `"UTC"` |  | IANA timezone that decides today |
@@ -782,6 +793,18 @@ Show each source's freshness and last load. Docs: [dataset.md#load-inspect-and-e
 | `PATH` | Path | required |  | Dataset SQLite file |
 | `--dataset` | value | - |  | Dataset name (required if file contains multiple datasets) |
 | `--format` | value | `"json"` | one of json, jsonl | Output format |
+
+### `rastro dataset changes`
+
+List new, removed and changed records since a time or an earlier copy. Docs: [dataset.md#load-inspect-and-export-a-job](dataset.md#load-inspect-and-export-a-job).
+
+| Flag | Value | Default | Choices | Description |
+| --- | --- | --- | --- | --- |
+| `PATH` | Path | required |  | Dataset SQLite file |
+| `--dataset` | value | - |  | Dataset name (required if file contains multiple datasets) |
+| `--format` | value | `"json"` | one of json, jsonl | Output format |
+| `--since` | value | - |  | ISO time; list records first seen after it |
+| `--against` | Path | - |  | Earlier copy of the dataset file to compare with |
 
 ### `rastro dataset migrate`
 
