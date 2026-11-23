@@ -12,7 +12,13 @@ from rastro.adapters.sqlite_drift import SQLiteDriftMonitor
 from rastro.application.dataset_load import stale_sources
 from rastro.application.errors import RunInProgressError
 from rastro.application.job_dataset import load_job_file
-from rastro.cli_dataset_export import csv_export, html_export, select_records
+from rastro.cli_dataset_export import (
+    changes_report,
+    csv_export,
+    html_export,
+    select_records,
+    write_xlsx,
+)
 from rastro.cli_errors import classify
 from rastro.cli_hook import add_hook_argument, hook_argv, load_summary, notify
 from rastro.cli_trust import add_trust_arguments, trust_options
@@ -20,7 +26,8 @@ from rastro.domain.job_results import JobExitCode
 from rastro.domain.models import ConfigurationError
 
 _DATASET_HELP = {
-    "export": "Print a dataset's records as JSON, JSONL or an HTML table",
+    "export": "Print a dataset's records as JSON, JSONL, CSV, XLSX or an HTML table",
+    "changes": "List new, removed and changed records since a time or an earlier copy",
     "status": "Show each source's freshness and last load",
     "migrate": "Migrate a dataset SQLite file forward to a schema version",
 }
@@ -40,7 +47,7 @@ def add_commands(subcommands: argparse._SubParsersAction, jobs: argparse._SubPar
     add_hook_argument(load)
     dataset = subcommands.add_parser("dataset", help="Read dataset records and freshness")
     commands = dataset.add_subparsers(dest="dataset_command", required=True)
-    for command in ("export", "status"):
+    for command in ("export", "status", "changes"):
         parser = commands.add_parser(command, help=_DATASET_HELP[command])
         parser.add_argument("path", type=Path, help="Dataset SQLite file")
         parser.add_argument(
@@ -48,11 +55,19 @@ def add_commands(subcommands: argparse._SubParsersAction, jobs: argparse._SubPar
         )
         parser.add_argument(
             "--format",
-            choices=("json", "jsonl", "html", "csv") if command == "export" else ("json", "jsonl"),
+            choices=("json", "jsonl", "html", "csv", "xlsx")
+            if command == "export"
+            else ("json", "jsonl"),
             default="json",
             help="Output format",
         )
+        if command == "changes":
+            parser.add_argument("--since", help="ISO time; list records first seen after it")
+            parser.add_argument(
+                "--against", type=Path, help="Earlier copy of the dataset file to compare with"
+            )
         if command == "export":
+            parser.add_argument("--output", type=Path, help="File to write (needed for xlsx)")
             parser.add_argument(
                 "--sort-field", help="Field to sort records by (ISO date for --upcoming)"
             )
@@ -119,10 +134,21 @@ def dataset_command(args: argparse.Namespace) -> int:
             fields = list(dict.fromkeys(name for record in all_records for name in record.fields))
             print(html_export(records, stale, fields))
             return 0
+        if args.format == "xlsx":
+            write_xlsx(records, args.output)
+            return 0
         if args.format == "csv":
             print(csv_export(records), end="")
             return 0
         items = [r.model_dump(mode="json") for r in records]
+    elif args.dataset_command == "changes":
+        report = changes_report(store, args.dataset, since=args.since, against=args.against)
+        print(
+            json.dumps(
+                {"schema_version": 1, "data_trust": "untrusted_source_data", **report}, indent=2
+            )
+        )
+        return 0
     else:
         return _status(store, args)
     label = {"schema_version": 1, "data_trust": "untrusted_source_data"}

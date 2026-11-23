@@ -2,11 +2,16 @@
 
 import csv
 import io
+import sys
 from datetime import UTC, date, datetime
 from html import escape
+from pathlib import Path
 from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from rastro.adapters.sqlite_dataset import SQLiteDatasetStore
+from rastro.application.changes import changes_between, changes_since
+from rastro.application.tabular import records_table
 from rastro.domain.dataset import DatasetRecordKey, StoredRecord
 from rastro.domain.models import ConfigurationError
 
@@ -108,48 +113,49 @@ def html_export(
     )
 
 
-_FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
-
-
-def flatten(value: object, prefix: str) -> dict[str, object]:
-    """Nested values as columns: ``tickets[0].price`` for a list item's member, ``a.b`` for an
-    object member. Empty lists and objects become one empty column named for the field."""
-    if isinstance(value, dict) and value:
-        out: dict[str, object] = {}
-        for name, item in value.items():
-            out.update(flatten(item, f"{prefix}.{name}"))
-        return out
-    if isinstance(value, list) and value:
-        out = {}
-        for index, item in enumerate(value):
-            out.update(flatten(item, f"{prefix}[{index}]"))
-        return out
-    return {prefix: None if value in ({}, []) else value}
-
-
-def _csv_cell(value: object) -> str:
-    if value is None:
-        return ""
-    text = "true" if value is True else "false" if value is False else str(value)
-    # Source data is untrusted: stop a spreadsheet from running a cell as a formula.
-    return f"'{text}" if text.startswith(_FORMULA_PREFIXES) and isinstance(value, str) else text
-
-
 def csv_export(records: tuple[StoredRecord, ...]) -> str:
     """One row per record; nested fields flattened by ``flatten``, then ``last_observed_at``."""
-    rows = [
-        {
-            column: cell_value
-            for name, value in record.fields.items()
-            for column, cell_value in flatten(value, name).items()
-        }
-        for record in records
-    ]
-    columns = list(dict.fromkeys(column for row in rows for column in row))
+    header, rows = records_table(records)
     buffer = io.StringIO()
     writer = csv.writer(buffer, lineterminator="\n")
-    writer.writerow([*columns, "last_observed_at"])
-    for row, record in zip(rows, records, strict=True):
-        cells = [_csv_cell(row.get(column)) for column in columns]
-        writer.writerow([*cells, record.last_observed_at.isoformat()])
+    writer.writerow(header)
+    writer.writerows(rows)
     return buffer.getvalue()
+
+
+def write_xlsx(records: tuple[StoredRecord, ...], output: Path | None) -> None:
+    """XLSX is binary: write to `output`, or to standard output when it is piped."""
+    from rastro.adapters.xlsx_export import xlsx_export
+
+    data = xlsx_export(records)
+    if output is not None:
+        output.write_bytes(data)
+    elif sys.stdout.isatty():
+        raise ConfigurationError("XLSX is binary: pass --output FILE or pipe standard output")
+    else:
+        sys.stdout.buffer.write(data)
+
+
+def changes_report(
+    store: SQLiteDatasetStore, dataset: str, *, since: str | None, against: Path | None
+) -> dict[str, object]:
+    """New, removed and changed records, as plain data for the CLI and Studio."""
+    records = store.records(dataset)
+    if against is not None:
+        if not against.exists():
+            raise ConfigurationError("The --against dataset file does not exist")
+        result = changes_between(SQLiteDatasetStore(against).records(dataset), records)
+    elif since is not None:
+        try:
+            moment = datetime.fromisoformat(since)
+        except ValueError:
+            raise ConfigurationError("--since must be an ISO datetime") from None
+        if moment.tzinfo is None:
+            moment = moment.replace(tzinfo=UTC)
+        done = {
+            s.source_url: s.last_success for s in store.source_status(dataset) if s.last_success
+        }
+        result = changes_since(records, moment, latest_success=done)
+    else:
+        raise ConfigurationError("Choose --since or --against")
+    return {"dataset": dataset, **result.model_dump(mode="json")}

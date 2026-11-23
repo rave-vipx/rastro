@@ -47,7 +47,7 @@ from rastro.cli_ops import add_job_commands as add_ops_job_commands
 from rastro.cli_ops import job_command as ops_job_command
 from rastro.cli_recipe import add_commands as add_recipe_commands
 from rastro.cli_recipe import recipe_command
-from rastro.cli_schedule import add_schedule_command, watch_job_command
+from rastro.cli_schedule import add_schedule_command, schedule_words_command, watch_job_command
 from rastro.cli_stats import add_stats_command, stats_command
 from rastro.cli_studio import add_command as add_studio_command
 from rastro.cli_studio import studio_command
@@ -178,6 +178,7 @@ def _run_job_command(args: argparse.Namespace) -> int:
         "template": template_command,
         "load": load_job_command,
         "watch": watch_job_command,
+        "schedule": schedule_words_command,
     }
     if args.job_command in handlers:
         return handlers[args.job_command](args)
