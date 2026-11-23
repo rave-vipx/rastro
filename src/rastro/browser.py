@@ -9,6 +9,7 @@ from rastro.application.capability_gate import require_capabilities
 from rastro.domain.acquisition import AcquisitionResult
 from rastro.domain.jobs import Job, UrlJobSource
 from rastro.domain.models import ConfigurationError, Representation, Source
+from rastro.domain.page_steps import PageStep
 from rastro.ports.acquisition import AcquisitionPort
 from rastro.ports.browser import BrowserRenderer, ScrollingAcquisition
 
@@ -82,6 +83,23 @@ class _JobAcquisition:
         if not isinstance(client, ScrollingAcquisition):
             raise ConfigurationError("This source's acquisition cannot scroll")
         return await client.scroll(source, settle_ms=settle_ms, max_bytes=max_bytes)
+
+    def runs_steps(self, url: str) -> bool:
+        """Page steps need a browser page; plain HTTP sources report ``step_failed``."""
+        client = self.clients[self.mode(url)]
+        return self.mode(url) != "http" and bool(
+            getattr(client, "runs_steps", lambda _: False)(url)
+        )
+
+    async def run_steps(
+        self, source: Source, steps: tuple[PageStep, ...], *, max_bytes: int
+    ) -> AcquisitionResult:
+        client = self.clients[self.mode(source.url)]
+        run = getattr(client, "run_steps", None)
+        if run is None:
+            raise ConfigurationError("This source's acquisition cannot run page steps")
+        result: AcquisitionResult = await run(source, steps, max_bytes=max_bytes)
+        return result
 
 
 def _renderer(mode: str) -> BrowserRenderer:
