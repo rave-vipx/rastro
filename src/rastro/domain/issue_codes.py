@@ -38,6 +38,8 @@ ISSUE_CODES = frozenset(
         "http_permanent_failure",
         "http_transient_failure",
         "https_downgrade",
+        "http3_unavailable",
+        "impersonation_unavailable",
         "https_required",
         "hub_candidate",
         "instruction_like_content",

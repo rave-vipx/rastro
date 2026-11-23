@@ -14,7 +14,7 @@ from curl_cffi.curl import CURL_WRITEFUNC_ERROR
 from curl_cffi.requests import AsyncSession
 from curl_cffi.requests.exceptions import RequestException
 
-from rastro.adapters.http_options import profile
+from rastro.adapters.http_options import negotiated, profile
 from rastro.domain.acquisition import AcquisitionError, HttpResponse, PinnedTarget, ProxyRoute
 from rastro.domain.models import Outcome
 from rastro.domain.source_notes import BrowserFamily, HttpVersion
@@ -144,6 +144,8 @@ class CurlTransport:
                     headers=selected_headers,
                     body=bytes(body),
                     bytes_received=int(response.download_size),
+                    http_version=negotiated(getattr(response, "http_version", None)),
+                    fallbacks=chosen.fallbacks,
                 )
         except RequestException as error:
             if exceeded or error.code == CurlECode.FILESIZE_EXCEEDED:

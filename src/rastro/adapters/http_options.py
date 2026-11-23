@@ -18,7 +18,14 @@ from curl_cffi.requests.impersonate import REAL_TARGET_MAP, BrowserType
 
 from rastro.domain.source_notes import BrowserFamily, HttpVersion
 
-__all__ = ["TransferProfile", "browser_target", "http3_available", "profile", "reset_warnings"]
+__all__ = [
+    "TransferProfile",
+    "browser_target",
+    "http3_available",
+    "negotiated",
+    "profile",
+    "reset_warnings",
+]
 
 _LOG = structlog.wrap_logger(
     logging.getLogger("rastro"), processors=[structlog.processors.JSONRenderer()]
@@ -27,6 +34,11 @@ _VERSIONS = {
     "1.1": CurlHttpVersion.V1_1,
     "2": CurlHttpVersion.V2TLS,  # never an h2c upgrade over cleartext
     "3": CurlHttpVersion.V3,  # QUIC first, TCP if the server does not answer it
+}
+_NEGOTIATED: dict[int, HttpVersion] = {
+    CurlHttpVersion.V1_1: "1.1",
+    CurlHttpVersion.V2_0: "2",
+    CurlHttpVersion.V3: "3",
 }
 _TARGETS = frozenset(item.value for item in BrowserType)
 _warned: set[tuple[str, str]] = set()
@@ -38,6 +50,8 @@ class TransferProfile:
 
     target: str | None
     version: CurlHttpVersion | None
+    fallbacks: tuple[str, ...] = ()
+    """Issue codes for the options this build or route could not honour."""
 
 
 def browser_target(family: BrowserFamily) -> str | None:
@@ -69,14 +83,23 @@ def profile(
 ) -> TransferProfile:
     """Resolve the job's options against the installed build and the egress route."""
     target = None
+    fallbacks: list[str] = []
     if impersonate is not None:
         target = browser_target(impersonate)
         if target is None:
             _warn_once("impersonation_unavailable", impersonate)
+            fallbacks.append("impersonation_unavailable")
     if http_version == "3" and (proxied or not http3_available()):
         # The CONNECT tunnel carries TCP only, so HTTP/3 cannot pass a proxy.
         _warn_once("http3_unavailable", "proxy" if proxied else "not_built")
+        fallbacks.append("http3_unavailable")
         http_version = "2"
     if http_version is None:
-        return TransferProfile(target, None if target else CurlHttpVersion.V1_1)
-    return TransferProfile(target, _VERSIONS[http_version])
+        version = None if target else CurlHttpVersion.V1_1
+        return TransferProfile(target, version, tuple(fallbacks))
+    return TransferProfile(target, _VERSIONS[http_version], tuple(fallbacks))
+
+
+def negotiated(curl_version: object) -> HttpVersion | None:
+    """The protocol a finished transfer used, from libcurl's ``CURLINFO_HTTP_VERSION``."""
+    return _NEGOTIATED.get(curl_version) if isinstance(curl_version, int) else None

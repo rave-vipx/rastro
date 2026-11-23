@@ -18,7 +18,7 @@ from rastro.domain.acquisition_auth import AcquisitionAuth, NetworkGrants
 from rastro.domain.acquisition_base import ENVIRONMENT_NAME, RedactedContract, exact_host
 from rastro.domain.browser_controls import BrowserControls, HostLimits, HttpOptions
 from rastro.domain.models import EGRESS_NAME, Outcome
-from rastro.domain.source_notes import BlockedHint, RenderMode
+from rastro.domain.source_notes import BlockedHint, HttpVersion, RenderMode
 
 
 class EgressProfile(RedactedContract):
@@ -208,6 +208,10 @@ class HttpResponse:
     headers: dict[str, str] = field(repr=False)
     body: bytes
     bytes_received: int
+    http_version: HttpVersion | None = None
+    """The protocol the server answered with, when the transport knows it."""
+    fallbacks: tuple[str, ...] = ()
+    """Issue codes for transfer options this build or route could not honour."""
 
 
 @dataclass(frozen=True)
@@ -233,6 +237,8 @@ class AcquisitionResult:
     proxy_rotation: bool = False
     proxies_used: int = 0  # distinct rotated profiles; names and counts only, never routes
     challenge_solved: bool = False
+    http_version: HttpVersion | None = None
+    transfer_issues: tuple[str, ...] = ()
     blocked: BlockedHint | None = None
     screenshot: bytes | None = field(default=None, repr=False)  # PNG evidence; browser only
     raw_body: bytes | None = field(default=None, repr=False)  # set only by acquire_raw

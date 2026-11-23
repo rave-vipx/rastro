@@ -132,3 +132,30 @@ def test_impersonation_granted_to_mcp_only_by_the_operator(no_env_grants):
             assert {"impersonation", "http3"} <= require_capabilities(_job()).granted
     finally:
         set_process_trust(previous)
+
+
+class Negotiated(Transport):
+    async def get(self, target, **kwargs):
+        response = await super().get(target, **kwargs)
+        if target.url.endswith("robots.txt"):
+            return response
+        return HttpResponse(
+            response.status,
+            response.headers,
+            response.body,
+            response.bytes_received,
+            http_version="2",
+            fallbacks=("http3_unavailable",),
+        )
+
+
+def test_negotiated_version_and_fallbacks_reach_the_report(offline_cli_loop):
+    from rastro.application.jobs import run_job
+
+    spec = _job()  # asks for HTTP/3 and chrome impersonation
+    client = WebAcquirer(spec.acquisition, transport=Negotiated(), resolver=Resolver())
+    run = run_job(spec, acquisition=client)
+    result = run.results[0]
+    assert result.notes.acquisition.http_version == "2"
+    assert "http3_unavailable" in {issue.code for issue in result.issues}
+    assert run.report.sources[0].acquisition.http_version == "2"

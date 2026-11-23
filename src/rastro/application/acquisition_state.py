@@ -23,7 +23,7 @@ from rastro.domain.acquisition import (
     ProxyRoute,
 )
 from rastro.domain.models import Outcome
-from rastro.domain.source_notes import BlockKind
+from rastro.domain.source_notes import BlockKind, HttpVersion
 
 
 @dataclass
@@ -58,6 +58,8 @@ class _Operation:
     proxies_used: set[str] = field(default_factory=set)
     block_marker: BlockKind | None = None  # what the last refusal looked like
     challenge_solved: bool = False  # a browser cleared a challenge on the way to the page
+    http_version: HttpVersion | None = None  # what the server last answered with
+    fallbacks: set[str] = field(default_factory=set)  # transfer options not honoured
 
     def rotate(self) -> None:
         """Route the next transfer through the next rotated profile, if the source rotates."""
@@ -93,6 +95,8 @@ class _Operation:
             proxy_rotation=self.rotation is not None,
             proxies_used=len(self.proxies_used),
             challenge_solved=self.challenge_solved,
+            http_version=self.http_version,
+            transfer_issues=tuple(sorted(self.fallbacks)),
             blocked=blocked_hint(issue, self.http_status, self.block_marker),
             raw_body=raw_body,
         )
@@ -104,6 +108,8 @@ def record_response(
     """Account for one response and apply the host's denial, rate-limit and retry-after state."""
     operation.bytes_received += response.bytes_received
     operation.http_status = response.status
+    operation.http_version = response.http_version or operation.http_version
+    operation.fallbacks.update(response.fallbacks)
     operation.block_marker = response_marker(response)
     if response.status in {401, 403, 451}:
         host.denied = True

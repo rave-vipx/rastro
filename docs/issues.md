@@ -76,6 +76,8 @@ grouped by theme. A test fails when a code in `src/rastro` has no row here.
 | `blocked` | The site refused automated access (for example a login wall, a captcha or a refused cloud address). The run report says which kind and links to a guide. | No. | Follow the linked guide: change egress, render mode or the site permission you have. |
 | `capability_refused` | The job asked for a capability that was not granted for where it came from (a bundle, a registry recipe, an agent tool or model output). | No. | Grant it with `--allow-untrusted ORIGIN:CAPABILITY`, or `--allow-capability` for grant-only capabilities. |
 | `proxy_rotated` | A request moved to the next proxy after the previous one failed or was refused. | Yes. | Nothing. Check the proxy if it repeats. |
+| `impersonation_unavailable` | The installed HTTP client has no target for the requested `impersonate` browser, so the page was fetched with the plain profile. | Yes. | Upgrade the `http` extra, or pick another browser family. |
+| `http3_unavailable` | HTTP/3 was asked for but the installed client lacks it or the request went through a proxy, so HTTP/2 was used. | Yes. | Nothing, or drop `http_version = "3"`. |
 | `ladder_exhausted` | Every acquisition level the job allows was tried and none returned the page. | No. | Allow a stronger level, or check the site in a browser. |
 
 ## Browser and scroll

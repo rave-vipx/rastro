@@ -128,6 +128,7 @@ def stamp_acquired[T: BaseModel](
             "http_status": fetched.http_status,
             "retry_after_seconds": fetched.retry_after_seconds,
             "notes": acquisition_notes(result.notes, fetched),
+            "issues": (*result.issues, *(Issue(code=c) for c in fetched.transfer_issues)),
         }
     )
 
@@ -137,13 +138,14 @@ def acquisition_notes(notes: SourceNotes | None, fetched: AcquisitionResult) -> 
     update: dict[str, object] = {}
     if fetched.blocked is not None:
         update["blocked"] = fetched.blocked
-    if fetched.proxy_rotation or fetched.challenge_solved:
+    if fetched.proxy_rotation or fetched.challenge_solved or fetched.http_version:
         update["acquisition"] = AcquisitionUse(
             render=fetched.render,
             egress=fetched.egress,
             proxy_rotation=fetched.proxy_rotation,
             proxies_used=fetched.proxies_used,
             challenge_solved=fetched.challenge_solved,
+            http_version=fetched.http_version,
             robots="overridden" if fetched.robots_overridden else "obeyed",
         )
     if fetched.proxy_rotation:
