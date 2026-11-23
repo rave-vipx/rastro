@@ -102,11 +102,13 @@ def add_notify_argument(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def add_notify_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+def add_notify_parser(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[type-arg]
     notify = subparsers.add_parser("notify", help="Check notification channels")
     actions = notify.add_subparsers(dest="notify_command", required=True)
     test = actions.add_parser("test", help="Send a test notification to each channel")
-    test.add_argument("channels", nargs="+", metavar="CHANNEL", choices=CHANNELS)
+    test.add_argument(
+        "channels", nargs="+", metavar="CHANNEL", choices=CHANNELS, help="Channels to test"
+    )
 
 
 def notify_test_command(channels: Sequence[str]) -> int:

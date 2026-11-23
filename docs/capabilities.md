@@ -165,10 +165,10 @@ What Rastro already does, for people and for AI coding agents. Use these before 
 
 ### Alert when a run fails, drifts or goes stale
 
-- **Use:** `--on-failure CMD` or `RASTRO_ON_FAILURE` on `job load`/`run`/`watch`; `rastro health` exits 4 when someone must act
+- **Use:** `--notify email|slack|telegram|webhook` or `RASTRO_NOTIFY`, or `--on-failure CMD`, on `job load`/`run`/`watch`; `rastro notify test CHANNEL` checks a channel; `rastro health` exits 4 when someone must act
 - **Python:** `job_health`, `JobExitCode`
-- **CLI:** `rastro health`, `rastro job stats`
-- **Limits:** The hook gets a JSON summary on stdin, no records or secrets; a job file cannot set it
+- **CLI:** `rastro health`, `rastro job stats`, `rastro notify test`
+- **Limits:** Messages and the hook carry the run report only, no records or secrets; channels and secrets come from the operator, never from a job file
 - **Do not build:** parsing logs or exit codes to build your own alerting
 - **Docs:** [operations.md#failure-hook](operations.md#failure-hook)
 

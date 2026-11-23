@@ -1023,6 +1023,18 @@ Install a hub package as a candidate. Docs: [jobs.md#cli-commands-and-exit-codes
 | `--registry` | Path | - |  | Local hub checkout instead of a URL |
 | `--registry-url` | URL | - |  | https registry URL (default: the public hub, https://raw.githubusercontent.com/rave-vipx/rastro-hub/main/) |
 
+### `rastro notify`
+
+Check notification channels. Docs: [jobs.md#cli-commands-and-exit-codes](jobs.md#cli-commands-and-exit-codes).
+
+### `rastro notify test`
+
+Send a test notification to each channel. Docs: [jobs.md#cli-commands-and-exit-codes](jobs.md#cli-commands-and-exit-codes).
+
+| Flag | Value | Default | Choices | Description |
+| --- | --- | --- | --- | --- |
+| `CHANNELS` | CHANNEL | required | one of email, slack, telegram, webhook | Channels to test |
+
 ### `rastro model`
 
 Find local AI models and test a model. Docs: [jobs.md#cli-commands-and-exit-codes](jobs.md#cli-commands-and-exit-codes).

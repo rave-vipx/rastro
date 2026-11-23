@@ -41,6 +41,7 @@ from rastro.cli_hub_group import add_command as add_hub_group
 from rastro.cli_hub_group import hub_group_command
 from rastro.cli_model_setup import add_command as add_model_command
 from rastro.cli_model_setup import model_command
+from rastro.cli_notify import add_notify_parser, notify_test_command
 from rastro.cli_ops import JOB_COMMANDS as OPS_JOB_COMMANDS
 from rastro.cli_ops import add_health_command, health_command
 from rastro.cli_ops import add_job_commands as add_ops_job_commands
@@ -154,6 +155,7 @@ def _build_parser() -> argparse.ArgumentParser:
     add_recipe_commands(subcommands)
     add_studio_command(subcommands)
     add_hub_group(subcommands)
+    add_notify_parser(subcommands)
     add_model_command(subcommands)
     add_suggest_commands(subcommands)
     add_agent_commands(subcommands)
@@ -235,6 +237,7 @@ def _run_command(args: argparse.Namespace) -> int:
         "model": model_command,
         "health": health_command,
         "hub": hub_group_command,
+        "notify": lambda args: notify_test_command(args.channels),
         "suggest": suggest_command,
         "new": new_command,
         "job": _run_job_command,

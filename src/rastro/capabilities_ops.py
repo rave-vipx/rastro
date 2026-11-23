@@ -42,12 +42,13 @@ OPS_CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         task="Alert when a run fails, drifts or goes stale",
-        use="`--on-failure CMD` or `RASTRO_ON_FAILURE` on `job load`/`run`/`watch`; "
+        use="`--notify email|slack|telegram|webhook` or `RASTRO_NOTIFY`, or `--on-failure CMD`, "
+        "on `job load`/`run`/`watch`; `rastro notify test CHANNEL` checks a channel; "
         "`rastro health` exits 4 when someone must act",
         python=_names("job_health JobExitCode"),
-        cli=("rastro health", "rastro job stats"),
-        limits="The hook gets a JSON summary on stdin, no records or secrets; "
-        "a job file cannot set it",
+        cli=("rastro health", "rastro job stats", "rastro notify test"),
+        limits="Messages and the hook carry the run report only, no records or secrets; "
+        "channels and secrets come from the operator, never from a job file",
         instead_of="parsing logs or exit codes to build your own alerting",
         docs="docs/operations.md#failure-hook",
     ),
