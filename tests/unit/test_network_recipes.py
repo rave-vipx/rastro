@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import time
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from types import SimpleNamespace
@@ -11,6 +12,8 @@ import pytest
 from pydantic import ValidationError
 
 from rastro.domain.acquisition import AcquisitionPolicy, AcquisitionResult, PinnedTarget
+from rastro.domain.browser_controls import BrowserControls
+from rastro.domain.capture_pattern import capture_matches
 from rastro.domain.models import ConfigurationError, Limits, Outcome, Source
 from rastro.domain.recipes import JsonRecipe, Recipe
 
@@ -238,9 +241,20 @@ def test_recipe_capture_is_validated_data():
     recipe = JsonRecipe(record_path="", fields={"a": "/a"}, capture=r"^/api/v\d+/items$")
     assert recipe.capture == r"^/api/v\d+/items$"
     assert "capture" not in JsonRecipe(record_path="", fields={"a": "/a"}).model_dump()
-    for bad in ["(", "", "x" * 257, r"^/api/(a+)+$", r"(\d*)*"]:
+    for bad in ["(", "", "x" * 257, r"(?=/api)", r"(a)\1"]:
         with pytest.raises(ValidationError):
             JsonRecipe(record_path="", fields={"a": "/a"}, capture=bad)
+
+
+def test_capture_pattern_runs_in_linear_time_like_spider_patterns():
+    # A nested quantifier is harmless on the linear-time engine shared with allow_pattern.
+    recipe = JsonRecipe(record_path="", fields={"a": "/a"}, capture=r"^/(a+)+$")
+    started = time.perf_counter()
+    assert not capture_matches(recipe.capture or "", "/" + "a" * 1000 + "!")
+    assert time.perf_counter() - started < 0.5
+    assert capture_matches(r"api/v\d", "/x/api/v2/items")
+    with pytest.raises(ValidationError):
+        BrowserControls(capture_network=(r"(?<=x)y",))
     with pytest.raises(ValidationError):
         JsonRecipe(
             record_path="",

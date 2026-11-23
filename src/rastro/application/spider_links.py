@@ -9,13 +9,12 @@ from __future__ import annotations
 
 from contextvars import ContextVar
 from dataclasses import dataclass
-from functools import lru_cache
-from typing import Annotated
 from urllib.parse import unquote, urljoin, urlsplit, urlunsplit
 
-from pydantic import BaseModel, Field, TypeAdapter, ValidationError
+from pydantic import BaseModel
 
 from rastro.application.sitemap import SitemapEntry, sitemap_discovery_note
+from rastro.domain.linear_regex import linear_search
 from rastro.domain.models import ConfigurationError, ExtractionResult, Limits, ResourceLimitError
 from rastro.domain.provenance_url import canonical_page_url
 from rastro.domain.source_notes import DiscoveryNote, SourceNotes
@@ -98,19 +97,9 @@ def path_matches(path: str, prefixes: tuple[str, ...]) -> bool:
     return False
 
 
-@lru_cache(maxsize=64)
-def _compiled_pattern(pattern: str) -> TypeAdapter[str]:
-    return TypeAdapter(Annotated[str, Field(pattern=pattern)])
-
-
 def pattern_matches(path: str, pattern: str) -> bool:
     """Linear-time regex match against the tidied, percent-decoded path."""
-    decoded = tidy_path(unquote(path))
-    try:
-        _compiled_pattern(pattern).validate_python(decoded)
-    except ValidationError:
-        return False
-    return True
+    return linear_search(pattern, tidy_path(unquote(path)))
 
 
 class LinkHarvest:

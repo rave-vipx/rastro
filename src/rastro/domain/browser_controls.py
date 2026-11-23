@@ -8,7 +8,6 @@ by a short name the operator maps to a directory.
 
 from __future__ import annotations
 
-import re
 from typing import Literal
 
 from pydantic import Field, StrictBool, StrictFloat, StrictInt, StrictStr, field_validator
@@ -16,6 +15,7 @@ from pydantic import Field, StrictBool, StrictFloat, StrictInt, StrictStr, field
 from rastro.domain.acquisition_base import ENVIRONMENT_NAME, exact_host
 from rastro.domain.capability_grants import Capability
 from rastro.domain.job_contract import RedactedContract
+from rastro.domain.linear_regex import check_linear_pattern
 from rastro.domain.page_steps import WaitState
 from rastro.domain.source_notes import BrowserFamily, HttpVersion
 
@@ -89,10 +89,7 @@ class BrowserControls(RedactedContract):
         for pattern in value:
             if not 1 <= len(pattern) <= 256:
                 raise ValueError("capture patterns must be 1 to 256 characters")
-            try:
-                re.compile(pattern)
-            except re.error:
-                raise ValueError("capture patterns must be valid regular expressions") from None
+            check_linear_pattern(pattern)
         return value
 
     def requested_capabilities(self) -> frozenset[Capability]:

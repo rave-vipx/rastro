@@ -19,15 +19,14 @@ from pydantic import (
     StrictBool,
     StrictInt,
     StrictStr,
-    TypeAdapter,
     field_validator,
     model_validator,
 )
-from pydantic_core import SchemaError
 
 from rastro.domain.capability_grants import Capability
 from rastro.domain.job_contract import RedactedContract
 from rastro.domain.job_sources import UrlJobSource
+from rastro.domain.linear_regex import check_linear_pattern
 from rastro.domain.recipes import CssRecipe
 from rastro.domain.selector_policy import check_untrusted_recipe
 from rastro.domain.sources import ConfigurationError
@@ -103,14 +102,7 @@ class SpiderPolicy(RedactedContract):
     @classmethod
     def check_pattern(cls, value: str | None) -> str | None:
         if value is not None:
-            # Linear-time Rust regex engine (no look-around or backreferences, SEC-008).
-            try:
-                TypeAdapter(Annotated[str, Field(pattern=value)])
-            except SchemaError:
-                raise ValueError(
-                    "Invalid or unsupported regular expression pattern "
-                    "(look-around and backreferences are not supported)"
-                ) from None
+            check_linear_pattern(value)
         return value
 
     @model_validator(mode="after")
