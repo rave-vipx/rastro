@@ -23,7 +23,7 @@ from rastro.domain.models import ConfigurationError, Recipe
 _MAX_PAYLOAD = 600_000
 _ROW = (
     "SELECT version, payload, selected_index, created_at, last_success_at, successful_runs, "
-    "state, validated_at FROM recipes WHERE key = ?"
+    "state, validated_at, start_level, level_runs FROM recipes WHERE key = ?"
 )
 
 
@@ -41,7 +41,7 @@ def find_serving(db: sqlite3.Connection, key: RecipeKey, identity: str) -> Store
 
 
 def _decode(key: RecipeKey, row: tuple[object, ...]) -> StoredRecipe:
-    version, payload, index, created, success, count, state, validated = row
+    version, payload, index, created, success, count, state, validated, level, runs = row
     status(version, state, validated)  # A pinned read must not bypass corruption checks.
     stored = StoredRecipe.model_validate(
         dict(
@@ -53,6 +53,8 @@ def _decode(key: RecipeKey, row: tuple[object, ...]) -> StoredRecipe:
                 last_success_at=success,
                 successful_runs=count,
                 state=state,
+                start_level=level,
+                level_runs=runs,
             ),
         )
     )
