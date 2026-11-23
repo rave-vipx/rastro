@@ -26,7 +26,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Changed
 
 - `rastro init --agent`, `llms.txt` and `docs/capabilities.md` explain how results reach Studio: keep them in a job's dataset (`rastro job load` or `rastro.load_records`) and open `rastro studio --root`, instead of building an ad hoc database.
-- Planning documents are no longer kept in the repository. Public documentation, ADRs, `AGENTS.md` and the repository templates were rewritten for 1.0: one tagline, no internal process wording, GitHub private vulnerability reporting for security reports, and invented site names on `.example` hosts in the documentation.
+- Planning documents are no longer kept in the repository. Public documentation, ADRs and the repository templates were rewritten for 1.0: one tagline, no internal process wording, GitHub private vulnerability reporting for security reports, and invented site names on `.example` hosts in the documentation.
 - `docs/issues.md`: `link_group_refused` now describes the refused comma selector group, `invalid_record` also covers evidence building and storage serialization, and `extraction_limit` also covers a nested list cut at its limit. The `tolerant_jsonld` issue is now `repaired_json`.
 - Release process: patch releases can be tagged from a maintenance branch; see `docs/releasing.md`.
 

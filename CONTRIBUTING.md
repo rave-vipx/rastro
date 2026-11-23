@@ -58,6 +58,13 @@ For comparison changes, regenerate the full report using the [benchmark methodol
 - Ambiguous and invalid records need explicit outcomes. Default values are not source evidence.
 - Logs and validation diagnostics must not contain raw input, credential-bearing URLs, or user-defined validator messages.
 - New acquisition must include destination validation, redirect/DNS tests, timeouts, and source-policy enforcement before being exposed publicly.
+- Layers: `domain/` (Pydantic and the standard library only) ← `application/` → `ports/` ← `adapters/`; `cli`, `mcp`, `studio` and the Python API call `application`. Engine types stay in `adapters/`.
+- All network access goes through the acquisition boundary; never add a second fetch path. `import rastro` stays light: optional extras load lazily.
+- Write the failing test first; every bug gets a regression test. Tests are offline with synthetic fixtures on `.example` domains.
+- Modules stay under 250 lines (hard limit 400) and functions around 40 lines; split instead of growing.
+- Public names, flags and persisted formats change only through the [stability policy](docs/stability.md).
+- A new capability is registered in `src/rastro/capabilities_*.py`, new issue codes are documented in `docs/issues.md`, and the generated files are refreshed: `rastro capabilities --output llms > llms.txt`, `rastro capabilities --output markdown > docs/capabilities.md`, `rastro config --output markdown > docs/configuration.md`.
+- Never open or edit `benchmarks/recovery/` (frozen corpus, ADR 0011).
 
 ## Submit a pull request
 
