@@ -414,6 +414,43 @@
       ],
       "type": "string"
     },
+    "ClickStep": {
+      "additionalProperties": false,
+      "description": "Click the first element matching ``selector``, then optionally wait for ``wait_for``.",
+      "properties": {
+        "action": {
+          "const": "click",
+          "title": "Action",
+          "type": "string"
+        },
+        "selector": {
+          "maxLength": 1024,
+          "minLength": 1,
+          "title": "Selector",
+          "type": "string"
+        },
+        "wait_for": {
+          "anyOf": [
+            {
+              "maxLength": 1024,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Wait For"
+        }
+      },
+      "required": [
+        "action",
+        "selector"
+      ],
+      "title": "ClickStep",
+      "type": "object"
+    },
     "CommandProvider": {
       "additionalProperties": false,
       "description": "A local model command run without a shell; the prompt goes to stdin.\n\nThe command may forward page content to a hosted service, so it needs either\n``allow_remote = true`` or ``local = true``. ``env`` lists extra variable names\npassed through besides ``PATH`` and ``HOME``. Arguments may be empty strings; the\nprogram (the first item) may not.",
@@ -548,7 +585,7 @@
     },
     "CssRecipe": {
       "additionalProperties": false,
-      "description": "Select HTML records with ``record_selector``; fields end in ::text or ::attr(name).",
+      "description": "Records at ``record_selector``; fields end in ::text or ::attr(name); steps run first.",
       "properties": {
         "fallbacks": {
           "default": [],
@@ -589,6 +626,11 @@
           "default": false,
           "title": "Require Evidence",
           "type": "boolean"
+        },
+        "steps": {
+          "$ref": "#/$defs/PageSteps",
+          "default": [],
+          "description": "Browser actions (click, type, select, scroll, wait, follow) run before extraction; data only, never code."
         },
         "strategy": {
           "const": "css",
@@ -1162,6 +1204,29 @@
         "path"
       ],
       "title": "FileJobSource",
+      "type": "object"
+    },
+    "FollowStep": {
+      "additionalProperties": false,
+      "description": "Open the link read by ``selector``, which must end with ``::attr(href)``.",
+      "properties": {
+        "action": {
+          "const": "follow",
+          "title": "Action",
+          "type": "string"
+        },
+        "selector": {
+          "maxLength": 1024,
+          "minLength": 1,
+          "title": "Selector",
+          "type": "string"
+        }
+      },
+      "required": [
+        "action",
+        "selector"
+      ],
+      "title": "FollowStep",
       "type": "object"
     },
     "HistoricalShift": {
@@ -2235,6 +2300,46 @@
       "title": "OpenAICompatibleProvider",
       "type": "object"
     },
+    "PageStep": {
+      "discriminator": {
+        "mapping": {
+          "click": "#/$defs/ClickStep",
+          "follow": "#/$defs/FollowStep",
+          "scroll": "#/$defs/ScrollStep",
+          "select": "#/$defs/SelectStep",
+          "type": "#/$defs/TypeStep",
+          "wait": "#/$defs/WaitStep"
+        },
+        "propertyName": "action"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/ClickStep"
+        },
+        {
+          "$ref": "#/$defs/TypeStep"
+        },
+        {
+          "$ref": "#/$defs/SelectStep"
+        },
+        {
+          "$ref": "#/$defs/ScrollStep"
+        },
+        {
+          "$ref": "#/$defs/WaitStep"
+        },
+        {
+          "$ref": "#/$defs/FollowStep"
+        }
+      ]
+    },
+    "PageSteps": {
+      "items": {
+        "$ref": "#/$defs/PageStep"
+      },
+      "maxItems": 20,
+      "type": "array"
+    },
     "Pagination": {
       "additionalProperties": false,
       "description": "A bounded next-page expression, interpreted by the recipe strategy.",
@@ -2459,6 +2564,36 @@
       "title": "ScrollSpec",
       "type": "object"
     },
+    "ScrollStep": {
+      "additionalProperties": false,
+      "description": "Scroll to the bottom ``times`` times, waiting ``settle_ms`` after each.",
+      "properties": {
+        "action": {
+          "const": "scroll",
+          "title": "Action",
+          "type": "string"
+        },
+        "settle_ms": {
+          "default": 500,
+          "maximum": 5000,
+          "minimum": 0,
+          "title": "Settle Ms",
+          "type": "integer"
+        },
+        "times": {
+          "default": 1,
+          "maximum": 20,
+          "minimum": 1,
+          "title": "Times",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "action"
+      ],
+      "title": "ScrollStep",
+      "type": "object"
+    },
     "SeedOrder": {
       "enum": [
         "document",
@@ -2466,6 +2601,35 @@
         "lastmod"
       ],
       "type": "string"
+    },
+    "SelectStep": {
+      "additionalProperties": false,
+      "description": "Choose the option whose value is ``value`` in the ``<select>`` at ``selector``.",
+      "properties": {
+        "action": {
+          "const": "select",
+          "title": "Action",
+          "type": "string"
+        },
+        "selector": {
+          "maxLength": 1024,
+          "minLength": 1,
+          "title": "Selector",
+          "type": "string"
+        },
+        "value": {
+          "maxLength": 256,
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "action",
+        "selector",
+        "value"
+      ],
+      "title": "SelectStep",
+      "type": "object"
     },
     "SpiderPolicy": {
       "additionalProperties": false,
@@ -2697,6 +2861,35 @@
       "title": "StringField",
       "type": "object"
     },
+    "TypeStep": {
+      "additionalProperties": false,
+      "description": "Type literal ``text`` into ``selector``. The text is never read from the environment.",
+      "properties": {
+        "action": {
+          "const": "type",
+          "title": "Action",
+          "type": "string"
+        },
+        "selector": {
+          "maxLength": 1024,
+          "minLength": 1,
+          "title": "Selector",
+          "type": "string"
+        },
+        "text": {
+          "maxLength": 256,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "action",
+        "selector",
+        "text"
+      ],
+      "title": "TypeStep",
+      "type": "object"
+    },
     "UrlField": {
       "additionalProperties": false,
       "properties": {
@@ -2841,6 +3034,47 @@
         "detached"
       ],
       "type": "string"
+    },
+    "WaitStep": {
+      "additionalProperties": false,
+      "description": "Wait until ``selector`` reaches ``state``, or for ``timeout_ms`` without a selector.",
+      "properties": {
+        "action": {
+          "const": "wait",
+          "title": "Action",
+          "type": "string"
+        },
+        "selector": {
+          "anyOf": [
+            {
+              "maxLength": 1024,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Selector"
+        },
+        "state": {
+          "$ref": "#/$defs/WaitState",
+          "default": "visible"
+        },
+        "timeout_ms": {
+          "default": 5000,
+          "maximum": 15000,
+          "minimum": 0,
+          "title": "Timeout Ms",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "action"
+      ],
+      "title": "WaitStep",
+      "type": "object"
     }
   },
   "$id": "https://rave-vipx.github.io/rastro/schemas/job.schema.json",
