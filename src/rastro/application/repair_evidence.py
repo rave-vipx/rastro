@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import UTC, datetime
 
 from pydantic import JsonValue
 
@@ -60,7 +59,6 @@ async def gather_evidence(
     snapshot, fixtures = context.fixtures(source, previous)
     parser = JsonParser() if previous.representation == "json" else ScraplingParser()
     history = context.history()  # before any dataset write; repair never applies snapshots
-    now = datetime.now(UTC)
 
     def evaluate(candidate: RepairCandidate) -> CandidateEvaluation:
         return evaluate_candidate(
@@ -70,7 +68,6 @@ async def gather_evidence(
             schema=context.schema,
             parser=parser,
             limits=context.job.limits or Limits(),
-            observed_at=now,
             fixtures=fixtures,
             rules=context.job.consistency,
             history=history,
