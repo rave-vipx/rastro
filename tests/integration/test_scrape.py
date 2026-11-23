@@ -203,7 +203,7 @@ def test_url_target_failures_return_explicit_outcomes(monkeypatch):
         result = rastro.scrape("http://acme.example/", schema)
         assert result.status == Outcome.ACCESS_RESTRICTION
         assert result.items == []
-        assert [issue.code for issue in result.issues] == ["robots_disallowed"]
+        assert [issue.code for issue in result.issues] == ["robots_disallowed", "ladder_exhausted"]
     assert seen["policy"].allow_http is True
 
 
