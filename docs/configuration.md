@@ -573,6 +573,18 @@ Besides the grant variables above. Values are never stored in job files.
 | --- | --- | --- |
 | `RASTRO_MODEL` | Default model spec, such as "ollama:qwen3"; used by scrape(model="env"), Studio Ask AI, `new --search model` and [repair] model = true. | [ai.md#connect-a-model](ai.md#connect-a-model) |
 | `RASTRO_MODEL_LOCAL` | Set to 1 to declare that a RASTRO_MODEL command keeps content local. | [ai.md#privacy](ai.md#privacy) |
+| `RASTRO_NOTIFY` | Comma list of notification channels (email, slack, telegram, webhook) for job load, run or watch. | [operations.md#notifications](operations.md#notifications) |
+| `RASTRO_NOTIFY_WEBHOOK_URL` | Secret https URL the webhook channel posts the content-free message to. | [operations.md#notifications](operations.md#notifications) |
+| `RASTRO_NOTIFY_SLACK_WEBHOOK_URL` | Secret Slack incoming webhook URL for the slack channel. | [operations.md#notifications](operations.md#notifications) |
+| `RASTRO_NOTIFY_TELEGRAM_TOKEN` | Secret Telegram bot token for the telegram channel. | [operations.md#notifications](operations.md#notifications) |
+| `RASTRO_NOTIFY_TELEGRAM_CHAT_ID` | Telegram chat id or @channel the telegram channel writes to. | [operations.md#notifications](operations.md#notifications) |
+| `RASTRO_NOTIFY_SMTP_HOST` | SMTP server for the email channel. | [operations.md#notifications](operations.md#notifications) |
+| `RASTRO_NOTIFY_SMTP_PORT` | SMTP port for the email channel (default 587, or 465 with ssl). | [operations.md#notifications](operations.md#notifications) |
+| `RASTRO_NOTIFY_SMTP_SECURITY` | starttls (default) or ssl for the email channel. | [operations.md#notifications](operations.md#notifications) |
+| `RASTRO_NOTIFY_SMTP_USERNAME` | SMTP login name for the email channel. | [operations.md#notifications](operations.md#notifications) |
+| `RASTRO_NOTIFY_SMTP_PASSWORD` | Secret SMTP password for the email channel. | [operations.md#notifications](operations.md#notifications) |
+| `RASTRO_NOTIFY_EMAIL_FROM` | Sender address of notification email. | [operations.md#notifications](operations.md#notifications) |
+| `RASTRO_NOTIFY_EMAIL_TO` | Comma list of up to 10 notification email recipients. | [operations.md#notifications](operations.md#notifications) |
 | `RASTRO_ON_FAILURE` | Command run with a JSON summary when job load, run or watch needs attention. | [operations.md#failure-hook](operations.md#failure-hook) |
 | `RASTRO_PROFILE_DIR` | Directory holding the persistent browser profiles that browser.session_profile names. | [browser.md#persistent-sessions](browser.md#persistent-sessions) |
 | `RASTRO_SEARXNG_URL` | SearXNG endpoint for `rastro new --goal --search searxng`. | [jobs.md#start-from-a-goal](jobs.md#start-from-a-goal) |
@@ -644,6 +656,7 @@ Execute a TOML or JSON job file. Docs: [jobs.md#cli-commands-and-exit-codes](job
 | `--output` | value | `"json"` | one of json | Machine-readable output format (default: json) |
 | `--allow-absolute-paths` | flag | - |  | Allow absolute paths for local source files and recipe memory |
 | `--on-failure` | CMD | - |  | Run CMD (no shell) with a JSON summary on stdin when the job exits non-zero; overrides RASTRO_ON_FAILURE |
+| `--notify` | CHANNEL (repeatable) | - |  | Notify email, slack, telegram, webhook when the job exits non-zero (repeatable); overrides RASTRO_NOTIFY |
 | `--max-model-cost` | USD | - |  | Stop calling the model once this cost would be exceeded (needs --model-cost-per-call or the job's [model] cost_per_call; overrides max_cost) |
 | `--model-cost-per-call` | USD | - |  | Price of one model call; overrides the job's [model] cost_per_call |
 
@@ -676,6 +689,7 @@ Run a job and load approved observed fields. Docs: [jobs.md#cli-commands-and-exi
 | `--output` | value | `"json"` | one of json | Machine-readable output format |
 | `--allow-absolute-paths` | flag | - |  | Allow absolute paths in the job file |
 | `--on-failure` | CMD | - |  | Run CMD (no shell) with a JSON summary on stdin when the job exits non-zero; overrides RASTRO_ON_FAILURE |
+| `--notify` | CHANNEL (repeatable) | - |  | Notify email, slack, telegram, webhook when the job exits non-zero (repeatable); overrides RASTRO_NOTIFY |
 | `--max-model-cost` | USD | - |  | Stop calling the model once this cost would be exceeded (needs --model-cost-per-call or the job's [model] cost_per_call; overrides max_cost) |
 | `--model-cost-per-call` | USD | - |  | Price of one model call; overrides the job's [model] cost_per_call |
 
@@ -732,6 +746,7 @@ Run due job sources on their [schedule]. Docs: [jobs.md#cli-commands-and-exit-co
 | `--output` | value | `"json"` | one of json | Machine-readable output format |
 | `--allow-absolute-paths` | flag | - |  | Allow absolute paths in the job file |
 | `--on-failure` | CMD | - |  | Run CMD (no shell) with a JSON summary on stdin when the job exits non-zero; overrides RASTRO_ON_FAILURE |
+| `--notify` | CHANNEL (repeatable) | - |  | Notify email, slack, telegram, webhook when the job exits non-zero (repeatable); overrides RASTRO_NOTIFY |
 
 ### `rastro job template`
 

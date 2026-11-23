@@ -146,6 +146,52 @@ export RASTRO_ON_FAILURE='curl -fsS -m 20 -H "Content-Type: application/json" --
 rastro job load job.toml --drift
 ```
 
+## Notifications
+
+Rastro can tell you itself when a job needs attention, by email, Slack, Telegram or a
+webhook, without writing a hook. Pick channels with `--notify CHANNEL` (repeatable) on
+`rastro job load`, `rastro job run` and `rastro job watch`, or with
+`RASTRO_NOTIFY="slack,email"`. They fire on the same exits as the failure hook (1, 3, 4
+or 5); a bad or missing setting is a usage error (exit 2) before the job runs.
+
+| Channel | Settings (environment only) |
+| --- | --- |
+| `webhook` | `RASTRO_NOTIFY_WEBHOOK_URL` (secret) |
+| `slack` | `RASTRO_NOTIFY_SLACK_WEBHOOK_URL` (secret; a Slack incoming webhook) |
+| `telegram` | `RASTRO_NOTIFY_TELEGRAM_TOKEN` (secret), `RASTRO_NOTIFY_TELEGRAM_CHAT_ID` |
+| `email` | `RASTRO_NOTIFY_SMTP_HOST`, `RASTRO_NOTIFY_SMTP_PORT` (default 587, or 465 with `ssl`), `RASTRO_NOTIFY_SMTP_SECURITY` (`starttls` default, or `ssl`), `RASTRO_NOTIFY_SMTP_USERNAME`, `RASTRO_NOTIFY_SMTP_PASSWORD` (secret), `RASTRO_NOTIFY_EMAIL_FROM`, `RASTRO_NOTIFY_EMAIL_TO` (comma list, up to 10) |
+
+Check a channel before relying on it:
+
+```sh
+export RASTRO_NOTIFY_SLACK_WEBHOOK_URL='https://hooks.slack.example/services/...'
+rastro notify test slack        # {"channel": "slack", "sent": true}
+rastro job watch job.toml --notify slack
+```
+
+- **Operator only.** Channels and their settings come from the command line and the
+  environment, never from a job file or a bundle.
+- **Secrets stay in allowed variables.** To keep a secret under another name, set
+  `<setting>_ENV` to that name (for example `RASTRO_NOTIFY_WEBHOOK_URL_ENV=TEAM_HOOK`); the
+  name must start with `RASTRO_` or be allowed with `RASTRO_ALLOWED_ENV` or `--allow-env`.
+  Secrets are never printed or logged.
+- **Same destination checks as scraping.** Webhook URLs must be plain `https://` without
+  credentials. Every destination (webhook, Slack, Telegram, SMTP server) is resolved and
+  must be a public address; Rastro connects to the checked address and verifies the TLS
+  certificate for the host name, and never follows redirects. A private address (a local
+  relay, say) needs `--allow-private-network` or `RASTRO_ALLOW_PRIVATE_NETWORK=1`;
+  link-local and cloud metadata addresses are always refused. Email always uses STARTTLS
+  or TLS.
+- **Content-free messages.** The message is built from the [run report](run-report.md):
+  the job file name, exit code, counts, and the host and reason of each source that did not
+  succeed. It never contains records, page text, URL paths or queries. The webhook channel
+  posts JSON `{"event", "subject", "text", "report"}`; Slack and Telegram get the text; email
+  gets the subject and text.
+- **Failures never change the exit code.** A channel that fails writes
+  `{"issue": "notification_failed", "channel": "slack", "reason": "destination_denied"}`
+  to stderr; the reason is a code such as `dns_failure`, `destination_denied`,
+  `rejected_status`, `timeout`, `tls_verification_failed` or `authentication_failed`.
+
 ## Logs
 
 Each source that does not succeed logs one `source_failed` WARNING line on stderr with
