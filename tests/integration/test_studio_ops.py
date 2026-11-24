@@ -374,7 +374,7 @@ def test_job_declared_proxy_needs_the_operator_flag(root: Path, path: str) -> No
 
 
 def test_export_csv_and_xlsx_flatten_nested_columns(client: TestClient) -> None:
-    """N5: one-click CSV and XLSX use the shared flattened table; XLSX travels as base64."""
+    """one-click CSV and XLSX use the shared flattened table; XLSX travels as base64."""
     create(client, dataset="agenda.sqlite", identity=["title"])
     post(client, "/api/load", {"file": "pages/agenda.toml"})
     csv_ = post(client, "/api/export", {"file": "pages/agenda.toml", "format": "csv"}).json()
@@ -386,7 +386,7 @@ def test_export_csv_and_xlsx_flatten_nested_columns(client: TestClient) -> None:
 
 
 def test_changes_is_a_first_run_until_a_second_load(client: TestClient) -> None:
-    """N5: no earlier load, nothing to compare; later loads count new and removed records."""
+    """no earlier load, nothing to compare; later loads count new and removed records."""
     create(client, dataset="agenda.sqlite", identity=["title"])
     post(client, "/api/load", {"file": "pages/agenda.toml"})
     first = post(client, "/api/changes", {"file": "pages/agenda.toml"}).json()

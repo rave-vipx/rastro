@@ -59,7 +59,7 @@ def _record(name: str, seen: datetime) -> StoredRecord:
 
 
 def test_partial_sources_get_one_plain_reason_each() -> None:
-    """N3: a cap, a failed page and a block are told apart; healthy sources say nothing."""
+    """a cap, a failed page and a block are told apart; healthy sources say nothing."""
     run = _run(
         T0,
         (
@@ -123,7 +123,7 @@ def _origin(record: StoredRecord, seen: datetime):  # type: ignore[no-untyped-de
 
 
 def test_nested_members_expand_and_filter() -> None:
-    """N5: a list of objects becomes sub-rows; a member filter keeps matching ones only."""
+    """a list of objects becomes sub-rows; a member filter keeps matching ones only."""
     run_node("""
 const { nestedModel, filterMembers } = await import("STATIC/cells.js");
 const tickets = [{tier: "General", price: "10"}, {tier: "VIP", price: "40"}];
@@ -139,7 +139,7 @@ assert.equal(filterMembers(model.rows, "tier", "").length, 2);
 
 
 def test_change_chips_model() -> None:
-    """N5: chips are new / changed / removed with counts; the first run is an empty state."""
+    """chips are new / changed / removed with counts; the first run is an empty state."""
     run_node("""
 const { chipsModel, partialLines } = await import("STATIC/changes.js");
 assert.deepEqual(chipsModel({first_run: true}), {state: "first", chips: []});

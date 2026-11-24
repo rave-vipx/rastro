@@ -1,5 +1,5 @@
-// N10: the Hub view. Explore by site, publish a proposal; folder tools sit under Advanced.
-// (N10: Registry (URL). Search and install from a local registry folder or an HTTPS URL;
+// the Hub view. Explore by site, publish a proposal; folder tools sit under Advanced.
+// (Registry (URL). Search and install from a local registry folder or an HTTPS URL;
 // publish writes into a local registry folder only (no account, no push, no Git).
 // Every source-derived value stays plain text.
 import { $, api, el, requireFile, table } from "./dom.js";
