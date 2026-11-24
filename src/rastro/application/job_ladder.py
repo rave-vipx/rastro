@@ -7,7 +7,7 @@ from contextlib import AbstractContextManager
 from typing import Any, Protocol
 
 from rastro.application import run_report_facts as facts
-from rastro.application.acquisition_ladder import StepOutcome, climb, gate
+from rastro.application.acquisition_ladder import StepOutcome, climb, gate, unclimbable
 from rastro.application.active_recipes import source_key
 from rastro.application.ladder_levels import Rung, floor_level, ladder_rungs, start_plan
 from rastro.application.solver_plugins import any_solver_installed, solver_port
@@ -36,13 +36,12 @@ class StartLevels(Protocol):
 
 
 def step_outcome(result: ExtractionResult[Any]) -> StepOutcome:
-    """A refusal climbs (except robots.txt, which a stronger level must not get around)."""
+    """A refusal climbs, except robots.txt and rate limits (see ``unclimbable``)."""
     notes = result.notes
-    robots = any(issue.code == "robots_denied" for issue in result.issues) or (
-        notes is not None and notes.blocked is not None and notes.blocked.kind == "robots"
-    )
+    kind = notes.blocked.kind if notes is not None and notes.blocked is not None else None
+    stop = unclimbable((issue.code for issue in result.issues), kind)
     refused = result.status == Outcome.ACCESS_RESTRICTION or (notes and notes.blocked)
-    if refused and not robots:
+    if refused and not stop:
         return "blocked"
     return "ok" if result.status in (*facts.OK, Outcome.PARTIAL_SUCCESS) else "failed"
 

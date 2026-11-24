@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-from rastro.application.acquisition_ladder import climb, gate
+from rastro.application.acquisition_ladder import climb, fetch_outcome, gate
+from rastro.application.blocked_hint import blocked_hint
+from rastro.application.job_ladder import step_outcome
 from rastro.application.ladder_levels import (
     LEVELS,
     PROBE_EVERY,
@@ -13,9 +15,11 @@ from rastro.application.ladder_levels import (
     start_plan,
 )
 from rastro.application.operator_trust import input_origin, set_process_trust
-from rastro.domain.acquisition import AcquisitionPolicy
+from rastro.domain.acquisition import AcquisitionPolicy, AcquisitionResult
 from rastro.domain.model_trust import OperatorTrust
-from rastro.domain.models import ConfigurationError
+from rastro.domain.models import ConfigurationError, Outcome
+from rastro.domain.results import ExtractionResult, Issue
+from rastro.domain.source_notes import SourceNotes
 
 POLICY = AcquisitionPolicy(allowed_hosts=("ladder.test",))
 PROXIES = AcquisitionPolicy.model_validate(
@@ -168,3 +172,41 @@ def test_solver_plugins_need_an_explicit_grant_even_for_the_operator() -> None:
         assert gate(solver) is True
     finally:
         set_process_trust(previous)
+
+
+def _rate_limited() -> AcquisitionResult:
+    return AcquisitionResult(
+        url="https://ladder.test/",
+        body=None,
+        status=Outcome.ACCESS_RESTRICTION,
+        issue_code="rate_limited",
+        http_status=429,
+        retry_after_seconds=3600,
+        blocked=blocked_hint("rate_limited", 429, None),
+    )
+
+
+def test_a_rate_limit_never_climbs_to_a_stronger_level() -> None:
+    hits: list[str] = []
+
+    def attempt(rung):
+        hits.append(rung.level)
+        fetched = _rate_limited()
+        return fetched, fetch_outcome(fetched)
+
+    assert fetch_outcome(_rate_limited()) == "failed"
+    climb(ladder_rungs(POLICY, html=True, rotate=False, solvers=False), "http", attempt, gate)
+    assert hits == ["http"]
+
+
+def test_a_rate_limited_source_result_does_not_climb() -> None:
+    issue = Issue(code="rate_limited")
+    by_code = ExtractionResult.model_construct(
+        status=Outcome.ACCESS_RESTRICTION, issues=(issue,), notes=None
+    )
+    notes = SourceNotes.model_construct(blocked=blocked_hint("rate_limited", 429, None))
+    by_note = ExtractionResult.model_construct(
+        status=Outcome.ACCESS_RESTRICTION, issues=(), notes=notes
+    )
+    assert step_outcome(by_code) == "failed"
+    assert step_outcome(by_note) == "failed"

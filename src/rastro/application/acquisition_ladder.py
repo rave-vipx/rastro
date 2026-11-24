@@ -10,7 +10,7 @@ level tried and how it ended goes into the source's acquisition notes.
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable, Iterator, Sequence
+from collections.abc import Awaitable, Callable, Iterable, Iterator, Sequence
 from typing import Literal
 
 from rastro.application.capability_gate import CapabilityRefused, policy_capabilities, require
@@ -36,12 +36,23 @@ def gate(rung: Rung) -> bool:
     return True
 
 
+# Refusals no stronger level may get around: robots.txt, and a rate limit (429 or
+# Retry-After), which only waiting honours. Each level has its own host state, so climbing
+# would bypass the shared cooldown.
+UNCLIMBABLE = frozenset({"robots_denied", "rate_limited"})
+_UNCLIMBABLE_KINDS = frozenset({"robots", "rate_limited"})
+
+
+def unclimbable(codes: Iterable[str | None], blocked_kind: str | None) -> bool:
+    """Whether a refusal must stop the ladder instead of trying a stronger level."""
+    return blocked_kind in _UNCLIMBABLE_KINDS or any(code in UNCLIMBABLE for code in codes)
+
+
 def fetch_outcome(fetched: AcquisitionResult) -> StepOutcome:
-    """A refused fetch climbs, except for robots.txt, which no level may get around."""
-    robots = fetched.issue_code == "robots_denied" or (
-        fetched.blocked is not None and fetched.blocked.kind == "robots"
-    )
-    if (fetched.status == Outcome.ACCESS_RESTRICTION or fetched.blocked) and not robots:
+    """A refused fetch climbs, except for robots.txt and rate limits."""
+    kind = fetched.blocked.kind if fetched.blocked is not None else None
+    stop = unclimbable((fetched.issue_code,), kind)
+    if (fetched.status == Outcome.ACCESS_RESTRICTION or fetched.blocked) and not stop:
         return "blocked"
     ok = (Outcome.SUCCESS, Outcome.PARTIAL_SUCCESS, Outcome.UNCHANGED)
     return "ok" if fetched.status in ok else "failed"
