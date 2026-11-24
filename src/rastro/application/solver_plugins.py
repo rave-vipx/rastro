@@ -100,7 +100,8 @@ class SolverChain:
         return (
             isinstance(result, AcquisitionResult)
             and result.status in _OK
-            and result.body is not None
+            and isinstance(result.body, str)  # a plugin's bytes or None count as unsolved
+            and isinstance(result.url, str)
             and self._inside(result.url)
             and len(result.body.encode("utf-8", "surrogatepass")) <= max_bytes
         )

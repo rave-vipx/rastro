@@ -92,6 +92,7 @@ def test_the_first_solver_that_returns_the_page_wins() -> None:
     [
         Fixed(url="https://elsewhere.test/page"),  # left the job's allowed hosts
         Fixed(body="x" * 2_000),  # over the byte limit
+        Fixed(body=b"<p>bytes</p>"),  # type: ignore[arg-type]  # a body that is not text
         Broken(),
     ],
 )
