@@ -30,14 +30,17 @@ def run(folder: Path) -> list[rastro.ReadRecord]:
     shutil.copytree(SAMPLE, folder / "tiers")
     job = folder / "tiers" / "job.toml"
     loaded = rastro.load_job_file(job)
-    print(summary(loaded.report))
+    if loaded.report is not None:
+        print(summary(loaded.report))
     return list(rastro.read_records(job).records)
 
 
 def main() -> None:
     with tempfile.TemporaryDirectory() as folder:
         for record in run(Path(folder).resolve()):
-            tiers = ", ".join(f"{t['tier']} {t['price']}" for t in record.fields["tiers"])
+            items = record.fields["tiers"]
+            assert isinstance(items, list)  # a list field reads back as a list of objects
+            tiers = ", ".join(f"{t['tier']} {t['price']}" for t in items if isinstance(t, dict))
             print(f"{record.fields['title']}: {tiers}")
             print("  title provenance:", record.provenance["title"].locator)
 
