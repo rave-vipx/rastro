@@ -1,4 +1,4 @@
-"""Enforced model cost limit and the remote-model cost notice (COST-002).
+"""Enforced model cost limit and the remote-model cost notice.
 
 ``BudgetedModel`` wraps any ``ModelPort``: it states the operation, model, call and cost
 ceiling once before the first call to a remote model, and stops calling the model once the

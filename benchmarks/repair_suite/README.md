@@ -1,7 +1,7 @@
 # Repair suite
 
 Measures automatic recipe repair on breakage modeled on three synthetic source shapes
-(REPAIR-001–005, DIFF-002 repair metric). It is not the recovery benchmark and does not touch
+(repair metric). It is not the recovery benchmark and does not touch
 `benchmarks/recovery/`. Pages are synthetic copies of the structures, not captured content.
 
 ## Method
@@ -41,7 +41,7 @@ UV_PYTHON=/opt/homebrew/bin/python3.12 uv run python benchmarks/repair_suite/mea
 
 It prints one row per case and writes `results.json`; the numbers there are the only claim.
 
-## Consistency gates (QUAL-005/006, SYNC-006)
+## Consistency gates
 
 Job loads now gate snapshots on the job's declared consistency rules. The suite jobs
 also declare `distinct_ratio` on `title` (minimum ratio 0.5 over at least 3 records):
@@ -64,6 +64,6 @@ including the venue cards’ `h2.cyg--display-3` venue trap, are held; no trap i
 This measures detection, not recovery of those recipes.
 
 The load gate compares every source against the same history captured before any source
-is written (QUAL-005). Held runs retain earlier rows and cannot become successful drift
-baselines (SYNC-006, DRIFT-001). Partial loads include rejected candidates in their
-structural-validity denominator (QUAL-006).
+is written. Held runs retain earlier rows and cannot become successful drift
+baselines. Partial loads include rejected candidates in their
+structural-validity denominator.

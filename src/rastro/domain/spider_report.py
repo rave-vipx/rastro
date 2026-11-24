@@ -1,4 +1,4 @@
-"""A spider run's content-free report: every attempted page, host and path only (N3).
+"""A spider run's content-free report: every attempted page, host and path only.
 
 Past ``MAX_REPORTED_PAGES`` rows, an unbounded crawl's report counts the rest in
 ``unreported`` and summarises every page by outcome in ``outcomes``.

@@ -1,4 +1,4 @@
-"""Operator trust for models declared in job files (SEC-004/005/011, P-001).
+"""Operator trust for models declared in job files.
 
 A job file may declare a model, but only the operator running Rastro decides whether
 page content may leave the machine or a secret may be read. ``allow_remote = true``

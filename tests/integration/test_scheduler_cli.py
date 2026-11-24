@@ -1,4 +1,4 @@
-"""Integration tests for `rastro job watch`, locks, and recovery (SCHED-001..007, SYNC-001)."""
+"""Integration tests for `rastro job watch`, locks, and recovery."""
 
 from __future__ import annotations
 
@@ -77,7 +77,7 @@ def _write_fixture(
 def test_watch_without_dataset_or_schedule_refused(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """SCHED-002: watch requires [schedule] and [dataset]; otherwise ConfigurationError (exit 2)."""
+    """Watch requires [schedule] and [dataset]; otherwise ConfigurationError (exit 2)."""
     no_dataset = _write_fixture(tmp_path / "no_ds", include_dataset=False)
     assert main(["job", "watch", str(no_dataset), "--once"]) == 2
     err = json.loads(capsys.readouterr().err)
@@ -92,7 +92,7 @@ def test_watch_without_dataset_or_schedule_refused(
 def test_watch_once_exit_code_passthrough(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """SCHED-002, SCHED-007: --once runs one tick and passes through the load exit code."""
+    """--once runs one tick and passes through the load exit code."""
     job_file = _write_fixture(tmp_path)
     assert main(["job", "watch", str(job_file), "--once"]) == 0
     payload = json.loads(capsys.readouterr().out)
@@ -114,7 +114,7 @@ def test_watch_once_exit_code_passthrough(
 def test_watch_loop_runs_only_due_sources_and_sleeps_with_deterministic_jitter(
     tmp_path: Path,
 ) -> None:
-    """SCHED-001, SCHED-002, SCHED-006, SYNC-001: ticks run due sources and sleep with jitter."""
+    """Ticks run due sources and sleep with jitter."""
     job_file = _write_fixture(tmp_path)
     now = datetime(2026, 11, 15, 12, 0, tzinfo=UTC)
     slept: list[float] = []
@@ -156,7 +156,7 @@ def test_watch_loop_runs_only_due_sources_and_sleeps_with_deterministic_jitter(
 def test_lock_held_exits_4_run_in_progress_and_stale_lock_replaced(
     tmp_path: Path, capsys: pytest.CaptureFixture[str], caplog: pytest.LogCaptureFixture
 ) -> None:
-    """SCHED-003: live lock -> exit 4 run_in_progress; stale lock -> replaced with WARNING."""
+    """Live lock -> exit 4 run_in_progress; stale lock -> replaced with WARNING."""
     job_file = _write_fixture(tmp_path)
     db_path = tmp_path / "items.sqlite"
 
@@ -184,7 +184,7 @@ def test_lock_held_exits_4_run_in_progress_and_stale_lock_replaced(
 def test_interrupted_run_resumes_remaining_sources_only(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """SCHED-004: interrupted load leaves .run.json; next load runs only remaining sources."""
+    """Interrupted load leaves .run.json; next load runs only remaining sources."""
     job_file = _write_fixture(tmp_path)
     db_path = tmp_path / "items.sqlite"
     real_run_job = rastro.application.job_dataset.run_job
@@ -225,7 +225,7 @@ def test_interrupted_run_resumes_remaining_sources_only(
 def test_sigint_finishes_current_source_releases_lock_and_exits_0(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """SCHED-002, SCHED-003, SCHED-004: SIGINT finishes current source, releases lock, exits 0."""
+    """SIGINT finishes current source, releases lock, exits 0."""
     job_file = _write_fixture(tmp_path)
     db_path = tmp_path / "items.sqlite"
     real_run_job = rastro.application.job_dataset.run_job
@@ -251,7 +251,7 @@ def test_sigint_finishes_current_source_releases_lock_and_exits_0(
 def test_checkpoint_distinguishes_same_url_sources_in_different_regions(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """SCHED-004: the checkpoint keys sources by (index, URL); resume runs only the second."""
+    """The checkpoint keys sources by (index, URL); resume runs only the second."""
     job_file = _write_fixture(tmp_path)
     text = job_file.read_text(encoding="utf-8").replace(
         "https://b.example/items", "https://a.example/items"
@@ -300,7 +300,7 @@ def _fire_stop_handler_while_waiting(fired: threading.Event) -> threading.Thread
 
 
 def test_stop_signal_during_the_wait_ends_the_loop_promptly(tmp_path: Path) -> None:
-    """SCHED-002: SIGINT/SIGTERM wake the wait for the next due time (6h away) at once."""
+    """SIGINT/SIGTERM wake the wait for the next due time (6h away) at once."""
     job_file = _write_fixture(tmp_path)
     fired = threading.Event()
     thread = _fire_stop_handler_while_waiting(fired)
@@ -316,7 +316,7 @@ def test_stop_signal_during_the_wait_ends_the_loop_promptly(tmp_path: Path) -> N
 def test_watch_passes_allow_stealth_like_the_other_trust_parameters(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """SEC-005: the SDK's allow_stealth reaches the load of each tick."""
+    """The SDK's allow_stealth reaches the load of each tick."""
     job_file = _write_fixture(tmp_path)
     seen: list[dict[str, Any]] = []
     real = rastro.application.scheduler.load_job_file
@@ -334,7 +334,7 @@ def test_watch_passes_allow_stealth_like_the_other_trust_parameters(
 def test_live_lock_at_a_watch_tick_skips_that_tick_and_keeps_watching(
     tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """SCHED-003: a loop tick finding a live holder warns and retries; --once still exits 4."""
+    """A loop tick finding a live holder warns and retries; --once still exits 4."""
     job_file = _write_fixture(tmp_path)
     db_path = tmp_path / "items.sqlite"
     ran: list[int] = []

@@ -1,4 +1,4 @@
-# Offline product-task comparison (DIFF-002)
+# Offline product-task comparison
 
 This combines the independent Scrapling + Pydantic baseline from the first
 evaluation step with the real Rastro validate/preview/load and scripted manual

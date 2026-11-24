@@ -1,4 +1,4 @@
-"""Offline integration tests for the Valle Azul dance agenda pilot example (COST-001)."""
+"""Offline integration tests for the Valle Azul dance agenda pilot example."""
 
 from __future__ import annotations
 

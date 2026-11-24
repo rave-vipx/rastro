@@ -1,4 +1,4 @@
-"""SQLite-only views refuse PostgreSQL-backed jobs, never show empty data (DATA-003, SEC-011).
+"""SQLite-only views refuse PostgreSQL-backed jobs, never show empty data.
 
 A synthetic job whose [dataset] backend is postgres; no PostgreSQL server or driver is needed
 because the views must refuse before they touch any dataset.
@@ -52,23 +52,23 @@ def refused(response: Any) -> None:
 
 
 def test_studio_records_refuses_postgres(client: TestClient) -> None:
-    """DATA-003: /api/records is an explicit error, not "no records yet"."""
+    """/api/records is an explicit error, not "no records yet"."""
     refused(post(client, "/api/records", {"file": "job.toml"}))
 
 
 def test_studio_export_refuses_postgres(client: TestClient) -> None:
-    """DATA-003: /api/export is an explicit error for a PostgreSQL job."""
+    """/api/export is an explicit error for a PostgreSQL job."""
     refused(post(client, "/api/export", {"file": "job.toml", "format": "json"}))
 
 
 def test_studio_health_refuses_postgres(client: TestClient) -> None:
-    """DATA-003: /api/health must not report `status: None` as if nothing were stored."""
+    """/api/health must not report `status: None` as if nothing were stored."""
     refused(post(client, "/api/health", {"file": "job.toml"}))
 
 
 @pytest.mark.asyncio
 async def test_mcp_drift_status_refuses_postgres(root: Path) -> None:
-    """DATA-003: drift_status returns the tool error shape, not empty sources."""
+    """Drift_status returns the tool error shape, not empty sources."""
     built = build_server(root)
     async with create_connected_server_and_client_session(built._mcp_server) as client:
         result = await client.call_tool("drift_status", {"path": "job.toml"})

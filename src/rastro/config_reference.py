@@ -1,4 +1,4 @@
-"""Every configurable point of Rastro, generated from code (N18, AGENT-001).
+"""Every configurable point of Rastro, generated from code.
 
 Job keys come from the job models (``config_schema``), keyword arguments from the public
 function signatures, flags from the real argparse parser, and grants and environment

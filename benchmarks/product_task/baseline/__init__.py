@@ -1,4 +1,4 @@
-"""Independent Scrapling + Pydantic agenda loader (DIFF-002)."""
+"""Independent Scrapling + Pydantic agenda loader."""
 
 import json
 import sqlite3

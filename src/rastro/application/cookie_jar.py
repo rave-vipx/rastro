@@ -1,4 +1,4 @@
-"""Run-local, bounded host-only cookies (SCHED-005, SEC-005)."""
+"""Run-local, bounded host-only cookies."""
 
 from email.utils import parsedate_to_datetime
 from http.cookies import CookieError, SimpleCookie

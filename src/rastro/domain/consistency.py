@@ -1,4 +1,4 @@
-"""Generic semantic consistency rules and report (QUAL-005, QUAL-006).
+"""Generic semantic consistency rules and report.
 
 Rules are declarative data, declared in a job as ``[[consistency]]`` entries. They name
 fields and thresholds only; they know nothing about any one domain. Evaluation lives in
@@ -83,7 +83,7 @@ class RuleResult(Contract):
 
 
 class ConsistencyReport(Contract):
-    """Three separate indicators (QUAL-006); ``None`` means "not assessed", never 1.0.
+    """Three separate indicators; ``None`` means "not assessed", never 1.0.
 
     - ``completeness``: share of declared fields that carry a value.
     - ``structural_validity``: share of candidate records that passed validation.

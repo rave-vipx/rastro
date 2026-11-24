@@ -1,4 +1,4 @@
-// Per-viewer language and theme (N8). English is the default language; the theme follows the
+// Per-viewer language and theme. English is the default language; the theme follows the
 // system unless the viewer picks light or dark. Storage may be blocked: every access is guarded
 // and the page works without it.
 import { LANGS, setLang } from "./i18n.js";

@@ -1,11 +1,8 @@
 # Recovery benchmark protocol
 
 This page fixes how Rastro's automatic recovery is evaluated, so the pass criteria
-cannot be tuned after seeing results. It supports **DIFF-001** (recovery effectiveness, silent error
-detection, maintenance effort, AI inference usage), recovery success rate, mean time to
-detect degradation, mean time to restore, false success, silent error detection,
-**REPAIR-001–006**, **DRIFT-001–005**,
-**QUAL-005/006**, **MOCK-002/003** and **MOCK-004/005** (labelled synthetic fixtures).
+cannot be tuned after seeing results. It measures recovery success rate, mean time to detect degradation, mean time to
+restore, false success and silent error detection on labelled synthetic fixtures.
 See [ADR 0011](decisions/0011-recovery-benchmark.md) for the reasoning.
 
 **Status: the protocol and corpus are frozen and verifiable; the full runner is not
@@ -40,11 +37,11 @@ data, never visible to executors):
 | `requires_warning` | An explicit non-success outcome or a degradation flag is required. |
 | `expected` | Expected records (`sku`, `name`, `price`, `priceCurrency`) as `Decimal`-normalised strings. |
 
-Change kinds cover the MOCK-002 structural mutations that apply to the
+Change kinds cover the structural mutations that apply to the
 selector-based corpus: `class_rename`, `wrapper_insertion`, `reordering`,
 `field_move`, `duplicated_candidate`, `removed_field`, `empty_container`, plus
 `semantic_trap` (stale-but-valid values). Changed labels and modified pagination are
-**not** covered by corpus v1; MOCK-003 transport failures (403, 429, timeout) belong to
+**not** covered by corpus v1; transport failures (403, 429, timeout) belong to
 acquisition tests, not this corpus. The soft-error page and the empty or no-results
 page are the corpus's invalid-response scenarios. Corpus v1 is HTML-only: JSON and
 JSON-LD recovery is out of scope and no claim may extend to it.
@@ -149,7 +146,7 @@ A zero denominator is `null`, never 0% or 100%. With 8 to 12 episodes per split 
 intervals are wide; results describe mechanisms on a synthetic corpus, not
 real-world rates.
 
-## 4. Pass criteria for a DIFF-001 recovery claim
+## 4. Pass criteria for a recovery claim
 
 Decided in advance; they cannot be edited after the first published result. Evaluate `rastro`
 against `baseline_adapted`, both splits, same machine, `deny_all`, one configuration.

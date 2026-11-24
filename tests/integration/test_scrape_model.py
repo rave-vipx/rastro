@@ -1,6 +1,5 @@
 """rastro.scrape with a model: zero-selector recipes, model repair, semantic gate.
 
-Requirements: INT-002, REPAIR-001, REPAIR-002, QUAL-005, QUAL-006, AI-001. Every model
 here is a deterministic fake ModelPort; nothing leaves the process.
 """
 
@@ -121,7 +120,7 @@ def test_without_a_model_shape_gates_promote_a_wrong_title(tmp_path, monkeypatch
 
 
 def test_semantic_judge_blocks_a_wrong_title_that_passes_shape_gates(tmp_path, monkeypatch):
-    """QUAL-005: a relocated candidate is judged too; a mismatch vetoes it."""
+    """A relocated candidate is judged too; a mismatch vetoes it."""
     memory = tmp_path / "recipes.db"
     _scrape(V1, memory)
     _misplace_title(monkeypatch)
@@ -139,7 +138,7 @@ def test_semantic_judge_blocks_a_wrong_title_that_passes_shape_gates(tmp_path, m
 
 
 def test_a_recipe_that_still_serves_never_calls_the_judge(tmp_path):
-    """QUAL-005: no repair, no judgement."""
+    """No repair, no judgement."""
     memory = tmp_path / "recipes.db"
     _scrape(V1, memory)
     model = FakeModel()
@@ -148,7 +147,7 @@ def test_a_recipe_that_still_serves_never_calls_the_judge(tmp_path):
 
 
 def test_semantic_judge_blocks_a_model_candidate_that_passes_value_checks(tmp_path):
-    """QUAL-005, QUAL-006: the judge vetoes after every deterministic check passed."""
+    """The judge vetoes after every deterministic check passed."""
     memory = tmp_path / "recipes.db"
     _scrape(V1, memory)
     model = FakeModel([RESCUE], verdict="mismatch")

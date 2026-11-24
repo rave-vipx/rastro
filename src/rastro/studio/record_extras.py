@@ -1,4 +1,4 @@
-"""Per-record extras for the Results view (N5, PROV-001, N17): field provenance, why a
+"""Per-record extras for the Results view: field provenance, why a
 declared field is empty, instruction-like value flags and whether the record came from an
 adapter (``rastro.load_records``) rather than a web extraction.
 

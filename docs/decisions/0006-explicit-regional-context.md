@@ -1,7 +1,6 @@
 # ADR 0006: explicit regional context with direct-only egress
 
-- **Status:** accepted for the 0.1 regional context; GEO-001 remains partial.
-- **Requirements:** GEO-001–003, GEO-005 and REC-001.
+- **Status:** accepted for the 0.1 regional context; regional context remains partial.
 
 ## Context
 
@@ -45,7 +44,7 @@ regional context gets a distinct key and never falls back to legacy memory.
 - Language order and currency differences cannot share recipes.
 - Descending weights express caller priority for up to 20 languages; servers may
   still ignore content negotiation.
-- `direct` describes actual network origin, not browser geolocation. GEO-001 stays
+- `direct` describes actual network origin, not browser geolocation. Regional context stays
   partial until a browser adapter makes browser geolocation applicable or a secure
   pinned non-direct egress adapter is introduced.
 - There is no table migration, new dependency, proxy credential surface, new port,

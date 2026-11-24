@@ -1,4 +1,4 @@
-"""A removed or renamed source stops counting and can be forgotten (DATA-004, SYNC-008)."""
+"""A removed or renamed source stops counting and can be forgotten."""
 
 import json
 import sqlite3

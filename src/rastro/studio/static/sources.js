@@ -1,5 +1,5 @@
 // Sources: one row per source with its status in words, last fetch, counts, warnings and one
-// next action (N5). Reads POST /api/sources; a missing route or an error is said, never hidden.
+// next action. Reads POST /api/sources; a missing route or an error is said, never hidden.
 import { $, api, el, request, requireFile, show, switchView } from "./dom.js";
 import { issueText, onLangChange, t, when } from "./i18n.js";
 import { actionButton, chip, emptyState, errorState, loadingState } from "./ui.js";

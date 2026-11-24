@@ -57,7 +57,7 @@ uv run python examples/event-agenda/repair_demo.py
 The demonstration uses temporary files and a fixed clock. It quarantines a repair below
 its configured record threshold, promotes after that threshold is met, rolls back, and
 rejects valid sale dates used as event dates. All six dataset records survive, and no
-model, browser or network is needed (DRIFT-001–006, REPAIR-001–006, QUAL-005/006).
+model, browser or network is needed.
 See [repair configuration and limits](../../docs/repair.md).
 
 Expected output:

@@ -1,4 +1,4 @@
-"""Opt-in `document:` CSS field expressions and blank text handling (SCR-003 neutral, DATA-004)."""
+"""Opt-in `document:` CSS field expressions and blank text handling."""
 
 import pytest
 from pydantic import ValidationError

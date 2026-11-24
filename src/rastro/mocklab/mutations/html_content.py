@@ -1,4 +1,4 @@
-"""HTML operators that change classes, labels, fields and pagination (MOCK-002)."""
+"""HTML operators that change classes, labels, fields and pagination."""
 
 from __future__ import annotations
 

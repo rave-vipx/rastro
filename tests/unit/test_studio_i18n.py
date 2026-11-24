@@ -1,4 +1,4 @@
-"""Studio copy split per view, English and Spanish, with technical wording behind Advanced (N8)."""
+"""Studio copy split per view, English and Spanish, with technical wording behind Advanced."""
 
 from __future__ import annotations
 

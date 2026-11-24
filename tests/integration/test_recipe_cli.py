@@ -1,4 +1,4 @@
-"""REPAIR-002-006 / REC-006: offline lifecycle leaves the dataset intact."""
+"""Offline lifecycle leaves the dataset intact."""
 
 import json
 import shutil
@@ -148,7 +148,7 @@ def test_recipe_paths_refuse_symlinks_and_report_collisions(tmp_path, capsys):
 
 
 def test_ambiguous_candidate_is_quarantined_not_active(tmp_path, capsys):
-    """REPAIR-005/REC-006: ambiguous provider evidence cannot activate a version."""
+    """Ambiguous provider evidence cannot activate a version."""
     from datetime import UTC, datetime
 
     from rastro.adapters.scrapling import ScraplingParser

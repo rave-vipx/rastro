@@ -1,4 +1,4 @@
-"""Workspace-rooted tool operations behind the MCP server (AGENT-002, AGENT-003, P-008).
+"""Workspace-rooted tool operations behind the MCP server.
 
 Each function wraps an existing service used by the CLI, so the same containment, egress and
 robots policy applies. Paths are workspace-relative; absolute paths, ``..`` escapes and symlinks
@@ -54,7 +54,7 @@ def bounded(
     payload: dict[str, Any], *, max_items: int = 50, max_chars: int = 500, max_keys: int = 100
 ) -> dict[str, Any]:
     """Cap every list at ``max_items``, every object at ``max_keys`` keys and every string at
-    ``max_chars``, at any depth; say so in ``truncated`` (AGENT-002). Applied to tool outputs
+    ``max_chars``, at any depth; say so in ``truncated``. Applied to tool outputs
     that can grow with the source."""
     cut = False
 

@@ -161,7 +161,7 @@ class SQLiteRecipeRepository:
     def save_candidate(
         self, key: RecipeKey, recipe: Recipe, *, selected_index: int, at: datetime
     ) -> StoredRecipe:
-        """Store an evaluated proposal as a new candidate version (REC-006).
+        """Store an evaluated proposal as a new candidate version.
 
         Candidates never touch existing versions: any stored version number conflicts.
         """
@@ -210,7 +210,7 @@ class SQLiteRecipeRepository:
             return self._read(db, key, identity, version)
 
     def rollback(self, key: RecipeKey, version: int, *, reason: str, at: datetime) -> StoredRecipe:
-        """Return a retired version that previously served to active service (REPAIR-006)."""
+        """Return a retired version that previously served to active service."""
         check_version(version, required=True)
         reason = check_lifecycle_input(reason, at)
         identity = key.canonical()

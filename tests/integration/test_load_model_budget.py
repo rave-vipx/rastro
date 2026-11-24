@@ -1,6 +1,6 @@
-"""COST-002, OBS-001: one model budget and one remote notice per load, not per source.
+"""One model budget and one remote notice per load, not per source.
 
-``load_job_file`` runs the sources one by one (SCHED-004); the model is built once for the
+``load_job_file`` runs the sources one by one; the model is built once for the
 whole load and shared by every source. The models are deterministic fakes.
 """
 

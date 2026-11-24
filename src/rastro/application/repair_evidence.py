@@ -1,4 +1,4 @@
-"""Current page, retained evidence and a CI evaluator for one job source (REPAIR-002/004)."""
+"""Current page, retained evidence and a CI evaluator for one job source."""
 
 from __future__ import annotations
 

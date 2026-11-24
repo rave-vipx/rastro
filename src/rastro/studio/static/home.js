@@ -1,5 +1,5 @@
 // Home: the projects Studio recognizes in this folder, with health, last run, records and
-// sources with problems (N1, N5). Loading, empty folder and unknown databases are explained.
+// sources with problems. Loading, empty folder and unknown databases are explained.
 import { $, api, el, show } from "./dom.js";
 import { onLangChange, t, when } from "./i18n.js";
 import { lightTone, lightWord } from "./alerts.js";

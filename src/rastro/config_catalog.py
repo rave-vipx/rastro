@@ -1,5 +1,5 @@
 """Configuration points that are not job-file keys: Python keyword arguments, operator
-grants, environment variables, plus where each part is documented (AGENT-001, N18).
+grants, environment variables, plus where each part is documented.
 
 Data only: ``capabilities_render`` reads ``SECTIONS`` for the agent
 snippet. Guard tests check that every parameter, grant flag and ``RASTRO_*`` name in the

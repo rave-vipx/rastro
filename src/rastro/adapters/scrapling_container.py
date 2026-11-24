@@ -1,4 +1,4 @@
-"""Container scope and exact class-token evidence (REPAIR-001/002, SCR-002)."""
+"""Container scope and exact class-token evidence."""
 
 import re
 from typing import Any

@@ -3,7 +3,6 @@
 - Status: Accepted; implemented
 - Date: 2026-10-24
 - Release: 0.1
-- Requirements: INT-001/003/004, GEO-001/002, OBS-001/002, SEC-001–005/008
 
 ## Trust boundary and use cases
 

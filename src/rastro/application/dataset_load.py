@@ -1,4 +1,4 @@
-"""Load validated job results through the dataset port (DATA-001, SYNC-002/006/008)."""
+"""Load validated job results through the dataset port."""
 
 from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from typing import Any
@@ -44,7 +44,7 @@ def load_results(
     Stale sources and open drift cover only this job's sources. A dataset storage failure
     stops further writes: committed sources keep their counts, the rest report
     ``storage_error`` and the result's ``status`` is ``storage_error`` (exit code 5).
-    One ``run_metrics`` row per source is recorded when the store supports it (OBS-003);
+    One ``run_metrics`` row per source is recorded when the store supports it;
     ``required`` names the job's required fields for the coverage count.
     ``on_source(index, result, loaded)`` runs after each source whose load, and drift
     assessment when ``monitor`` is set, completed without a storage failure.
@@ -84,7 +84,7 @@ def load_stream(
 
     ``summary`` is called once ``results`` is exhausted; ``current`` names the origins of the
     whole job (default: those of the results seen) for stale sources and open drift.
-    ``job`` gives the run metrics of a reached cap its configured value (N5).
+    ``job`` gives the run metrics of a reached cap its configured value.
     """
     sources: list[LoadedSource] = []
     assessments = []

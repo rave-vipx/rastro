@@ -1,4 +1,4 @@
-"""Read-only recipe resolution for previews of jobs with ``recipe_memory`` (DATA-002, REC-001).
+"""Read-only recipe resolution for previews of jobs with ``recipe_memory``.
 
 A preview must not create, migrate or write the recipe store. Each source gets an
 explicit recipe: the stored serving recipe when it is newer than the job file's

@@ -104,7 +104,7 @@ def _v2(db: sqlite3.Connection) -> None:
 
 
 def _v3(db: sqlite3.Connection) -> None:
-    db.execute(CREATE_TABLE)  # schema 3 (OBS-003)
+    db.execute(CREATE_TABLE)  # schema 3
     db.execute(CREATE_INDEX)
 
 

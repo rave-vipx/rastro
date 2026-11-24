@@ -1,4 +1,4 @@
-"""HUB-002, HUB-003, HUB-004, HUB-005, HUB-006: CLI integration for recipe hub phase 2."""
+"""CLI integration for recipe hub phase 2."""
 
 import json
 import shutil
@@ -33,7 +33,7 @@ def author_job(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> tuple[Path
 def test_format_1_bundle_still_imports_unchanged(
     author_job: tuple[Path, Path], tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """HUB-002: export writes format 2 by default; a format-1 bundle still imports cleanly."""
+    """Export writes format 2 by default; a format-1 bundle still imports cleanly."""
     folder, job = author_job
     bundle = tmp_path / "bundle-v1"
     sample = folder / "teatro-central-cartelera.html"
@@ -63,7 +63,7 @@ def test_format_1_bundle_still_imports_unchanged(
 def test_cli_export_publish_search_install_round_trip(
     author_job: tuple[Path, Path], tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """HUB-002..HUB-006: full CLI flow from export to registry publish, search and install."""
+    """Full CLI flow from export to registry publish, search and install."""
     folder, job = author_job
     sample = folder / "teatro-central-cartelera.html"
     private_bundle = tmp_path / "private-bundle"
@@ -161,7 +161,7 @@ def test_cli_export_publish_search_install_round_trip(
 def test_example_registry_searches_and_installs_cleanly(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """HUB-003, HUB-006: examples/registry contains a valid synthetic package."""
+    """Examples/registry contains a valid synthetic package."""
     assert main(["recipe", "search", "teatro", "--registry", str(EXAMPLE_REGISTRY)]) == 0
     found = json.loads(capsys.readouterr().out)
     assert len(found["results"]) >= 1

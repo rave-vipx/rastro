@@ -1,4 +1,4 @@
-"""N4/N5/N12: next-link pagination, the job's auto-promote switch, the session stealth
+"""Next-link pagination, the job's auto-promote switch, the session stealth
 grant and the observed operation snapshot.
 
 Auto-promote is job policy and is written to the operator's job file. Stealth is a grant

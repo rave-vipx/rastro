@@ -1,15 +1,13 @@
 # ADR 0015: recipe lifecycle states, single serving version and schema 2
 
 - **Status:** accepted for v0.2.
-- **Requirements:** REC-005, REC-006, REPAIR-006; groundwork for REPAIR-001/004/005 and
-  DRIFT-*. Refines the lookup rule of [ADR 0003](0003-sqlite-recipe-memory.md).
 
 ## Context
 
 Through 0.1.0, recipe memory stored immutable versions and reused the highest
 version of a key. That cannot express a repair candidate that must not serve until
-it passes (REPAIR-001, REC-006), a working recipe that is failing but still the best
-available (`degraded`), or a return to an earlier version (REPAIR-006). Repair and
+it passes, a working recipe that is failing but still the best
+available (`degraded`), or a return to an earlier version. Repair and
 drift work that follows needs a small, stable vocabulary of states and
 transitions before either is built.
 
@@ -48,8 +46,8 @@ or retire. This decision provides only the operations.
 A rollback target must have served as active at some point. Each row stores
 `validated_at`, which is set the first time the row becomes active and never cleared. A
 candidate that passed some checks but was never promoted is not validated in this
-sense, so rollback to it is rejected (REPAIR-006). Promotion is the only path to
-service for such a candidate, and it remains subject to the later REPAIR-004/005
+sense, so rollback to it is rejected. Promotion is the only path to
+service for such a candidate, and it remains subject to the later repair gates
 gates.
 
 ### `save_success` keeps v0.1 adoption semantics
@@ -125,8 +123,8 @@ retired but remain rollback targets, so no capability is lost.
   events, and the single-serving invariant could not be enforced by an index.
 - **A boolean `active` flag plus a separate candidates table.** It cannot express
   `degraded`, and promotion would move rows between tables.
-- **Make every new version a candidate.** Strictest reading of REC-006, but it breaks
-  the 0.1.0 contract that a successful explicit recipe is adopted. The REC-006 risk is
+- **Make every new version a candidate.** Strictest reading of the requirement, but it breaks
+  the 0.1.0 contract that a successful explicit recipe is adopted. That risk is
   automatic repair, which uses `save_candidate`.
 - **Mark all migrated rows active.** Rejected for the reason given above.
 
@@ -146,7 +144,7 @@ retired but remain rollback targets, so no capability is lost.
 
 `tests/unit/test_lifecycle.py` covers every allowed and forbidden state pair, the
 supersede ordering and the rollback eligibility rules. `tests/integration/test_recipe_lifecycle.py`
-covers REC-006 end to end through `Rastro.extract_html`, promotion, rollback with reason
+covers the lifecycle end to end through `Rastro.extract_html`, promotion, rollback with reason
 and timestamp, the storage-level invariant, and history round trips.
 `tests/integration/test_recipe_migration.py` builds synthetic schema 1 files and checks
 loading, state assignment, rollback eligibility, schema parity with fresh files, atomic

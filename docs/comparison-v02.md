@@ -1,4 +1,4 @@
-# Product-task benchmark (DIFF-002)
+# Product-task benchmark
 
 On this offline task both integrations produce the correct database, retain it
 when extraction breaks, and restore the changed price after a scripted manual

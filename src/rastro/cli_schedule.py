@@ -1,4 +1,4 @@
-"""Scheduler CLI (`rastro job watch`, SCHED-002)."""
+"""Scheduler CLI (`rastro job watch`."""
 
 from __future__ import annotations
 

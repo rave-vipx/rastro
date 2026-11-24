@@ -1,4 +1,4 @@
-"""N3/N4/N9: domain-validated bounded acquisition settings for Studio."""
+"""Domain-validated bounded acquisition settings for Studio."""
 
 import json
 from pathlib import Path

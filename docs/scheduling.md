@@ -1,4 +1,4 @@
-# Daily dataset and agenda (SCHED-007, DATA-004)
+# Daily dataset and agenda
 
 Without cron or launchd, `[schedule] every = "1d"` with `at = "08:00"` and `rastro job
 watch job.toml` run the job at that time of day in the job's timezone; see

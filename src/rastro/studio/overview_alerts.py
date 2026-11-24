@@ -1,4 +1,4 @@
-"""The Alerts view (N5): dated, content-free alerts for one job, newest first.
+"""The Alerts view: dated, content-free alerts for one job, newest first.
 
 Failures come from run metrics and the dataset's source status (CLI runs included); open
 caps from run metrics too; drift from the dataset; waiting candidates from recipe memory;

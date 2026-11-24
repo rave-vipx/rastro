@@ -2,8 +2,7 @@
 
 This page records what connecting a model changes in Rastro's job repair, measured on the
 offline AI repair benchmark (`benchmarks/ai_repair/`). It is evidence, not a model ranking
-and not a release gate. Requirements: **QUAL-001, REPAIR-001–005, AI-001–004, DIFF-002**.
-It does not use `benchmarks/recovery/`.
+and not a release gate. It does not use `benchmarks/recovery/`.
 
 ## Method
 

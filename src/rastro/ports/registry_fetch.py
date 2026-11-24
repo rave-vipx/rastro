@@ -1,4 +1,4 @@
-"""Port: fetch one registry file as bytes (N10). Adapters enforce the network policy."""
+"""Port: fetch one registry file as bytes. Adapters enforce the network policy."""
 
 from typing import Protocol, runtime_checkable
 

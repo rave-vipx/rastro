@@ -1,4 +1,4 @@
-"""N16: multi-type JSON-LD and JSON embedded in HTML attributes or scripts (REC-*, PARSE-*)."""
+"""Multi-type JSON-LD and JSON embedded in HTML attributes or scripts (REC-*, PARSE-*)."""
 
 import html
 import json

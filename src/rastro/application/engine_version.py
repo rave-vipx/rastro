@@ -1,4 +1,4 @@
-"""The running rastro-engine version, as ``MAJOR.MINOR.PATCH`` (HUB-002)."""
+"""The running rastro-engine version, as ``MAJOR.MINOR.PATCH``."""
 
 from __future__ import annotations
 

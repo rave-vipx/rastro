@@ -1,4 +1,4 @@
-"""Ask a model whether repaired values still mean what each field means (QUAL-005, QUAL-006).
+"""Ask a model whether repaired values still mean what each field means.
 
 Shape gates cannot tell a title from a city: both are short strings. Before an automatic
 promotion, the judge sends each changed field's name, type and description, a few
@@ -7,7 +7,7 @@ untrusted page data), and asks for a strict JSON verdict per field. The model ju
 it never supplies values. Any ``mismatch`` blocks promotion, ``unsure`` promotes only
 when every deterministic gate is strong, and a failed or malformed answer blocks too.
 Values that look like instructions carry ``content_flags`` (field and rule ids, never the
-text); recipe CI has already refused to promote such a candidate on its own (N19).
+text); recipe CI has already refused to promote such a candidate on its own.
 List and object fields also send each member's values separately under ``members``, so
 a price read into a name is visible without decoding the whole list.
 """

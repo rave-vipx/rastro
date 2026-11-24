@@ -1,4 +1,4 @@
-"""Remove what a person cannot see before a page reaches a model (N19, SEC-008, AI-001).
+"""Remove what a person cannot see before a page reaches a model.
 
 Model contexts only: record extraction always runs on the original document. Dropped are
 elements with ``hidden`` or ``aria-hidden="true"``, inline styles that hide them

@@ -1,4 +1,4 @@
-"""The public scrape examples stay runnable offline (INT-001, REPAIR-001)."""
+"""The public scrape examples stay runnable offline."""
 
 import runpy
 

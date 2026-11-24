@@ -1,4 +1,4 @@
-"""Held-out DIFF-001 evaluation: python -m benchmarks.heldout --output report.json.
+"""Held-out evaluation: python -m benchmarks.heldout --output report.json.
 
 Measures source-specific configuration, outcomes under structural mutations of a
 previously working integration, model calls per successful record with SQLite memory

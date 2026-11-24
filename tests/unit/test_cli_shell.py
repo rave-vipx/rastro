@@ -1,4 +1,4 @@
-"""`rastro shell JOB` opens an interactive Python shell on a job's parsed page (N39)."""
+"""`rastro shell JOB` opens an interactive Python shell on a job's parsed page."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""SEC-008: atomic writes replace the file and sync the directory entry."""
+"""Atomic writes replace the file and sync the directory entry."""
 
 import os
 

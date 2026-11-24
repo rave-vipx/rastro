@@ -1,4 +1,4 @@
-"""Open one job page in a guarded browser, replay page steps and read what it shows (N39).
+"""Open one job page in a guarded browser, replay page steps and read what it shows.
 
 Used by the agent browser tools and ``rastro shell``. Every call is one fresh source session
 through the job's own browser acquisition: capability gate for the current input origin

@@ -1,4 +1,4 @@
-"""REPAIR-002/004, QUAL-005: documented repair stays reproducible after sample dates."""
+"""Documented repair stays reproducible after sample dates."""
 
 import runpy
 from contextlib import ExitStack

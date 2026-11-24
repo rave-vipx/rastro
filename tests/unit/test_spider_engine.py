@@ -1,4 +1,4 @@
-"""Spider engine with a fake page fetcher: concurrency cap, failures, link harvest (N3)."""
+"""Spider engine with a fake page fetcher: concurrency cap, failures, link harvest."""
 
 import asyncio
 

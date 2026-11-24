@@ -1,4 +1,4 @@
-"""N2, N3, N9, SEC-001/008: failures after browser transfers keep their count; no unsafe reuse."""
+"""Failures after browser transfers keep their count; no unsafe reuse."""
 
 import asyncio
 from contextlib import asynccontextmanager

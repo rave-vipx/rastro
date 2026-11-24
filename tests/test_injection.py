@@ -1,4 +1,4 @@
-"""Prompt-injection detection and model-context hardening (N19, SEC-008, AI-001).
+"""Prompt-injection detection and model-context hardening.
 
 Fixtures under ``tests/fixtures/injection`` are synthetic pages: (a) visible injected text
 in a field, (b) hidden instructions, (c) Unicode-tag-smuggled instructions, (d) a comment
@@ -104,7 +104,7 @@ def test_scanning_is_bounded_on_a_megabyte():
 
 
 def test_role_header_near_miss_does_not_backtrack_on_whitespace():
-    """PR #145 review: a header plus 64,000 spaces took over 8 s (N19, SEC-008)."""
+    """PR #145 review: a header plus 64,000 spaces took over 8 s."""
     start = time.perf_counter()
     assert instruction_like("### system" + " " * 64_000 + "X") == ()
     assert instruction_like("### assistant message" + " \t" * 32_000 + "X") == ()
@@ -158,7 +158,7 @@ def test_hidden_content_never_reaches_the_outline_or_the_html(name):
     ],
 )
 def test_a_hidden_document_root_yields_an_empty_document(page):
-    """PR #145 review: a hidden root was counted but still sent to the model (N19, SEC-008)."""
+    """PR #145 review: a hidden root was counted but still sent to the model."""
     hardened = harden_html(page)
     assert "ignore" not in hardened.html.lower() and sum(hardened.removed.values()) == 1
     request = build_proposal_request(fields=["t"], required={"t"}, failure="x", html=page)

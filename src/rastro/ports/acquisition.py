@@ -43,6 +43,6 @@ class AcquisitionPort(Protocol):
 
 @runtime_checkable
 class XmlAcquisition(Protocol):
-    """Fetch an XML document (a sitemap) under the same policy; bytes in ``raw_body`` (N16)."""
+    """Fetch an XML document (a sitemap) under the same policy; bytes in ``raw_body``."""
 
     async def acquire_xml(self, source: Source, *, max_bytes: int) -> AcquisitionResult: ...

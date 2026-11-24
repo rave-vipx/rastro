@@ -1,5 +1,4 @@
-"""MCP agent-in-the-loop tools: the client's own model proposes, Rastro verifies (AGENT-002,
-AGENT-003, REPAIR-001-005, INT-001, QUAL-006).
+"""MCP agent-in-the-loop tools: the client's own model proposes, Rastro verifies.
 
 The agent never supplies records. It reads bounded context, proposes recipe definitions and
 judges meaning; every proposal passes the same validation and recipe CI as deterministic

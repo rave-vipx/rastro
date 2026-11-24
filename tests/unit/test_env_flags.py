@@ -1,4 +1,4 @@
-"""Every boolean RASTRO_ALLOW_* opt-in reads the same values (SEC-004/005, security audit)."""
+"""Every boolean RASTRO_ALLOW_* opt-in reads the same values (security audit)."""
 
 import pytest
 

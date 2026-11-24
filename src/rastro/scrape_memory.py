@@ -1,4 +1,4 @@
-"""Recipe memory, success samples and offline self-repair for ``rastro.scrape`` (REPAIR-001-005).
+"""Recipe memory, success samples and offline self-repair for ``rastro.scrape``.
 
 The recipe database holds versions and their lifecycle. A sibling samples file
 (``recipes.samples.db`` next to ``recipes.db``) keeps the latest sanitized success

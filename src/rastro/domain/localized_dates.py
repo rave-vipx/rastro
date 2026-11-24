@@ -1,4 +1,4 @@
-"""Deterministic Spanish date parsing without inventing missing times (DATA-005)."""
+"""Deterministic Spanish date parsing without inventing missing times."""
 
 import re
 from datetime import date, datetime, timedelta

@@ -1,4 +1,4 @@
-"""One-call scraping into validated Pydantic models (INT-001, INT-002, REC-001, REPAIR-001-005).
+"""One-call scraping into validated Pydantic models.
 
 ``scrape`` builds a recipe from ``rastro.css`` markers (or takes ``recipe=``),
 loads the target, extracts through the standard engine and, with ``memory=``,

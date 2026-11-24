@@ -1,4 +1,4 @@
-"""Job schedule, per-source intervals and deterministic jitter (SCHED-001/006/007, SYNC-001)."""
+"""Job schedule, per-source intervals and deterministic jitter."""
 
 from __future__ import annotations
 

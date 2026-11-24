@@ -1,4 +1,4 @@
-"""Bounded, DTD-free sitemap parsing and entry ordering (N16; SEC-001, SEC-008).
+"""Bounded, DTD-free sitemap parsing and entry ordering.
 
 A sitemap is untrusted XML. Any DOCTYPE is refused before an entity can be declared, so
 there is no entity expansion and no external resource; expat never touches the network.

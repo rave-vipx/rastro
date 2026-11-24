@@ -1,4 +1,4 @@
-"""Issue messages never echo source values (P-005, SEC-005)."""
+"""Issue messages never echo source values."""
 
 import re
 from decimal import Decimal

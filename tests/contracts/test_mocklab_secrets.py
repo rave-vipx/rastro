@@ -1,4 +1,4 @@
-"""MOCK-005: a secret planted in every category never reaches any written fixture file."""
+"""A secret planted in every category never reaches any written fixture file."""
 
 from decimal import Decimal
 

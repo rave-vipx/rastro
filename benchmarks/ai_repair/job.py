@@ -1,4 +1,4 @@
-"""The schema and job file every case runs under (QUAL-001, REPAIR-001).
+"""The schema and job file every case runs under.
 
 ``SCHEMA`` documents each field's meaning. The job file cannot carry descriptions, and
 this base's repair prompt sends field names only, so the descriptions are harness

@@ -1,4 +1,4 @@
-"""REPAIR-002, SCR-002: additive retention, last success survives failed loads."""
+"""Additive retention, last success survives failed loads."""
 
 import json
 import shutil

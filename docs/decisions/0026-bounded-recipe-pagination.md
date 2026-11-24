@@ -2,7 +2,6 @@
 
 Status: accepted
 
-Requirements: SYNC-002, SEC-008
 
 ## Decision
 

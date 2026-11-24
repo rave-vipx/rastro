@@ -1,5 +1,5 @@
 // Alerts: what happened in the runs, newest first, grouped by day; one plain sentence and one
-// action each (N5). The sentence is written here from kind + code, so it follows the language.
+// action each. The sentence is written here from kind + code, so it follows the language.
 import { $, api, el, request, requireFile, show, switchView } from "./dom.js";
 import { issueText, lang, onLangChange, t, when } from "./i18n.js";
 import { sources } from "./sources.js";

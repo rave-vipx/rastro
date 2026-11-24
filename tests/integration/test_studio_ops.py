@@ -1,4 +1,4 @@
-"""Studio wizard, run and dataset endpoints (P-008, INT-002, JOB-001, DATA-001, DATA-004, N1)."""
+"""Studio wizard, run and dataset endpoints."""
 
 import base64
 import json
@@ -86,12 +86,12 @@ def create(client: TestClient, **extra: object) -> dict[str, object]:
 
 
 def test_pages_lists_saved_html_only(client: TestClient) -> None:
-    """P-008: the wizard lists .html/.htm pages below the root, skipping hidden folders."""
+    """The wizard lists .html/.htm pages below the root, skipping hidden folders."""
     assert client.get("/api/pages").json() == {"files": ["pages/agenda.html"], "truncated": False}
 
 
 def test_create_from_url_fetches_and_writes_a_url_job(tmp_path: Path) -> None:
-    """N1: Studio accepts a URL, fetches it, and writes a job that scrapes that URL."""
+    """Studio accepts a URL, fetches it, and writes a job that scrapes that URL."""
     acquirer = FakeAcquirer({URL: PAGE})
     app, token = create_app(tmp_path, acquisition=acquirer)
     with serving(app, "http://127.0.0.1:8765") as http:
@@ -115,7 +115,7 @@ def test_create_from_url_fetches_and_writes_a_url_job(tmp_path: Path) -> None:
 
 
 def test_create_from_url_keeps_the_query_string(tmp_path: Path) -> None:
-    """N1: listing/search URLs keep ?q= so the job scrapes the same page the preview used."""
+    """Listing/search URLs keep ?q= so the job scrapes the same page the preview used."""
     acquirer = FakeAcquirer({QUERY_URL: PAGE})
     app, token = create_app(tmp_path, acquisition=acquirer)
     with serving(app, "http://127.0.0.1:8765") as http:
@@ -133,7 +133,7 @@ def test_create_from_url_keeps_the_query_string(tmp_path: Path) -> None:
 
 
 def test_create_from_http_url_reports_allow_http(tmp_path: Path) -> None:
-    """N1: an http:// source writes allow_http and Studio reports it."""
+    """An http:// source writes allow_http and Studio reports it."""
     acquirer = FakeAcquirer({HTTP_URL: PAGE})
     app, token = create_app(tmp_path, acquisition=acquirer)
     with serving(app, "http://127.0.0.1:8765") as http:
@@ -147,7 +147,7 @@ def test_create_from_http_url_reports_allow_http(tmp_path: Path) -> None:
 
 
 def test_create_from_url_respects_operator_port_and_private_grants(tmp_path: Path) -> None:
-    """N1: non-standard ports and private hosts need the operator's grants."""
+    """Non-standard ports and private hosts need the operator's grants."""
     private = "http://192.168.1.10/list"
     custom = "https://shop.example:8443/list"
     acquirer = FakeAcquirer({private: PAGE, custom: PAGE})
@@ -168,7 +168,7 @@ def test_create_from_url_respects_operator_port_and_private_grants(tmp_path: Pat
 
 
 def test_create_from_url_refuses_without_a_url(tmp_path: Path) -> None:
-    """N1: creating a job without a URL or a saved page is refused."""
+    """Creating a job without a URL or a saved page is refused."""
     app, token = create_app(tmp_path, acquisition=FakeAcquirer({}))
     with serving(app, "http://127.0.0.1:8765") as http:
         http.headers["X-Studio-Token"] = token
@@ -178,7 +178,7 @@ def test_create_from_url_refuses_without_a_url(tmp_path: Path) -> None:
 
 
 def test_wizard_page_is_url_first(tmp_path: Path) -> None:
-    """N1: the Studio page asks for a URL; it does not require uploading HTML."""
+    """The Studio page asks for a URL; it does not require uploading HTML."""
     app, _token = create_app(tmp_path)
     with serving(app, "http://127.0.0.1:8765") as http:
         page = http.get("/").text
@@ -188,7 +188,7 @@ def test_wizard_page_is_url_first(tmp_path: Path) -> None:
 
 
 def test_suggest_returns_recipe_preview_and_confidence(client: TestClient) -> None:
-    """INT-002: suggest verifies a recipe and shows per-field confidence; nothing is written."""
+    """Suggest verifies a recipe and shows per-field confidence; nothing is written."""
     body = {"page": "pages/agenda.html", "url": URL, "examples": EXAMPLES}
     found = post(client, "/api/suggest", body).json()
     assert found["ok"] and found["records"] == 3 and found["data_trust"] == "untrusted_source_data"
@@ -214,7 +214,7 @@ def test_suggest_rejects_bad_input(client: TestClient, body: dict[str, object]) 
 
 
 def test_create_writes_a_valid_job_and_refuses_overwrite(client: TestClient, root: Path) -> None:
-    """JOB-001: create writes a job with a dataset; a second create never overwrites it."""
+    """Create writes a job with a dataset; a second create never overwrites it."""
     made = create(client, dataset="agenda.sqlite", identity=["title"])
     assert made["file"] == "pages/agenda.toml" and len(str(made["sha256"])) == 64
     job = load_job(root / "pages/agenda.toml")
@@ -241,7 +241,7 @@ def test_create_validates_the_name(client: TestClient, root: Path, name: str) ->
 
 
 def test_create_can_add_recipe_memory(client: TestClient, root: Path) -> None:
-    """REC-006, JOB-001: the wizard can enable recipe memory, so repair works later."""
+    """The wizard can enable recipe memory, so repair works later."""
     create(client, dataset="agenda.sqlite", identity=["title"], recipe_memory="recipes.sqlite")
     assert load_job(root / "pages/agenda.toml").recipe_memory == "recipes.sqlite"
     body = {"file": "pages/b.toml", "page": "pages/agenda.html", "examples": EXAMPLES}
@@ -262,7 +262,7 @@ def test_create_can_add_recipe_memory(client: TestClient, root: Path) -> None:
 def test_create_refuses_paths_that_name_the_same_file(
     client: TestClient, root: Path, dataset: str | None, memory: str | None
 ) -> None:
-    """JOB-001: the dataset and recipe store cannot be the job, the page or each other."""
+    """The dataset and recipe store cannot be the job, the page or each other."""
     body = {"file": "pages/agenda.toml", "page": "pages/agenda.html", "examples": EXAMPLES}
     extra = {"dataset": dataset, "identity": ["title"] if dataset else [], "recipe_memory": memory}
     assert post(client, "/api/create", {**body, **extra}).status_code == 400
@@ -286,7 +286,7 @@ def test_create_requires_identity_with_a_dataset(client: TestClient, root: Path)
 def test_create_refuses_a_dataset_the_job_could_not_open(
     client: TestClient, root: Path, dataset: str, code: str
 ) -> None:
-    """DATA-001: the dataset path is relative to the job file and its folder must exist."""
+    """The dataset path is relative to the job file and its folder must exist."""
     body = {"file": "pages/a.toml", "page": "pages/agenda.html", "examples": EXAMPLES}
     answer = post(client, "/api/create", {**body, "dataset": dataset, "identity": ["title"]})
     assert answer.status_code == 400 and code in json.dumps(answer.json())
@@ -294,7 +294,7 @@ def test_create_refuses_a_dataset_the_job_could_not_open(
 
 
 def test_extract_writes_nothing_and_load_fills_the_dataset(client: TestClient, root: Path) -> None:
-    """DATA-001, REC-006: extract is read-only; load writes the dataset and reports origins."""
+    """Extract is read-only; load writes the dataset and reports origins."""
     create(client, dataset="agenda.sqlite", identity=["title"])
     job = root / "pages/agenda.toml"
     job.write_text(
@@ -314,7 +314,7 @@ def test_extract_writes_nothing_and_load_fills_the_dataset(client: TestClient, r
 
 
 def test_records_page_and_export(client: TestClient) -> None:
-    """DATA-004: bounded pages with stale markers; JSON and HTML export of the same records."""
+    """Bounded pages with stale markers; JSON and HTML export of the same records."""
     create(client, dataset="agenda.sqlite", identity=["title"])
     assert post(client, "/api/records", {"file": "pages/agenda.toml"}).status_code == 400
     post(client, "/api/load", {"file": "pages/agenda.toml"})
@@ -335,7 +335,7 @@ def test_records_page_and_export(client: TestClient) -> None:
 
 
 def test_new_endpoints_require_token_and_origin(root: Path) -> None:
-    """P-008: every POST needs the token and this Studio's exact origin."""
+    """Every POST needs the token and this Studio's exact origin."""
     app, token = create_app(root)
     with serving(app, "http://127.0.0.1:8765") as http:
         for path in (

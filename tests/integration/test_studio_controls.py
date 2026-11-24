@@ -1,4 +1,4 @@
-"""N4/N7/N12: guarded Studio settings edit only the owned job and keep gates."""
+"""Guarded Studio settings edit only the owned job and keep gates."""
 
 import json
 from pathlib import Path
@@ -16,7 +16,7 @@ pytestmark = pytest.mark.usefixtures("offline_cli_loop")
 
 
 def test_settings_are_guarded_and_change_only_requested_properties(tmp_path: Path) -> None:
-    """N4/N12: pagination and auto-promote persist with digest and selector gates."""
+    """Pagination and auto-promote persist with digest and selector gates."""
     path = tmp_path / "job.toml"
     path.write_text(JOB)
     other = tmp_path / "other.toml"
@@ -63,7 +63,7 @@ def test_settings_are_guarded_and_change_only_requested_properties(tmp_path: Pat
 
 
 def test_session_stealth_does_not_write_a_job(tmp_path: Path) -> None:
-    """N12: the switch starts off and changes runtime trust only."""
+    """The switch starts off and changes runtime trust only."""
     (tmp_path / "job.toml").write_text(JOB)
     app, token = create_app(tmp_path, allow_stealth=False)
     with serving(app, "http://127.0.0.1:8765") as client:
@@ -78,7 +78,7 @@ def test_session_stealth_does_not_write_a_job(tmp_path: Path) -> None:
 
 
 def test_completion_progress_contains_only_safe_outcomes(tmp_path: Path) -> None:
-    """N5: synchronous runs keep their shape and report real completion without secrets."""
+    """Synchronous runs keep their shape and report real completion without secrets."""
     (tmp_path / "job.toml").write_text(JOB)
     (tmp_path / "board.html").write_text(board())
     app, token = create_app(tmp_path)
@@ -94,7 +94,7 @@ def test_completion_progress_contains_only_safe_outcomes(tmp_path: Path) -> None
 
 
 def test_rejected_promote_cannot_override_gates(tmp_path: Path) -> None:
-    """N7: Studio refuses overrides and a candidate rejected by real CI never serves."""
+    """Studio refuses overrides and a candidate rejected by real CI never serves."""
     from datetime import UTC, datetime
 
     import rastro
@@ -129,7 +129,7 @@ def test_rejected_promote_cannot_override_gates(tmp_path: Path) -> None:
 def test_stealth_trust_reaches_studio_services(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """N12: session trust reaches extract, load, preview and repair without job grants."""
+    """Session trust reaches extract, load, preview and repair without job grants."""
     from rastro.studio import routes_jobs, routes_repair, routes_run
 
     (tmp_path / "job.toml").write_text(JOB)
@@ -167,7 +167,7 @@ def test_stealth_trust_reaches_studio_services(
 def test_live_operation_is_guarded_bounded_and_failure_explicit(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """N5: polling sees actual running state, competing work is refused, failure is explicit."""
+    """Polling sees actual running state, competing work is refused, failure is explicit."""
     from concurrent.futures import ThreadPoolExecutor
     from threading import Event
 

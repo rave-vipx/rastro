@@ -81,7 +81,7 @@ class _FieldBase(RedactedContract):
 
     def _wrap_required(self, annotation: Any) -> tuple[Any, Any]:
         # Blank text is stripped before validation, so constraints see the real value and
-        # a blank required value is a validation issue (QUAL-004).
+        # a blank required value is a validation issue.
         blank = BeforeValidator(partial(strip_text, required=self.required))
         if self.null_values:
             annotation = Annotated[

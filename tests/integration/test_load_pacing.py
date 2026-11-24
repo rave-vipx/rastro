@@ -1,4 +1,4 @@
-"""One acquisition port per load keeps host pacing across sources (SCHED-004, SEC-008)."""
+"""One acquisition port per load keeps host pacing across sources."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""N6 / HUB-002..006: synthetic examples replay, install as candidates and deduplicate."""
+"""Synthetic examples replay, install as candidates and deduplicate."""
 
 import json
 import shutil
@@ -45,7 +45,7 @@ def test_example_install_replays_and_reuses_candidate(tmp_path: Path, kind: str)
 
 
 def test_example_registry_build_is_reproducible(tmp_path: Path) -> None:
-    """N6: the export/publish services reproduce every committed package byte offline."""
+    """The export/publish services reproduce every committed package byte offline."""
     from examples.registry.build import STARTERS, build
 
     generated = tmp_path / "registry"
@@ -64,7 +64,7 @@ def test_example_registry_build_is_reproducible(tmp_path: Path) -> None:
 def test_example_cli_promote_load_and_rerun(
     tmp_path: Path, kind: str, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """N6/N8: the documented candidate-to-dataset workflow survives a second load."""
+    """The documented candidate-to-dataset workflow survives a second load."""
     import shutil
 
     from rastro.cli import main

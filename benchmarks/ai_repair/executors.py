@@ -1,4 +1,4 @@
-"""Run one case through an executor and classify what it served (QUAL-001, REPAIR-001-005).
+"""Run one case through an executor and classify what it served.
 
 Every executor ends in one of three verdicts: ``correct`` (served exactly the expected
 records), ``wrong`` (served anything else: a silent error) or ``refused`` (served

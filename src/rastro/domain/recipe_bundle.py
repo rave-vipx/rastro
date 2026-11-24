@@ -1,4 +1,4 @@
-"""Portable recipe bundle format: manifest, canonical bytes and failures (HUB-001, HUB-002)."""
+"""Portable recipe bundle format: manifest, canonical bytes and failures."""
 
 from __future__ import annotations
 
@@ -46,7 +46,7 @@ class BundleVerificationError(RecipeBundleError):
 
 
 class BundleAuthor(Contract):
-    """Package author identity (HUB-002)."""
+    """Package author identity."""
 
     name: str = Field(min_length=1, max_length=128)
     url: str | None = Field(default=None, max_length=2048)
@@ -91,7 +91,7 @@ def default_source_pattern(url: str) -> str:
 
 
 class BundleCompatibility(Contract):
-    """Minimum Rastro version and compatible source host/path patterns (HUB-002)."""
+    """Minimum Rastro version and compatible source host/path patterns."""
 
     min_rastro: str = Field(pattern=SEMVER_PATTERN)
     source_patterns: tuple[str, ...] = Field(min_length=1, max_length=32)

@@ -1,7 +1,7 @@
-"""Suggest the closest valid key when a job file has an unknown one (N18, AGENT-001).
+"""Suggest the closest valid key when a job file has an unknown one.
 
 Only key names matching ``[A-Za-z0-9_-]{1,64}`` are echoed; anything else in the job file
-stays out of the message (AGENT-003)."""
+stays out of the message."""
 
 from __future__ import annotations
 

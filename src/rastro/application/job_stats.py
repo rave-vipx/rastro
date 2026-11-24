@@ -1,4 +1,4 @@
-"""`rastro job stats`: aggregate a job dataset's per-source run metrics (OBS-003..006)."""
+"""`rastro job stats`: aggregate a job dataset's per-source run metrics."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""A dataset failure after commits keeps the report and exits 5 (DATA-001, QUAL-005)."""
+"""A dataset failure after commits keeps the report and exits 5."""
 
 import json
 

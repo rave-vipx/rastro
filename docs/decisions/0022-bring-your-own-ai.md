@@ -1,7 +1,6 @@
 # ADR 0022: bring your own AI, with operator trust for job-declared models
 
 - **Status:** accepted for 0.6.0.
-- **Requirements:** AI-001–005, INT-002, REPAIR-001, SEC-004, SEC-005, SEC-011, P-001.
 
 ## Problem
 

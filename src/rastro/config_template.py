@@ -1,5 +1,4 @@
-"""``rastro job template``: an annotated job file with every option commented (N18,
-AGENT-001).
+"""``rastro job template``: an annotated job file with every option commented.
 
 Uncommented lines form a minimal valid job (one URL source, one field, a CSS recipe);
 every other key is a comment that shows its default (or a ``<type>`` placeholder), its

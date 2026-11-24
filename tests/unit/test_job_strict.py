@@ -1,4 +1,4 @@
-"""Strict scalar parsing and env-reference rules for declarative jobs (JOB-002)."""
+"""Strict scalar parsing and env-reference rules for declarative jobs."""
 
 from typing import Any
 

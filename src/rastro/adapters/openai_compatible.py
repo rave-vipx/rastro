@@ -1,4 +1,4 @@
-"""Optional OpenAI-compatible Chat Completions adapter (AI-001-005, SEC-004/005/011).
+"""Optional OpenAI-compatible Chat Completions adapter.
 
 Install rastro-engine[openai]. One strategy serves OpenAI, OpenRouter, vLLM, LM Studio,
 llama.cpp server and Ollama's ``/v1`` endpoint; loopback is the default, remote is opt-in.

@@ -1,4 +1,4 @@
-"""Deterministic, explainable drift classification (DRIFT-001-006)."""
+"""Deterministic, explainable drift classification."""
 
 from datetime import UTC, datetime
 

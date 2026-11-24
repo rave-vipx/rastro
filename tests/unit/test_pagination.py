@@ -1,4 +1,4 @@
-"""Declarative pagination and selector boundaries (SYNC-002, SEC-008)."""
+"""Declarative pagination and selector boundaries."""
 
 import tomllib
 

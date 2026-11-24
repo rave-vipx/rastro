@@ -1,4 +1,4 @@
-"""HUB-002: a format-1 bundle written by the 0.7 export still imports unchanged.
+"""A format-1 bundle written by the 0.7 export still imports unchanged.
 
 ``tests/fixtures/bundle_format1`` retains the legacy CLI export layout from before format 2.
 Its source names and checksums use the current synthetic ``examples/event-agenda`` job.

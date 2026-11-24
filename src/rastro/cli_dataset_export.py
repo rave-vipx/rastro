@@ -1,4 +1,4 @@
-"""Presentation and selection of dataset records (DATA-004, SCHED-007)."""
+"""Presentation and selection of dataset records."""
 
 import csv
 import io

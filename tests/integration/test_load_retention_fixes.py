@@ -1,4 +1,4 @@
-"""DATA-001 / REPAIR-002 / SCR-002: evidence retention never contradicts a committed load."""
+"""Evidence retention never contradicts a committed load."""
 
 import json
 

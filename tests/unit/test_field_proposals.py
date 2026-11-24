@@ -1,4 +1,4 @@
-"""Unit tests for observed field proposals from page structure (DISC-003, P-002)."""
+"""Unit tests for observed field proposals from page structure."""
 
 from __future__ import annotations
 
@@ -81,7 +81,7 @@ class FakeSuggestModel:
 
 
 def test_propose_fields_discovers_repeated_structure_without_model():
-    """DISC-003, P-002: observed repeated structures produce fields with examples and selectors."""
+    """Observed repeated structures produce fields with examples and selectors."""
     model = NeverCalledModel()
     proposals = propose_fields(CATALOGUE_HTML, url="https://agenda.example/events", model=model)
     assert model.calls == 0
@@ -103,7 +103,7 @@ def test_propose_fields_discovers_repeated_structure_without_model():
 
 
 def test_propose_fields_with_requested_field_names_and_model_fallback():
-    """DISC-003: requested --fields map deterministically first, or fall back to model if needed."""
+    """Requested --fields map deterministically first, or fall back to model if needed."""
     model = NeverCalledModel()
     proposals = propose_fields(
         CATALOGUE_HTML,
@@ -127,7 +127,7 @@ def test_propose_fields_with_requested_field_names_and_model_fallback():
 
 
 def test_propose_fields_raises_when_invalid_or_no_records_observed():
-    """DISC-003: invalid field names or pages without repeating records raise ConfigurationError."""
+    """Invalid field names or pages without repeating records raise ConfigurationError."""
     with pytest.raises(ConfigurationError, match="valid identifiers"):
         propose_fields(CATALOGUE_HTML, fields=("123-bad",))
     with pytest.raises(ConfigurationError):
@@ -150,7 +150,7 @@ def _hostile_page(parents: int) -> str:
 
 
 def test_many_distinct_candidate_selectors_fail_fast_with_a_reported_limit():
-    """SEC-008, DISC-003: candidate record selectors are capped; no quadratic scan."""
+    """Candidate record selectors are capped; no quadratic scan."""
 
     def elapsed(parents: int) -> float:
         html = _hostile_page(parents)
@@ -166,7 +166,7 @@ def test_many_distinct_candidate_selectors_fail_fast_with_a_reported_limit():
 
 
 def test_candidate_cap_boundary_still_proposes_below_the_cap():
-    """DISC-003: a page within the candidate budget is still analysed."""
+    """A page within the candidate budget is still analysed."""
     noisy = CATALOGUE_HTML.replace("<body>", "<body>" + _hostile_page(10))
     assert propose_fields(noisy).recipe.record_selector
 

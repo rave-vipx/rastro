@@ -1,4 +1,4 @@
-"""Operator health: open drift, stale sources and pending repair (DRIFT-005, REPAIR-005, OPS)."""
+"""Operator health: open drift, stale sources and pending repair (OPS)."""
 
 from typing import Any, Literal
 

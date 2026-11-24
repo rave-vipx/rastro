@@ -1,4 +1,4 @@
-"""Read-only evidence for an agent that proposes or judges a repair (AGENT-002, REPAIR-001).
+"""Read-only evidence for an agent that proposes or judges a repair.
 
 ``job_repair_context`` gives a model what it needs to propose a fix: the failing recipe, the
 field definitions, recent success values, the current outcome and a page outline.

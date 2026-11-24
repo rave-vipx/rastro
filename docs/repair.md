@@ -1,6 +1,5 @@
 # Recipe CI and controlled repair
 
-**Requirements:** REPAIR-001–006, REC-005/006, SCR-002, QUAL-005/006.
 
 Load a successful job with both `recipe_memory = "recipes.sqlite"` and a separate
 `[dataset]` first. `job load` retains the last successful sanitized Mock Lab sample
@@ -15,7 +14,7 @@ The next successful load captures the container without a migration or backfill.
 If the document exceeds relocation's structural budget
 or uses unsupported selectors, the historical fixture is still retained. The successful
 load keeps its exit code and reports `relocation_retention_skipped` in that source's
-`issues` array (DATA-001, SCR-002). If the sample cannot be retained at all (for example,
+`issues` array. If the sample cannot be retained at all (for example,
 the sanitizer refuses it or the evidence write fails), the rows are already committed: the
 load keeps its exit code, reports `evidence_retention_failed` for that source and keeps the
 previous evidence. No issue array is emitted when retention succeeds.

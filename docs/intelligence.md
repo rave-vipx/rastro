@@ -9,7 +9,6 @@ A model proposes a **recipe** (selectors and field mappings), never the extracte
 Rastro executes the recipe on the original document and validates every observation with
 the same deterministic gates as a hand-written recipe. Model output is untrusted: it can only
 help Rastro find more correct recipes and reject more wrong ones.
-Requirements: **INT-002, AI-001–005, REC-004, REPAIR-001, SEC-004/005/011, P-001**.
 
 ## Start without a model
 
@@ -275,8 +274,7 @@ limits across its bounded workers.
 
 `model=` accepts any object implementing `ModelPort`, the provider strategy
 interface; `rastro.model()` builds one for you. The HTTP strategies need HTTPX, so the
-core install never does (P-002). Requirements: **AI-001–005, SEC-004/005/011, P-001, P-007**.
-
+core install never does. 
 | Provider | Install | Endpoint | Use when |
 | --- | --- | --- | --- |
 | `OllamaModel` | `rastro-engine[ollama]` | native `/api/chat`, loopback only | A local Ollama service; strictest local-only checks |
@@ -366,7 +364,7 @@ multiple choices, a `finish_reason` other than `stop` (`length`, `content_filter
 
 **Privacy.** Opting into any model sends the page document to that endpoint. With
 `allow_remote=True`, that is a third-party service under its own retention terms;
-keep the default loopback endpoint when local processing is mandatory (P-001). The
+keep the default loopback endpoint when local processing is mandatory. The
 recorded live check against Ollama's `/v1` endpoint is described in
 [ADR 0010](decisions/0010-model-providers.md); it is not a model-quality claim.
 
@@ -484,7 +482,7 @@ stays intact; there is no automatic version increment or replacement.
 Discovery is intentionally conservative. It does not infer synonyms, crawl links,
 fetch alternate APIs, resolve remote JSON-LD contexts, or render JavaScript.
 Supplied structured metadata precedes DOM discovery; acquisition of separate
-structured API representations remains a documented INT-002 gap.
+structured API representations remains a documented gap.
 
 ## Budgets and outcomes
 

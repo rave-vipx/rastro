@@ -1,7 +1,6 @@
 # ADR 0016: the product outcome is an updatable database; v0.2 starts from known sources
 
 - **Status:** accepted on 2026-11-06, after the Mock Lab and recipe lifecycle shipped.
-- **Requirements:** DATA-001–005, SYNC-002/003/005/006/008, COST-001/002, DISC-003, DRIFT-006, DIFF-002, AGENT-002, SCHED-007 
 
 ## Context
 
@@ -24,10 +23,10 @@ records but not maintain the database their application needs.
    performance, keep distinct performances distinct, keep a failed source's records with their
    last observation time, and flag uncertain cross-source matches with both origins. Second
    cut: drift and repair on that path, including a sale-date-versus-event-date trap, the
-   product-task comparison (DIFF-002) and the single opening of the sealed corpus (ADR 0011).
+   product-task comparison and the single opening of the sealed corpus (ADR 0011).
 3. **Brought forward from v0.3:** record identity, update semantics, no deletion on failure,
-   last observation time and stale-source reporting (SYNC-002/003/005/006/008).
-4. **Moved:** the MCP adapter (AGENT-002) moves from v0.2 to v0.4 and waits for a concrete
+   last observation time and stale-source reporting.
+4. **Moved:** the MCP adapter moves from v0.2 to v0.4 and waits for a concrete
    integration that will consume it. v0.3 is reframed around three entry modes (known sites
    and fields, sites only, goal only) and adds pagination, JavaScript, sessions, per-domain
    concurrency and run recovery according to the obstacles the pilot finds. Hub (v0.5) starts
@@ -49,6 +48,6 @@ records but not maintain the database their application needs.
   needs its own ADR when its first slice lands.
 - Live runs against real sites become part of v0.2 evidence. They follow every acquisition
   policy (robots, pacing, destination checks); bot challenges are reported as restrictions,
-  never evaded (SCR-003). Committed fixtures stay synthetic or redistributable.
+  never evaded. Committed fixtures stay synthetic or redistributable.
 - Repair and drift are judged by their effect on the dataset, not only on extraction outcomes.
 - Users who wanted MCP in v0.2 wait for v0.4 unless a concrete integration appears earlier.

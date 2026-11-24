@@ -1,15 +1,14 @@
 # Monitoring and alerts
 
-**Requirements:** DRIFT-004, OBS-002, OBS-007, DATA-004, REPAIR-005, SEC-009, SCHED-001, SCHED-002, SCHED-003, SCHED-004, SCHED-006, SCHED-007, SYNC-001.
 
 Rastro runs from cron, CI or any scheduler, or with its built-in foreground watcher
-(`rastro job watch`, SCHED-002). Everything an operator needs to alert on is in the exit
+(`rastro job watch`). Everything an operator needs to alert on is in the exit
 code; the JSON on stdout says why.
 
 ## Scheduler
 
-Recurring runs use the **same job file** (SCHED-007); add an optional `[schedule]` block
-and optional per-source `every` overrides (SCHED-001, SCHED-006, SYNC-001):
+Recurring runs use the **same job file**; add an optional `[schedule]` block
+and optional per-source `every` overrides:
 
 ```toml
 [schedule]
@@ -41,7 +40,7 @@ rastro job watch job.toml --once --on-failure 'notify-send "Rastro needs attenti
   due sources without a separate config file (see also [Daily dataset and agenda](scheduling.md)).
 - `SIGINT` and `SIGTERM` finish the current source, release the lock, and exit `0`. They
   also wake the wait for the next due time at once.
-- **Overlap protection (SCHED-003):** every `rastro job load` and each `watch` tick creates
+- **Overlap protection:** every `rastro job load` and each `watch` tick creates
   an owner-only lock `<dataset file>.lock` (`O_CREAT|O_EXCL`, mode `0600`) holding the PID,
   a random start token and the start time. If another live process holds the lock,
   `job load` and `watch --once` do no work, print `{"error": "run_in_progress", ...}` on
@@ -52,7 +51,7 @@ rastro job watch job.toml --once --on-failure 'notify-send "Rastro needs attenti
   creates the new lock exclusively, so two starters cannot both take over. A holder only
   deletes the lock while it still holds its own PID and token, never a successor's. PID
   liveness uses `OpenProcess` on Windows and signal `0` elsewhere.
-- **Checkpoint and recovery (SCHED-004):** during a load Rastro atomically writes
+- **Checkpoint and recovery:** during a load Rastro atomically writes
   `<dataset file>.run.json` (`0600`) with the completed sources of the current run, each
   keyed by its position in the job file and its URL, so two sources with one URL in
   different regions stay distinct. If a load is interrupted, the next load of the same job

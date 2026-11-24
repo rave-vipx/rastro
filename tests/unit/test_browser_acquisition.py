@@ -1,4 +1,4 @@
-"""SCR-003 amended, SEC-005/008, OBS-001: browser boundary acceptance."""
+"""Browser boundary acceptance."""
 
 from unittest.mock import AsyncMock
 
@@ -421,7 +421,7 @@ def test_missing_browser_extra_checked_before_http_import(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_operator_grants_reach_the_browser_engine():
-    """SEC-001/002/003: the browser path uses the same grants, never from the job."""
+    """The browser path uses the same grants, never from the job."""
     from rastro.application.operator_trust import operator_trust
 
     client, renderer, transport, resolver = setup()

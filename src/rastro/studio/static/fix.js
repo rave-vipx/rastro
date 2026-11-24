@@ -1,4 +1,4 @@
-// Fix a site (N7, N12): find a proposed recipe, compare it field by field, then apply it with a
+// Fix a site: find a proposed recipe, compare it field by field, then apply it with a
 // reason or discard it. Applying re-runs every check; Studio cannot override a failed one.
 import { $, api, el, requireFile, show, state, switchView } from "./dom.js";
 import { advanced, onLangChange, t } from "./i18n.js";

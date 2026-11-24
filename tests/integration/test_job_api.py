@@ -1,4 +1,4 @@
-"""Public job API: load, repair, promote, apply (REPAIR-002-006, REC-006, QUAL-006, DATA-001).
+"""Public job API: load, repair, promote, apply.
 
 Synthetic job cards: the optional salary is absent in one of five cards, then the
 title markup changes so the job file's selector breaks.
@@ -103,7 +103,7 @@ def history(job):
 
 
 def test_optional_field_absent_in_one_card_does_not_block_promotion(job):
-    """QUAL-006: default thresholds promote a correct repair with a legitimately empty salary."""
+    """Default thresholds promote a correct repair with a legitimately empty salary."""
     report = repaired(job)
     (source,) = report.sources
     assert source.promoted_version == 2, source.model_dump_json(indent=2)
@@ -112,7 +112,7 @@ def test_optional_field_absent_in_one_card_does_not_block_promotion(job):
 
 
 def test_promoted_repair_is_used_by_run_and_load_until_applied(job):
-    """REC-006: a newer serving recipe in memory wins over the job file's recipe."""
+    """A newer serving recipe in memory wins over the job file's recipe."""
     repaired(job)
     result = rastro.run_job_file(job)
     assert result.job.status == "success"
@@ -123,7 +123,7 @@ def test_promoted_repair_is_used_by_run_and_load_until_applied(job):
 
 
 def test_apply_writes_serving_recipe_and_keeps_the_rest_of_the_file(job):
-    """REC-006: apply writes the recipe back; text outside the recipe tables is unchanged."""
+    """Apply writes the recipe back; text outside the recipe tables is unchanged."""
     repaired(job)
     before = job.read_text(encoding="utf-8")
     assert rastro.apply_job_recipe(job, 1) == job.resolve()
@@ -181,7 +181,7 @@ def quarantined(job):
 
 
 def test_override_gates_promotes_quarantined_candidate_with_recorded_reason(job, capsys):
-    """REPAIR-005: a person may override measured gates; the reason is audited."""
+    """A person may override measured gates; the reason is audited."""
     version = quarantined(job)
     plain = rastro.promote_job_recipe(job, 1, version, reason="Looks right")
     assert plain.sources[0].promoted_version is None
@@ -200,7 +200,7 @@ def test_override_gates_promotes_quarantined_candidate_with_recorded_reason(job,
 
 
 def test_override_never_activates_a_rejected_candidate(job):
-    """REPAIR-005: failed validation or regressions cannot be overridden."""
+    """Failed validation or regressions cannot be overridden."""
     assert rastro.load_job_file(job).job.status == "success"
     repository, key = history(job)
     recipe = rastro.load_job(job).sources[0].recipe
@@ -219,7 +219,7 @@ BLANK_TITLE = '<article class="card" data-id="job-6"><h2 class="new-title">  </h
 
 
 def test_repair_and_promote_agree_and_repeated_repairs_reuse_the_version(job, capsys):
-    """REPAIR-002/005, REC-006: one evaluator for repair and promote; a rejection retires
+    """One evaluator for repair and promote; a rejection retires
     the version with an event, names the blocking record and field, and a second repair of
     the same definition allocates no new version."""
     assert rastro.load_job_file(job).job.status == "success"
@@ -244,7 +244,7 @@ def test_repair_and_promote_agree_and_repeated_repairs_reuse_the_version(job, ca
 
 
 def test_promote_rejects_like_repair_and_retires(job):
-    """REPAIR-005: promote reaches repair's verdict for the same candidate and page."""
+    """Promote reaches repair's verdict for the same candidate and page."""
     assert rastro.load_job_file(job).job.status == "success"
     repository, key = history(job)
     recipe = rastro.load_job(job).sources[0].recipe
@@ -264,7 +264,7 @@ def test_promote_rejects_like_repair_and_retires(job):
 
 
 def test_symlinked_recipe_memory_is_refused_by_run_load_and_preview(job, capsys):
-    """SEC-008: recipe_memory is never opened through a symlink."""
+    """Recipe_memory is never opened through a symlink."""
     assert rastro.load_job_file(job).job.status == "success"
     real = job.parent / "real.sqlite"
     (job.parent / "recipes.sqlite").rename(real)
@@ -278,7 +278,7 @@ def test_symlinked_recipe_memory_is_refused_by_run_load_and_preview(job, capsys)
 
 
 def test_pinned_version_reports_what_the_store_holds(job):
-    """REC-006: a pinned recipe_version is reported only when the store has it."""
+    """A pinned recipe_version is reported only when the store has it."""
     from rastro.application.active_recipes import active_job
 
     assert rastro.load_job_file(job).job.status == "success"
@@ -297,7 +297,7 @@ def test_pinned_version_reports_what_the_store_holds(job):
 
 
 def test_apply_refuses_a_symlinked_parent_directory(job, tmp_path, monkeypatch):
-    """SEC-008: below the working directory, apply never follows a symlinked directory."""
+    """Below the working directory, apply never follows a symlinked directory."""
     repaired(job)
     work = tmp_path / "work"
     work.mkdir()
@@ -356,7 +356,7 @@ required = false
 
 
 def test_apply_gives_one_source_of_a_shared_recipe_its_own_table(tmp_path, capsys):
-    """REC-006: apply writes [sources.recipe] for the repaired source; the others keep the
+    """Apply writes [sources.recipe] for the repaired source; the others keep the
     shared job recipe."""
     (tmp_path / "board.html").write_text(board(), encoding="utf-8")
     (tmp_path / "other.html").write_text(board(), encoding="utf-8")
@@ -379,7 +379,7 @@ def test_apply_gives_one_source_of_a_shared_recipe_its_own_table(tmp_path, capsy
 
 
 def test_recipe_show_and_compare_report_record_selector_changes(job, capsys):
-    """REC-006: show prints a stored version read-only; compare lists changed settings."""
+    """Show prints a stored version read-only; compare lists changed settings."""
     assert rastro.load_job_file(job).job.status == "success"
     repository, key = history(job)
     recipe = rastro.load_job(job).sources[0].recipe
@@ -409,7 +409,7 @@ def test_recipe_help_describes_every_subcommand(capsys):
 
 
 def test_container_rename_relocates_with_a_card_missing_its_optional_field(job):
-    """REPAIR-001, SCR-002: rows that omit an optional child stay one homogeneous container."""
+    """Rows that omit an optional child stay one homogeneous container."""
     assert rastro.load_job_file(job).job.status == "success"
     renamed = board().replace('class="card"', 'class="job-card"')
     (job.parent / "board.html").write_text(renamed, encoding="utf-8")
@@ -429,7 +429,7 @@ def stage_candidate(job, selector="h2.new-title::text"):
 
 
 def test_promote_on_an_unusable_page_keeps_the_candidate(job):
-    """REPAIR-005: a consent wall or empty shell never retires a candidate."""
+    """A consent wall or empty shell never retires a candidate."""
     assert rastro.load_job_file(job).job.status == "success"
     repository, key = stage_candidate(job)
     (job.parent / "board.html").write_text(
@@ -446,7 +446,7 @@ def test_promote_on_an_unusable_page_keeps_the_candidate(job):
 
 
 def test_promote_reject_on_a_usable_page_reports_retirement(job):
-    """REPAIR-005: the not-promoted report says the candidate was retired."""
+    """The not-promoted report says the candidate was retired."""
     assert rastro.load_job_file(job).job.status == "success"
     repository, key = stage_candidate(job, selector="p.none::text")
     report = rastro.promote_job_recipe(job, 1, 2, reason="x")
@@ -456,7 +456,7 @@ def test_promote_reject_on_a_usable_page_reports_retirement(job):
 
 
 def test_equal_reuse_prefers_the_newest_candidate(job):
-    """REC-006: reuse picks the newest equal candidate, else the newest retired twin."""
+    """Reuse picks the newest equal candidate, else the newest retired twin."""
     from rastro.application.recipe_repair import _equal_stored
 
     assert rastro.load_job_file(job).job.status == "success"
@@ -476,7 +476,7 @@ def test_equal_reuse_prefers_the_newest_candidate(job):
 
 
 def test_repaired_optional_field_never_reads_a_sibling_in_a_thinned_card(job):
-    """REPAIR-002, SCR-002: relocated selectors are tag+class, never positional."""
+    """Relocated selectors are tag+class, never positional."""
 
     def tagged(salary_class):
         cards = "".join(

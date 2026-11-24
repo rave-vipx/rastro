@@ -1,4 +1,4 @@
-"""JSON operators that edit one field per record (MOCK-002)."""
+"""JSON operators that edit one field per record."""
 
 from __future__ import annotations
 

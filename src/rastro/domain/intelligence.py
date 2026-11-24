@@ -1,4 +1,4 @@
-"""Optional inference contracts and declarative proposals (AI-001-004, REC-004)."""
+"""Optional inference contracts and declarative proposals."""
 
 from __future__ import annotations
 
@@ -34,7 +34,7 @@ class InferencePolicy(Contract):
 
 
 class ModelBudget(Contract):
-    """What a model call costs and the most one run may spend on it (COST-002), in USD.
+    """What a model call costs and the most one run may spend on it, in USD.
 
     Without ``cost_per_call`` nothing can be priced, so ``max_cost`` requires it.
     """

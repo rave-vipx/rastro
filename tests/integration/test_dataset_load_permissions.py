@@ -1,7 +1,4 @@
-"""A dataset load honours the operator's network grants and auth rules (offline).
-
-Requirement IDs: SCHED-001, SYNC-001, SEC-001, SEC-004.
-"""
+"""A dataset load honours the operator's network grants and auth rules (offline)."""
 
 from __future__ import annotations
 

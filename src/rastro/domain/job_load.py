@@ -1,4 +1,4 @@
-"""Versioned load report: DATA-001/003, SYNC-008; values are untrusted source data."""
+"""Versioned load report: values are untrusted source data."""
 
 from collections.abc import Iterable
 from typing import Any, Literal, Self

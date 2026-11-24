@@ -1,4 +1,4 @@
-"""N2, N3, N9, SEC-001, SEC-003, SEC-008: the browser path keeps every boundary of the source.
+"""The browser path keeps every boundary of the source.
 
 Fake renderers only: no real browser, no network. The budget fake mimics NetworkGuard: it lets
 at most ``policy.max_requests`` transfers through and reports the ones it let through.

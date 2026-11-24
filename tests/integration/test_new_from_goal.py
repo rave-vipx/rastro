@@ -1,4 +1,4 @@
-"""Integration tests for starting a job from a goal or sites (DISC-001..003, P-002)."""
+"""Integration tests for starting a job from a goal or sites."""
 
 from __future__ import annotations
 
@@ -133,7 +133,7 @@ class FakeModel:
 
 
 def test_goal_without_approve_writes_nothing_and_lists_proposals(tmp_path: Path):
-    """DISC-001, DISC-002: without --approve, print proposals only and write no file."""
+    """Without --approve, print proposals only and write no file."""
     search = FakeSearchProvider(
         [
             SearchHit("https://approved.example/events", "Approved Events"),
@@ -158,7 +158,7 @@ def test_goal_without_approve_writes_nothing_and_lists_proposals(tmp_path: Path)
 def test_goal_with_approve_fetches_only_approved_host_up_to_3_pages_via_web_acquirer(
     tmp_path: Path,
 ):
-    """DISC-002, DISC-003: WebAcquirer fetches at most 3 pages on approved host; writes job."""
+    """WebAcquirer fetches at most 3 pages on approved host; writes job."""
     hits = [SearchHit(f"https://approved.example/p{i}", f"Page {i}") for i in range(1, 6)] + [
         SearchHit("https://unapproved.example/secret", "Unapproved"),
         SearchHit("https://sub.approved.example/events", "Subdomain not exact match"),
@@ -204,7 +204,7 @@ async def _noop() -> None:
 
 
 def test_no_observable_records_or_failed_fetch_writes_no_job(tmp_path: Path):
-    """DISC-003: if no record can be observed or fetch fails, fail and write no job."""
+    """If no record can be observed or fetch fails, fail and write no job."""
     search = FakeSearchProvider([SearchHit("https://empty.example/events", "Empty")])
     acquirer = FakeAcquirer(
         {"https://empty.example/events": "<html><body><h1>Nothing</h1></body></html>"}
@@ -241,7 +241,7 @@ def test_no_observable_records_or_failed_fetch_writes_no_job(tmp_path: Path):
 
 
 def test_sites_only_mode_uses_urls_as_approval_and_previews_real_records(tmp_path: Path):
-    """DISC-003: `rastro new --site URL -o job.toml` proposes fields and previews real records."""
+    """`rastro new --site URL -o job.toml` proposes fields and previews real records."""
     acquirer = FakeAcquirer({"http://agenda.example/shows": EVENTS_HTML})
     job_path = tmp_path / "job.toml"
     result = new_job_from_sites(
@@ -262,7 +262,7 @@ def test_sites_only_mode_uses_urls_as_approval_and_previews_real_records(tmp_pat
 
 
 def test_cli_new_from_goal_and_site(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys):
-    """DISC-001, DISC-002, DISC-003: CLI `rastro new --goal` and `rastro new --site`."""
+    """CLI `rastro new --goal` and `rastro new --site`."""
     import rastro.cli_suggest as cli_suggest
 
     search = FakeSearchProvider(
@@ -322,7 +322,7 @@ def test_cli_new_from_goal_and_site(tmp_path: Path, monkeypatch: pytest.MonkeyPa
 def test_cli_missing_http_extra_is_reported_not_masked_as_bad_hosts(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys
 ):
-    """DISC-002: only host validation errors say 'exact hostnames'; a missing extra says so."""
+    """Only host validation errors say 'exact hostnames'; a missing extra says so."""
     import rastro.cli_suggest as cli_suggest
 
     def missing(_policy: AcquisitionPolicy):

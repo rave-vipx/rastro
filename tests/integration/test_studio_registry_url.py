@@ -1,4 +1,4 @@
-"""N10, SEC-001/005: real registry fetches honor grants; installs stay candidates."""
+"""Real registry fetches honor grants; installs stay candidates."""
 
 from functools import partial
 from pathlib import Path
@@ -87,7 +87,7 @@ def test_registry_url_requires_operator_grants(
     monkeypatch: pytest.MonkeyPatch,
     grant: str,
 ) -> None:
-    """N10, N12, SEC-001/005: request data cannot grant network permissions."""
+    """Request data cannot grant network permissions."""
     url = BASE
     grants = {}
     if grant == "port":

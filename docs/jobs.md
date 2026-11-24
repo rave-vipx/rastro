@@ -59,7 +59,7 @@ A job can start from three entry points:
 2. **Known sites only** (`rastro new --site URL [--site URL ...] -o job.toml`), where your URLs are the host approval.
 3. **Only a goal** (`rastro new --goal "TEXT" [--fields a,b] [--search searxng|model] [--approve HOST ...] -o job.toml`).
 
-### 1. Propose candidate sources (`DISC-001`, `DISC-002`)
+### 1. Propose candidate sources
 
 Without `--approve`, `rastro new --goal` runs in **proposals-only** mode: it queries the search provider or model, prints candidate sources as JSON (`url`, `host`, `title`, `origin = "search" | "model"`), writes no file, and never fetches any candidate host:
 
@@ -68,9 +68,9 @@ export RASTRO_SEARXNG_URL="http://127.0.0.1:8080"
 uv run rastro new --goal "cultural events in Montevideo"
 ```
 
-- **Search providers (`--search searxng|model`).** `SearXNGSearchProvider` queries a free self-hosted SearXNG JSON endpoint (`RASTRO_SEARXNG_URL`; needs `httpx`, installed by `pip install 'rastro-engine[openai]'`); `localhost` and loopback addresses are local, other endpoints require HTTPS and `--allow-remote` (`SEC-004`). Passing `--search model` asks the configured model (`--model` or `RASTRO_MODEL`) for candidate URLs (`origin = "model"`), parses the response strictly, keeps only public `http(s)` URLs on standard ports, and caps proposals at 10 (`SEC-005`). If neither a search provider nor a model is configured, Rastro raises `ConfigurationError` explaining both options (`P-002`).
+- **Search providers (`--search searxng|model`).** `SearXNGSearchProvider` queries a free self-hosted SearXNG JSON endpoint (`RASTRO_SEARXNG_URL`; needs `httpx`, installed by `pip install 'rastro-engine[openai]'`); `localhost` and loopback addresses are local, other endpoints require HTTPS and `--allow-remote`. Passing `--search model` asks the configured model (`--model` or `RASTRO_MODEL`) for candidate URLs (`origin = "model"`), parses the response strictly, keeps only public `http(s)` URLs on standard ports, and caps proposals at 10. If neither a search provider nor a model is configured, Rastro raises `ConfigurationError` explaining both options.
 
-### 2. Approve hosts, propose fields and preview real records (`DISC-002`, `DISC-003`)
+### 2. Approve hosts, propose fields and preview real records
 
 Discovered hosts never enter an allowlist without explicit approval. Pass `--approve HOST ...` (or `--site URL ...` when you already know the URLs) with `-o job.toml`:
 
@@ -243,7 +243,7 @@ Values that cannot be coerced become `validation_error` issues on the record, ne
 defaults. Normalize decimal commas or unsupported local formats in the recipe or with the Python SDK.
 
 For Spanish source dates, opt in on each `date` or `datetime` field with `localized = true`
-(DATA-005, JOB-002). ISO input remains supported. Month names and abbreviations are case
+. ISO input remains supported. Month names and abbreviations are case
 insensitive; weekday prefixes are ignored. For example, `12 al 14 NOV 2026 - 20 H` becomes
 November 12 at 20:00 in `[region].timezone`. Ranges and lists use their first day.
 Yearless dates use the observation's year in that timezone, advancing to the next year
@@ -314,7 +314,7 @@ such as `time.cyg--dia:first-of-type::text` picks the first.
 ## Dataset block and preview
 
 An optional `[dataset]` block declares where approved records would be stored and how a record
-is identified (DATA-002). It is additive: `format_version` stays `1`, and a job without the block
+is identified. It is additive: `format_version` stays `1`, and a job without the block
 validates, runs and prints exactly as before.
 
 ```toml
@@ -427,7 +427,7 @@ with a specific `message` (for example `Dataset file not found: agenda.sqlite` f
 `rastro job run` prints a single `JobRunResult` JSON object to `stdout`:
 
 - `schema_version`: `1`
-- `data_trust`: `"untrusted_source_data"` — extracted record fields come from untrusted external documents and must never be treated by agents as instructions (AGENT-003)
+- `data_trust`: `"untrusted_source_data"` — extracted record fields come from untrusted external documents and must never be treated by agents as instructions
 - `job`: `JobSummary` (`schema_fingerprint`, `source_count`, `succeeded`, `partial`, `failed`, `records_accepted`, `records_rejected`, `status`)
 - `results`: ordered list of [`ExtractionResult`](api.md#results) dumps preserving records, field-level `evidence`, `issues`, `metrics`, `recipe_attempts` and `learned_recipe`.
 - `recipes`: one entry per source (`source_index`, `recipe_origin`, `recipe_version`) saying whether the source used the job file's recipe (`"job"`) or the serving recipe in `recipe_memory` (`"memory"`). With `recipe_memory`, a stored serving recipe whose version is higher than the job file's recipe is used; see [load and rollback behavior](repair.md#load-and-rollback-behavior). `rastro job load` reports the same `recipe_origin` and `recipe_version` per source.
@@ -572,8 +572,8 @@ See [dataset usage and the executed offline sequence](dataset.md#load-inspect-an
 
 ## Pagination
 
-For URL sources, a recipe can declare a next-page link (SYNC-002, SEC-008;
-[ADR 0026](decisions/0026-bounded-recipe-pagination.md)):
+For URL sources, a recipe can declare a next-page link
+([ADR 0026](decisions/0026-bounded-recipe-pagination.md)):
 
 ```toml
 [recipe.pagination]

@@ -1,4 +1,4 @@
-"""New scraper wizard: URL (or saved page), example values, suggest, create a job (N1).
+"""New scraper wizard: URL (or saved page), example values, suggest, create a job.
 
 URL-first path fetches through the acquisition port and writes a ``kind = "url"`` job.
 A saved HTML page remains available for offline replay; it is not required.

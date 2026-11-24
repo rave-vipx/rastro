@@ -1,4 +1,4 @@
-"""N17: every issue code emitted in src/rastro is documented in docs/issues.md."""
+"""Every issue code emitted in src/rastro is documented in docs/issues.md."""
 
 import ast
 import re
@@ -55,7 +55,7 @@ def emitted_codes() -> set[str]:
     return codes
 
 
-# Calls whose positional string arguments are issue codes (N16 sitemap, N19 flags).
+# Calls whose positional string arguments are issue codes.
 _CODE_CALLS = {"AcquisitionResult", "SitemapError", "fail"}
 _CODE_SHAPE = re.compile(r"^[a-z][a-z0-9]*(?:_[a-z0-9]+)+$")
 

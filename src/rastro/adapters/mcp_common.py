@@ -1,5 +1,5 @@
 """Shared MCP plumbing: bounded argument types, tool annotations and the safe error envelope
-(AGENT-002). Tool modules import from here so the server module stays a thin composition."""
+. Tool modules import from here so the server module stays a thin composition."""
 
 from __future__ import annotations
 

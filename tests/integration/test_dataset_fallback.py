@@ -1,4 +1,4 @@
-"""PR 61 review regressions: DATA-001/002/003, SYNC-008."""
+"""PR 61 review regressions."""
 
 import json
 import shutil

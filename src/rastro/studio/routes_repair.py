@@ -2,10 +2,10 @@
 
 Each action calls the public job API (``repair_job_source``, ``promote_job_recipe``,
 ``write_serving_recipe``); Studio adds only the selector diff and the digest check
-(REPAIR-002-005, REC-006, P-008).
+.
 
-"Fix this site" uses the Studio model when one is configured (N7). Studio cannot override
-failed gates: promotion re-runs them and a refusal is shown as an alert (N5, N7, ADR 0034).
+"Fix this site" uses the Studio model when one is configured. Studio cannot override
+failed gates: promotion re-runs them and a refusal is shown as an alert (ADR 0034).
 """
 
 from __future__ import annotations
@@ -48,7 +48,7 @@ def _existing(raw: str | None, base: Path) -> Path | None:
 
 
 def _statuses(job: Job, base: Path) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Source status and open drift by source URL (DRIFT-005)."""
+    """Source status and open drift by source URL."""
     if job.dataset is not None:
         job.dataset.require_sqlite_views()
     file = _existing(job.dataset.path if job.dataset else None, base)
@@ -125,7 +125,7 @@ def routes(studio: Studio) -> list[Route]:
         path, _, job = studio.load(text(data, "file"))
         index = integer(data, "source", 1, MAX_SOURCES)
 
-        # N12: Studio's switch promises the semantic judge. Without a model to provide it,
+        # Studio's switch promises the semantic judge. Without a model to provide it,
         # this repair stores candidates only; the core API keeps its deterministic default.
         held = bool(job.repair and job.repair.auto_promote) and not has_judge(job, studio.model)
 

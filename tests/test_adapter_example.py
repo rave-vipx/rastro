@@ -1,4 +1,4 @@
-"""examples/adapter.py stays runnable offline on public names only (N15)."""
+"""examples/adapter.py stays runnable offline on public names only."""
 
 import ast
 import runpy

@@ -1,4 +1,4 @@
-"""OBS-003: transactional forward-only migrations for ``run_metrics`` (v3 and v4)."""
+"""Transactional forward-only migrations for ``run_metrics`` (v3 and v4)."""
 
 import json
 import os
@@ -121,7 +121,7 @@ def test_rows_never_store_url_queries_or_userinfo():
     assert clean.source_url == "https://a.example/x"
 
 
-# The exact ``run_metrics`` table and columns the schema 3 code (0.7, before N5) wrote.
+# The exact ``run_metrics`` table and columns the schema 3 code (0.7, before alerts) wrote.
 V3_TABLE = (
     "CREATE TABLE run_metrics (id INTEGER PRIMARY KEY AUTOINCREMENT, "
     "dataset TEXT NOT NULL, run_id TEXT NOT NULL, source_url TEXT NOT NULL, host TEXT NOT NULL, "
@@ -135,7 +135,7 @@ V3_TABLE = (
 
 
 def to_v3(path):
-    """A schema 3 file with one metrics row, written with the pre-N5 columns only."""
+    """A schema 3 file with one metrics row, written with the pre-alert columns only."""
     status = to_v2(path)
     with closing(sqlite3.connect(path)) as db:
         db.execute(V3_TABLE)
@@ -151,7 +151,7 @@ def to_v3(path):
 
 
 def test_v3_rows_read_as_unknown_and_migrate_to_v4_once(tmp_path):
-    """N5: old rows keep ``rejected``/``cap`` unknown (None), never a made-up 0."""
+    """Old rows keep ``rejected``/``cap`` unknown (None), never a made-up 0."""
     path = tmp_path / "d.sqlite"
     status = to_v3(path)
     store = SQLiteDatasetStore(path)

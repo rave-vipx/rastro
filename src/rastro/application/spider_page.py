@@ -1,4 +1,4 @@
-"""The one place a spider page is fetched (N3).
+"""The one place a spider page is fetched.
 
 Every document a spider run reads, pagination pages included, goes through
 ``AcquisitionPort.acquire`` here. The crawl of one start source runs inside that source's

@@ -1,4 +1,4 @@
-"""Job file endpoints: page, listing, validate, preview, correct a selector, connect (P-008)."""
+"""Job file endpoints: page, listing, validate, preview, correct a selector, connect."""
 
 from __future__ import annotations
 
@@ -53,7 +53,7 @@ I18N_ASSETS = frozenset(path.name for path in (STATIC / "i18n").glob("*.json"))
 
 
 def _recipes(job: Job) -> list[dict[str, Any]]:
-    """Recipes the page may edit (N4): the job recipe (``source`` None) and per-source ones."""
+    """Recipes the page may edit: the job recipe (``source`` None) and per-source ones."""
     declared = [(None, job.recipe), *((i, s.recipe) for i, s in enumerate(job.sources))]
     return [
         {

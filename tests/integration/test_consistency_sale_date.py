@@ -1,4 +1,4 @@
-"""A recipe that reads the ticket sale date as the event date fails consistency (QUAL-005)."""
+"""A recipe that reads the ticket sale date as the event date fails consistency."""
 
 from __future__ import annotations
 

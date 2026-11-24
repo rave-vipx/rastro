@@ -1,7 +1,6 @@
 # ADR 0030: run-local HTTP sessions and conditional dataset loads
 
 - **Status:** accepted for 0.7.0.
-- **Requirements:** SCHED-005, SYNC-004, SEC-005, ALERT-006.
 
 ## Problem
 

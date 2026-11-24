@@ -1,4 +1,4 @@
-"""`rastro studio`: serve the local Studio on loopback (P-008)."""
+"""`rastro studio`: serve the local Studio on loopback."""
 
 from __future__ import annotations
 

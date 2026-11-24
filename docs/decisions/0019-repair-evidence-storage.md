@@ -1,7 +1,6 @@
 # ADR 0019: last-success repair evidence stays with the dataset
 
 - **Status:** accepted for v0.2.
-- **Requirements:** REPAIR-002/004/005, SCR-002, REC-006; preserves ADR 0015/0017/0018.
 
 ## Problem and options
 

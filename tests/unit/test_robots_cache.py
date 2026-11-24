@@ -1,4 +1,4 @@
-"""One robots.txt answer per origin and run, never across runs (N10, SEC-008, SEC-003)."""
+"""One robots.txt answer per origin and run, never across runs."""
 
 import asyncio
 

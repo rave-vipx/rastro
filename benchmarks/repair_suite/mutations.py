@@ -1,4 +1,4 @@
-"""Named breakage transforms per page (REPAIR-001-005). Each maps page HTML to new HTML."""
+"""Named breakage transforms per page. Each maps page HTML to new HTML."""
 
 from __future__ import annotations
 

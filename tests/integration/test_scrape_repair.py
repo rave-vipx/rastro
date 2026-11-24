@@ -1,4 +1,4 @@
-"""Recipe memory and offline self-repair through rastro.scrape (REC-001, REPAIR-001-005)."""
+"""Recipe memory and offline self-repair through rastro.scrape."""
 
 from typing import Annotated, ClassVar
 
@@ -237,7 +237,7 @@ def _shop(css_class, missing_stock=None):
 
 @pytest.mark.parametrize("missing", [0, 1])
 def test_auto_heals_when_one_record_lacks_an_optional_field(tmp_path, missing):
-    """REPAIR-001, SCR-002: an absent optional child does not block relocation."""
+    """An absent optional child does not block relocation."""
     memory = tmp_path / "recipes.db"
     assert _scrape(_shop("product"), memory, "auto", Item).status == Outcome.SUCCESS
     healed = _scrape(_shop("item-card", missing), memory, "auto", Item)
@@ -265,7 +265,7 @@ def _stocked(stock_class, missing=None, card="product"):
 
 @pytest.mark.parametrize("missing", [0, 2])
 def test_auto_never_gives_a_thinned_record_its_siblings_value(tmp_path, missing):
-    """REPAIR-002, SCR-002: a relocated optional field never reads the next sibling."""
+    """A relocated optional field never reads the next sibling."""
     memory = tmp_path / "recipes.db"
     _scrape(_stocked("stock"), memory, "auto", Stocked)
     result = _scrape(_stocked("qty", missing, "item-card"), memory, "auto", Stocked)

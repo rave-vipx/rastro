@@ -162,7 +162,7 @@ def dataset_command(args: argparse.Namespace) -> int:
 
 
 def _status(store: SQLiteDatasetStore, args: argparse.Namespace) -> int:
-    """Exit 4 (needs attention) when a source is stale or has open drift (DATA-004)."""
+    """Exit 4 (needs attention) when a source is stale or has open drift."""
     label = {"schema_version": 1, "data_trust": "untrusted_source_data"}
     statuses = store.source_status(args.dataset)
     stale = stale_sources(store, args.dataset)

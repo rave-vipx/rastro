@@ -1,7 +1,7 @@
 """Dataset browser: paginated records with stale markers, and JSON or HTML export.
 
 Reads the job's ``[dataset]`` file without creating it; values stay labelled untrusted
-and every field value is capped at ``MAX_CHARS`` with a ``truncated`` flag (DATA-004, P-008).
+and every field value is capped at ``MAX_CHARS`` with a ``truncated`` flag.
 The store has no paged read, so a page reads the whole dataset; that read is bounded by the
 job's ``Limits`` (``max_records``, ``max_json_bytes``).
 """

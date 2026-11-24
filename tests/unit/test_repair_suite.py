@@ -1,4 +1,4 @@
-"""The repair suite measures; it never asserts that repair succeeds (REPAIR-001-005, DIFF-002)."""
+"""The repair suite measures; it never asserts that repair succeeds."""
 
 from __future__ import annotations
 

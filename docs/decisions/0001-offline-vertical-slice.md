@@ -3,7 +3,6 @@
 - Status: Accepted
 - Date: 2026-10-24
 - Release: 0.1
-- Requirements: INT-002/003/004, REC-002, QUAL-001–004, SEC-004/005/007/008
 
 ## Context
 

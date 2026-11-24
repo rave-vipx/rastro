@@ -1,4 +1,4 @@
-"""Recipe retention CLI: prune old non-serving recipe versions (REC-005)."""
+"""Recipe retention CLI: prune old non-serving recipe versions."""
 
 import argparse
 import json

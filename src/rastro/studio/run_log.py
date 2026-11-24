@@ -1,4 +1,4 @@
-"""Studio's content-free run log: what a load reported that the dataset does not keep (N5).
+"""Studio's content-free run log: what a load reported that the dataset does not keep.
 
 The dataset keeps source status, run metrics and drift. A load result also names issue codes
 (for example ``evidence_retention_failed``) and a promotion can be refused; Studio keeps the

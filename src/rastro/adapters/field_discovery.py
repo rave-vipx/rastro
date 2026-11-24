@@ -1,4 +1,4 @@
-"""Discover repeated records and their per-record fields from a parsed page (DISC-003, SEC-008).
+"""Discover repeated records and their per-record fields from a parsed page.
 
 Page content is untrusted: selectors come only from safe tags and stable classes, and the
 number of candidate record selectors and scanned nodes is bounded, so a hostile page

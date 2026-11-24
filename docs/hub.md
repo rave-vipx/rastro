@@ -2,7 +2,7 @@
 
 A recipe is data, so it can travel in a plain Git repository. A bundle lets one
 person publish a working recipe and another application use it without the author's
-help (HUB-001..HUB-006). Export and import (`rastro recipe export`/`import`) work
+help. Export and import (`rastro recipe export`/`import`) work
 on local directories, and a registry adds package metadata, reproducible trust
 indicators and `publish`, `search` and `install`. A registry is a local directory
 or any HTTPS URL that serves the same layout. Rastro never runs `git`; it makes
@@ -99,7 +99,7 @@ the right to redistribute it (use a synthetic or trimmed page). Export refuses t
 write anything unless the recipe extracts the sample cleanly, and refuses source URLs
 with a query string or fragment.
 
-By default, exported bundles have `"visibility": "private"` (HUB-004). Pass `--public`
+By default, exported bundles have `"visibility": "private"`. Pass `--public`
 together with `--id` (`^[a-z0-9][a-z0-9-]{1,63}$`), `--version` (`MAJOR.MINOR.PATCH`),
 `--author` (and optional `--author-url`), and `--license` (SPDX identifier) when
 preparing a package for a shared registry.
@@ -142,10 +142,10 @@ $ rastro recipe publish ./my-recipe --registry ./registry
 
 `publish` enforces four gates before writing to `<registry>`:
 
-1. **Public visibility (HUB-004):** private bundles are refused with a hint to re-export using `--public`.
-2. **Offline verification (HUB-003):** file digests, untrusted-selector policy, and sample replay must pass.
+1. **Public visibility:** private bundles are refused with a hint to re-export using `--public`.
+2. **Offline verification:** file digests, untrusted-selector policy, and sample replay must pass.
 3. **Immutability:** an existing `<id>@<version>` in the registry is never overwritten.
-4. **Secret scanning (HUB-004):** every bundle file is scanned with the Mock Lab secret and personal-data detectors (`src/rastro/mocklab/detectors.py`); any hit is refused naming only the file and detector category, never echoing the matched value.
+4. **Secret scanning:** every bundle file is scanned with the Mock Lab secret and personal-data detectors (`src/rastro/mocklab/detectors.py`); any hit is refused naming only the file and detector category, never echoing the matched value.
 
 When all checks pass, Rastro writes `<registry>/recipes/<id>/<version>/`, updates
 `<registry>/index.json` atomically, and prints the `git` commands you may run to commit
@@ -169,7 +169,7 @@ recipe as a `candidate`. A package that declares `compatibility` is also checked
 against this install: it is refused (`RegistryError`, store unchanged) when the running
 `rastro-engine` version is below its `min_rastro`, or when the bundle's source URL does
 not match any of its `source_patterns` (a host such as `example.com`, or a
-`host/path-prefix` that matches whole path segments; the port must match when given). Imported packages never execute code (HUB-005): only JSON,
+`host/path-prefix` that matches whole path segments; the port must match when given). Imported packages never execute code: only JSON,
 HTML, and declarative selector data are read.
 
 ### Install from a registry URL
@@ -204,7 +204,7 @@ unchanged. Error messages carry a short category such as `destination_denied` or
 `body_too_large`, never the URL query or a response body. A missing `index.json` is an error,
 not an empty registry.
 
-### Trust indicators (HUB-006)
+### Trust indicators
 
 Trust indicators are computed from offline verification, never self-declared:
 

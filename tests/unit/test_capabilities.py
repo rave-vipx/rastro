@@ -1,5 +1,5 @@
 """The capability manifest covers every public surface and its generated files stay current
-(N18, AGENT-001, AGENT-002)."""
+."""
 
 import argparse
 import json
@@ -26,7 +26,7 @@ PROVIDERS = {"OllamaModel", "OpenAICompatibleModel"}  # public, kept out of __al
     [("llms.txt", render_llms, "llms"), ("docs/capabilities.md", render_markdown, "markdown")],
 )
 def test_generated_files_are_current(path: str, render: object, flag: str) -> None:
-    """N18: committed outputs equal a fresh render byte for byte."""
+    """Committed outputs equal a fresh render byte for byte."""
     assert callable(render)
     assert (ROOT / path).read_text(encoding="utf-8") == render(), (
         f"{path} is stale: run `uv run rastro capabilities --output {flag} > {path}`"
@@ -43,7 +43,7 @@ def _commands(parser: argparse.ArgumentParser, prefix: str = "") -> list[str]:
 
 
 def test_every_cli_command_is_a_capability() -> None:
-    """N18: each command and subcommand appears in a capability or REFERENCE_ONLY."""
+    """Each command and subcommand appears in a capability or REFERENCE_ONLY."""
     covered = [*CLI, *REFERENCE_ONLY]
     commands = _commands(_build_parser())
     assert {"capabilities", "init", "job load", "recipe install"} <= set(commands)
@@ -54,14 +54,14 @@ def test_every_cli_command_is_a_capability() -> None:
 
 
 def test_every_public_name_is_listed_and_exists() -> None:
-    """N18: rastro.__all__ is covered; listed names are real public names."""
+    """Rastro.__all__ is covered; listed names are real public names."""
     assert set(rastro.__all__) - PYTHON - set(REFERENCE_ONLY) == set()
     assert PYTHON - set(rastro.__all__) - PROVIDERS == set()
 
 
 @pytest.mark.asyncio
 async def test_every_mcp_tool_is_listed() -> None:
-    """N18, AGENT-002: registered tools appear; listed tools exist; resource serves JSON."""
+    """Registered tools appear; listed tools exist; resource serves JSON."""
     pytest.importorskip("mcp")
     from rastro.adapters.mcp_server import INSTRUCTIONS, build_server
 
@@ -83,7 +83,7 @@ def _slug(heading: str) -> str:
 
 
 def test_docs_links_point_at_real_anchors() -> None:
-    """N18: every capability links to an existing page and heading."""
+    """Every capability links to an existing page and heading."""
     for cap in CAPABILITIES:
         page, _, anchor = cap.docs.partition("#")
         text = (ROOT / page).read_text(encoding="utf-8")
@@ -93,7 +93,7 @@ def test_docs_links_point_at_real_anchors() -> None:
 
 
 def test_entries_are_complete() -> None:
-    """N18: each entry says what to use, what not to build and where the docs are."""
+    """Each entry says what to use, what not to build and where the docs are."""
     for cap in CAPABILITIES:
         assert cap.task and cap.use and cap.instead_of and cap.docs.startswith("docs/")
         assert all(command.startswith("rastro ") for command in cap.cli)
@@ -103,7 +103,7 @@ def test_entries_are_complete() -> None:
 def test_capabilities_command_prints_each_format(
     flag: str, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """N18: `rastro capabilities --output` prints the manifest; JSON parses."""
+    """`rastro capabilities --output` prints the manifest; JSON parses."""
     assert main(["capabilities", "--output", flag]) == 0
     out = capsys.readouterr().out
     if flag == "json":
@@ -113,7 +113,7 @@ def test_capabilities_command_prints_each_format(
 
 
 def test_generated_outputs_identical() -> None:
-    """AGENT-001: split catalogs preserve generated reference bytes."""
+    """Split catalogs preserve generated reference bytes."""
     from rastro.capabilities_extract import EXTRACT_CAPABILITIES
     from rastro.config_render import render_markdown as render_configuration
     from rastro.domain.health import job_health_json_schema

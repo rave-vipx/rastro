@@ -1,4 +1,4 @@
-"""Flag instruction-like text in untrusted source values (N19, SEC-008, AI-001, REPAIR-002).
+"""Flag instruction-like text in untrusted source values.
 
 Page content may address the model or agent that later reads it ("ignore previous
 instructions", a fake ``<|im_start|>system`` turn, a call to ``recipe_promote``). Rastro

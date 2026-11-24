@@ -1,4 +1,4 @@
-"""DATA-001 / SCR-002: optional relocation cannot misreport a committed load."""
+"""Optional relocation cannot misreport a committed load."""
 
 import json
 

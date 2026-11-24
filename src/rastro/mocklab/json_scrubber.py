@@ -1,4 +1,4 @@
-"""Scrub JSON so only retained values and the keys that reach them survive (MOCK-005).
+"""Scrub JSON so only retained values and the keys that reach them survive.
 
 Values outside retained pointers become placeholders or small integers. Keys survive
 only on the path to a retained value or a structural pointer (such as a JSON

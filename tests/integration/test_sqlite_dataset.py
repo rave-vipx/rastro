@@ -1,4 +1,4 @@
-"""DATA-001/004/005, SYNC-002/003/005/006: durable, non-destructive snapshots."""
+"""Durable, non-destructive snapshots."""
 
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
@@ -145,7 +145,7 @@ def test_concurrent_apply_is_serialized(store):
 
 
 def test_clock_going_backwards_clamps_source_times_instead_of_failing(store):
-    """DATA-004, QUAL-005: an earlier clock is clamped to the last recorded attempt."""
+    """An earlier clock is clamped to the last recorded attempt."""
     apply(store, record())
     earlier = AT - timedelta(hours=1)
     assert apply(store, record(at=earlier), at=earlier).counts["unchanged"] == 1
@@ -157,7 +157,7 @@ def test_clock_going_backwards_clamps_source_times_instead_of_failing(store):
 
 
 def test_failure_detail_is_stored_without_changing_the_reason(store):
-    """DATA-005: the outcome stays the reason; the detail tells 403, 429 and timeouts apart."""
+    """The outcome stays the reason; the detail tells 403, 429 and timeouts apart."""
     from rastro.ports.dataset import SourceFailureRecorder
 
     assert isinstance(store, SourceFailureRecorder)

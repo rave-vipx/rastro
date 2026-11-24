@@ -1,4 +1,4 @@
-"""`rastro job stats`; the model cost options live in `cli_model` (OBS-003..006, COST-002)."""
+"""`rastro job stats`; the model cost options live in `cli_model`."""
 
 import argparse
 import json

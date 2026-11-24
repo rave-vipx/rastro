@@ -1,4 +1,4 @@
-"""Drift reaches the dataset and preserves earlier observations (DRIFT-001-006)."""
+"""Drift reaches the dataset and preserves earlier observations."""
 
 import shutil
 from pathlib import Path
@@ -64,7 +64,7 @@ def test_renamed_class_yields_structural_drift_naming_field_and_table_effect(tmp
 
 
 def test_total_extraction_failure_after_success_is_high_risk(tmp_path):
-    """DRIFT-002/004: a record selector that stops matching is never low risk or 0.0."""
+    """A record selector that stops matching is never low risk or 0.0."""
     sample = tmp_path / "sample"
     shutil.copytree(Path("examples/event-agenda/sample"), sample)
     load(sample)
@@ -82,7 +82,7 @@ def test_total_extraction_failure_after_success_is_high_risk(tmp_path):
 
 
 def test_total_failure_without_drift_baseline_uses_dataset_success_history(tmp_path, capsys):
-    """DRIFT-002/004: the earlier success came from a load without --drift; still high risk."""
+    """The earlier success came from a load without --drift; still high risk."""
     import json
 
     from rastro.cli import main

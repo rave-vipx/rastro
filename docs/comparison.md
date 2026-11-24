@@ -1,7 +1,7 @@
 # Reproducible extraction comparison
 
 The [product-task benchmark](comparison-v02.md) measures loading two sources,
-adding a third, and scripted repair to a SQLite database (DIFF-002).
+adding a third, and scripted repair to a SQLite database.
 
 !!! note "Historical measurements"
     The numbers on this page were recorded on Rastro 0.1.0 (and a development
@@ -10,10 +10,10 @@ adding a third, and scripted repair to a SQLite database (DIFF-002).
     detection and monitoring shipped in later releases and are covered by the
     [AI repair evidence](ai-evidence.md) and the [repair suite](repair.md).
 
-These experiments support **DIFF-001**, **QUAL-003**, **REC-001** and **OBS-001**. They compare Rastro with an independent
+These experiments cover differentiation, recipe reuse and evidence. They compare Rastro with an independent
 Scrapling + Pydantic baseline written for this repository.
 
-**DIFF-001 status: partially demonstrated.** On the [held-out evaluation](#held-out-evaluation)
+**Status: partially demonstrated.** On the [held-out evaluation](#held-out-evaluation)
 below, Rastro needed the same source-specific configuration as the adapted
 baseline required by section 17 (10 versus 10 entries). The adapted baseline needs
 33 more lines of one-time adapter code; versus hand-written per-source mappings
@@ -23,7 +23,7 @@ SQLite memory made 0.017 calls per successful record and Rastro without memory m
 0.167. The baseline makes no model calls. Rastro showed **no** advantage in silent
 error detection or extraction accuracy. Every executor had 3 silent errors in 24
 mutations. Rastro was slower on every page. The
-[first regression result](#first-recorded-result) shows no advantage either. DIFF-001
+[first regression result](#first-recorded-result) shows no advantage either. The differentiation claim
 remains open for accuracy, silent error detection, maintenance and recovery.
 
 ## Same task, side by side
@@ -227,7 +227,7 @@ Rastro 0.242–0.411 ms and 11.870 ms.
 
 ## Held-out evaluation
 
-This second experiment targets the DIFF-001 dimensions where Rastro's integration
+This second experiment targets the dimensions where Rastro's integration
 could plausibly matter. The 14-case regression corpus does not cover them. It was
 added after that corpus and **no engine code changed for it**. The engine is under
 `src/rastro`, which this change does not touch.
@@ -452,14 +452,14 @@ is small next to network acquisition, which was not measured here.
   naming convention makes Rastro's discovery count equal to `baseline` (25 entries)
   unless aliases are added. Aliases were unsupported when this was measured.
 - Silent errors that a schema cannot distinguish (duplicates, reassigned classes)
-  need historical or semantic checks (QUAL-005). Neither engine had them in this experiment.
+  need historical or semantic checks. Neither engine had them in this experiment.
 - Recovery after a mutation (repair) was out of scope for this experiment and was not
   measured here. A stored recipe that fails is reported, never replaced automatically.
 
 ## Latency profile
 
-This profile explains the slowdown above for **DIFF-001** and follows principle
-**P-010** (measure before optimizing). An initial baseline profile (commit `e70a642`)
+This profile explains the slowdown above and follows principle
+**(measure before optimizing). An initial baseline profile (commit `e70a642`)
 attributed cost before any engine change; the top two candidates were then implemented
 and re-profiled into `benchmarks/results/latency-profile.json`.
 

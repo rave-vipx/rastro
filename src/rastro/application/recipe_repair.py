@@ -1,4 +1,4 @@
-"""Candidate-only persistence followed by measured lifecycle decisions (REC-006)."""
+"""Candidate-only persistence followed by measured lifecycle decisions."""
 
 from collections.abc import Callable, Sequence
 from datetime import datetime

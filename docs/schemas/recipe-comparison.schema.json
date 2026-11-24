@@ -77,7 +77,7 @@
     },
     "ConsistencyReport": {
       "additionalProperties": false,
-      "description": "Three separate indicators (QUAL-006); ``None`` means \"not assessed\", never 1.0.\n\n- ``completeness``: share of declared fields that carry a value.\n- ``structural_validity``: share of candidate records that passed validation.\n- ``semantic_confidence``: lowest confidence among assessable rules.",
+      "description": "Three separate indicators; ``None`` means \"not assessed\", never 1.0.\n\n- ``completeness``: share of declared fields that carry a value.\n- ``structural_validity``: share of candidate records that passed validation.\n- ``semantic_confidence``: lowest confidence among assessable rules.",
       "properties": {
         "completeness": {
           "anyOf": [
