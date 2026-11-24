@@ -118,8 +118,10 @@ has a `[model]` table, when `[repair] model = true` (the `RASTRO_MODEL` spec, th
 `rastro.model`), or when `rastro recipe repair --model SPEC [--allow-remote]` or
 `repair_job_source(..., model=...)` overrides both.
 
-1. **Escalation.** Relocation, declared fallbacks and discovery run first. The model
-   proposes only when none of their candidates would pass every gate, so it cannot
+1. **Escalation.** Relocation, declared fallbacks and discovery run first, then adaptive
+   candidates: elements similar to the remembered records, found without a model. A
+   passing adaptive candidate ends repair with no model call (`origin = "adaptive"`). The
+   model proposes only when none of these candidates would pass every gate, so it cannot
    compete with a passing deterministic candidate. The prompt carries the serving
    recipe and the field types and descriptions. Each changed selector is composed as
    `"<serving>, <proposed>"`, as relocation does, so historical pages keep matching; the

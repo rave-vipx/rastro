@@ -174,14 +174,16 @@ proposal passes the same deterministic checks as a relocated one.
 ```python
 port = rastro.model()  # reads RASTRO_MODEL; any ModelPort object works too
 result = rastro.scrape(page, Offer, memory="recipes.db", repair="auto", model=port)
-result.repair.origin  # "relocation" or "model": where the candidates came from
+result.repair.origin  # "relocation", "adaptive" or "model": where the candidates came from
 result.repair.model_calls  # proposal and judge calls this repair made
 ```
 
 - **No selectors.** A model without `rastro.css` markers, on a page without matching
   structured data, gets a recipe proposed from the field names, types and descriptions;
   it is kept only if extraction and the schema validate, and `memory=` remembers it.
-- **Repair.** Relocation runs first. Only when none of its candidates would pass does
+- **Repair.** Relocation runs first, then adaptive candidates (elements similar to the
+  remembered records); a passing one repairs without any model call and
+  `result.repair.origin` is `"adaptive"`. Only when none of them would pass does
   the model propose (at most two calls by default). Rastro prefixes each changed
   selector with the remembered one (`"old, new"`), so the retained sample still parses,
   and gates the result like any candidate.
