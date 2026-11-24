@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import re
 import zipfile
 from xml.sax.saxutils import escape
 
@@ -12,7 +13,8 @@ from rastro.domain.dataset import StoredRecord
 _MAIN = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 _REL = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 _DECL = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-_XML_FORBIDDEN = {c: None for c in [*range(0, 9), 11, 12, *range(14, 32)]}
+# Everything outside the XML 1.0 Char production: C0 controls, surrogates, U+FFFE, U+FFFF.
+_XML_FORBIDDEN = re.compile("[^\t\n\r\x20-\ud7ff\ue000-\ufffd\U00010000-\U0010ffff]")
 
 
 def column_name(index: int) -> str:
@@ -26,7 +28,7 @@ def column_name(index: int) -> str:
 
 
 def _cell(ref: str, text: str) -> str:
-    clean = escape(text.translate(_XML_FORBIDDEN))
+    clean = escape(_XML_FORBIDDEN.sub("", text))
     return f'<c r="{ref}" t="inlineStr"><is><t xml:space="preserve">{clean}</t></is></c>'
 
 

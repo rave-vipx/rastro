@@ -106,3 +106,9 @@ def test_xlsx_opens_valid_zip_and_cells():
     assert cells["C1"] == "tags[0]" and cells["C2"] == "x"
     assert cells["A3"] == "'=evil"  # same formula guard as CSV
     assert cells["E1"] == "last_observed_at"
+
+
+def test_xlsx_drops_characters_xml_cannot_hold():
+    note = "x￾y￿z\ud800w\x01v"
+    cells = _cells(xlsx_export((record("a", note=note),)))  # parses: no malformed sheet
+    assert cells["B2"] == "xyzwv"
