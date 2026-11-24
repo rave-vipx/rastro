@@ -1,8 +1,11 @@
-// N10: Registry (URL). Search and install from a local registry folder or an HTTPS URL;
+// N10: the Hub view. Explore by site, publish a proposal; folder tools sit under Advanced.
+// (N10: Registry (URL). Search and install from a local registry folder or an HTTPS URL;
 // publish writes into a local registry folder only (no account, no push, no Git).
 // Every source-derived value stays plain text.
 import { $, api, el, requireFile, table } from "./dom.js";
 import { onLangChange, t } from "./i18n.js";
+import { exploreSection } from "./hub_explore.js";
+import { publishSection } from "./hub_publish.js";
 
 function input(row, id, label, placeholder) {
   const caption = el("label", label);
@@ -117,16 +120,45 @@ function publishForm(section) {
   section.append(form, output);
 }
 
+// The folder search and bundle publish stay for people who run their own hub (Advanced).
+function folderTools() {
+  const box = el("details", undefined, "card fold");
+  box.dataset.adv = "";
+  box.append(el("summary", t("registry.publishTitle")), el("p", t("registry.intro"), "muted"),
+    el("p", t("registry.claim"), "warn"));
+  searchForm(box);
+  publishForm(box);
+  return box;
+}
+
 function build() {
   const section = el("div");
   section.id = "registry-section";
-  section.append(el("p", t("registry.intro"), "muted"), el("p", t("registry.claim"), "warn"));
-  searchForm(section);
-  publishForm(section);
+  const tabs = el("div", undefined, "row");
+  tabs.setAttribute("role", "group");
+  tabs.setAttribute("aria-label", t("hub.tabs.label"));
+  const panels = { explore: exploreSection(), publish: publishSection() };
+  const buttons = {};
+  const pick = (name) => {
+    for (const key of Object.keys(panels)) {
+      panels[key].hidden = key !== name;
+      buttons[key].setAttribute("aria-pressed", String(key === name));
+    }
+  };
+  for (const key of Object.keys(panels)) {
+    buttons[key] = el("button", t(`hub.tab.${key}`));
+    buttons[key].type = "button";
+    buttons[key].addEventListener("click", () => pick(key));
+    tabs.append(buttons[key]);
+  }
+  section.append(tabs, panels.explore, panels.publish, folderTools());
+  pick("explore");
   return section;
 }
 
-const FIELDS = ["registry-location", "registry-query", "registry-bundle", "registry-destination"];
+const FIELDS = ["registry-location", "registry-query", "registry-bundle", "registry-destination",
+  "hub-site", "hub-address", "hub-source", "hub-sample", "hub-destination", "hub-id",
+  "hub-version", "hub-author", "hub-license"];
 
 export function initRegistry() {
   if ($("registry-section")) return;

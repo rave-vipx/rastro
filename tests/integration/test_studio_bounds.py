@@ -133,6 +133,9 @@ def test_spider_result_line_only_uses_report_fields() -> None:
         + json.dumps(limits)
         + ";\n"
         + """
+import { readFileSync } from 'node:fs';
+const load = (url) => JSON.parse(readFileSync(new URL(url), 'utf8'));
+globalThis.fetch = async (url) => ({ ok: true, json: async () => load(url) });
 const nodes = {};
 const $ = id => nodes[id] ??= {};
 const show = (id, text) => { $(id).textContent = text; };
