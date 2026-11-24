@@ -50,7 +50,7 @@ Evidence stores locators, not source excerpts. URL credentials and fragments are
 
 Persistence is opt-in. SQLite memory retains declarative recipe definitions, successful-run metadata and context fingerprints. It does not retain raw URLs, HTML, extracted records, or JSON Schema documents/defaults. Keep the database in a trusted private directory; recipe selectors and context identifiers must not contain credentials. Unknown database versions and corruption fail without reset. `delete` and `prune` provide retention controls with SQLite secure deletion, but do not erase external backups or filesystem snapshots. Stop writers before deletion if concurrent operations must not recreate entries. See the [memory guide](docs/memory.md). CLI output is data and should be handled accordingly.
 
-On POSIX systems dataset and recipe-memory files, and their SQLite `-journal`, `-wal` and `-shm` files, are created readable and writable by the owner only (0600), and existing files the user owns are tightened to 0600 when opened. Dataset files hold sanitized page samples for repair (`relocation_samples`), so keep them in a private directory. On Windows the folder's access rules apply. `rastro job forget-source` deletes a removed source's status, drift history and repair samples (SEC-009).
+On POSIX systems dataset and recipe-memory files, and their SQLite `-journal`, `-wal` and `-shm` files, are created readable and writable by the owner only (0600), and existing files the user owns are tightened to 0600 when opened. Dataset files hold sanitized page samples for repair (`relocation_samples`), so keep them in a private directory. On Windows the folder's access rules apply. `rastro job forget-source` deletes a removed source's status, drift history and repair samples.
 
 ## Trust model for jobs, bundles and agents
 
@@ -125,7 +125,7 @@ These stay the operator's alone, whatever the origin:
   or with `--allow-env NAME` (`allow_env=` in Python). Otherwise a hostile job could name
   `GITHUB_TOKEN` as a proxy password and send it to its own proxy.
 - **Network permissions.** Four widenings of the acquisition policy are the operator's alone
-  (SEC-001, SEC-002, SEC-003, SEC-004, SEC-011), through a root flag, an SDK keyword or a
+, through a root flag, an SDK keyword or a
   `RASTRO_*` variable; a job file, bundle, MCP argument or model output cannot grant them.
   `--allow-private-network` (`RASTRO_ALLOW_PRIVATE_NETWORK`) permits RFC 1918, ULA, loopback
   and CGNAT destinations of allowed hosts; link-local and cloud metadata addresses,

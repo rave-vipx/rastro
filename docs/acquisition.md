@@ -213,7 +213,7 @@ source = Source(url="https://example.com/article", egress="eu-office")
   Policy validation errors never include input values, so a rejected inline
   credential is not echoed. The proxy host is not checked against
   `allowed_hosts` or public-address rules: declaring it is the administrator's
-  explicit permission (SEC-002), so keep untrusted input out of policy construction.
+  explicit permission, so keep untrusted input out of policy construction.
 - **Credentials are environment references only.** `username_env`/`password_env`
   name variables read from the process environment when each source is acquired.
   A password reference requires a username reference. Values never appear in
@@ -259,7 +259,7 @@ automatic redirects or transport retries are disabled; only a selected or rotate
 profile uses a proxy. Rotation never retries a refusal elsewhere: there is no restriction bypass.
 
 For direct egress, connection failures can fall back sequentially to up to three
-validated addresses in DNS order (SEC-001/002/003). All resolved addresses are
+validated addresses in DNS order. All resolved addresses are
 validated before any connection, even addresses beyond that three-address cap;
 a private address anywhere rejects the entire answer. Each connection keeps the
 original URL, Host header and TLS hostname. A refused connection or connect timeout
@@ -301,7 +301,7 @@ Four widenings of the policy come only from the operator running Rastro, exactly
 and `load_job_file` (or the `operator_trust(...)` scope), or a `RASTRO_*` environment
 variable. A job file, a bundle, an MCP argument or a model output can never grant any of
 them: the first three are not job fields (unknown keys are rejected). Without a grant,
-behavior is unchanged (SEC-001, SEC-002, SEC-003, SEC-004, SEC-011).
+behavior is unchanged.
 
 | Permission | CLI | Environment | SDK |
 | --- | --- | --- | --- |
@@ -379,7 +379,7 @@ commands stay the operator grants described above; no capability widens them.
 ## Sessions
 
 `[acquisition] session = true` enables a bounded, in-memory cookie jar for one job
-run (SCHED-005, SEC-005). The default is `false`. In the SDK, the jar belongs to
+run. The default is `false`. In the SDK, the jar belongs to
 the `WebAcquirer` client: create a fresh client for each run. Cookies never enter
 jobs, recipes, datasets, results, logs or object representations; they are discarded
 with the client. There are no login flows or cookie credential fields.
@@ -395,8 +395,7 @@ disabled, and separate `Set-Cookie` response headers are preserved.
 ## Spider
 
 A job's `[spider]` table (`mode = "spider"`, see [Spider in jobs](jobs.md#spider)) follows
-links from the job's own sources. It adds no acquisition path and no grant (SEC-001,
-SEC-003, SEC-008):
+links from the job's own sources. It adds no acquisition path and no grant:
 
 - **One entry point.** Every page, including pagination pages, is fetched by one
   function, `fetch_spider_page`, through the normal `AcquisitionPort`. Anything that
@@ -421,7 +420,7 @@ Hitting a cap ends the run as `partial_success` with the accepted records kept.
 ## Conditional requests
 
 `rastro job load` automatically revalidates HTTP sources when the job declares a
-`[dataset]` (SYNC-004, ALERT-006). After a successful HTTP 200 extraction and approved
+`[dataset]`. After a successful HTTP 200 extraction and approved
 load, it stores `ETag` and `Last-Modified` in the dataset database. The next load
 sends `If-None-Match` and `If-Modified-Since` when available. Robots lookups are
 unconditional. Validators follow only their exact document URL, including across

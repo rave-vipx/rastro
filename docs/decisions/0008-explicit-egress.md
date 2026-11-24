@@ -1,11 +1,10 @@
 # ADR 0008: explicit proxy egress without rotation or fallback
 
 - **Status:** accepted for v0.1; supersedes the direct-only egress limit of ADR 0006.
-- **Requirements:** GEO-001–003, GEO-005, SEC-001–005, SEC-008, SEC-011.
 
 ## Context
 
-GEO-001 requires explicit network egress configuration. ADR 0006 deliberately
+The spec requires explicit network egress configuration. ADR 0006 deliberately
 accepted only `direct` because a non-direct selector without a secure transport
 would imply behavior Rastro did not provide. ADR 0002 pins every connection to a
 locally validated address with libcurl `RESOLVE` and disables ambient proxies.
@@ -13,14 +12,14 @@ locally validated address with libcurl `RESOLVE` and disables ambient proxies.
 An outbound proxy changes both properties: the proxy, not Rastro, resolves the
 target name and opens the final connection. Proxy credentials add a secret that
 must not leak into recipes, results, logs or memory keys. Proxy pools and rotation
-are common ways to evade access restrictions, which GEO-005 forbids.
+are common ways to evade access restrictions, which the spec forbids.
 
 ## Decision
 
 A trusted administrator declares up to 16 **named egress profiles** in
 `AcquisitionPolicy.egress_profiles`. Each profile is exactly one `http://` or
 `https://` proxy origin (host and optional port), plus optional
-`username_env`/`password_env` references to environment variables (SEC-011).
+`username_env`/`password_env` references to environment variables.
 SOCKS is not supported: it would add DNS-mode choices (`socks5` vs `socks5h`) and
 untested paths for little v0.1 value. A `Source` selects `direct` or one profile by
 name. There is no list form, pool, rotation, health check or automatic fallback.
@@ -60,14 +59,14 @@ blocks obvious SSRF attempts, but a proxy with a different resolver (or a rebind
 answer) could connect to an address Rastro never saw. The proxy is therefore inside
 the trust boundary: administrators should choose proxies that enforce their own
 egress controls. The proxy endpoint itself is not checked against public-address
-rules, because administrators commonly use internal proxies (SEC-002 permits explicit
+rules, because administrators commonly use internal proxies (the spec permits explicit
 administrator exceptions).
 
 ## Consequences
 
-- GEO-001 network-egress configuration is supported; browser geolocation remains
+- Network-egress configuration is supported; browser geolocation remains
   inapplicable without a browser adapter and is rejected explicitly on `Source`
-  (GEO-002).
+.
 - `Source.egress` changes from a `Literal["direct"]` to a validated name string;
   names absent from the policy fail at acquisition, not at model construction.
 - Supplied-HTML extraction treats egress only as a label for validation context and

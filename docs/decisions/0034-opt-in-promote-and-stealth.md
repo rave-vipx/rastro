@@ -1,7 +1,6 @@
 # ADR 0034: opt-in promote, stealth, and local code
 
 - **Status:** accepted 2026-11-16. These capabilities exist with an activation choice, not as the default.
-- **Requirements:** opt-in repair promotion, stealth and local code. REC-002, SEC-005, and P-005 stay.
 
 ## Decision
 

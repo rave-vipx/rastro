@@ -1,7 +1,6 @@
 # ADR 0033: bounded scroll, a registry URL, and requirement amendments
 
 - **Status:** accepted 2026-11-16. Extends ADR 0032.
-- **Requirements:** bounded scroll, a hostable registry URL and amended requirements. HUB-001–006 stay. REC-002, SEC-001, P-005, P-007 stay.
 
 ## Problem
 
@@ -27,7 +26,7 @@ stop_when = "no_new_records"
 
 ### Registry URL
 
-The Git-directory registry (HUB-002–006) remains the write format. "Hosted" means any HTTPS URL that serves that directory (`index.json` plus `recipes/<id>/<version>/`).
+The Git-directory registry remains the write format. "Hosted" means any HTTPS URL that serves that directory (`index.json` plus `recipes/<id>/<version>/`).
 
 - `rastro recipe search` and `rastro recipe install` accept `--registry-url`. Fetch uses the existing public-address and SSRF checks. Size caps match the bundle limits. The URL must be `https`, with no userinfo and no query secret. Redirects are re-checked.
 - Downloaded bytes go through the same gates as a local registry: digests, selector policy, offline replay, candidate only. Install never promotes.

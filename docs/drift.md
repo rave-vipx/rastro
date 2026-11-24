@@ -3,7 +3,7 @@
 `rastro job load job.toml --drift` measures structural evidence, compares it with
 the last successful comparable run, and adds `drift` to the JSON load report.
 Without `--drift`, the output and extraction behavior remain unchanged. This
-implements DRIFT-001–006; it does not repair or activate recipes.
+implements drift detection; it does not repair or activate recipes.
 
 ```sh
 cp -R examples/event-agenda/sample /tmp/rastro-drift-sample
@@ -22,7 +22,7 @@ outcomes or authorize repairs.
 ## Open drift
 
 An `elevated` or `high` assessment of a **successful** run opens a drift alert for that
-source (DRIFT-004). The load report then has `status = "degraded"`, lists the alert in
+source. The load report then has `status = "degraded"`, lists the alert in
 `open_drift` and exits **4** (`JobExitCode.NEEDS_ATTENTION`). While the alert is open:
 
 - the baseline stays at the last run before the drift, so every later run keeps

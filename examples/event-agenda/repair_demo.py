@@ -1,4 +1,4 @@
-"""Clock-pinned real CLI demo on a disposable sample (REPAIR-001-006)."""
+"""Clock-pinned real CLI demo on a disposable sample."""
 
 from __future__ import annotations
 

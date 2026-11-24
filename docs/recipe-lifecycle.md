@@ -1,9 +1,9 @@
 # Recipe lifecycle and rollback
 
-Every stored recipe version has a lifecycle state (REC-005). Exactly one version per
+Every stored recipe version has a lifecycle state. Exactly one version per
 [recipe key](memory.md#identity-and-validation) serves reuse when no version is
 pinned. A candidate never replaces that version unless it is explicitly promoted
-(REC-006), and a version that has served before can be restored (REPAIR-006).
+, and a version that has served before can be restored.
 
 This page covers states, transitions, persistence and rollback. Repair candidates
 and drift detection build on these operations.

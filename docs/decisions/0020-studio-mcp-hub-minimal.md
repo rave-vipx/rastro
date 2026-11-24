@@ -1,7 +1,6 @@
 # ADR 0020: minimal Studio, MCP and Hub on the same services
 
 - **Status:** accepted for 0.5.0 (not published).
-- **Requirements:** P-008, AGENT-002, AGENT-003, HUB-001 (first step), spec sections 08 and 09.
 
 ## Problem and options
 

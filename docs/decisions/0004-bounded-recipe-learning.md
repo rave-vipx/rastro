@@ -1,7 +1,6 @@
 # ADR 0004: bounded optional recipe learning
 
 - Status: accepted for M4 / v0.1
-- Requirements: AI-001–004, REC-004, INT-002; supporting OBS-001/002 and SEC-004/005
 
 ## Context
 
@@ -16,7 +15,7 @@ Keep discovery/model orchestration in `RecipeLearner`, behind `RecipeDiscovery` 
 methods. Existing synchronous and default memory semantics remain intact.
 Scrapling performs exact-name JSON-LD and simple microdata discovery before inference.
 External API discovery is not implemented, and that
-part of INT-002 remains incomplete.
+part of the extraction ladder remains incomplete.
 
 The Ollama adapter uses an optional HTTPX 0.28.x extra against the documented chat
 API. Direct HTTP lets the client bound streamed response bytes, reject compression,

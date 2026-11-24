@@ -1,6 +1,5 @@
 # Semantic consistency
 
-**Requirements:** QUAL-005 (historical consistency checks), QUAL-006 (separate indicators).
 
 A recipe can return valid values that mean the wrong thing: a ticket sale date in the
 event-date path passes every datetime validator. Consistency rules catch this. They are

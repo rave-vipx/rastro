@@ -1,12 +1,10 @@
 # ADR 0007: permitted structured JSON responses
 
-- **Status:** accepted for 0.1 structured responses (INT-002 step 3).
-- **Requirements:** INT-001–004, QUAL-001–004, REC-001–004, SEC-001, SEC-005,
-  SEC-008 and specification section 12.1.
+- **Status:** accepted for 0.1 structured responses (step 3 of the extraction ladder).
 
 ## Context
 
-INT-002 puts permitted structured responses and APIs between JSON-LD and DOM
+The extraction ladder puts permitted structured responses and APIs between JSON-LD and DOM
 heuristics. Rastro could only read HTML: JSON-LD inside `<script>` blocks, or CSS
 selectors. A caller with a permitted JSON endpoint had to wrap the JSON in HTML or
 bypass validation and provenance.
@@ -14,7 +12,7 @@ bypass validation and provenance.
 Structured responses widen the untrusted input surface. JSON can be deeply nested,
 very wide, or ambiguous because of duplicate keys. Expression languages such as
 JSONPath, JMESPath and jq add wildcards, filters and sometimes functions, which
-conflicts with REC-002 (declarative recipes) and SEC-008 (bounded resources). An HTTP
+conflicts with declarative recipes and bounded resources. An HTTP
 client that silently accepted any content type could also misinterpret an HTML error
 page as data, or the reverse.
 
@@ -61,7 +59,7 @@ objects. A field maps only when its exact name occurs once in each sampled recor
 (up to 20 records) and all samples agree on one pointer. Candidates are ranked by
 mapped fields, then document order, and validated before activation. The model
 port's proposal schema covers only HTML strategies, so models are not consulted for
-JSON. The INT-002 order is therefore memory → JSON-LD → structured JSON → DOM →
+JSON. The extraction order is therefore memory → JSON-LD → structured JSON → DOM →
 model, with each step applied only to the representation it can read.
 
 ## Consequences

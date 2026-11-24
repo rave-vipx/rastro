@@ -1,7 +1,6 @@
 # ADR 0018: measured drift snapshots in the dataset file
 
 - **Status:** accepted for v0.2.
-- **Requirements:** DRIFT-001–006, SEC-004/008, SYNC-006/008.
 
 ## Context
 

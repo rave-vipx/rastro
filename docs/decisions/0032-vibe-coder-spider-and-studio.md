@@ -1,7 +1,6 @@
 # ADR 0032: vibe-coder Studio, JavaScript, and a bounded spider
 
 - **Status:** accepted, 2026-11-16.
-- **Requirements:** URL-first Studio, JavaScript as a normal path, a bounded spider, pagination in Studio, plain-language alerts, shareable synthetic recipes, gated repair and a newcomer README. Amends the product bans implied by ADR 0020 and by the "you name the pages" comparison. Does not amend SEC-001–SEC-011.
 
 ## Problem
 

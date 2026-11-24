@@ -2,7 +2,7 @@
 
 The dataset is a separate SQLite file containing approved extracted fields and
 provenance. Recipe memory continues to store extraction instructions. This API
-implements DATA-001/003/004/005 and SYNC-002/003/005/006/008.
+implements the dataset store.
 The CLI loads a declarative job without Python.
 
 ```python

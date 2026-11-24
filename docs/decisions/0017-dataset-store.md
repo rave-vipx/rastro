@@ -1,7 +1,6 @@
 # ADR 0017: separate dataset identity, origins and non-destructive snapshots
 
 - **Status:** accepted for v0.2.
-- **Requirements:** DATA-001/004/005, SYNC-002/003/005 (observation times)/006.
 
 ## Context
 

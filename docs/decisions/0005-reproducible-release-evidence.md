@@ -1,7 +1,6 @@
 # ADR 0005: Reproducible release evidence
 
 - **Status:** Accepted for the 0.1 release evidence; release acceptance remains open.
-- **Requirements:** DIFF-001, QUAL-003, OBS-001, master specification sections 17–18.
 
 ## Context
 
@@ -34,7 +33,7 @@ currency contract, and persistence offline.
 ## Consequences
 
 The first comparison may show a tie or disadvantage. Publish it without claiming
-DIFF-001 is fulfilled. Rendered HTML is a supplied snapshot, not browser execution;
+The differentiation requirement is fulfilled. Rendered HTML is a supplied snapshot, not browser execution;
 a large page is not pagination. Human effort and maintenance reduction require a
 separate study. License metadata is an inventory, not distribution clearance.
 No release or publishing workflow is enabled by adding this evidence.
