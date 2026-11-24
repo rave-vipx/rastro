@@ -59,6 +59,9 @@ def render_job(job_fields: Sequence[JobField], recipe: CssRecipe, source: Any, *
         lines += ["[acquisition]", f"allowed_hosts = [{hosts_toml}]"]
         if policy.allow_http:
             lines.append("allow_http = true")
+        if recipe.steps or policy.render != "http":  # page steps replay only in a browser
+            render = policy.render if policy.render != "http" else "browser"
+            lines.append(f"render = {_quote(render)}")
         lines.append("")
     lines += [
         "[recipe]",

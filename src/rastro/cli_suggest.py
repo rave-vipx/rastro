@@ -15,6 +15,7 @@ from rastro.application.job_preview import _cell
 from rastro.application.model_choice import resolve_model
 from rastro.application.source_proposals import clean_proposal, default_acquirer
 from rastro.application.suggest import suggest
+from rastro.cli_explore import add_explore_options, explore_command
 from rastro.cli_model import add_model_options
 from rastro.domain.acquisition import AcquisitionPolicy
 from rastro.domain.job_fields import StringField
@@ -45,6 +46,7 @@ def add_commands(subcommands: argparse._SubParsersAction) -> None:  # type: igno
     )
     new.add_argument("--from", dest="page", type=Path, help="Saved HTML page")
     new.add_argument("--goal", help="Research goal text for source discovery")
+    add_explore_options(new)
     new.add_argument(
         "--site", nargs="+", action="extend", default=[], metavar="URL", help="Page URLs to scrape"
     )
@@ -167,8 +169,13 @@ def new_command(args: argparse.Namespace) -> int:
     if args.file is not None and args.output_file is not None:
         raise ConfigurationError("Give the job file once, either positionally or with -o")
     target = args.output_file or args.file
-    if sum((args.page is not None, bool(args.site), args.goal is not None)) != 1:
-        raise ConfigurationError("Specify exactly one of --from PAGE, --site URL, or --goal TEXT")
+    chosen = (args.page is not None, bool(args.site), args.goal is not None, args.explore)
+    if sum(item is not None and item is not False for item in chosen) != 1:
+        raise ConfigurationError(
+            "Specify exactly one of --from PAGE, --site URL, --goal TEXT or --explore JOB"
+        )
+    if args.explore is not None:
+        return explore_command(args, target)
     common = {
         "fields": _split_csv([*args.field, *args.fields]),
         "records_min": args.records_min,

@@ -56,7 +56,25 @@ when the job is loaded.
   source fails with `step_failed` rather than extracting a page the steps never touched.
 
 Steps run once per source, on its first page. Pagination and `[scroll]` continue from
-the page the steps leave. Fallback recipes cannot carry steps.
+the page the steps leave. In a `[spider]` crawl, steps run on the start page only; linked
+pages are extracted as they render, without steps. Fallback recipes cannot carry steps.
+
+## Let a model find the steps
+
+When the first page hides records behind a button or a form, a model can look for the
+steps once:
+
+```bash
+rastro new --explore job.toml -o explored.toml --expect 40
+```
+
+The job must render in a browser. Every step the model proposes is checked against the
+action vocabulary above and kept only if a fresh run of the job's first source, without the
+model, then shows more records. The new file has the job's fields, sources, hosts and
+dataset, the kept steps and `render = "browser"`; `job.toml` is not changed. In Python,
+`rastro.explore_job_file(job, output, model=...)` does the same and `rastro.explore_job`
+returns the result without writing. Exploration starts only from the command line or
+Python, never from an agent tool, a registry recipe, a bundle or model output.
 
 ## When a step stops matching
 

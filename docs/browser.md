@@ -67,4 +67,6 @@ is a plain lowercase identifier and can never point outside that directory. With
 ## Steps
 
 Recipe page steps (click, type, wait and so on) run in the same page and under the same
-guard. A stealth source runs them after navigation through Scrapling's hook.
+guard. A stealth source runs them after navigation through Scrapling's hook. To have a model
+find the steps once, run `rastro new --explore job.toml -o explored.toml`; see
+[Page steps](page-steps.md#let-a-model-find-the-steps).

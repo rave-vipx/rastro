@@ -68,7 +68,7 @@ def _validate_target(job: Path, page: Path | None, opts: dict[str, Any]) -> None
             taken[resolved] = f"the {label}"
 
 
-def _write_validated_job(path: Path, text: str) -> Path:
+def write_validated_job(path: Path, text: str) -> Path:
     parse_job(text, format="toml")
     with path.open("x", encoding="utf-8") as handle:
         handle.write(text)
@@ -131,7 +131,7 @@ def new_job(
         )
     src_obj = Source(url=source.resolved_source_url())
     typed = _typed_fields(html, job_fields, checked, found, src_obj)
-    return _write_validated_job(path, render_job(typed, found.recipe, source, **opts))
+    return write_validated_job(path, render_job(typed, found.recipe, source, **opts))
 
 
 def new_job_from_goal(
@@ -259,7 +259,7 @@ def _build_approved_job(
             preview_rows.extend(rec.data.model_dump(mode="json") for rec in res.records)
     if not preview_rows:
         raise ConfigurationError(f"No valid records (outcome: {Outcome.INSUFFICIENT_EVIDENCE})")
-    _write_validated_job(path, render_job(job_fields, proposed.recipe, kept, policy=policy, **opts))
+    write_validated_job(path, render_job(job_fields, proposed.recipe, kept, policy=policy, **opts))
     res_kw: dict[str, Any] = {
         "allowed_hosts": hosts,
         "proposals": proposals,
