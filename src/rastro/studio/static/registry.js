@@ -160,9 +160,19 @@ const FIELDS = ["registry-location", "registry-query", "registry-bundle", "regis
   "hub-site", "hub-address", "hub-source", "hub-sample", "hub-destination", "hub-id",
   "hub-version", "hub-author", "hub-license"];
 
+// The guided create found a hub offer for its URL and the person chose "Try": search it here.
+export function tryFromWizard(event) {
+  const url = event.detail && event.detail.url;
+  const site = document.getElementById("hub-site");
+  if (!url || !site) return;
+  site.value = url;
+  site.form.requestSubmit();
+}
+
 export function initRegistry() {
   if ($("registry-section")) return;
   $("settings-registry").append(build());
+  document.addEventListener("studio:hub-try", tryFromWizard);
   onLangChange(() => {
     const typed = FIELDS.map((id) => $(id).value);
     $("settings-registry").replaceChildren(build());

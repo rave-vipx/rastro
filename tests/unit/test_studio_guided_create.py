@@ -139,3 +139,54 @@ assert.deepEqual(opened, ["shop.toml"]);
 assert.deepEqual(views, ["wizard", "results"]);
 """
     )
+
+
+def test_wizard_hub_try_is_searched_in_the_hub_view() -> None:
+    """The wizard's "Try" sends studio:hub-try {offer, url}; the Hub view searches that URL."""
+    run_node(
+        IMPORTS
+        + """
+const registry = await import("STATIC/registry.js");
+const offer = {id: "shop-example", version: "3.0.0", last_verified: null,
+  card: {fields: [{name: "name"}], engine_needs: {capabilities: []}}};
+reply({"/api/wizard/lookup": [200, {ok: true, offers: [offer], hub: "ok"}]});
+const views = [];
+wizard.initWizard({ switchView: (v) => views.push(v) });
+document.getElementById("page-url").value = "https://shop.example/list";
+await document.getElementById("wiz-next-1").click();
+const step = document.getElementById("wiz-step-1");
+const tryButton = buttons(step).find((b) => b.textContent === i18n.t("wizard.hub.try"));
+await tryButton.click();
+const sent = events.find((e) => e.type === "studio:hub-try");
+assert.deepEqual(sent.detail, {offer, url: "https://shop.example/list"});
+assert.deepEqual(views, ["hub"]);
+const site = document.getElementById("hub-site");
+let submitted = 0;
+site.form = { requestSubmit: () => { submitted += 1; } };
+registry.tryFromWizard(sent);
+assert.equal(site.value, "https://shop.example/list");
+assert.equal(submitted, 1);
+registry.tryFromWizard({detail: {}});  // nothing to search: nothing happens
+assert.equal(submitted, 1);
+"""
+    )
+
+
+def test_use_the_api_writes_the_job_and_opens_its_results() -> None:
+    run_node(
+        IMPORTS
+        + """
+const offer = {host: "shop.example", path: "/api/items", records: 2, record_path: "/data/items", covers: ["name"]};
+const card = correct.offerCard(offer, async () => {});
+assert.equal(buttons(card)[0].textContent, i18n.t("wizard.api.use"));
+assert.equal(buttons(correct.offerCard({...offer, covers: []}, async () => {})).length, 0);
+reply({"/api/wizard/offers/use": [200, {ok: true, file: "shop.toml", sha256: "x"}]});
+const done = [];
+const app = { refreshJobs: async (f) => done.push(["refresh", f]), openJob: async (f) => done.push(["open", f]),
+  switchView: (v) => done.push(["view", v]) };
+await correct.useOffer(app, "https://shop.example/list", offer, "shop.toml");
+assert.deepEqual(calls.at(-1).body, {url: "https://shop.example/list", host: "shop.example",
+  path: "/api/items", fields: ["name"], file: "shop.toml"});
+assert.deepEqual(done, [["refresh", "shop.toml"], ["open", "shop.toml"], ["view", "results"]]);
+"""
+    )
