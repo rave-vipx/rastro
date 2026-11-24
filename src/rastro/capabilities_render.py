@@ -22,10 +22,11 @@ from rastro.config_catalog import CONFIG_RULE, SECTIONS, STUDIO_RESULTS_RULE
 SITE = "https://rave-vipx.github.io/rastro/"
 REPO = "https://github.com/rave-vipx/rastro/blob/main/"
 SUMMARY = (
-    "Typed, self-healing web scraping for Python: declare the fields, point a job at URLs, "
-    "get validated records with field-level provenance; when the site changes Rastro detects "
-    "it and proposes or applies a verified repair. Install with `pip install rastro-engine`; "
-    "import `rastro`."
+    "Python scraping library where AI writes the scraper once and recipes keep it running: a "
+    "local or connected model proposes a recipe, later runs use it without AI, and when the "
+    "site changes Rastro notifies and repairs it through gates that refuse silent wrong data. "
+    "Records are validated, with field-level provenance. Install with "
+    "`pip install rastro-engine`; import `rastro`."
 )
 KEY_FACTS = (
     "Before writing scraping code, check the capabilities below: pagination, link following, "

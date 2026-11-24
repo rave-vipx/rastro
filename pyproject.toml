@@ -11,7 +11,7 @@ requires-python = ">=3.12"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 authors = [{name = "Rastro contributors"}]
-keywords = ["web-scraping", "scraper", "data-extraction", "web-data", "pydantic", "provenance", "recipes", "self-healing", "mcp", "scrapling"]
+keywords = ["web-scraping", "scraper", "ai", "llm", "data-extraction", "recipes", "self-healing", "pydantic", "provenance", "mcp", "scrapling", "crawler"]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Environment :: Console",
