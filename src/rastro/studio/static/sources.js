@@ -2,7 +2,11 @@
 // next action. Reads POST /api/sources; a missing route or an error is said, never hidden.
 import { $, api, el, request, requireFile, show, switchView } from "./dom.js";
 import { issueText, onLangChange, t, when } from "./i18n.js";
-import { actionButton, chip, emptyState, errorState, loadingState } from "./ui.js";
+import { actionButton, chip, emptyState } from "./ui.js";
+import { lightTone, lightWord, sayText } from "./alerts.js";
+import { live, renderRun } from "./run_view.js";
+
+export { clock, live, renderRun, runView } from "./run_view.js";
 
 const TONE = { ok: "ok", warning: "warn", capped: "warn", stale: "warn", failed: "fail", never: "none" };
 // Failure codes grouped into the plain words the brief asks for; others say "Failed".
@@ -80,14 +84,21 @@ function actions(source, index, more) {
   return row;
 }
 
+// The traffic light and its plain sentence when the server sent one; the status word otherwise.
+export function lightOf(source) {
+  if (!source.light) return { ...sourceStatus(source), say: "" };
+  return { tone: lightTone(source.light), word: lightWord(source.light), say: sayText(source.say) };
+}
+
 function sourceRow(source, index) {
   const { host, path } = place(source.url);
-  const item = el("li", undefined, `source-row tone-${TONE[source.status] || "none"}`);
+  const status = lightOf(source);
+  const item = el("li", undefined, `source-row tone-${status.tone}`);
   const name = el("div", undefined, "source-name");
   name.append(el("strong", host), el("span", path, "muted block"));
-  const status = sourceStatus(source);
   const state = el("div");
   state.append(chip(status.tone, status.word));
+  if (status.say) state.append(el("p", status.say, "small-text"));
   for (const code of source.warnings || []) state.append(el("p", issueText(code), "warn small-text"));
   const fetched = el("div", undefined, "source-meta");
   fetched.append(el("span", t("source.lastFetch", { at: when(source.last_fetch) })), el("span", counts(source), "muted block"));
@@ -135,106 +146,6 @@ export async function loadSources() {
 export function resetSources() {
   Object.assign(sources, { list: [], error: "", ready: false });
   $("sources-list").replaceChildren();
-}
-
-// Running read: a view of what POST /api/run/status says, rebuilt on every poll.
-const POLL_MS = 1000;
-export const live = { snap: null, timer: null, panel: null };
-
-export function clock(seconds) {
-  const whole = Math.max(0, Math.round(seconds));
-  const minutes = Math.floor(whole / 60);
-  return minutes ? `${minutes}m ${String(whole % 60).padStart(2, "0")}s` : `${whole}s`;
-}
-
-// DOM-free mapping from a status snapshot to what the panel shows.
-export function runView(snap) {
-  if (!snap || snap.state === "idle") return { running: false, idle: true, lines: [], sample: [] };
-  const running = snap.state === "running";
-  const lines = [];
-  const progress = { pages: snap.pages, records: snap.records };
-  const head = { running: "run.live.progress", done: "run.live.done", stopped: "run.live.stopped" }[snap.state];
-  if (head) lines.push(t(head, progress));
-  if (running || snap.state === "done") lines.push(t("run.live.sites", { done: snap.sources_done, total: snap.sources_total }));
-  const used = clock(snap.seconds_used);
-  const budget = snap.budget_seconds;
-  lines.push(budget ? t("run.live.timeOf", { used, budget: clock(budget) }) : t("run.live.time", { used }));
-  if (snap.failed_sources) lines.push(t("run.live.failedSites", { n: snap.failed_sources }));
-  return {
-    running, idle: false, tone: { failed: "fail", stopped: "warn" }[snap.state] || (running ? "none" : "ok"),
-    fraction: running && budget ? Math.min(1, snap.seconds_used / budget) : null,
-    lines, sample: snap.sample || [], error: snap.state === "failed" ? t("run.live.failed", { why: snap.error?.message || snap.error?.error || "" }) : "",
-    resume: snap.will_continue ? t("run.live.continue") : "",
-  };
-}
-
-function sampleList(rows) {
-  const box = el("div");
-  box.append(el("h4", t("run.live.sample")));
-  const list = el("ul", undefined, "live-sample");
-  for (const row of rows) list.append(el("li", Object.values(row).join(" · ")));
-  box.append(rows.length ? list : el("p", t("run.live.noResults"), "muted"));
-  return box;
-}
-
-export function renderRun() {
-  const panel = live.panel;
-  if (!panel) return;
-  const view = runView(live.snap);
-  if (view.idle) {
-    panel.replaceChildren(el("p", t("run.live.cacheHint"), "muted small-text"));
-  } else {
-    const body = view.error ? errorState(view.error, "", () => startRun()) : el("div");
-    if (!view.error) {
-      body.append(...(view.running && !live.snap.pages ? [loadingState(t("run.live.title"), 1)] : []));
-      body.append(chip(view.tone, t("run.live.title")), ...view.lines.map((line) => el("p", line)));
-      if (view.fraction !== null) {
-        const bar = el("progress");
-        bar.max = 1;
-        bar.value = view.fraction;
-        body.append(bar);
-      }
-      if (view.resume) body.append(el("p", view.resume, "warn"));
-      if (view.sample.length || view.running) body.append(sampleList(view.sample));
-    }
-    panel.replaceChildren(body);
-  }
-  const row = el("div", undefined, "row");
-  row.append(view.running
-    ? actionButton(t("run.live.stop"), () => stopRun(), "small")
-    : actionButton(t("run.live.start"), () => startRun(), "primary small"));
-  panel.append(row);
-}
-
-async function poll() {
-  try {
-    live.snap = await api("/api/run/status", {});
-  } catch (error) {
-    live.snap = { state: "failed", error: { message: error.message }, sample: [], seconds_used: 0 };
-  }
-  renderRun();
-  if (live.snap.state === "running") live.timer = setTimeout(poll, POLL_MS);
-}
-
-async function startRun() {
-  clearTimeout(live.timer);
-  try {
-    live.snap = await api("/api/run/start", { file: requireFile() });
-  } catch (error) {
-    live.snap = { state: "failed", error: { message: error.message }, sample: [], seconds_used: 0 };
-  }
-  renderRun();
-  if (live.snap.state === "running") live.timer = setTimeout(poll, POLL_MS);
-}
-
-async function stopRun() {
-  clearTimeout(live.timer);
-  try {
-    live.snap = await api("/api/run/stop", {});
-  } catch (error) {
-    live.snap = { state: "failed", error: { message: error.message }, sample: [], seconds_used: 0 };
-  }
-  renderRun();
 }
 
 export function initSources() {

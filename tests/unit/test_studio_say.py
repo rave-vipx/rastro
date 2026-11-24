@@ -64,3 +64,22 @@ assert.equal(a.lightTone("nonsense"), "none");
 assert.equal(a.lightWord("amber"), "Needs a look");
 """
     )
+
+
+def test_sites_view_shows_the_light_and_its_sentence() -> None:
+    from tests.unit.studio_js import run_node
+
+    run_node(
+        """
+const i18n = await import("STATIC/i18n.js");
+const s = await import("STATIC/sources.js");
+await i18n.setLang("en");
+const amber = s.lightOf({status: "ok", light: "amber", say: {key: "blocked", kind: "captcha"}});
+assert.equal(amber.tone, "warn");
+assert.equal(amber.word, "Needs a look");
+assert.ok(amber.say.length > 0 && !amber.say.includes("say."));
+const old = s.lightOf({status: "failed", issue_code: "timeout"});
+assert.equal(old.say, "");
+assert.equal(old.tone, "fail");
+"""
+    )
