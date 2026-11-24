@@ -76,6 +76,10 @@ recipe: see [Agent in the loop](#agent-in-the-loop).
 | `semantic_review(path, source, version)` | none | Old and new values side by side for each changed field | read-only |
 | `suggest_context(page_path, fields)` | none | Page outline and recipe format for a new page | read-only |
 | `recipe_try(page_path, recipe, fields?, url?)` | none | Runs a recipe once: fill counts, preview rows, issues | read-only |
+| `browser_snapshot(path, source?, url?, steps?)` | `rastro shell` | Opens the page in a guarded browser, runs the steps, returns hardened text and outline with flags | writes nothing; open world |
+| `browser_extract(path, recipe, source?, url?, steps?, fields?)` | none | Runs a recipe once on the live page after the steps | writes nothing; open world |
+| `browser_network(path, source?, url?, steps?)` | none | JSON responses the page loaded from allowed hosts, with bounded flagged previews | writes nothing; needs `network_capture` |
+| `browser_screenshot(path, source?, url?, steps?)` | none | A PNG of the viewport after the steps | writes nothing; needs `screenshots` |
 
 `source` is the one-based index of a source in the job. Each tool declares its MCP
 annotations (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`) so a client
@@ -200,6 +204,42 @@ replays the old pages and fills every record, so the structural gates pass; only
 tells it apart. That is why `recipe_propose` never promotes: the agent saw cities where titles
 were, left version 2 unpromoted and proposed again. The serving recipe never changed until the
 agent promoted a candidate whose values it had checked.
+
+## Browser tools
+
+While an agent writes a recipe for a page that needs a browser, the `browser_*` tools let it
+look at the live page through the job's own policy. Each call opens one fresh page for the
+job source (`source`, default 1), or for `url` when it names another page on the job's
+`allowed_hosts`, runs the optional `steps`, reads the page and closes it. Nothing stays open
+between calls: send the same steps again to see the same state.
+
+- `steps` uses the recipe's page-step vocabulary and nothing else: `click`, `type`, `select`,
+  `scroll`, `wait` and `follow` objects, at most 20. Selectors run in the CSS engine only, and
+  a `follow` link is checked against the allowed hosts before the browser moves.
+- Every request passes the job's allowed hosts, pinned DNS, private-address checks, robots
+  and request budget, as in a job run. A plain HTTP source opens in the plain browser.
+- The tools run as agent input (ADR 0037): `steps` need the `page_actions` grant,
+  `browser_screenshot` needs `screenshots` and `browser_network` needs `network_capture`.
+  Without the grant the call fails with `capability_refused` before any page opens. The
+  operator grants them when starting the server, for example
+  `rastro mcp --allow-untrusted mcp:page_actions`.
+- `browser_snapshot` removes what a person cannot see (hidden elements, comments,
+  templates, invisible characters) before the text reaches the agent, and reports how many
+  nodes it removed in `hidden_removed`. Text that looks like instructions to a model is kept
+  and flagged in `flags` with `instruction_like_content` (ADR 0035).
+- `browser_network` lists JSON responses from allowed hosts by path, never the query. A
+  JSON recipe with `capture` reads one of them in a job run.
+- A refused URL or a failed step is a `page_refused` error that names the reason code, such
+  as `host_not_allowed` or `step_failed`.
+- There is no tool that evaluates JavaScript or takes a script, and there will not be one.
+
+When the recipe works, write it into the job with its `steps`; later runs replay them
+without an agent.
+
+`rastro shell JOB [--source N]` is the same look for a person: a Python shell with `job`,
+`page` (a parsed page with `css()` and `xpath()`), `html` and `url`. A file source is read
+from disk; a URL source is rendered once with the job's policy. IPython is used when it is
+installed, otherwise the standard Python console.
 
 ## Limits and safety
 

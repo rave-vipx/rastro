@@ -635,6 +635,16 @@ Serve jobs and datasets to an agent over stdio MCP. Docs: [mcp.md#install-and-co
 | `--root` | Path | `"."` |  | Workspace root (default: cwd) |
 | `--allow-override-gates` | flag | - |  | Let the agent call recipe_promote with override_gates (off: page content can prompt-inject the agent; run rastro recipe promote --override-gates yourself) |
 
+### `rastro shell`
+
+Open an interactive Python shell on a job source's parsed page. Docs: [jobs.md#cli-commands-and-exit-codes](jobs.md#cli-commands-and-exit-codes).
+
+| Flag | Value | Default | Choices | Description |
+| --- | --- | --- | --- | --- |
+| `FILE` | Path | required |  | Job file (.toml or .json) |
+| `--source` | int | `1` |  | One-based source (default: 1) |
+| `--allow-absolute-paths` | flag | - |  | Allow absolute paths for local source files |
+
 ### `rastro job`
 
 Validate, run, or inspect declarative jobs. Docs: [jobs.md#cli-commands-and-exit-codes](jobs.md#cli-commands-and-exit-codes).

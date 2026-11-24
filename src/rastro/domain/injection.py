@@ -21,6 +21,10 @@ CODE = "instruction_like_content"
 MAX_SCAN_CHARS = 64 * 1024
 # Every Rastro MCP tool name, plus the gate-override flag; kept in sync by a test.
 TOOL_NAMES = (
+    "browser_extract",
+    "browser_network",
+    "browser_screenshot",
+    "browser_snapshot",
     "dataset_records",
     "drift_status",
     "job_extract",
