@@ -65,6 +65,10 @@ schema, locale, timezone and egress. Each `FieldStructure` records:
 - `validation_failure_rate`: distinct candidate indexes with a validation issue
   naming this field divided by that attempt's candidate count (zero if none).
 
+List and object fields add one `field.member` entry per member with that member's coverage,
+so a member that disappears is drift even when the item count holds. Member entries always
+report a `validation_failure_rate` of 0: validation issues name the field, not the member.
+
 Counts and fingerprints come from an offline parser adapter. A scoped capture
 hook runs after extraction validation and never stores the input document, field
 values, selectors, or attribute values. JSON parsing uses the existing adapters.

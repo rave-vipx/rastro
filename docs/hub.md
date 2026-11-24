@@ -28,8 +28,10 @@ $ rastro hub search https://listing.example/cards/page-2
 Search matches the URL's domain (`host[:port]`, case-insensitive; the path is ignored, a
 subdomain is a different domain) against each package's `source_patterns` and offers the newest
 version of at most five packages. An offer is only a `candidate`: search never writes to a
-recipe store. The SDK equivalent is `rastro.application.hub_search.hub_candidates(url)`, and
-`install_candidate(offer, repository, parser_for, at=...)` installs the offered version.
+recipe store. The SDK equivalent is `rastro.hub_candidates(url)`, and
+`rastro.application.hub_search.install_candidate(offer, repository, parser_for, at=...)`
+installs the offered version. Studio searches the hub when you enter a URL; `rastro new`
+does not contact the registry, so run `rastro hub search URL` first if you want an offer.
 
 `rastro hub install ID[@VERSION] --store recipes.sqlite` runs exactly the gates of
 `rastro recipe install` (digests, selector policy, offline replay, index match, compatibility)

@@ -365,6 +365,7 @@ uv run rastro job load job.toml --drift --on-failure "notify-script"
 uv run rastro job ack-drift job.toml --source 1
 uv run rastro job forget-source job.toml --url https://old.example/list
 uv run rastro health job.toml --output json
+uv run rastro model test --model "ollama:llama3.2:3b"   # check a model before a job uses it
 ```
 
 | Exit code | Constant | Meaning |

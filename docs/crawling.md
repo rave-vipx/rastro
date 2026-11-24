@@ -107,10 +107,11 @@ time_budget_seconds = 1800
 - An unbounded crawl requests the `unbounded_crawl` capability. Your own jobs have it;
   input from agent tools, bundles, registry recipes or model output needs
   `--allow-untrusted <origin>:unbounded_crawl`.
-
 - While it runs, an unbounded crawl rewrites its checkpoint every minute. A run that dies
   (a crash, a killed process) resumes from the last one; the pages it had fetched go back
   into the frontier, because their records are stored only when a run ends.
+- Run one copy of an unbounded job at a time. Two runs at once share one checkpoint and
+  the last one to save wins, so pages can be fetched twice.
 - An install without the browser extra still adapts its pace: Rastro uses its own
   throttle with the same rules when the engine's crawl package is not installed.
 - `stream_job_async(job)` yields each source's result as it finishes instead of waiting
