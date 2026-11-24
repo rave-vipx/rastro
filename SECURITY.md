@@ -184,8 +184,9 @@ nothing but is not advertised as read-only, because a job can fetch URLs or call
 
 The MCP browser tools run as untrusted `mcp` input: each call opens one fresh guarded page
 under the job's allowed hosts, pinned DNS, robots and budget and closes it; page steps from
-the closed vocabulary need `--allow-untrusted mcp:page_actions` (screenshots and captured
-responses need their own grants), and no tool evaluates JavaScript.
+the closed vocabulary need `--allow-untrusted mcp:page_actions`, screenshots
+`--allow-untrusted mcp:screenshots` and the network list `--allow-untrusted
+mcp:network_capture`; there is no tool that evaluates JavaScript.
 
 Unbounded crawl checkpoints (`.rastro/crawl/` next to the job) keep the full URLs of the
 frontier and the seen set, queries included, so a resumed crawl fetches the same pages. The
