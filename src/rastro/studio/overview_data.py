@@ -26,6 +26,7 @@ from rastro.domain.lifecycle import RecipeState
 from rastro.domain.metrics import RunMetric
 from rastro.domain.models import Outcome
 from rastro.domain.run_report import RunReport
+from rastro.studio.overview_say import RANK, hint, light
 from rastro.studio.run_log import LoggedRun, LoggedSource, read_runs
 
 FAILED = frozenset(o.value for o in Outcome) - {"success", "unchanged", "partial_success"}
@@ -168,9 +169,12 @@ def source_row(state: JobState, url: str) -> dict[str, Any]:
         metric.finished_at if metric else None,
     ]
     last = next((m for m in moments if m is not None), None)
+    say = hint(state.report, url)
     return {
         "url": url,
         "status": kind,
+        "light": light(kind, say),
+        "say": say,
         "issue_code": issue,
         "last_fetch": last.isoformat() if last else None,
         **_counts(metric, item),
@@ -211,6 +215,7 @@ def project(rel: str, state: JobState) -> dict[str, Any]:
         health = "warnings"
     else:
         health = "ok"
+    lights = [r["light"] for r in rows]
     moments = [r["last_fetch"] for r in rows if r["last_fetch"]]
     last = max(moments, key=datetime.fromisoformat) if moments else None
     spec = state.job.dataset
@@ -219,6 +224,7 @@ def project(rel: str, state: JobState) -> dict[str, Any]:
         "name": display_name(spec.name if spec else Path(rel).stem),
         "dataset": spec.name if spec else None,
         "health": health,
+        "light": max(lights, key=RANK.__getitem__) if lights else "grey",
         "last_run": last,
         "records": state.records,
         "sources_total": len(rows),

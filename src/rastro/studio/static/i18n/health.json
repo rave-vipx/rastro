@@ -121,7 +121,36 @@
     "health.drift": "open drift ({risk})",
     "health.driftReview": "{risk}: review or fix",
     "health.fresh": "fresh",
-    "health.none": "none"
+    "health.none": "none",
+    "health.light.green": "All good",
+    "health.light.amber": "Needs a look",
+    "health.light.red": "Not working",
+    "health.light.grey": "Not read yet",
+    "say.robots": "This site asks programs not to read it, so Rastro did not.",
+    "say.blocked": "The site turned Rastro away ({why}).",
+    "say.blocked_passed": "The site turned Rastro away ({why}), then let it in {how}.",
+    "say.repaired": "The site changed and Rastro fixed how it reads it.",
+    "say.repair_waiting": "The site changed. A fix is ready for you to review.",
+    "say.drift": "The site is changing how it shows its pages.",
+    "say.kind.cloud_ip_refused": "it does not accept this kind of connection",
+    "say.kind.login_wall": "it wants a login",
+    "say.kind.captcha": "it asked for a check that people pass",
+    "say.kind.challenge_unsolved": "it set a check Rastro could not pass",
+    "say.kind.rate_limited": "too many visits too fast",
+    "say.kind.robots": "it asks programs to stay out",
+    "say.kind.geo_blocked": "it is closed to this country",
+    "say.kind.unknown": "no reason given",
+    "say.rung.http": "with a plain visit",
+    "say.rung.impersonation": "by visiting like a browser",
+    "say.rung.browser": "by opening it in a browser",
+    "say.rung.stealth": "by opening it in a quieter browser",
+    "say.rung.challenge": "after passing its check",
+    "say.rung.proxy_rotation": "by visiting from another address",
+    "say.rung.solver_plugin": "with the helper you set up",
+    "alert.action.review": "Review the fix",
+    "fix.approve": "Approve this fix",
+    "fix.approveHelp": "Rastro checks it again before using it. If a check fails, nothing changes.",
+    "fix.defaultReason": "Approved in Studio after reviewing the before and after"
   },
   "es": {
     "health.title": "Detalle técnico: la forma de leer en uso y versiones guardadas",
@@ -245,7 +274,36 @@
     "health.drift": "cambio abierto ({risk})",
     "health.driftReview": "{risk}: revisar o arreglar",
     "health.fresh": "al día",
-    "health.none": "ninguno"
+    "health.none": "ninguno",
+    "health.light.green": "Todo bien",
+    "health.light.amber": "Hay que mirar",
+    "health.light.red": "No funciona",
+    "health.light.grey": "Sin leer todavía",
+    "say.robots": "Este sitio pide que los programas no lo lean, así que Rastro no lo leyó.",
+    "say.blocked": "El sitio rechazó a Rastro ({why}).",
+    "say.blocked_passed": "El sitio rechazó a Rastro ({why}) y después lo dejó entrar {how}.",
+    "say.repaired": "El sitio cambió y Rastro arregló cómo lo lee.",
+    "say.repair_waiting": "El sitio cambió. Hay un arreglo listo para que lo revises.",
+    "say.drift": "El sitio está cambiando cómo muestra sus páginas.",
+    "say.kind.cloud_ip_refused": "no acepta este tipo de conexión",
+    "say.kind.login_wall": "pide iniciar sesión",
+    "say.kind.captcha": "pidió una prueba que pasan las personas",
+    "say.kind.challenge_unsolved": "puso una prueba que Rastro no pudo pasar",
+    "say.kind.rate_limited": "demasiadas visitas muy rápido",
+    "say.kind.robots": "pide que los programas no entren",
+    "say.kind.geo_blocked": "está cerrado para este país",
+    "say.kind.unknown": "sin motivo informado",
+    "say.rung.http": "con una visita simple",
+    "say.rung.impersonation": "visitando como un navegador",
+    "say.rung.browser": "abriéndolo en un navegador",
+    "say.rung.stealth": "abriéndolo en un navegador más discreto",
+    "say.rung.challenge": "tras pasar su prueba",
+    "say.rung.proxy_rotation": "visitando desde otra dirección",
+    "say.rung.solver_plugin": "con el ayudante que configuraste",
+    "alert.action.review": "Revisar el arreglo",
+    "fix.approve": "Aprobar este arreglo",
+    "fix.approveHelp": "Rastro lo revisa de nuevo antes de usarlo. Si una revisión falla, no cambia nada.",
+    "fix.defaultReason": "Aprobado en Studio después de revisar el antes y el después"
   },
   "advanced": {
     "en": {
@@ -261,7 +319,8 @@
       "fix.refused": "Not applied: the proposal failed its checks. The current recipe keeps serving.",
       "fix.write": "Also write it to the job file",
       "fix.discarded": "Discarded. Nothing was applied; the current recipe keeps serving and the proposal stays stored, unused.",
-      "fix.noneFoundHelp": "Rastro found no recipe that passes the checks for this site. Correct a field by hand below, or try again after the site settles."
+      "fix.noneFoundHelp": "Rastro found no recipe that passes the checks for this site. Correct a field by hand below, or try again after the site settles.",
+      "say.rung.stealth": "by opening it in a stealth browser"
     },
     "es": {
       "health.title": "Detalle técnico: receta en uso y versiones guardadas",
@@ -276,7 +335,8 @@
       "fix.refused": "No se aplicó: la propuesta falló sus controles. La receta actual sigue en uso.",
       "fix.write": "Escribirla también en el archivo del job",
       "fix.discarded": "Descartado. No se aplicó nada; la receta actual sigue en uso y la propuesta queda guardada, sin usar.",
-      "fix.noneFoundHelp": "Rastro no encontró una receta que pase los controles para este sitio. Corregí un campo a mano abajo, o probá de nuevo cuando el sitio se estabilice."
+      "fix.noneFoundHelp": "Rastro no encontró una receta que pase los controles para este sitio. Corregí un campo a mano abajo, o probá de nuevo cuando el sitio se estabilice.",
+      "say.rung.stealth": "abriéndolo en un navegador sigiloso"
     }
   }
 }

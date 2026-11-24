@@ -28,6 +28,7 @@ def _unknown(rel: str) -> dict[str, Any]:
         "name": display_name(Path(rel).stem),
         "dataset": None,
         "health": "unknown",
+        "light": "grey",
         "last_run": None,
         "records": 0,
         "sources_total": 0,
