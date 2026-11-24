@@ -17,12 +17,13 @@ def _page() -> html.HtmlElement:
 
 
 def test_settings_are_folded_groups() -> None:
-    """Brief section 7: next page, links, scroll, browser, network, connect, registry."""
+    """Brief section 7: next page, links, scroll, browser, network, connect (the registry
+    search moved to its own Hub view)."""
     view = _page().get_element_by_id("view-settings")
     summaries = [d.find("summary").get("data-i18n") for d in view.findall(".//details")]
     assert summaries == [
         "settings.title", "spider.legend", "scroll.title", "settings.browser",
-        "settings.network", "connect.title", "registry.title",
+        "settings.network", "connect.title",
     ]  # fmt: skip
     for control in ("pagination-cap", "spider-depth", "scroll-steps", "allow-stealth", "connect"):
         assert _page().get_element_by_id(control).xpath("ancestor::details"), control
@@ -40,13 +41,14 @@ def test_settings_commands_are_real_cli_flags_only() -> None:
 
 
 def test_registry_is_a_url_with_local_publish() -> None:
-    """N10: "Registry (URL)", search/install from a folder or HTTPS, publish to a local folder."""
+    """N10: the Hub view searches/installs from a folder or HTTPS and publishes locally."""
     english = messages()["en"]
-    assert english["registry.title"] == "Registry (URL)"
+    assert english["hub.title"] == "Community hub"
     assert "does not run git" in english["registry.publishNote"]
     labels = " ".join(v for k, v in english.items() if k.startswith("registry."))
     assert "GitHub" not in labels and "Open pull request" not in labels
-    assert _page().get_element_by_id("settings-registry").xpath("ancestor::details")
+    hub = _page().get_element_by_id("settings-registry").xpath("ancestor::div[@id='view-hub']")
+    assert hub
 
 
 def test_narrow_screens_turn_tables_into_labelled_cards() -> None:

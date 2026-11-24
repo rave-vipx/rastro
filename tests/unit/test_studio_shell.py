@@ -1,18 +1,14 @@
 """Studio redesign stage 1: tokens, theme, es/en dictionary and app shell (N1, N5, N8)."""
 
-import json
 import re
-from pathlib import Path
 
 from lxml import html
 
-STATIC = Path(__file__).resolve().parents[2] / "src" / "rastro" / "studio" / "static"
+from tests.unit.studio_js import STATIC, messages, run_node
 
 
 def _messages() -> dict[str, dict[str, str]]:
-    source = (STATIC / "i18n.js").read_text(encoding="utf-8")
-    block = source.split("/* i18n:begin */", 1)[1].split("/* i18n:end */", 1)[0]
-    return json.loads(block)
+    return messages()
 
 
 def _page() -> html.HtmlElement:
@@ -52,14 +48,58 @@ def test_spanish_copy_uses_voseo() -> None:
 
 
 def test_every_tab_has_a_view_and_one_starts_selected() -> None:
-    """N1: the shell's tabs each switch to an existing view; Results is first."""
+    """N1: main navigation (Projects, Hub) and project tabs (Results, Sites, Alerts, Settings)
+    each switch to an existing view; Projects starts selected."""
     page = _page()
-    tabs = page.xpath("//button[contains(@class, 'tab')]")
+    tabs = page.xpath("//button[contains(concat(' ', @class, ' '), ' tab ')]")
     views = [tab.get("data-view") for tab in tabs]
-    assert views[0] == "results"
+    assert views[:2] == ["home", "hub"]
+    assert views[2:6] == ["results", "sources", "alerts", "settings"]
     for view in views:
         assert page.get_element_by_id(f"view-{view}") is not None
     assert [tab.get("aria-pressed") for tab in tabs].count("true") == 1
+    assert tabs[0].get("aria-pressed") == "true"
+
+
+def test_shell_has_language_theme_and_advanced_controls() -> None:
+    """Shell basics: skip link, labelled navigation, the Advanced switch and live regions."""
+    page = _page()
+    switch = page.get_element_by_id("pref-advanced")
+    assert switch.get("role") == "switch" and switch.get("aria-checked") == "false"
+    assert page.get_element_by_id("pref-lang") is not None
+    assert page.get_element_by_id("pref-theme") is not None
+    assert page.xpath("//a[@class='skip' and @href='#main']")
+    assert all(nav.get("aria-label") for nav in page.xpath("//nav"))
+
+
+def test_shell_renders_each_view_placeholder() -> None:
+    """Every view switches in alone; the project tabs hide on Projects."""
+    page = _page()
+    views = [v.get("id")[5:] for v in page.xpath("//main/*[starts-with(@id, 'view-')]")]
+    assert {"home", "hub", "results", "sources", "alerts", "settings", "repair", "wizard"} <= set(
+        views
+    )
+    run_node(
+        """
+const shown = {};
+const sections = views.map((name) => {
+  const node = document.getElementById(`view-${name}`);
+  node.id = `view-${name}`;
+  return node;
+});
+document.querySelectorAll = (sel) => (sel.startsWith("main") ? sections : []);
+const { state, switchView, $ } = await import("STATIC/dom.js");
+state.file = "pages/shop.toml";
+for (const name of views) {
+  switchView(name);
+  assert.deepEqual(sections.filter((s) => !s.hidden).map((s) => s.id), [`view-${name}`]);
+  shown[name] = !$("project-nav").hidden;
+}
+assert.equal(shown.home, false);
+assert.equal(shown.results, true);
+""",
+        views=views,
+    )
 
 
 def test_existing_controls_keep_their_ids() -> None:
@@ -103,7 +143,11 @@ PAIRS = [
     ("text-3", "bg"), ("text-2", "surface-2"), ("accent", "surface"), ("on-accent", "accent"),
     ("ok", "surface"), ("warn", "surface"), ("fail", "surface"),
     ("ok", "ok-soft"), ("warn", "warn-soft"), ("fail", "fail-soft"),
+    ("added", "surface"), ("changed", "surface"), ("removed", "surface"),
+    ("added", "added-soft"), ("changed", "changed-soft"), ("removed", "removed-soft"),
+    ("accent", "accent-soft"), ("text-2", "surface-3"),
 ]  # fmt: skip
+TAG_TEXT = {"light": "#ffffff", "dark": "#111111"}  # field highlight labels sit on --hl-N
 
 
 def test_light_and_dark_tokens_meet_aa_contrast() -> None:
@@ -115,6 +159,12 @@ def test_light_and_dark_tokens_meet_aa_contrast() -> None:
         for name, tokens in themes.items()
         for fg, bg in PAIRS
         if _contrast(tokens[fg], tokens[bg]) < 4.5
+    ]
+    failures += [
+        f"{name}: label on hl-{n} = {_contrast(TAG_TEXT[name], tokens[f'hl-{n}']):.2f}"
+        for name, tokens in themes.items()
+        for n in range(1, 6)
+        if _contrast(TAG_TEXT[name], tokens[f"hl-{n}"]) < 4.5
     ]
     assert failures == []
 
@@ -128,3 +178,27 @@ def test_dark_tokens_apply_for_system_and_explicit_choice() -> None:
         css, ':root[data-theme="dark"]'
     )
     assert "@import" not in css and "url(" not in css  # no web fonts, no CDN
+
+
+def test_loading_and_error_states_speak_to_screen_readers() -> None:
+    """Shared states: loading reads as polite text over a hidden skeleton; an error is an
+    alert with what happened, what to do and one retry button."""
+    run_node("""
+const { loadingState, errorState } = await import("STATIC/ui.js");
+const loading = loadingState();
+assert.equal(loading.getAttribute("aria-busy"), "true");
+const [sketch, status] = loading.children;
+assert.equal(sketch.getAttribute("aria-hidden"), "true");
+assert.equal(status.getAttribute("aria-live"), "polite");
+assert.equal(status.textContent, "Loading…");
+let retried = 0;
+const retry = () => { retried += 1; };
+const error = errorState("Could not reach shop.example", "Check the address.", retry);
+assert.equal(error.getAttribute("role"), "alert");
+assert.ok(error.textContent.includes("Could not reach shop.example"));
+const button = buttons(error);
+assert.equal(button.length, 1);
+assert.equal(button[0].textContent, "Try again");
+await button[0].click();
+assert.equal(retried, 1);
+""")

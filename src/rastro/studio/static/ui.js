@@ -82,6 +82,33 @@ export function emptyState(title, text, ...actions) {
   return box;
 }
 
+// Loading: skeleton lines for the shape of what is coming, plus a sentence a screen reader
+// hears. With reduced motion the skeleton stays still and the sentence still reads.
+export function loadingState(text, lines = 3) {
+  const box = el("div", undefined, "loading-state");
+  box.setAttribute("aria-busy", "true");
+  const sketch = el("div", undefined, "skel-lines");
+  sketch.setAttribute("aria-hidden", "true");
+  for (let i = 0; i < lines; i += 1) sketch.append(el("div", undefined, "skel"));
+  const status = el("p", text || t("state.loading"), "muted");
+  status.setAttribute("role", "status");
+  status.setAttribute("aria-live", "polite");
+  box.append(sketch, status);
+  return box;
+}
+
+// Error: what happened, what to do, and one button. Announced at once (role="alert").
+export function errorState(what, todo, retry) {
+  const box = el("div", undefined, "error-state");
+  box.setAttribute("role", "alert");
+  const head = el("p", undefined, "error-what");
+  head.append(shape("fail"), document.createTextNode(what || t("state.errorTitle")));
+  box.append(head);
+  if (todo) box.append(el("p", todo, "muted"));
+  if (retry) box.append(actionButton(t("state.retry"), retry, "primary"));
+  return box;
+}
+
 export function actionButton(label, run, className) {
   const node = el("button", label, className);
   node.type = "button";

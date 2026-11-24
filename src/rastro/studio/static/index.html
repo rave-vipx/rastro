@@ -11,12 +11,20 @@
 <a class="skip" href="#main" data-i18n="skip">Skip to content</a>
 <header class="bar">
   <div class="bar-row">
-    <h1 class="brand" data-i18n="brand">Rastro Studio</h1>
+    <h1 class="brand"><svg class="logo" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="5" cy="18" r="2"/><circle cx="11.5" cy="12" r="2.6"/><circle cx="18.5" cy="5.5" r="3.2"/></svg><span data-i18n="brand">Rastro Studio</span></h1>
+    <nav class="main-nav" aria-label="Main" data-i18n-label="nav.main">
+      <button type="button" id="go-home" class="tab nav-main" data-view="home" aria-pressed="true" data-i18n="crumbs.projects">Projects</button>
+      <button type="button" class="tab nav-main" data-view="hub" aria-pressed="false" data-i18n="nav.hub">Hub</button>
+    </nav>
     <nav class="crumbs" aria-label="Breadcrumb" data-i18n-label="crumbs.label">
-      <button type="button" id="go-home" class="link" data-i18n="crumbs.projects">Projects</button>
-      <span id="crumb-project" class="crumb-project"></span>
+      <span id="crumb-project" class="crumb-project" aria-current="page"></span>
     </nav>
     <div class="prefs">
+      <span class="swlabel">
+        <button type="button" id="pref-advanced" class="sw" role="switch" aria-checked="false" aria-labelledby="pref-advanced-label" aria-describedby="pref-advanced-hint"><span></span></button>
+        <span id="pref-advanced-label" data-i18n="adv.label">Advanced</span>
+        <span id="pref-advanced-hint" class="sr" data-i18n="adv.hint">Advanced: show technical terms</span>
+      </span>
       <label for="pref-lang" data-i18n="prefs.language">Language</label>
       <select id="pref-lang">
         <option value="en">English</option>
@@ -33,11 +41,11 @@
   <p id="root" class="muted"></p>
   <p id="validation" role="status" aria-live="polite"></p>
   <nav id="project-nav" class="tabs" aria-label="Views" data-i18n-label="nav.label" hidden>
-    <button type="button" class="tab" data-view="results" aria-pressed="true" data-i18n="nav.results">Results</button>
-    <button type="button" class="tab" data-view="sources" aria-pressed="false" data-i18n="nav.sources">Sources</button>
+    <button type="button" class="tab" data-view="results" aria-pressed="false" data-i18n="nav.results">Results</button>
+    <button type="button" class="tab" data-view="sources" aria-pressed="false" data-i18n="nav.sources">Sites</button>
     <button type="button" class="tab" data-view="alerts" aria-pressed="false" data-i18n="nav.alerts">Alerts</button>
-    <button type="button" class="tab" data-view="repair" aria-pressed="false" data-i18n="nav.repair">Fix</button>
     <button type="button" class="tab" data-view="settings" aria-pressed="false" data-i18n="nav.settings">Settings</button>
+    <button type="button" class="tab" data-view="repair" aria-pressed="false" data-i18n="nav.repair">Fix</button>
     <button type="button" class="tab tab-new" data-view="wizard" aria-pressed="false" data-i18n="nav.new">New scraper</button>
   </nav>
 </header>
@@ -54,17 +62,17 @@
     </section>
     <details id="export-help" class="card fold">
       <summary id="export-help-summary" data-i18n="home.exportTitle">Connect an export</summary>
-      <p data-i18n="home.exportFormats">Supported: JSON records you load with the Python API, or a Rastro SQLite dataset.</p>
-      <p class="muted" data-i18n="home.exportHow">Load records from your own export into a project's dataset with rastro.load_records. They are validated like a web load, keep their provenance and show as an imported snapshot. Then open the project here.</p>
-      <pre>from rastro import load_records
+      <p data-i18n="home.exportFormats">Supported: JSON files or databases saved by Rastro.</p>
+      <p class="muted" data-i18n="home.exportHow">Load the records of your own export into a project's dataset with rastro.load_records. They are validated like a web load, keep their provenance and show as an imported snapshot. Then open the project here.</p>
+      <pre data-adv>from rastro import load_records
 
 load_records("pages/events.toml", records, source_url="https://example.com/events")</pre>
-      <p class="muted" data-i18n="home.exportSqlite">For a Rastro SQLite dataset, create a job whose [dataset] points at that file, then open it.</p>
+      <p class="muted" data-adv data-i18n="home.exportSqlite">For a database saved by Rastro, turn on Advanced to see how to point a project at it.</p>
     </details>
-    <details class="card fold">
-      <summary data-i18n="home.openFile">Open a job file (advanced)</summary>
+    <details class="card fold" data-adv>
+      <summary data-i18n="home.openFile">Open a project by name</summary>
       <div class="row project">
-        <label for="files" data-i18n="project.label">Job file</label>
+        <label for="files" data-i18n="project.label">Project</label>
         <select id="files"></select>
         <button type="button" id="validate" data-i18n="project.open">Open</button>
       </div>
@@ -144,12 +152,12 @@ load_records("pages/events.toml", records, source_url="https://example.com/event
       <p id="sources-status" role="status" aria-live="polite"></p>
       <div id="sources-list"></div>
     </section>
-    <details class="card fold">
-      <summary data-i18n="health.title">Technical detail: serving recipe and stored versions</summary>
+    <details class="card fold" data-adv>
+      <summary data-i18n="health.title">Technical detail: the reading setup in use and stored versions</summary>
       <button type="button" id="health" class="primary" data-i18n="health.check">Check health</button>
       <p id="health-status" role="status" aria-live="polite"></p>
       <div id="health-alerts" role="alert"></div>
-      <p class="muted" id="failure-hint" hidden data-i18n="health.hint">Get the same alerts outside Studio.</p>
+      <p class="muted" id="failure-hint" hidden data-i18n="health.hint">Get the same alerts outside Studio: create notify.py as the README's "Notify on failure" section shows, then run this from the Studio folder. A project cannot set this hook itself.</p>
       <pre id="failure-command"></pre>
       <div id="health-result"></div>
       <div id="repair-result"></div>
@@ -172,7 +180,7 @@ load_records("pages/events.toml", records, source_url="https://example.com/event
     <section class="card" aria-labelledby="fix-heading">
       <h2 id="fix-heading" data-i18n="fix.heading">Fix a site</h2>
       <p class="muted" data-i18n="fix.lead">When a site changes, Rastro proposes a new way to read it and checks it. Compare the fields, then apply it with a reason or discard it.</p>
-      <p id="fix-memory-note" class="note" hidden data-i18n="fix.needsMemory">Fixes need a recipe memory file in the job.</p>
+      <p id="fix-memory-note" class="note" hidden data-i18n="fix.needsMemory">Fixes need past versions saved in this project. Turn that on when you create a scraper, or ask for it with Advanced on.</p>
       <div class="row">
         <label for="fix-source" data-i18n="fix.source">Site</label>
         <select id="fix-source"></select>
@@ -185,7 +193,7 @@ load_records("pages/events.toml", records, source_url="https://example.com/event
     <section class="card" aria-labelledby="auto-heading">
       <h2 id="auto-heading" data-i18n="fix.autoTitle">Apply fixes automatically</h2>
       <label class="check"><input type="checkbox" id="auto-promote"> <span data-i18n="switch.autoPromote">Apply fixes automatically for this job</span></label>
-      <p class="muted" data-i18n="switch.autoPromoteHelp">Off by default.</p>
+      <p class="muted" data-i18n="switch.autoPromoteHelp">Off by default. If you turn it on, Rastro applies a fix only when it passes every check and the semantic judge (a configured model) agrees the values kept their meaning; otherwise it waits for you here. Off means you apply fixes yourself, with a reason.</p>
       <p id="auto-promote-status" role="status" aria-live="polite"></p>
     </section>
     <details class="card fold">
@@ -195,10 +203,10 @@ load_records("pages/events.toml", records, source_url="https://example.com/event
       <div class="row">
         <label for="selector-pick" data-i18n="fix.field">Field</label>
         <select id="selector-pick"></select>
-        <label for="selector-text" data-i18n="fix.selector">New selector</label>
+        <label for="selector-text" data-i18n="fix.selector">New place on the page</label>
         <input id="selector-text" type="text" maxlength="1024" size="40" spellcheck="false">
-        <button type="button" id="repreview" data-i18n="fix.repreview">Preview with this selector</button>
-        <button type="button" id="accept" data-i18n="fix.accept">Save to job file</button>
+        <button type="button" id="repreview" data-i18n="fix.repreview">Preview with this place</button>
+        <button type="button" id="accept" data-i18n="fix.accept">Save to the project</button>
       </div>
       <p id="accepted" role="status" aria-live="polite"></p>
       <div id="records"></div>
@@ -208,18 +216,18 @@ load_records("pages/events.toml", records, source_url="https://example.com/event
   <div id="view-settings" hidden>
     <section class="card" aria-labelledby="settings-heading">
       <h2 id="settings-heading" data-i18n="settings.heading">Project settings (advanced)</h2>
-      <p class="muted" data-i18n="settings.lead">Each group changes one part of the job file and checks it before saving. Nothing here grants network access.</p>
+      <p class="muted" data-i18n="settings.lead">Each group changes one part of the project and checks it before saving. Nothing here grants network access.</p>
       <p id="controls-status" role="status" aria-live="polite"></p>
     </section>
 
     <details class="card fold">
       <summary data-i18n="settings.title">Next page</summary>
-      <p class="muted" data-i18n="settings.intro">Follow a next link up to a page cap.</p>
+      <p class="muted" data-i18n="settings.intro">Follow a next-page link up to a page cap. Studio saves it in the project.</p>
       <div class="row">
-        <label for="pagination-source" data-i18n="settings.recipe">Recipe</label>
+        <label for="pagination-source" data-i18n="settings.recipe">Applies to</label>
         <select id="pagination-source"></select>
-        <label for="pagination-next" data-i18n="settings.next">Next-link selector</label>
-        <input id="pagination-next" type="text" maxlength="1024" size="32" spellcheck="false" placeholder="a.next::attr(href)">
+        <label for="pagination-next" data-adv data-i18n="settings.next">Where the next-page link is</label>
+        <input id="pagination-next" data-adv type="text" maxlength="1024" size="32" spellcheck="false" placeholder="a.next::attr(href)">
         <label for="pagination-cap"><span data-i18n="settings.cap">Page cap</span> <span id="pagination-cap-range"></span></label>
         <input id="pagination-cap" type="number">
         <button type="button" id="save-pagination" data-i18n="settings.saveNext">Save next page</button>
@@ -233,12 +241,12 @@ load_records("pages/events.toml", records, source_url="https://example.com/event
         <label><input id="spider-enabled" type="checkbox"> <span data-i18n="spider.enabled">Follow links from the starting URLs</span></label>
         <label><span data-i18n="spider.depth">Link depth</span> <span id="spider-depth-range"></span> <input id="spider-depth" type="number"></label>
         <label><span data-i18n="spider.pages">Page cap</span> <span id="spider-pages-range"></span> <input id="spider-pages" type="number"></label>
-        <label for="spider-links" id="spider-link-label">Link selector</label>
-        <input id="spider-links" type="text" value="a::attr(href)">
+        <label for="spider-links" id="spider-link-label" data-adv>Which links to follow</label>
+        <input id="spider-links" data-adv type="text" value="a::attr(href)">
         <label><input id="spider-same-host" type="checkbox" checked> <span data-i18n="spider.sameHost">Stay on the same host</span></label>
         <p class="muted" data-i18n="spider.otherHosts">Other hosts still require the job's allowed hosts.</p>
-        <label><span data-i18n="spider.allow">Allowed path prefixes (one per line)</span><textarea id="spider-allow"></textarea></label>
-        <label><span data-i18n="spider.deny">Denied path prefixes (one per line)</span><textarea id="spider-deny"></textarea></label>
+        <label data-adv><span data-i18n="spider.allow">Allowed path prefixes (one per line)</span><textarea id="spider-allow"></textarea></label>
+        <label data-adv><span data-i18n="spider.deny">Denied path prefixes (one per line)</span><textarea id="spider-deny"></textarea></label>
         <button type="button" id="save-spider" data-i18n="spider.save">Save link following</button>
       </fieldset>
     </details>
@@ -257,15 +265,15 @@ load_records("pages/events.toml", records, source_url="https://example.com/event
 
     <details class="card fold">
       <summary data-i18n="settings.browser">Browser and stealth</summary>
-      <p class="muted" data-i18n="settings.browserHelp">Whether a source uses a browser is set in the job file (render under [acquisition]). Stealth is never written to a job or a bundle: it is a grant for this Studio session only.</p>
+      <p class="muted" data-i18n="settings.browserHelp">Whether a site uses a browser is part of the project; turn on Advanced to see where. Stealth is never saved in a project or a bundle: it is a grant for this Studio session only.</p>
       <label class="check"><input type="checkbox" id="allow-stealth"> <span data-i18n="switch.stealth">Allow stealth for this Studio session</span></label>
-      <p class="muted" data-i18n="switch.stealthHelp">Off by default.</p>
+      <p class="muted" data-i18n="switch.stealthHelp">Off by default. Lets jobs that ask for render = "stealth" run while this Studio is open. Nothing is written to a job or a bundle.</p>
     </details>
 
     <details class="card fold">
       <summary data-i18n="settings.network">Network permissions</summary>
       <p class="muted" data-i18n="settings.networkHelp">Studio reads only the hosts the job allows (allowed_hosts under [acquisition]); robots.txt and public-address checks always apply. Operator grants are flags of the command that starts Studio, never settings here:</p>
-      <pre>rastro studio --allow-egress
+      <pre data-adv>rastro studio --allow-egress
 rastro studio --allow-env NAME
 rastro studio --allow-stealth</pre>
     </details>
@@ -276,11 +284,14 @@ rastro studio --allow-stealth</pre>
       <button type="button" id="connect" data-i18n="connect.show">Show commands</button>
       <pre id="commands"></pre>
     </details>
+  </div>
 
-    <details class="card fold">
-      <summary data-i18n="registry.title">Registry (URL)</summary>
+  <div id="view-hub" hidden>
+    <section class="card" aria-labelledby="hub-heading">
+      <h2 id="hub-heading" data-i18n="hub.title">Community hub</h2>
+      <p class="muted" data-i18n="hub.sub">Sites other people already solved. Everything is tested on your computer before it is saved.</p>
       <div id="settings-registry"></div>
-    </details>
+    </section>
   </div>
 
 
@@ -296,10 +307,10 @@ rastro studio --allow-stealth</pre>
 
       <div id="wiz-step-1" class="step">
         <h3 data-i18n="wizard.url.title">Paste the page URL</h3>
-        <p class="muted" data-i18n="wizard.url.intro">Paste a page URL.</p>
+        <p class="muted" data-i18n="wizard.url.intro">Paste a page URL. Studio fetches it and the job scrapes that URL on every run.</p>
         <label for="page-url" data-i18n="wizard.url.label">Page URL</label>
         <input id="page-url" class="wide" type="url" size="48" placeholder="https://example.com/list" required>
-        <p class="muted" data-i18n="wizard.url.browser">If the page builds its list with JavaScript, the preview may find no records; the browser path is explained in the docs (acquisition, JavaScript pages).</p>
+        <p class="muted" data-i18n="wizard.url.browser">If the page builds its list with JavaScript, the preview may find no records; the documentation's JavaScript pages section explains the browser path.</p>
         <p id="url-status" role="status" aria-live="polite"></p>
         <div class="row step-nav">
           <button type="button" id="wiz-next-1" class="primary" data-i18n="wizard.next">Continue</button>
@@ -342,15 +353,15 @@ rastro studio --allow-stealth</pre>
         <h3 data-i18n="wizard.create.title">Name the project and save</h3>
         <label for="new-name" data-i18n="wizard.create.name">Project name</label>
         <input id="new-name" class="wide" type="text" maxlength="80" spellcheck="false">
-        <p id="new-key-note" class="muted" data-i18n="wizard.create.note">A dataset needs at least one record key.</p>
+        <p id="new-key-note" class="muted" data-i18n="wizard.create.note">To store records, tick a record key in step 2 (for example the title or the page address). Without one, the project only extracts.</p>
         <details class="fold">
           <summary data-i18n="wizard.create.files">File names (advanced)</summary>
           <div class="row">
-            <label for="new-file" data-i18n="wizard.create.file">Job file</label>
+            <label for="new-file" data-i18n="wizard.create.file">Project name</label>
             <input id="new-file" type="text" size="30" spellcheck="false" placeholder="pages/events.toml">
-            <label for="new-dataset" data-i18n="wizard.create.dataset">Dataset file, next to the job file (optional)</label>
+            <label for="new-dataset" data-i18n="wizard.create.dataset">Where to keep the results (optional)</label>
             <input id="new-dataset" type="text" size="24" spellcheck="false" placeholder="events.sqlite">
-            <label for="new-memory" data-i18n="wizard.create.memory">Recipe memory file, enables fixes (optional)</label>
+            <label for="new-memory" data-i18n="wizard.create.memory">Keep past versions so Rastro can fix it later (optional)</label>
             <input id="new-memory" type="text" size="24" spellcheck="false" placeholder="recipes.sqlite">
           </div>
         </details>

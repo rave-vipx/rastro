@@ -52,7 +52,7 @@ def test_controls_follow_changed_domain_bounds(monkeypatch: pytest.MonkeyPatch) 
 
 def test_no_copied_numeric_bounds() -> None:
     root = Path("src/rastro/studio")
-    for path in [root / "bounds.py", root / "routes_settings.py", *(root / "static").glob("*")]:
+    for path in [root / "bounds.py", root / "routes_settings.py", *(root / "static").rglob("*.*")]:
         text = path.read_text(encoding="utf-8")
         assert not re.search(
             r"\b(?:1\s*[-\u2013]\s*(?:4|30|50|100)|100\s*[-\u2013]\s*3000)\b", text

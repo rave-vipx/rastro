@@ -67,6 +67,10 @@ def test_page_lists_validates_previews_and_connects(client: TestClient) -> None:
     assert "__STUDIO_TOKEN__" not in page.text
     assert client.get("/static/studio.js").status_code == 200
     assert client.get("/static/other.js").status_code == 404
+    copy = client.get("/static/i18n/core.json")
+    assert copy.status_code == 200 and copy.headers["content-type"].startswith("application/json")
+    assert client.get("/static/i18n/other.json").status_code == 404
+    assert client.get("/static/i18n/%2e%2e%2fstudio.js").status_code == 404
     assert client.get("/api/jobs").json()["files"] == ["job.toml"]
     checked = post(client, "/api/validate", {"file": "job.toml"}).json()
     assert checked["ok"] and checked["has_dataset"]

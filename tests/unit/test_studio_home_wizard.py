@@ -75,7 +75,7 @@ def test_missing_projects_route_falls_back_without_inventing_health() -> None:
 reply({"/api/jobs": [200, {root: "r", files: ["agenda.toml"], truncated: false}]});
 await home.loadHome();
 const text = list.textContent;
-assert.ok(text.includes("/api/projects route is missing") && text.includes("Status unknown"));
+assert.ok(text.includes("lists projects only") && text.includes("Status unknown"));
 assert.ok(text.includes("Not reported") && !text.includes("Up to date"));
 reply({"/api/projects": [500, {ok: false, error: "internal"}]});
 await home.loadHome();

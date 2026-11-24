@@ -74,9 +74,23 @@ const reply = (table) => {
 """
 
 
-def messages() -> dict[str, dict[str, str]]:
-    source = (STATIC / "i18n.js").read_text(encoding="utf-8")
-    return json.loads(source.split("/* i18n:begin */", 1)[1].split("/* i18n:end */", 1)[0])
+def view_messages() -> dict[str, dict[str, object]]:
+    """Each per-view dictionary under ``static/i18n``, by file stem."""
+    return {
+        path.stem: json.loads(path.read_text(encoding="utf-8"))
+        for path in sorted((STATIC / "i18n").glob("*.json"))
+    }
+
+
+def messages(*, advanced: bool = False) -> dict[str, dict[str, str]]:
+    """All views merged per language; ``advanced`` overlays the technical wording."""
+    merged: dict[str, dict[str, str]] = {"en": {}, "es": {}}
+    for data in view_messages().values():
+        for lang in merged:
+            merged[lang].update(data[lang])  # type: ignore[arg-type]
+            if advanced:
+                merged[lang].update(data["advanced"][lang])  # type: ignore[index]
+    return merged
 
 
 def run_node(body: str, **data: object) -> None:

@@ -2,7 +2,7 @@
 // All source-derived text is set as plain text content; markup is never parsed.
 import { initPrefs } from "./prefs.js";
 import { $, api, bind, show, state, switchView } from "./dom.js";
-import { onLangChange, t } from "./i18n.js";
+import { advanced, onLangChange, setAdvanced, t } from "./i18n.js";
 import { initAI } from "./ai.js";
 import { fillControls, initControls } from "./controls.js";
 import { fillSelectors, initCorrect, resetCorrect } from "./correct.js";
@@ -68,8 +68,27 @@ function wireRequests() {
   });
 }
 
+// The Advanced switch is per viewer and off by default; blocked storage just forgets it.
+const ADVANCED_KEY = "rastro-studio-advanced";
+
+function initAdvanced() {
+  const toggle = $("pref-advanced");
+  let stored = null;
+  try { stored = window.localStorage.getItem(ADVANCED_KEY); } catch { /* storage blocked */ }
+  const apply = (on) => {
+    setAdvanced(on);
+    toggle.setAttribute("aria-checked", String(advanced()));
+  };
+  apply(stored === "on");
+  toggle.addEventListener("click", () => {
+    apply(!advanced());
+    try { window.localStorage.setItem(ADVANCED_KEY, advanced() ? "on" : "off"); } catch { /* blocked */ }
+  });
+}
+
 async function start() {
   initPrefs();
+  initAdvanced();
   if (!state.token) {
     show("listing", t("open.noToken"), "bad");
     return;

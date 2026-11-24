@@ -142,20 +142,27 @@ Four steps, one decision each:
 
 ## Layout, language and theme
 
-Studio opens on **Projects**. The header holds **Projects** with the open project's name, the
-language and theme choices, and, once a project is open, its views: **Results** (run and records),
-**Sources**, **Alerts**, **Fix** (repair, the automatic switch, correcting a field by hand),
-**Settings** (next page, link following, scroll, stealth, connecting your app, the recipe registry)
-and **New scraper**.
+Studio opens on **Projects**. The header holds the main navigation (**Projects** and **Hub**,
+the community hub search), the open project's name, the **Advanced** switch and the language and
+theme choices. Once a project is open, its views follow: **Results** (run and records), **Sites**,
+**Alerts**, **Settings** (next page, link following, scroll, stealth, connecting your app),
+**Fix** (repair, the automatic switch, correcting a field by hand) and **New scraper**.
 
+- **Advanced:** off by default. Normal mode speaks in plain words ("how the page is read",
+  "project", "databases saved by Rastro"); turning Advanced on shows the technical terms (recipe,
+  selector, job file, SQLite) and the sections that need them, such as opening a job file by name,
+  the stored recipe versions and the operator flags. Turning it off loses nothing. The choice is
+  stored in this browser only.
 - **Language:** English by default; Spanish (Rioplatense voseo) from the header. Every label and
-  message Studio writes comes from one dictionary (`static/i18n.js`, tests keep both languages
-  complete); lists, cards and panels redraw when the language changes. Sentences the server writes
-  (run alerts above a result) and issue codes stay as the server sends them.
+  message Studio writes comes from one JSON file per view under `static/i18n/` (`core`, `wizard`,
+  `results`, `health`, `settings`, `hub`, `run`), each with `en`, `es` and an `advanced` overlay for
+  the technical wording; tests keep both languages complete and normal mode free of jargon. Lists,
+  cards and panels redraw when the language changes. Sentences the server writes (run alerts above
+  a result) and issue codes stay as the server sends them.
 - **Narrow screens:** from 360 px. At 40rem and below the results and before/after tables become
   cards with a label per value, the provenance panel opens as a bottom sheet, and controls are 44 px.
 - **Settings** are folded groups: next page, follow links, scroll, browser and stealth, network
-  permissions, connect your app, and **Registry (URL)**.
+  permissions and connect your app. The registry search and publish live in **Hub**.
 - **Theme:** System (default), Light or Dark. Both choices are stored in this browser only; with
   storage blocked they last until reload.
 - **Accessibility:** controls are at least 36 px (44 px on narrow screens), focus is a 3 px accent

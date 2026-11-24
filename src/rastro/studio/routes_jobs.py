@@ -44,6 +44,8 @@ ASSETS = frozenset(
         "home.js",
     }
 )
+# Per-view copy (English and Spanish); fixed names, so a path can never leave the folder.
+I18N_ASSETS = frozenset(path.name for path in (STATIC / "i18n").glob("*.json"))
 
 
 def _recipes(job: Job) -> list[dict[str, Any]]:
@@ -96,6 +98,12 @@ def routes(studio: Studio) -> list[Route]:
             return reply({"error": "not_found"}, 404)
         return FileResponse(STATIC / name, headers=HEADERS)
 
+    async def copy(request: Request) -> Response:
+        name = request.path_params["name"]
+        if name not in I18N_ASSETS:
+            return reply({"error": "not_found"}, 404)
+        return FileResponse(STATIC / "i18n" / name, headers=HEADERS)
+
     async def jobs(request: Request) -> Response:
         found, truncated = files.list_job_files(studio.root)
         return reply({"root": studio.root.name, "files": found, "truncated": truncated})
@@ -145,6 +153,7 @@ def routes(studio: Studio) -> list[Route]:
     return [
         studio.route("/", page),
         studio.route("/static/{name}", asset),
+        studio.route("/static/i18n/{name}", copy),
         studio.route("/api/jobs", jobs),
         studio.route("/api/connect", connect),
         studio.route("/api/validate", validate, post=True),
