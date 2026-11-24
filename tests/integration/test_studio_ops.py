@@ -1,5 +1,6 @@
 """Studio wizard, run and dataset endpoints (P-008, INT-002, JOB-001, DATA-001, DATA-004, N1)."""
 
+import base64
 import json
 from collections.abc import Iterator
 from pathlib import Path
@@ -329,7 +330,7 @@ def test_records_page_and_export(client: TestClient) -> None:
     assert len(json.loads(exported["content"])["records"]) == 3
     html = post(client, "/api/export", {"file": "pages/agenda.toml", "format": "html"}).json()
     assert html["media_type"] == "text/html" and "Candombe" in html["content"]
-    bad = post(client, "/api/export", {"file": "pages/agenda.toml", "format": "csv"})
+    bad = post(client, "/api/export", {"file": "pages/agenda.toml", "format": "pdf"})
     assert bad.status_code == 400
 
 
@@ -344,6 +345,7 @@ def test_new_endpoints_require_token_and_origin(root: Path) -> None:
             "/api/load",
             "/api/records",
             "/api/export",
+            "/api/changes",
             "/api/health",
             "/api/repair",
             "/api/promote",
@@ -369,3 +371,29 @@ def test_job_declared_proxy_needs_the_operator_flag(root: Path, path: str) -> No
             http.headers["X-Studio-Token"] = token
             reply = post(http, path, {"file": "proxy.toml"})
         assert reply.status_code >= 400 and expected in reply.text
+
+
+def test_export_csv_and_xlsx_flatten_nested_columns(client: TestClient) -> None:
+    """N5: one-click CSV and XLSX use the shared flattened table; XLSX travels as base64."""
+    create(client, dataset="agenda.sqlite", identity=["title"])
+    post(client, "/api/load", {"file": "pages/agenda.toml"})
+    csv_ = post(client, "/api/export", {"file": "pages/agenda.toml", "format": "csv"}).json()
+    assert csv_["filename"] == "agenda.csv" and csv_["media_type"] == "text/csv"
+    assert csv_["content"].splitlines()[0] == "title,venue,last_observed_at"
+    xlsx = post(client, "/api/export", {"file": "pages/agenda.toml", "format": "xlsx"}).json()
+    assert xlsx["encoding"] == "base64" and xlsx["filename"] == "agenda.xlsx"
+    assert base64.b64decode(xlsx["content"])[:2] == b"PK"
+
+
+def test_changes_is_a_first_run_until_a_second_load(client: TestClient) -> None:
+    """N5: no earlier load, nothing to compare; later loads count new and removed records."""
+    create(client, dataset="agenda.sqlite", identity=["title"])
+    post(client, "/api/load", {"file": "pages/agenda.toml"})
+    first = post(client, "/api/changes", {"file": "pages/agenda.toml"}).json()
+    assert first["ok"] and first["first_run"] is True and first["partial"] == []
+    post(client, "/api/load", {"file": "pages/agenda.toml"})
+    second = post(client, "/api/changes", {"file": "pages/agenda.toml"}).json()
+    assert second["first_run"] is False and second["new"] == 0 and second["removed"] == 0
+    page = post(client, "/api/records", {"file": "pages/agenda.toml"}).json()
+    assert all("change" not in row for row in page["records"])
+    assert post(client, "/api/changes", {"file": "../x.toml"}).status_code == 400
