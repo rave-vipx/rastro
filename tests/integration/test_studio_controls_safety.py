@@ -22,9 +22,8 @@ def test_controls_start_off_and_external_stealth_grant_is_reported(
         with serving(app, "http://127.0.0.1:8765") as client:
             client.headers["X-Studio-Token"] = token
             page = client.get("/").text
-            for control in ("auto-promote", "allow-stealth"):
-                line = next(line for line in page.splitlines() if f'id="{control}"' in line)
-                assert "checked" not in line
+            line = next(line for line in page.splitlines() if 'id="auto-promote"' in line)
+            assert "checked" not in line and 'id="allow-stealth"' not in page
             assert client.get("/api/session").json()["allow_stealth"] is granted
     monkeypatch.setenv("RASTRO_ALLOW_STEALTH", "1")
     app, token = create_app(tmp_path)

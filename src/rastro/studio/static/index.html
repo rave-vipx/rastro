@@ -264,10 +264,9 @@ load_records("pages/events.toml", records, source_url="https://example.com/event
     </details>
 
     <details class="card fold">
-      <summary data-i18n="settings.browser">Browser and stealth</summary>
-      <p class="muted" data-i18n="settings.browserHelp">Whether a site uses a browser is part of the project; turn on Advanced to see where. Stealth is never saved in a project or a bundle: it is a grant for this Studio session only.</p>
-      <label class="check"><input type="checkbox" id="allow-stealth"> <span data-i18n="switch.stealth">Allow stealth for this Studio session</span></label>
-      <p class="muted" data-i18n="switch.stealthHelp">Off by default. Lets jobs that ask for render = "stealth" run while this Studio is open. Nothing is written to a job or a bundle.</p>
+      <summary data-i18n="settings.browser">Browser</summary>
+      <p class="muted" data-i18n="settings.browserHelp">Whether a site uses a browser is part of the project; turn on Advanced to see where. What shared or AI-written input may use is switched per origin under Connections, for this Studio session only.</p>
+      <div id="steps-section" data-adv></div>
     </details>
 
     <details class="card fold">
@@ -275,7 +274,7 @@ load_records("pages/events.toml", records, source_url="https://example.com/event
       <p class="muted" data-i18n="settings.networkHelp">Studio reads only the hosts the job allows (allowed_hosts under [acquisition]); robots.txt and public-address checks always apply. Operator grants are flags of the command that starts Studio, never settings here:</p>
       <pre data-adv>rastro studio --allow-egress
 rastro studio --allow-env NAME
-rastro studio --allow-stealth</pre>
+rastro studio --allow-untrusted ORIGIN:CAPABILITY</pre>
     </details>
 
     <details class="card fold">

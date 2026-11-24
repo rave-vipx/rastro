@@ -26,6 +26,7 @@ from rastro.studio import (
     routes_repair,
     routes_run,
     routes_settings,
+    routes_steps,
     routes_wizard,
 )
 from rastro.studio.web import MAX_BODY, Studio
@@ -71,6 +72,7 @@ def create_app(
     routes = [
         *routes_jobs.routes(studio),
         *routes_settings.routes(studio),
+        *routes_steps.routes(studio),
         *routes_registry.routes(studio),
         *routes_wizard.routes(studio),
         *routes_run.routes(studio),

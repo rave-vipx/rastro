@@ -145,5 +145,4 @@ def test_auto_apply_switch_starts_off_in_the_fix_view() -> None:
     assert switch.get("checked") is None
     assert switch.xpath("ancestor::div[@id='view-repair']")
     assert page.get_element_by_id("auto-promote-status").get("role") == "status"
-    stealth = page.get_element_by_id("allow-stealth")
-    assert stealth.get("checked") is None
+    assert not page.xpath("//*[@id='allow-stealth']")  # per-origin switches replaced it

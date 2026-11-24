@@ -25,7 +25,7 @@ def test_settings_are_folded_groups() -> None:
         "settings.title", "spider.legend", "scroll.title", "settings.browser",
         "settings.network", "connect.title",
     ]  # fmt: skip
-    for control in ("pagination-cap", "spider-depth", "scroll-steps", "allow-stealth", "connect"):
+    for control in ("pagination-cap", "spider-depth", "scroll-steps", "steps-section", "connect"):
         assert _page().get_element_by_id(control).xpath("ancestor::details"), control
 
 
