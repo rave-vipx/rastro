@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 """Advanced, Settings: the recorded page steps in plain words, delete and look again."""
 
 from __future__ import annotations

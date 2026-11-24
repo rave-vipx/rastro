@@ -51,7 +51,7 @@ def _without(raw: bytes, job: Job, source: int | None, index: int) -> str:
 
 def routes(studio: Studio) -> list[Route]:
     async def listed(request: Request) -> Response:
-        path, sha, job = studio.load(text(await body(request), "file"))
+        _, sha, job = studio.load(text(await body(request), "file"))
         return reply(
             {"ok": True, "sha256": sha, "steps": step_rows(job), "explore": bool(job.acquisition)}
         )
