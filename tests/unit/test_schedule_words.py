@@ -95,3 +95,16 @@ def test_multi_day_schedule_with_a_time_of_day_runs_on_the_right_day(every, due)
     assert next_due_at(ScheduleSpec(every=every, at="08:00"), on_time) == expected
     early = datetime(2026, 11, 23, 7, 0, tzinfo=UTC)
     assert next_due_at(ScheduleSpec(every=every, at="08:00"), early) == on_time.replace(second=0)
+
+
+@pytest.mark.parametrize("zone", ["Nowhere/City", "../etc/passwd", ""])
+def test_an_unknown_timezone_is_a_configuration_error(zone):
+    from rastro.domain.schedule_words import next_due_at
+
+    after = datetime(2026, 11, 23, 8, 0, tzinfo=UTC)
+    for spec in (ScheduleSpec(every="1d", at="08:00"), ScheduleSpec(every="6h")):
+        with pytest.raises(ConfigurationError) as error:
+            next_runs(spec, after, timezone=zone)
+        assert error.value.location == "timezone"
+    with pytest.raises(ConfigurationError):
+        next_due_at(ScheduleSpec(every="1d", at="08:00"), after, zone)

@@ -6,7 +6,7 @@ import difflib
 import re
 import unicodedata
 from datetime import datetime, time, timedelta
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from rastro.domain.models import ConfigurationError
 from rastro.domain.schedule import ScheduleSpec
@@ -91,6 +91,16 @@ def parse_schedule_words(text: str) -> ScheduleSpec:
     raise ConfigurationError("Schedule words are not understood", location="schedule", hint=hint)
 
 
+def _zone(timezone: str) -> ZoneInfo:
+    """The IANA zone named ``timezone``; an unknown or malformed name is a configuration error."""
+    try:
+        return ZoneInfo(timezone)
+    except (ZoneInfoNotFoundError, ValueError):
+        raise ConfigurationError(
+            "Unknown time zone; use an IANA name such as Europe/Madrid", location="timezone"
+        ) from None
+
+
 def _at_run(day: object, spec_at: str, zone: ZoneInfo) -> datetime:
     return datetime.combine(day, time.fromisoformat(spec_at), zone)  # type: ignore[arg-type]
 
@@ -102,9 +112,9 @@ def next_runs(
     in `timezone`."""
     if after.tzinfo is None:
         raise ConfigurationError("Run times need an aware start", location="after")
+    zone, step = _zone(timezone), spec.every_delta.days
     if spec.at is None:
         return [after + spec.every_delta * i for i in range(1, count + 1)]
-    zone, step = ZoneInfo(timezone), spec.every_delta.days
     run = _at_run(after.astimezone(zone).date(), spec.at, zone)
     if run <= after:
         run = _at_run(run.date() + timedelta(days=1), spec.at, zone)
@@ -116,9 +126,9 @@ def next_runs(
 
 def next_due_at(spec: ScheduleSpec, last_attempt: datetime, timezone: str = "UTC") -> datetime:
     """When a source last tried at `last_attempt` is due again."""
+    zone = _zone(timezone)
     if spec.at is None:
         return last_attempt + spec.every_delta
-    zone = ZoneInfo(timezone)
     day = last_attempt.astimezone(zone).date()
     run = _at_run(day, spec.at, zone)
     if run <= last_attempt:
