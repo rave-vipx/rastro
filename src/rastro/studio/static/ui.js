@@ -1,7 +1,7 @@
 // Named components shared by the views: status shapes, chips, empty states and the
 // placeholders for links and images that come from data. Text is always plain text content.
 import { el } from "./dom.js";
-import { t } from "./i18n.js";
+import { onLangChange, t } from "./i18n.js";
 
 // A status is a shape plus a word, never a color alone: circle ok, triangle warning,
 // octagon failure, minus-circle "nothing there".
@@ -123,3 +123,13 @@ export function actionButton(label, run, className) {
   });
   return node;
 }
+
+// A box whose content is built in JS is rebuilt when the language or Advanced changes;
+// a null render forgets the box (its content is then left as the caller set it).
+const redraws = new Map();
+export function redrawable(box, render) {
+  if (!render) { redraws.delete(box); return; }
+  redraws.set(box, render);
+  box.replaceChildren(render());
+}
+onLangChange(() => { for (const [box, render] of redraws) box.replaceChildren(render()); });

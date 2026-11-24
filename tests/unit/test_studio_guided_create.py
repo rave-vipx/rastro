@@ -190,3 +190,24 @@ assert.deepEqual(calls.at(-1).body, {url: "https://shop.example/list", host: "sh
 assert.deepEqual(done, [["refresh", "shop.toml"], ["open", "shop.toml"], ["view", "results"]]);
 """
     )
+
+
+def test_cards_built_in_js_are_redrawn_for_language_and_advanced() -> None:
+    run_node(
+        IMPORTS
+        + """
+const ui = await import("STATIC/ui.js");
+const offer = {host: "shop.example", path: "/api/items", records: 2, record_path: "/data/items", covers: ["name"]};
+const box = new Node("div");
+ui.redrawable(box, () => correct.offerCard(offer, async () => {}));
+assert.ok(!box.textContent.includes("shop.example/api/items"));
+i18n.setAdvanced(true);
+assert.ok(box.textContent.includes("shop.example/api/items"));  // the technical line appears
+await i18n.setLang("es");
+assert.ok(box.textContent.includes("Usar estos datos"));
+ui.redrawable(box, null);
+box.replaceChildren();
+i18n.setAdvanced(false);
+assert.equal(box.children.length, 0);  // a forgotten box is not drawn again
+"""
+    )
