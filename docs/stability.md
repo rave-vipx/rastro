@@ -10,8 +10,8 @@ version, except for security fixes (see the deprecation policy).
 
 1.0.0 is the first release under this policy, so it fixes the list that the whole 1.x series
 builds on. A change to anything below follows the deprecation policy; the list is re-checked
-before the `v1.0.0` tag, together with the generated schemas, so the code, the documentation and
-the published contracts agree at the release.
+at every release, together with the generated schemas, so the code, the documentation and the
+published contracts agree.
 
 - **Distribution**: the `rastro-engine` project on PyPI, the `rastro` executable, and the
   `rastro` import package with its optional extras (`browser`, `http`, `ollama`, `openai`,
@@ -24,7 +24,8 @@ the published contracts agree at the release.
 - **Run results**: `JobRunResult` and `JobSummary` with `schema_version = 1`
   ([`job-run.schema.json`](schemas/job-run.schema.json), also `rastro job schema --target run`).
 - **The run report**: `RunReport` and `SourceReport` with `schema_version = 1`, published as
-  `run-report.schema.json`.
+  [`run-report.schema.json`](schemas/run-report.schema.json) with the schema id
+  `https://rave-vipx.github.io/rastro/schemas/run-report.schema.json`.
 - **Recipes and stores**: recipe bundles with `format_version = 1`, and the recipe-memory and
   dataset SQLite schemas, which migrate forward as described below.
 - **CLI**: command names, flags, exit codes `0`–`5` and the documented error codes.
@@ -58,7 +59,8 @@ across patch releases, and get at least one minor release of warnings before a c
   leniently and ignore unknown keys. The error object on stderr keeps the keys `error`,
   `message` and `location`, and documented `error` codes keep their meaning.
 - **Published JSON Schemas** in [`docs/schemas/`](https://github.com/rave-vipx/rastro/tree/main/docs/schemas)
-  for jobs, run results and previews (also printed by `rastro job schema`).
+  for jobs, run results, run reports, loads, health and previews (all but the run report also
+  printed by `rastro job schema`). Each keeps its `$id`.
 - **Job files** with `format_version = 1`. A job that validates today keeps validating with the
   same meaning; a breaking change introduces `format_version = 2` and keeps reading version 1
   for at least one minor release.

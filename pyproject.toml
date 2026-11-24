@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "rastro-engine"
-version = "0.9.0"
+version = "1.0.0"
 description = "Rastro: AI writes the scraper once, recipes keep it running."
 readme = "README.md"
 requires-python = ">=3.12"

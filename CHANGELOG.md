@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-24
+
+First stable release. The public Python names, the job file format, the run report schema and the CLI exit codes are frozen under the policy in `docs/stability.md`.
+
 ### Added
 
 - Run report: every `rastro job run` and `rastro job load` result carries a content-free `report` (`rastro.RunReport`, `rastro.SourceReport`) saying per source why it ended as it did: outcome, reason, pages, accepted and rejected counts by code, fields nulled, what was stored, acquisition, crawl, repair and timings. It also reaches the failure hook payload and Studio, and its JSON Schema is `docs/schemas/run-report.schema.json`. See `docs/run-report.md`.
@@ -45,7 +49,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Changed
 
 - `rastro init --agent`, `llms.txt` and `docs/capabilities.md` explain how results reach Studio: keep them in a job's dataset (`rastro job load` or `rastro.load_records`) and open `rastro studio --root`, instead of building an ad hoc database.
-- Planning documents are no longer kept in the repository. Public documentation, ADRs and the repository templates were rewritten for 1.0: one tagline, no internal process wording, GitHub private vulnerability reporting for security reports, and invented site names on `.example` hosts in the documentation.
+- Version 1.0.0: `docs/stability.md` lists the frozen public surface (`rastro.__all__`, job format version, run report schema id, CLI exit codes) and the deprecation policy.
+- Documentation, ADRs and the repository templates were rewritten for 1.0: one tagline, GitHub private vulnerability reporting for security reports, and invented site names on `.example` hosts.
 - `docs/issues.md`: `link_group_refused` now describes the refused comma selector group, `invalid_record` also covers evidence building and storage serialization, and `extraction_limit` also covers a nested list cut at its limit. The `tolerant_jsonld` issue is now `repaired_json`.
 - Release process: patch releases can be tagged from a maintenance branch; see `docs/releasing.md`.
 - `rastro.scrape` reports the acquisition ladder in the source's acquisition note.
@@ -66,6 +71,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Unbounded crawls no longer fail on installs without the browser extra: pacing falls back to a standard-library throttle with the same rules.
 - Repair candidate checks use the extraction's observation clock, so results no longer depend on the day the tests run.
 - The browser acquirer keeps a render's screenshot on the acquisition result, so Studio's guided flow can show the page with its highlight boxes.
+- A rate limit (429) stops the acquisition ladder instead of climbing to a heavier level.
+- The webhook notification carries hosts and counts, never URL paths.
+- A multi-day schedule with a time of day (`every = "2d"`, `at = "08:00"`) waits the full interval instead of running daily.
+- `rastro dataset changes --since` lists only records removed after that time.
+- `rastro dataset export --format xlsx` drops every character XML 1.0 cannot hold instead of writing a file spreadsheet programs refuse.
+- A solver plugin result whose body is not text counts as unsolved instead of failing the source.
+- An unknown schedule time zone is a configuration error, not an internal one.
+- A captured response whose path is too long for a recipe's capture pattern is no longer offered as a data source, and building a recipe from one raises `ConfigurationError` instead of an internal error.
+- A repaired source reports the real repair origin when no model is configured.
 
 ### Security
 
@@ -410,7 +424,8 @@ Release candidate tagged on `main`; not published to a package registry. First R
 - The Ollama adapter disables thinking. Capable models no longer spend the output budget and deadline on hidden reasoning.
 - The decoding schema now requires `record_selector` for CSS proposals and forbids it for JSON-LD, matching recipe validation.
 
-[Unreleased]: https://github.com/rave-vipx/rastro/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/rave-vipx/rastro/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/rave-vipx/rastro/compare/v0.9.0...v1.0.0
 [0.9.0]: https://github.com/rave-vipx/rastro/compare/v0.7.0...v0.9.0
 [0.7.0]: https://github.com/rave-vipx/rastro/releases/tag/v0.7.0
 [0.6.0]: https://pypi.org/project/rastro-engine/0.6.0/
