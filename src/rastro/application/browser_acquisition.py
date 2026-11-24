@@ -119,6 +119,7 @@ class BrowserAcquirer(WebAcquirer):
                     if result.url != url:
                         await self._robots(result.url, operation)
                     operation.challenge_solved |= result.challenge_solved
+                    operation.screenshot = result.screenshot  # evidence of this render only
                     if result.status != Outcome.SUCCESS:
                         raise AcquisitionError(
                             result.issue_code or "browser_failure", result.status

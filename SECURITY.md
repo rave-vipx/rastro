@@ -182,6 +182,11 @@ change a gate. Regular expressions from recipes and jobs (`capture`, `capture_ne
 pattern cannot backtrack catastrophically. The MCP `job_preview` tool writes
 nothing but is not advertised as read-only, because a job can fetch URLs or call a model.
 
+The MCP browser tools run as untrusted `mcp` input: each call opens one fresh guarded page
+under the job's allowed hosts, pinned DNS, robots and budget and closes it; page steps from
+the closed vocabulary need `--allow-untrusted mcp:page_actions` (screenshots and captured
+responses need their own grants), and no tool evaluates JavaScript.
+
 Unbounded crawl checkpoints (`.rastro/crawl/` next to the job) keep the full URLs of the
 frontier and the seen set, queries included, so a resumed crawl fetches the same pages. The
 files are written atomically with mode `0600` in an owner-only folder, never followed through

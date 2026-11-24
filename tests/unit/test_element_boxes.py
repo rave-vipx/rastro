@@ -11,6 +11,7 @@ from rastro.domain.models import ConfigurationError, Outcome
 from rastro.studio.routes_pick import BoxSource
 
 PAGE = "<html><body><h2>Night Run</h2><h2>Dawn Walk</h2></body></html>"
+PNG = b"\x89PNG\r\n\x1a\nsynthetic"
 BOX = {"x": 10.0, "y": 20.0, "w": 100.0, "h": 30.0}
 
 
@@ -47,7 +48,9 @@ class Session:
 
     async def render(self, target, *, policy, max_bytes):
         self.owner.rendered.append(target.url)
-        return AcquisitionResult(target.url, PAGE, Outcome.SUCCESS, None, http_status=200)
+        return AcquisitionResult(
+            target.url, PAGE, Outcome.SUCCESS, None, http_status=200, screenshot=PNG
+        )
 
     async def scroll(self, *, policy, max_bytes, settle_ms):
         raise AssertionError("not used")
@@ -68,7 +71,10 @@ class Browser:
             self.closed += 1
 
     async def render(self, target, *, policy, max_bytes, targets):
-        raise AssertionError("boxes are measured in a session")
+        self.rendered.append(target.url)  # a render outside any source session
+        return AcquisitionResult(
+            target.url, PAGE, Outcome.SUCCESS, None, http_status=200, screenshot=PNG
+        )
 
 
 class Resolver:
@@ -116,3 +122,44 @@ def test_studio_renders_the_page_in_a_browser_when_the_extra_is_installed(monkey
     monkeypatch.setattr(routes_pick, "browser_acquirer", missing)
     fallback = routes_pick._page_acquirer(policy)
     assert not isinstance(fallback, BoxSource) and fallback.policy.render == "http"
+
+
+class OnePageBrowser:
+    """Only the per-page protocol: no sessions."""
+
+    async def render(self, target, *, policy, max_bytes, targets):
+        return AcquisitionResult(
+            target.url, PAGE, Outcome.SUCCESS, None, http_status=200, screenshot=PNG
+        )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("make", [Browser, OnePageBrowser])
+async def test_the_html_path_keeps_the_render_screenshot(make):
+    from rastro.application.browser_sessions import source_session
+    from rastro.domain.models import Source
+
+    async with source_session():  # inside a source session, Browser renders in its session
+        result = await acquirer(make()).acquire(
+            Source(url="https://agenda.example/"), max_bytes=10**6
+        )
+    assert result.status == Outcome.SUCCESS and result.screenshot == PNG
+
+
+def test_studio_page_gets_the_screenshot_and_boxes(offline_cli_loop):
+    import asyncio
+    from types import SimpleNamespace
+
+    from rastro.studio import routes_pick
+
+    client = acquirer(Browser())
+    studio = SimpleNamespace(acquisition=client, clock=lambda: 0.0, url_preview=None)
+    fetched, png, inner = routes_pick._render("https://agenda.example/", studio)
+    assert png == PNG
+    shown = asyncio.run(
+        routes_pick._highlights(fetched, png, inner, {"title": "h2::text"}),
+        loop_factory=asyncio.SelectorEventLoop,
+    )
+    assert shown["boxes_measured"] and shown["highlights"][0]["boxes"] == [
+        {"x": 10, "y": 20, "w": 100, "h": 30}
+    ]

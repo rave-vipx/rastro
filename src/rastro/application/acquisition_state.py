@@ -60,6 +60,7 @@ class _Operation:
     challenge_solved: bool = False  # a browser cleared a challenge on the way to the page
     http_version: HttpVersion | None = None  # what the server last answered with
     fallbacks: set[str] = field(default_factory=set)  # transfer options not honoured
+    screenshot: bytes | None = field(default=None, repr=False)  # the last render's PNG
 
     def rotate(self) -> None:
         """Route the next transfer through the next rotated profile, if the source rotates."""
@@ -97,6 +98,7 @@ class _Operation:
             challenge_solved=self.challenge_solved,
             http_version=self.http_version,
             transfer_issues=tuple(sorted(self.fallbacks)),
+            screenshot=self.screenshot,
             blocked=blocked_hint(issue, self.http_status, self.block_marker),
             raw_body=raw_body,
         )
