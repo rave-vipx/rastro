@@ -112,6 +112,7 @@ def test_untrusted_input_cannot_switch_back_to_the_operator_origin():
     assert current_origin() == "operator"
 
 
+@pytest.mark.filterwarnings("ignore:allow_stealth= is deprecated:DeprecationWarning")
 def test_the_deprecated_stealth_switch_only_widens_untrusted_origins():
     with operator_trust(allow_stealth=True), input_origin("model"):
         decision = require_capabilities(job(render="browser", per_source="stealth", solve=True))
@@ -138,3 +139,21 @@ def test_environment_grants_are_read_and_unknown_names_never_echoed(monkeypatch)
             current_grants()
         assert SECRET not in f"{caught.value} {caught.value.hint}"
         monkeypatch.delenv(env)
+
+
+def test_the_sdk_stealth_keyword_warns_but_studio_and_the_cli_do_not():
+    import warnings
+
+    from rastro.application.operator_trust import operator_trust, stealth_notice_given
+
+    with (
+        pytest.warns(DeprecationWarning, match="allow_stealth= is deprecated"),
+        operator_trust(allow_stealth=True),
+    ):
+        pass
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        with stealth_notice_given(), operator_trust(allow_stealth=True):
+            pass
+        with operator_trust(allow_stealth=False):
+            pass

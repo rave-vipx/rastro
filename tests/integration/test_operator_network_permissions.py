@@ -278,6 +278,7 @@ async def test_job_auth_refuses_a_missing_or_malformed_value_without_echo(monkey
 @pytest.mark.parametrize(
     "acquisition", ['render = "browser"', 'render = "stealth"', "solve_challenges = true"]
 )
+@pytest.mark.filterwarnings("ignore:allow_stealth= is deprecated:DeprecationWarning")
 async def test_job_auth_is_http_engine_only(monkeypatch, acquisition):
     with pytest.raises(ConfigurationError, match="HTTP-engine only"):
         await _run(_job(acquisition=acquisition), monkeypatch, allow_stealth=True)

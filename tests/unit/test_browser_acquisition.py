@@ -359,6 +359,7 @@ def test_render_inheritance_survives_serialization():
     )
 
 
+@pytest.mark.filterwarnings("ignore:allow_stealth= is deprecated:DeprecationWarning")
 @pytest.mark.asyncio
 async def test_sdk_stealth_consent(monkeypatch):
     from rastro.application.jobs import run_job_async

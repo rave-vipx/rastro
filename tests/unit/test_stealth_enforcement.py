@@ -93,6 +93,7 @@ def test_load_job_file_refuses_before_building_the_stealth_browser(constructed, 
     assert constructed == []
 
 
+@pytest.mark.filterwarnings("ignore:allow_stealth= is deprecated:DeprecationWarning")
 def test_the_deprecated_grant_lets_untrusted_input_build(constructed):
     from rastro.browser import job_acquisition
 
