@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import stat
+from pathlib import Path
 
 import pytest
 
@@ -113,3 +114,10 @@ def test_the_key_ignores_the_time_budget_but_not_the_fields(tmp_path):
 
     assert crawl_key(job(60, "name")) == crawl_key(job(600, "name"))
     assert crawl_key(job(60, "name")) != crawl_key(job(60, "title"))
+
+
+def test_security_policy_describes_what_a_checkpoint_keeps():
+    policy = (Path(__file__).parents[2] / "SECURITY.md").read_text(encoding="utf-8")
+    paragraph = " ".join(policy.split("Unbounded crawl checkpoints", 1)[1].split("\n\n")[0].split())
+    assert "frontier and the seen set" not in paragraph  # the seen set keeps no URLs
+    assert "digest" in paragraph

@@ -189,7 +189,8 @@ the closed vocabulary need `--allow-untrusted mcp:page_actions`, screenshots
 mcp:network_capture`; there is no tool that evaluates JavaScript.
 
 Unbounded crawl checkpoints (`.rastro/crawl/` next to the job) keep the full URLs of the
-frontier and the seen set, queries included, so a resumed crawl fetches the same pages. The
+frontier, queries included, so a resumed crawl fetches the same pages; the pages already seen
+are stored only as 32-character digests, never as URLs. The
 files are written atomically with mode `0600` in an owner-only folder, never followed through
 a symlink, and validated when read; treat them like the dataset file. Studio's guided flow
 (`/api/wizard/lookup`, `/page`, `/pick`) sits behind the Studio token and local-host checks;
