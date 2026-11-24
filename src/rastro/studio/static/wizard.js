@@ -1,13 +1,21 @@
-// New scraper wizard in four steps: URL, fields with one example each, a preview of
-// the records, then a project name. File names are an advanced detail filled from the name.
+// Guided create in four steps: the page address (with a hub offer first), what you
+// want (fields with one example, plus an estimate), review (records, the page snapshot with
+// the fields marked, click to fix a field, the site's own data), then name and save, where
+// the AI may look once for records behind a click. File names are an advanced detail.
 // All source-derived text is set as plain text content; markup is never parsed.
-import { $, api, bind, el, show, table } from "./dom.js";
+import { $, api, bind, el, request, show, state } from "./dom.js";
 import { t } from "./i18n.js";
-import { openable } from "./ui.js";
+import { chip, openable } from "./ui.js";
+import { estimateCard, exploreCard, hubCard, offerCard } from "./correct.js";
+import { fixField, installedRows, reviewTable, setExample, showPage } from "./pick.js";
 
 const MAX_FIELDS = 30;
 let rowCount = 0;
 let edited = false; // the person typed file names: stop filling them from the project name
+let found = null; // the last suggestion; review and create read it
+let snapshot = null; // {wrap, page} of the last drawn snapshot
+let reviewing = null; // a project the Hub just installed into: review it, then open it
+const boxes = {};
 
 export function goStep(n) {
   for (let i = 1; i <= 4; i += 1) $(`wiz-step-${i}`).hidden = i !== n;
@@ -17,6 +25,18 @@ export function goStep(n) {
   }
   const focus = { 1: "page-url", 2: "add-field", 3: "wiz-next-3", 4: "new-name" }[n];
   $(focus).focus();
+}
+
+// A container the wizard owns inside a step, placed before the step's buttons.
+function area(step, name) {
+  if (boxes[name]) return boxes[name];
+  const box = el("div", undefined, `wiz-${name}`);
+  const parent = $(step);
+  const nav = parent.querySelector(".step-nav");
+  if (nav) nav.before(box);
+  else parent.append(box);
+  boxes[name] = box;
+  return box;
 }
 
 function input(id, label, value, placeholder) {
@@ -49,11 +69,19 @@ function addRow(name = "", example = "") {
   return cells[0];
 }
 
+// Live check of the address, DOM-free: {ok, host} or {ok: false, key} for the message.
+export function urlState(value) {
+  const text = String(value || "").trim();
+  if (!text) return { ok: false, key: "wizard.needUrl" };
+  const href = openable(text);
+  if (!href) return { ok: false, key: "wizard.url.notWeb" };
+  return { ok: true, host: new URL(href).hostname };
+}
+
 function pageUrl() {
-  const url = $("page-url").value.trim();
-  if (!url) throw new Error(t("wizard.needUrl"));
-  if (!openable(url)) throw new Error(t("wizard.badUrl"));
-  return url;
+  const checked = urlState($("page-url").value);
+  if (!checked.ok) throw new Error(t(checked.key));
+  return $("page-url").value.trim();
 }
 
 function collect() {
@@ -72,18 +100,14 @@ function collect() {
   return { url: pageUrl(), examples: [example], identity };
 }
 
-function confidenceText(note) {
-  const parts = [note.method];
-  if (note.ambiguous) parts.push(t("wizard.ambiguous"));
-  parts.push(t("wizard.withValue", { n: note.records_with_value }));
-  if (note.note) parts.push(note.note);
-  return parts.join("; ");
-}
-
 // "Agenda de fiestas · Valle Azul" -> "agenda-de-fiestas-valle-azul": letters, digits, "-" only.
 export function slug(name) {
   const plain = name.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
   return plain.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60);
+}
+
+function collectSafe() {
+  try { return collect(); } catch { return { identity: [] }; }
 }
 
 function fillFileNames() {
@@ -96,46 +120,71 @@ function fillFileNames() {
   $("new-key-note").hidden = keyed;
 }
 
-function collectSafe() {
-  try {
-    return collect();
-  } catch {
-    return { identity: [] };
-  }
+function defaultName(url) {
+  const parsed = new URL(url); // only called with an address urlState accepted
+  const leaf = parsed.pathname.split("/").filter(Boolean).pop();
+  return leaf ? `${parsed.hostname} ${leaf}` : parsed.hostname;
 }
 
-function defaultName(url) {
-  try {
-    const parsed = new URL(url);
-    const leaf = parsed.pathname.split("/").filter(Boolean).pop();
-    return leaf ? `${parsed.hostname} ${leaf}` : parsed.hostname;
-  } catch {
-    return "";
+// Step 1: someone may already have built this; the hub is asked before anything is fetched.
+async function lookUp(app) {
+  reviewing = null;
+  const { host } = urlState(pageUrl());
+  const box = area("wiz-step-1", "hub");
+  show("url-status", t("wizard.hub.searching", { host }), "muted");
+  const data = await api("/api/wizard/lookup", { url: pageUrl() }).catch(() => ({ offers: [], hub: "unavailable" }));
+  show("url-status", data.hub === "unavailable" ? t("wizard.hub.down") : "", "muted");
+  if (!data.offers.length) { box.replaceChildren(); return enterFields(); }
+  const offer = data.offers[0];
+  box.replaceChildren(hubCard(offer, host, async () => {
+    request("hub-try", { offer, url: pageUrl() });
+    app.switchView("hub");
+  }, async () => { box.replaceChildren(); await enterFields(); }));
+}
+
+// Step 2: what you want, with the estimate before anything large is read.
+let refresh = null;
+
+function enterFields() {
+  const box = area("wiz-step-2", "estimate");
+  if (!box.children.length) {
+    refresh = estimateCard(box, (more) => api("/api/wizard/estimate", { url: pageUrl(), more }));
   }
+  goStep(2);
+  return refresh();
+}
+
+async function showOffers(body) {
+  const box = area("wiz-step-3", "api");
+  box.replaceChildren();
+  const data = await api("/api/wizard/offers", { url: body.url, fields: Object.keys(body.examples[0]) })
+    .catch(() => ({ offers: [] }));
+  if (!data.offers.length) return;
+  box.append(offerCard(data.offers[0]));
 }
 
 async function suggestRecipe() {
   const { identity, ...body } = collect();
   show("suggest-status", t("wizard.fetching"), "muted");
-  const data = await api("/api/suggest", body);
-  show("suggest-status", t("wizard.suggested", { status: data.status, n: data.records }),
-    data.status === "success" ? "good" : "warn");
-  const names = Object.keys(data.recipe.fields);
-  const recipe = el("details", undefined, "fold");
-  recipe.append(el("summary", t("wizard.recipe")), el("p", t("wizard.eachRecord", { selector: data.recipe.record_selector })),
-    table([t("col.field"), t("wizard.selector"), t("wizard.confidence")], names.map((n) =>
-      [n, data.recipe.fields[n], confidenceText(data.confidence[n] || { method: "-", records_with_value: 0 })])));
+  found = await api("/api/suggest", body);
+  const good = found.status === "success";
+  show("suggest-status", "");
+  const names = Object.keys(found.recipe.fields);
   const out = $("suggest-result");
-  out.replaceChildren(el("p", t("wizard.found", { n: data.records }), data.status === "success" ? "good" : "warn"),
-    table(names, data.preview.map((row) => names.map((n) => row[n])), t("wizard.previewCaption")), recipe);
-  if (data.truncated) out.append(el("p", t("wizard.first50"), "muted"));
-  if (data.allow_http) out.append(el("p", t("wizard.allowHttp"), "warn"));
+  out.replaceChildren(chip(good ? "ok" : "warn", t("wizard.found", { n: found.records })),
+    reviewTable(names, found.preview));
+  if (found.truncated) out.append(el("p", t("wizard.first50"), "muted"));
+  if (found.allow_http) out.append(el("p", t("wizard.allowHttp"), "warn"));
   if (identity.length === 0) out.append(el("p", t("wizard.tickKey"), "muted"));
+  if (found.explore) out.append(el("p", t("wizard.explore.hint"), "muted"));
   if (!$("new-name").value) $("new-name").value = defaultName(body.url);
   fillFileNames();
   goStep(3);
+  const [shot] = await Promise.all([showPage(area("wiz-step-3", "page"), body.url, found.recipe), showOffers(body)]);
+  snapshot = shot;
 }
 
+// Step 4: save; when the page may hide records behind a click, the AI may look once.
 async function createJob(app) {
   const body = collect();
   const file = $("new-file").value.trim();
@@ -149,17 +198,44 @@ async function createJob(app) {
   show("create-status", t(made.allow_http ? "wizard.createdHttp" : "wizard.created", { file: made.file }),
     made.allow_http ? "warn" : "good");
   await app.refreshJobs(made.file);
+  if (found && found.explore && state.ai.enabled) return exploreCard(area("wiz-step-4", "explore"), app, made.file);
   await app.openJob(made.file);
   app.switchView("results");
+  return undefined;
+}
+
+// From the Hub: what someone else built was installed into a project; check its records here.
+async function reviewInstalled(app, { spec, file }) {
+  const data = await api("/api/preview", { file });
+  const { names, rows } = installedRows(data.preview);
+  reviewing = file;
+  app.switchView("wizard");
+  goStep(3);
+  $("suggest-result").replaceChildren(el("p", t("wizard.hub.reviewing", { spec, file })),
+    chip(rows.length ? "ok" : "warn", t("wizard.found", { n: rows.length })), reviewTable(names, rows));
 }
 
 export function initWizard(app) {
+  document.addEventListener("studio:review", (event) => reviewInstalled(app, event.detail || {})
+    .catch((error) => show("suggest-status", t("msg.error", { why: error.message }), "bad")));
   addRow();
   addRow();
-  bind("wiz-next-1", "url-status", () => { pageUrl(); show("url-status", ""); goStep(2); });
+  $("page-url").addEventListener("input", () => {
+    const checked = urlState($("page-url").value);
+    show("url-status", checked.ok ? t("wizard.url.ok", { host: checked.host }) : t(checked.key), checked.ok ? "muted" : "warn");
+  });
+  bind("wiz-next-1", "url-status", () => lookUp(app));
   bind("wiz-back-2", "suggest-status", () => goStep(1));
-  bind("wiz-back-3", "suggest-status", () => goStep(2));
-  bind("wiz-next-3", "create-status", () => { fillFileNames(); goStep(4); });
+  bind("wiz-back-3", "suggest-status", () => {
+    const ctx = { snapshot, found, url: pageUrl(), use: async (field, text) => { setExample($("field-rows"), field, text); await suggestRecipe(); } };
+    if (!fixField(area("wiz-step-3", "fix"), ctx)) goStep(2);
+  });
+  bind("wiz-next-3", "create-status", async () => {
+    if (!reviewing) { fillFileNames(); goStep(4); return; }
+    const file = reviewing;
+    reviewing = null;
+    await app.openJob(file).then(() => app.switchView("results"));
+  });
   bind("wiz-back-4", "create-status", () => goStep(3));
   bind("add-field", "suggest-status", () => addRow().focus());
   bind("suggest", "suggest-status", suggestRecipe);

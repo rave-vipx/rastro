@@ -30,8 +30,9 @@ from rastro.domain.intelligence import InferencePolicy, ModelRequest
 from rastro.domain.job_fields import StringField
 from rastro.domain.models import ConfigurationError, Limits, RastroError, Representation, Source
 from rastro.ports.acquisition import AcquisitionPort
+from rastro.studio.pick_candidates import candidates
 from rastro.studio.pick_element import match_count, pick_element
-from rastro.studio.web import Refused, Studio, body, flag, reply, text
+from rastro.studio.web import Refused, Studio, body, flag, optional_text, reply, text
 
 MAX_PATH = 128
 MAX_CHILD = 4096
@@ -123,12 +124,18 @@ def _render(url: str, studio: Studio) -> tuple[FetchedUrl, bytes | None, Acquisi
 
 
 async def _highlights(
-    fetched: FetchedUrl, png: bytes | None, inner: AcquisitionPort, fields: dict[str, str]
+    fetched: FetchedUrl,
+    png: bytes | None,
+    inner: AcquisitionPort,
+    fields: dict[str, str],
+    record_selector: str | None = None,
 ) -> dict[str, Any]:
     measured = png is not None and isinstance(inner, BoxSource)
+    picks = candidates(fetched.html, record_selector, Limits()) if record_selector else []
     boxes: Mapping[str, Sequence[Mapping[str, float]]] = {}
-    if measured and fields and isinstance(inner, BoxSource):
-        boxes = await inner.element_boxes(fetched.final_url, list(fields.values()))
+    wanted = [*fields.values(), *(c["locator"] for c in picks)]
+    if measured and wanted and isinstance(inner, BoxSource):
+        boxes = await inner.element_boxes(fetched.final_url, wanted)
     found = [
         {
             "field": name,
@@ -145,6 +152,14 @@ async def _highlights(
         "screenshot": base64.b64encode(png).decode() if png is not None else None,
         "boxes_measured": measured,
         "highlights": found if png is not None else [],
+        "elements": [
+            {
+                "path": c["path"],
+                "text": c["text"],
+                "boxes": _clean_boxes(boxes.get(c["locator"], ()))[:1],
+            }
+            for c in picks
+        ],
     }
 
 
@@ -201,8 +216,11 @@ def routes(studio: Studio) -> list[Route]:
     async def page(request: Request) -> Response:
         data = await body(request)
         url, fields = text(data, "url"), _selectors(data)
+        record = optional_text(data, "record_selector")
+        if record is not None and len(record) > 1024:
+            raise Refused(400, "invalid_record_selector")
         fetched, png, inner = await run_in_threadpool(_render, url, studio)
-        return reply(await _highlights(fetched, png, inner, fields))
+        return reply(await _highlights(fetched, png, inner, fields, record))
 
     async def pick(request: Request) -> Response:
         data = await body(request)
