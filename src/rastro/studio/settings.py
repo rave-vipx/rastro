@@ -20,12 +20,11 @@ from rastro.domain.jobs import Job, parse_job
 from rastro.domain.models import ConfigurationError, Recipe
 from rastro.domain.recipe_compare import RepairPolicy
 from rastro.domain.recipes import CssRecipe, Pagination
+from rastro.domain.schedule import ScheduleSpec
 from rastro.domain.selector_policy import check_untrusted_field
 from rastro.studio import files
 
-_REPAIR_HEADER = re.compile(r"(?m)^\[repair\][ \t]*(?:#.*)?$")
 _NEXT_TABLE = re.compile(r"(?m)^[ \t]*\[")
-_AUTO_KEY = re.compile(r"(?m)^[ \t]*auto_promote[ \t]*=.*$")
 
 
 def _format(path: Path) -> Literal["toml", "json"]:
@@ -83,35 +82,77 @@ def save_pagination(path: Path, expected: str, source: int | None, pagination: P
 
 def save_auto_promote(path: Path, expected: str, enabled: bool) -> str:
     """Write ``[repair] auto_promote`` on the operator's job; every gate still applies."""
-    text, job = _read(path)
+    _, job = _read(path)
     policy = (job.repair or RepairPolicy()).model_copy(update={"auto_promote": enabled})
     wanted = {**job.model_dump(mode="json"), "repair": policy.model_dump(mode="json")}
+    return _edit(path, expected, "repair", {"auto_promote": enabled}, wanted)
+
+
+def _toml_table(text: str, table: str, values: dict[str, Any], *, replace: bool = False) -> str:
+    """Set keys in an ordinary ``[table]`` (or rewrite it); unusual layouts fail the comparison."""
+    lines = {key: f"{key} = {json.dumps(value)}" for key, value in values.items()}
+    header = re.search(rf"(?m)^\[{re.escape(table)}\][ \t]*(?:#.*)?$", text)
+    if header is None:
+        separator = "" if text.endswith("\n") or not text else "\n"
+        return f"{text}{separator}\n[{table}]\n" + "\n".join(lines.values()) + "\n"
+    following = _NEXT_TABLE.search(text, header.end())
+    stop = following.start() if following else len(text)
+    section = "\n" + "\n".join(lines.values()) + "\n\n" if replace else text[header.end() : stop]
+    for key, line in () if replace else lines.items():
+        key_line = re.compile(rf"(?m)^[ \t]*{re.escape(key)}[ \t]*=.*$")
+        found = key_line.search(section)
+        section = (
+            section[: found.start()] + line + section[found.end() :]
+            if found
+            else f"\n{line}{section}"
+        )
+    return text[: header.end()] + section + text[stop:]
+
+
+def _edit(
+    path: Path,
+    expected: str,
+    table: str,
+    values: dict[str, Any],
+    wanted: dict[str, Any],
+    *,
+    replace: bool = False,
+) -> str:
+    text = files.read_job_bytes(path).decode("utf-8")
     if _format(path) == "toml":
         newline = "\r\n" if "\r\n" in text else "\n"
-        changed = _toml_auto_promote(text.replace("\r\n", "\n"), enabled)
+        changed = _toml_table(text.replace("\r\n", "\n"), table, values, replace=replace)
         changed = changed.replace("\n", newline)
     else:
         data = json.loads(text)
-        repair = data.setdefault("repair", {})
-        if not isinstance(repair, dict):
-            raise ConfigurationError("The job's repair block must be a table")
-        repair["auto_promote"] = enabled
+        holder = {} if replace else data.setdefault(table, {})
+        if not isinstance(holder, dict):
+            raise ConfigurationError(f"The job's {table} block must be a table")
+        data[table] = {**holder, **values}
         changed = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
     return _commit(path, expected, changed, wanted)
 
 
-def _toml_auto_promote(text: str, enabled: bool) -> str:
-    """Edit an ordinary ``[repair]`` table; unusual layouts fail the whole-job comparison."""
-    line = f"auto_promote = {'true' if enabled else 'false'}"
-    header = _REPAIR_HEADER.search(text)
-    if header is None:
-        separator = "" if text.endswith("\n") or not text else "\n"
-        return f"{text}{separator}\n[repair]\n{line}\n"
-    following = _NEXT_TABLE.search(text, header.end())
-    stop = following.start() if following else len(text)
-    section = text[header.end() : stop]
-    if _AUTO_KEY.search(section):
-        section = _AUTO_KEY.sub(line, section, count=1)
-    else:
-        section = f"\n{line}{section}"
-    return text[: header.end()] + section + text[stop:]
+def save_robots(path: Path, expected: str, mode: Literal["obey", "ignore"]) -> str:
+    """Write ``[acquisition] robots``; the run still needs the operator's grant for jobs
+    that did not come from the operator."""
+    _, job = _read(path)
+    if job.acquisition is None:
+        raise ConfigurationError("This job has no [acquisition] block to change")
+    policy = job.acquisition.model_copy(update={"robots": mode})
+    wanted = {**job.model_dump(mode="json"), "acquisition": policy.model_dump(mode="json")}
+    return _edit(path, expected, "acquisition", {"robots": mode}, wanted)
+
+
+def save_schedule(path: Path, expected: str, every: str, at: str | None) -> str:
+    """Write the job's ``[schedule]``: how often, and an optional time of day."""
+    _, job = _read(path)
+    spec = {"every": every, **({"at": at} if at else {})}
+    kept = job.schedule.jitter if job.schedule and job.schedule.jitter else None
+    if kept:
+        spec["jitter"] = kept
+    wanted = {
+        **job.model_dump(mode="json"),
+        "schedule": ScheduleSpec(**spec).model_dump(mode="json"),
+    }
+    return _edit(path, expected, "schedule", spec, wanted, replace=True)
