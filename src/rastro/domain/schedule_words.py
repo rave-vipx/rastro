@@ -119,8 +119,8 @@ def next_due_at(spec: ScheduleSpec, last_attempt: datetime, timezone: str = "UTC
     if spec.at is None:
         return last_attempt + spec.every_delta
     zone = ZoneInfo(timezone)
-    day = last_attempt.astimezone(zone).date() + timedelta(days=spec.every_delta.days - 1)
+    day = last_attempt.astimezone(zone).date()
     run = _at_run(day, spec.at, zone)
     if run <= last_attempt:
-        run = _at_run(run.date() + timedelta(days=1), spec.at, zone)
+        run = _at_run(day + timedelta(days=spec.every_delta.days), spec.at, zone)
     return run.astimezone(last_attempt.tzinfo)

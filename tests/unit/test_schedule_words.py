@@ -84,3 +84,14 @@ def test_scheduler_waits_for_the_time_of_day():
     on_time = datetime(2030, 1, 2, 8, 0, tzinfo=UTC)
     assert [s.url for s in due_sources(job, [status], early)] == []
     assert [s.url for s in due_sources(job, [status], on_time)] == ["https://a.example/items"]
+
+
+@pytest.mark.parametrize(("every", "due"), [("1d", 24), ("2d", 25), ("7d", 30)])
+def test_multi_day_schedule_with_a_time_of_day_runs_on_the_right_day(every, due):
+    from rastro.domain.schedule_words import next_due_at
+
+    on_time = datetime(2026, 11, 23, 8, 0, 5, tzinfo=UTC)
+    expected = datetime(2026, 11, due, 8, 0, tzinfo=UTC)
+    assert next_due_at(ScheduleSpec(every=every, at="08:00"), on_time) == expected
+    early = datetime(2026, 11, 23, 7, 0, tzinfo=UTC)
+    assert next_due_at(ScheduleSpec(every=every, at="08:00"), early) == on_time.replace(second=0)
