@@ -1,4 +1,4 @@
-"""REPAIR-002/004/005: thresholds and generated regressions use measured evidence."""
+"""Thresholds and generated regressions use measured evidence."""
 
 from datetime import UTC, datetime
 
@@ -50,7 +50,7 @@ def evaluate(recipe=RECIPE, **kwargs):
 
 
 def test_optional_field_absent_in_success_sample_does_not_lower_completeness():
-    """QUAL-006: an optional field the success sample never filled is not counted."""
+    """An optional field the success sample never filled is not counted."""
     result = evaluate(policy=RepairPolicy(auto_promote=True))
     assert result.indicators.completeness == 1.0
     assert result.decision == "promote"
@@ -58,7 +58,7 @@ def test_optional_field_absent_in_success_sample_does_not_lower_completeness():
 
 
 def test_optional_field_filled_in_success_sample_still_gates_completeness():
-    """QUAL-006: losing an optional value the success sample had stays below threshold."""
+    """Losing an optional value the success sample had stays below threshold."""
     body = "<article><h2>Hello</h2><p>More</p></article>"
     sampled = CssRecipe(
         record_selector="article",
@@ -96,7 +96,7 @@ def test_unassessable_consistency_does_not_pass():
 
 
 def test_consistent_candidate_below_semantic_confidence_threshold_is_quarantined():
-    """QUAL-005/006, REPAIR-004: consistent does not imply sufficient confidence."""
+    """Consistent does not imply sufficient confidence."""
     # Current rules give consistent runs confidence 1; exercise the CI gate's graded contract.
     indicators = ConsistencyReport(
         records=4,
@@ -159,7 +159,7 @@ def test_ci_refuses_weak_evidence_and_wrong_fixture_context():
 
 @pytest.mark.parametrize(("filled", "complete"), [(2, False), (3, True), (4, True)])
 def test_optional_field_may_thin_to_three_quarters_of_the_sample(filled, complete):
-    """QUAL-006: losing an optional value in half the records quarantines; one in four does not."""
+    """Losing an optional value in half the records quarantines; one in four does not."""
     recipe = CssRecipe(
         record_selector="article",
         fields={"title": "h2::text", "extra": "p::text"},

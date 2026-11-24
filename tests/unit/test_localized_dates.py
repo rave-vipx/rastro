@@ -1,4 +1,4 @@
-"""Spanish source dates preserve explicit times (DATA-005)."""
+"""Spanish source dates preserve explicit times."""
 
 from datetime import date, datetime
 from types import SimpleNamespace

@@ -1,5 +1,5 @@
-"""Studio API for the redesigned views: projects, sources, alerts and record extras (N5, N17,
-PROV-001, P-008). Built on the synthetic demo folder (tests/fixtures/studio_demo)."""
+"""Studio API for the redesigned views: projects, sources, alerts and record extras. Built on the
+synthetic demo folder (tests/fixtures/studio_demo)."""
 
 from __future__ import annotations
 

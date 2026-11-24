@@ -1,4 +1,4 @@
-"""Lock takeover and release races (SCHED-003)."""
+"""Lock takeover and release races."""
 
 from __future__ import annotations
 

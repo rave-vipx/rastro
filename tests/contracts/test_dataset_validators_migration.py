@@ -1,4 +1,4 @@
-"""SYNC-004: transactional forward-only v1→v2 (and onward) dataset migration."""
+"""Transactional forward-only v1→v2 (and onward) dataset migration."""
 
 import os
 import sqlite3
@@ -88,7 +88,7 @@ def test_migration_rolls_back_and_newer_versions_are_refused(tmp_path):
 
 
 def test_validators_are_bound_to_the_successful_snapshot_generation(tmp_path):
-    """SYNC-004: a crash or late writer between snapshot and validators cannot reuse stale tags."""
+    """A crash or late writer between snapshot and validators cannot reuse stale tags."""
     from datetime import timedelta
 
     from tests.integration.test_sqlite_dataset import AT, URL
@@ -112,7 +112,7 @@ def _version(path):
 
 
 def test_read_paths_do_not_migrate_a_v1_file(tmp_path):
-    """Studio/MCP reads must not mutate the dataset file (SYNC-004)."""
+    """Studio/MCP reads must not mutate the dataset file."""
     path = tmp_path / "d.sqlite"
     status = v1(path)
     before = path.read_bytes()

@@ -1,4 +1,4 @@
-"""Distributed event samples use reserved hosts and invented source identities (COST-001)."""
+"""Distributed event samples use reserved hosts and invented source identities."""
 
 import json
 from pathlib import Path

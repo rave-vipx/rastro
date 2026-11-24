@@ -87,7 +87,7 @@ def test_creation_of_active_and_candidate_versions():
         change(1, D, R, LifecycleAction.SUPERSEDED),
         change(2, None, A, LifecycleAction.CREATED),
     )
-    # REC-006: a candidate never displaces the serving version.
+    # A candidate never displaces the serving version.
     assert plan_creation(2, candidate=True, serving=status(1, A)) == (
         change(2, None, C, LifecycleAction.CREATED),
     )

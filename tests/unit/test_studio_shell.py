@@ -1,4 +1,4 @@
-"""Studio redesign stage 1: tokens, theme, es/en dictionary and app shell (N1, N5, N8)."""
+"""Studio redesign stage 1: tokens, theme, es/en dictionary and app shell."""
 
 import re
 
@@ -16,7 +16,7 @@ def _page() -> html.HtmlElement:
 
 
 def test_english_and_spanish_have_the_same_keys() -> None:
-    """N8: one dictionary, both languages complete; English is the default."""
+    """One dictionary, both languages complete; English is the default."""
     messages = _messages()
     assert set(messages) == {"en", "es"}
     assert set(messages["en"]) == set(messages["es"])
@@ -24,7 +24,7 @@ def test_english_and_spanish_have_the_same_keys() -> None:
 
 
 def test_every_static_text_key_exists_and_none_is_orphaned() -> None:
-    """N8: each data-i18n key in the page is in the dictionary, and each entry is used,
+    """Each data-i18n key in the page is in the dictionary, and each entry is used,
     by the page, by a t("key") call, or by a key family a script builds (t(`code.${...}`))."""
     page = _page()
     used = {
@@ -41,14 +41,14 @@ def test_every_static_text_key_exists_and_none_is_orphaned() -> None:
 
 
 def test_spanish_copy_uses_voseo() -> None:
-    """N8: Rioplatense Spanish ("Pegá la URL"), not "Pega" or "usted"."""
+    """Rioplatense Spanish ("Pegá la URL"), not "Pega" or "usted"."""
     spanish = _messages()["es"]
     assert spanish["wizard.url.intro"].startswith("Pegá")
     assert not any(re.search(r"\busted\b", v, re.IGNORECASE) for v in spanish.values())
 
 
 def test_every_tab_has_a_view_and_one_starts_selected() -> None:
-    """N1: main navigation (Projects, Hub) and project tabs (Results, Sites, Alerts, Settings)
+    """Main navigation (Projects, Hub) and project tabs (Results, Sites, Alerts, Settings)
     each switch to an existing view; Projects starts selected."""
     page = _page()
     tabs = page.xpath("//button[contains(concat(' ', @class, ' '), ' tab ')]")
@@ -151,7 +151,7 @@ TAG_TEXT = {"light": "#ffffff", "dark": "#111111"}  # field highlight labels sit
 
 
 def test_light_and_dark_tokens_meet_aa_contrast() -> None:
-    """N8 accessibility: every text/background token pair reaches 4.5:1 in both themes."""
+    """Accessibility: every text/background token pair reaches 4.5:1 in both themes."""
     css = (STATIC / "studio.css").read_text(encoding="utf-8")
     themes = {"light": _tokens(css, ":root {"), "dark": _tokens(css, ':root[data-theme="dark"]')}
     failures = [

@@ -1,4 +1,4 @@
-"""ADR 0037, SEC-005: stealth from untrusted input without a grant never builds the browser;
+"""ADR 0037: stealth from untrusted input without a grant never builds the browser;
 the operator's own jobs build it without any flag."""
 
 import pytest

@@ -1,4 +1,4 @@
-"""Review #66 regressions: untrusted containers cannot win promotion (REPAIR-001/002)."""
+"""Review #66 regressions: untrusted containers cannot win promotion."""
 
 from datetime import UTC, datetime
 
@@ -101,7 +101,7 @@ def verdict(candidate, html, fixture):
     ids=["promo", "footer", "classless-nested", "news-same-fields", "news-new-fields", "notice"],
 )
 def test_reviewer_article_traps_never_promote(html):
-    """REPAIR-002: every p_relocation.py trap must be held, even with valid strings."""
+    """Every p_relocation.py trap must be held, even with valid strings."""
     candidates, fixture = propose(html)
     assert all(verdict(c, html, fixture) in {"quarantine", "reject"} for c in candidates)
 
@@ -121,7 +121,7 @@ def test_reviewer_article_traps_never_promote(html):
     ids=["promo", "footer"],
 )
 def test_reviewer_list_traps_never_promote(extra):
-    """REPAIR-002: verify_all H1 must quarantine valid but unrelated list rows."""
+    """Verify_all H1 must quarantine valid but unrelated list rows."""
     before = (
         "<html><body><main><ul>"
         + "".join(
@@ -143,7 +143,7 @@ def test_reviewer_list_traps_never_promote(extra):
 
 
 def test_unrelated_class_hash_cannot_break_a_container_tie():
-    """SCR-002: verify_all H2 must not prefer banner because its digest looks similar."""
+    """Verify_all H2 must not prefer banner because its digest looks similar."""
     html = (
         "<html><main>"
         '<article class="card"><h2 class="title">Real dance</h2>'
@@ -158,7 +158,7 @@ def test_unrelated_class_hash_cannot_break_a_container_tie():
 
 
 def test_excessive_class_tokens_fail_closed():
-    """SCR-002: class-token hashing enforces a 100-token per-element budget."""
+    """Class-token hashing enforces a 100-token per-element budget."""
     from rastro import ResourceLimitError
 
     classes = " ".join(f"c{i}" for i in range(101))
@@ -171,7 +171,7 @@ def test_excessive_class_tokens_fail_closed():
 
 
 def test_record_selector_evidence_is_ambiguous_by_default():
-    """REPAIR-002: an unqualified container tie cannot bypass the domain CI gate."""
+    """An unqualified container tie cannot bypass the domain CI gate."""
     candidate = RepairCandidate(
         recipe=RECIPE,
         origin="scrapling_relocation",
@@ -244,18 +244,18 @@ def _product_verdicts(html, before=None):
 
 @pytest.mark.parametrize("missing", [0, 1, 2])
 def test_a_record_without_an_optional_child_still_relocates(missing):
-    """REPAIR-001, SCR-002: absent optional children do not make rows heterogeneous."""
+    """Absent optional children do not make rows heterogeneous."""
     assert _product_verdicts(_catalogue("item-card", missing)) == ["promote"]
 
 
 def test_optional_child_missing_before_and_after_relocates():
-    """REPAIR-001, SCR-002: the snapshot itself may come from a row set with gaps."""
+    """The snapshot itself may come from a row set with gaps."""
     before = _catalogue("product", 1)
     assert _product_verdicts(_catalogue("item-card", 2), before) == ["promote"]
 
 
 def test_a_promo_decoy_beside_rows_missing_optional_children_is_refused():
-    """REPAIR-002: the optional-child tolerance must not admit a decoy container."""
+    """The optional-child tolerance must not admit a decoy container."""
     html = _catalogue("item-card", 1).replace(
         "</main>",
         '<article class="promo"><h3 class="name">50% OFF</h3>'
@@ -280,7 +280,7 @@ def test_a_promo_decoy_beside_rows_missing_optional_children_is_refused():
 
 
 def test_a_same_class_row_with_extra_children_stays_ambiguous():
-    """REPAIR-002: tolerance covers omitted children only, never extra ones."""
+    """Tolerance covers omitted children only, never extra ones."""
     html = _catalogue("item-card", 1).replace(
         "</main>",
         '<div class="item-card"><img src="ad.png"><h3 class="name">Sponsored</h3>'
@@ -313,7 +313,7 @@ def _stocked(card_class, stock_class, missing=None):
 
 @pytest.mark.parametrize("missing", [0, 2])
 def test_a_relocated_field_never_reads_a_siblings_value_in_a_thinned_record(missing):
-    """REPAIR-002, SCR-002: relocated selectors are tag+class, not positional."""
+    """Relocated selectors are tag+class, not positional."""
     before = _stocked("product", "stock")
     result = extract_document(
         before,
@@ -343,7 +343,7 @@ def test_a_relocated_field_never_reads_a_siblings_value_in_a_thinned_record(miss
 
 
 def test_omissions_must_match_tag_and_class_and_empty_rows_are_heterogeneous():
-    """REPAIR-002: a row is a thinned template row only if its children keep tag and class."""
+    """A row is a thinned template row only if its children keep tag and class."""
     from scrapling.parser import Selector
 
     from rastro.adapters.scrapling_container import homogeneous
@@ -368,7 +368,7 @@ def test_omissions_must_match_tag_and_class_and_empty_rows_are_heterogeneous():
 
 
 def test_text_only_records_with_identical_shapes_stay_homogeneous():
-    """REPAIR-002: records without element children (table cells) can still relocate."""
+    """Records without element children (table cells) can still relocate."""
     from scrapling.parser import Selector
 
     from rastro.adapters.scrapling_container import homogeneous

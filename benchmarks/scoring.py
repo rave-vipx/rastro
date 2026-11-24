@@ -1,4 +1,4 @@
-"""Multiset scoring against independently supplied expected records (DIFF-001)."""
+"""Multiset scoring against independently supplied expected records."""
 
 from collections import Counter
 from collections.abc import Iterable

@@ -1,4 +1,4 @@
-"""`rastro health`: one command an operator can alert on (DATA-004, DRIFT-005, REPAIR-005)."""
+"""`rastro health`: one command an operator can alert on."""
 
 import json
 from pathlib import Path

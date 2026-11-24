@@ -1,4 +1,4 @@
-"""Value-consistency gate for relocated fields (REPAIR-002, REPAIR-004)."""
+"""Value-consistency gate for relocated fields."""
 
 from rastro.domain.value_consistency import (
     OTHER_FIELD,

@@ -1,4 +1,4 @@
-"""Studio never shows a healthy load or source while drift is open (DRIFT-005, P-008)."""
+"""Studio never shows a healthy load or source while drift is open."""
 
 from pathlib import Path
 

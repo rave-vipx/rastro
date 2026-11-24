@@ -1,4 +1,4 @@
-"""Offline first-cut proof: DATA-001/003, SYNC-002/006/008, COST-001."""
+"""Offline first-cut proof."""
 
 import json
 import shutil

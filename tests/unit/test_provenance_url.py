@@ -1,4 +1,4 @@
-"""Stored page_url keeps scheme, host, port and path only (N3, SEC-008, OBS-001)."""
+"""Stored page_url keeps scheme, host, port and path only."""
 
 import pytest
 

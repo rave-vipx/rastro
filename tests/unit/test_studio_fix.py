@@ -1,4 +1,4 @@
-"""Studio "Fix a site": before/after, apply with a reason, discard, auto-apply off (N7, N12)."""
+"""Studio "Fix a site": before/after, apply with a reason, discard, auto-apply off."""
 
 from __future__ import annotations
 
@@ -39,7 +39,7 @@ document.getElementById("fix-source").value = "2";
 
 
 def test_proposal_shows_before_after_and_checks() -> None:
-    """N7: each field's current and proposed reading, what changed, and every check."""
+    """Each field's current and proposed reading, what changed, and every check."""
     run_node(
         SETUP
         + """
@@ -61,7 +61,7 @@ assert.ok(buttons(out).some((b) => b.textContent === "Discard"));
 
 
 def test_apply_needs_a_reason_and_discard_writes_nothing() -> None:
-    """N7/N12: no reason, no request; with a reason, /api/promote; discard sends nothing."""
+    """No reason, no request; with a reason, /api/promote; discard sends nothing."""
     run_node(
         SETUP
         + """
@@ -98,7 +98,7 @@ assert.ok(document.getElementById("fix-status").textContent.includes("Nothing wa
 
 
 def test_missing_repair_route_is_an_error_not_a_result() -> None:
-    """N7: a failed request says so; no proposal and no "now serves" message appear."""
+    """A failed request says so; no proposal and no "now serves" message appear."""
     run_node(
         SETUP
         + """
@@ -114,7 +114,7 @@ assert.equal(document.getElementById("fix-result").children.length, 0);
 
 
 def test_auto_apply_switch_starts_off_in_the_fix_view() -> None:
-    """N12: the automatic switch lives in Fix, is unchecked in the page and explains itself."""
+    """The automatic switch lives in Fix, is unchecked in the page and explains itself."""
     page = html.fromstring((STATIC / "index.html").read_text(encoding="utf-8"))
     switch = page.get_element_by_id("auto-promote")
     assert switch.get("checked") is None

@@ -67,7 +67,7 @@ def test_candidate_never_replaces_the_active_recipe(repo, key, recipe, source, s
     result = Rastro(repository=repo).extract_html(html, source=source, schema=schema)
     assert result.status == Outcome.SUCCESS and result.recipe_reused
     assert result.recipe_version == 1
-    # A failed candidate is rejected; the known working recipe keeps serving (REC-006).
+    # A failed candidate is rejected; the known working recipe keeps serving.
     rejected = repo.transition(key, 2, R, reason="Failed regression fixtures", at=NOW)
     assert rejected.metadata.state is R
     assert repo.get(key).recipe.version == 1

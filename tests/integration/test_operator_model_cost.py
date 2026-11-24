@@ -1,4 +1,4 @@
-"""COST-002, OBS-001: the model cost cap and remote notice cover operator-supplied models.
+"""The model cost cap and remote notice cover operator-supplied models.
 
 An operator model (SDK ``model=``, ``recipe repair --model``, ``RASTRO_MODEL``) is wrapped
 the same way as a job-declared one. The models are deterministic fakes.

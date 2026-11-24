@@ -1,4 +1,4 @@
-"""HUB-001: Git-friendly recipe bundles are verified offline before they are stored."""
+"""Git-friendly recipe bundles are verified offline before they are stored."""
 
 import json
 import os

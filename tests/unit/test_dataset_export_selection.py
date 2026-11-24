@@ -1,4 +1,4 @@
-"""--upcoming and HTML link rules for dataset export (DATA-004, SCHED-007)."""
+"""--upcoming and HTML link rules for dataset export."""
 
 from datetime import UTC, datetime
 

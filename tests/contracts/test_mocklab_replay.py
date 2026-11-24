@@ -1,4 +1,4 @@
-"""MOCK-001/MOCK-006: bundles replay offline through Rastro and are byte-reproducible."""
+"""Bundles replay offline through Rastro and are byte-reproducible."""
 
 import json
 from pathlib import Path

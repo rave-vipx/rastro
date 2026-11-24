@@ -1,4 +1,4 @@
-"""`rastro mcp` degrades clearly without the extra (AGENT-002)."""
+"""`rastro mcp` degrades clearly without the extra."""
 
 import builtins
 import json
@@ -32,7 +32,7 @@ def test_missing_extra_exits_nonzero_with_a_clear_message(
 def test_override_gates_is_an_explicit_server_start_flag(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Any, argv: list[str], expected: bool
 ) -> None:
-    """REPAIR-005: only the operator who starts the server lets the agent override gates."""
+    """Only the operator who starts the server lets the agent override gates."""
     pytest.importorskip("mcp")
     from rastro.adapters import mcp_server
 

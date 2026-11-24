@@ -1,4 +1,4 @@
-"""N3/N4/N9, SEC-008: Studio bounds follow domain contracts without copied caps."""
+"""Studio bounds follow domain contracts without copied caps."""
 
 import json
 import re
@@ -14,7 +14,7 @@ from rastro.domain.recipes import Pagination
 from rastro.domain.scroll import ScrollSpec
 from rastro.studio import bounds
 
-# bounds.js builds its labels with t(); the sliced code gets the real dictionary (N8).
+# bounds.js builds its labels with t(); the sliced code gets the real dictionary.
 I18N = Path("src/rastro/studio/static/i18n.js").resolve().as_uri()
 I18N_IMPORT = f'const {{ t }} = await import("{I18N}");\n'
 
@@ -120,7 +120,7 @@ assert.equal($("scroll-steps-range").textContent, "");
 
 
 def test_unbounded_integer_does_not_break_controls() -> None:
-    """N3/N9: optional schema bounds do not make the controls payload fail."""
+    """Optional schema bounds do not make the controls payload fail."""
 
     class Unbounded(BaseModel):
         count: int
@@ -131,7 +131,7 @@ def test_unbounded_integer_does_not_break_controls() -> None:
 
 
 def test_acquisition_controls_have_separate_rows() -> None:
-    """N3/N9: link and scroll controls share a single-column layout."""
+    """Link and scroll controls share a single-column layout."""
     from lxml import html
 
     root = Path("src/rastro/studio/static")

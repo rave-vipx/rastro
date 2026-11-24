@@ -1,4 +1,4 @@
-"""Failed sources are logged at WARNING with index and host, never path or query (QUAL-005)."""
+"""Failed sources are logged at WARNING with index and host, never path or query."""
 
 import json
 import logging

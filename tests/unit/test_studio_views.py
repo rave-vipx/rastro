@@ -1,4 +1,4 @@
-"""Studio redesign views: results, provenance, sources, alerts, fix, wizard, home (N1-N12).
+"""Studio redesign views: results, provenance, sources, alerts, fix, wizard, home.
 
 Static checks run everywhere; behaviour checks run the real modules under Node with a tiny
 fake DOM and are skipped when Node is not installed.
@@ -28,7 +28,7 @@ def test_every_script_and_stylesheet_is_served() -> None:
 
 
 def test_every_js_message_key_exists() -> None:
-    """N8: each t("key") the scripts build is in the English and Spanish dictionary."""
+    """Each t("key") the scripts build is in the English and Spanish dictionary."""
     keys = set(_messages()["en"])
     sources = [src for name, src in _scripts().items() if name != "i18n.js"]
     used = {k for src in sources for k in re.findall(r'\bt\("([\w.]+)"', src)}
@@ -43,7 +43,7 @@ def test_every_script_module_stays_small() -> None:
 
 
 def test_text_helper_interpolates_and_falls_back() -> None:
-    """N8: t() fills {placeholders} as text, and unknown keys show the key, not nothing."""
+    """T() fills {placeholders} as text, and unknown keys show the key, not nothing."""
     run_node("""
 const { t, setLang } = await import("STATIC/i18n.js");
 assert.equal(t("results.range", {from: 1, to: 25, total: 74}), "Records 1\u201325 of 74");
@@ -54,7 +54,7 @@ assert.equal(t("no.such.key"), "no.such.key");
 
 
 def test_cell_model_keeps_each_empty_reason_and_summarizes_tiers() -> None:
-    """N5, DATA-004: empty cells keep their reason; several prices become a summary."""
+    """Empty cells keep their reason; several prices become a summary."""
     run_node("""
 const { cellModel, tiers } = await import("STATIC/cells.js");
 assert.deepEqual(cellModel(null, "not_published"), {kind: "not_published"});
@@ -75,7 +75,7 @@ assert.equal(tiers("$ 450"), null);
 
 
 def test_every_status_rendering_has_a_word_and_a_shape() -> None:
-    """N5 accessibility: status is a shape plus words, never color alone."""
+    """Accessibility: status is a shape plus words, never color alone."""
     run_node("""
 const { chip, emptyCell } = await import("STATIC/ui.js");
 for (const reason of ["not_published", "source_failed", null]) {
@@ -107,7 +107,7 @@ assert.ok(!walk(unsafe).some((n) => n.tagName === "BUTTON"));
 
 
 def test_results_controls_are_in_the_page() -> None:
-    """N5: search, filters, pager and export controls exist and are labelled."""
+    """Search, filters, pager and export controls exist and are labelled."""
     page = html.fromstring((STATIC / "index.html").read_text(encoding="utf-8"))
     for control in ("rs-search", "rs-source", "rs-state", "rs-date", "rs-per-page"):
         node = page.get_element_by_id(control)
@@ -145,7 +145,7 @@ SAMPLE_RECORD = {
 
 
 def test_provenance_panel_explains_each_field_without_loading_anything() -> None:
-    """N5, DATA-004: source, time and recipe version per field; flags, imports and tiers."""
+    """Source, time and recipe version per field; flags, imports and tiers."""
     run_node(
         """
 const { view } = await import("STATIC/results.js");

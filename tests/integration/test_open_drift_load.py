@@ -1,4 +1,4 @@
-"""Open drift is a persistent, non-zero alert until acknowledged (DRIFT-003/005, QUAL-005)."""
+"""Open drift is a persistent, non-zero alert until acknowledged."""
 
 import json
 
@@ -61,7 +61,7 @@ def run(capsys, *args):
 
 
 def test_successful_load_with_elevated_drift_exits_4_until_acknowledged(job, capsys):
-    """DRIFT-005: the drifted run never becomes the baseline; ack-drift accepts it."""
+    """The drifted run never becomes the baseline; ack-drift accepts it."""
     load = ("job", "load", str(job), "--drift")
     assert run(capsys, *load)[0] == 0
     (job.parent / "page.html").write_text(page(1), encoding="utf-8")
@@ -99,7 +99,7 @@ def test_ack_drift_rejects_an_unknown_source_as_json_error(job, capsys):
 
 
 def test_serving_recipe_change_clears_open_drift(job, capsys):
-    """REPAIR-005: promotion and rollback call serving_changed, which clears open drift."""
+    """Promotion and rollback call serving_changed, which clears open drift."""
     from rastro.application.repair_context import RepairContext
 
     text = job.read_text(encoding="utf-8")

@@ -1,4 +1,4 @@
-"""HUB-002, HUB-003, HUB-006: install compatibility, publish cleanup and quoted git commands."""
+"""Install compatibility, publish cleanup and quoted git commands."""
 
 import shlex
 from datetime import UTC, date, datetime

@@ -1,5 +1,5 @@
 """Studio "Ask AI" with a fake ModelPort: verified proposals only, guarded endpoints, remote
-notice (INT-001, REPAIR-001-005, P-008).
+notice.
 
 The fake model returns canned proposal JSON; no provider is involved, and none is
 special-cased: anything implementing ``ModelPort.generate`` works.
@@ -71,7 +71,7 @@ def test_without_a_model_ask_ai_is_off(root: Path) -> None:
 
 
 def test_ask_ai_needs_the_token_and_the_exact_origin(root: Path) -> None:
-    """P-008: same guard as every Studio API call."""
+    """Same guard as every Studio API call."""
     model = FakeModel(RIGHT)
     for http in client_for(root, model):
         assert post(http, "/api/ai/suggest", SUGGEST, **{"X-Studio-Token": "x"}).status_code == 403
@@ -83,7 +83,7 @@ def test_ask_ai_needs_the_token_and_the_exact_origin(root: Path) -> None:
 
 
 def test_suggest_keeps_only_a_verified_recipe_and_sends_the_page(root: Path) -> None:
-    """INT-001: the first proposal matches nothing and is retried; the second is verified."""
+    """The first proposal matches nothing and is retried; the second is verified."""
     model = FakeModel(MISSING, PAGE)
     data = ask(root, model, "/api/ai/suggest", SUGGEST).json()
     assert data["found"] is True and data["calls"] == 2 and data["records"] == 5
@@ -153,7 +153,7 @@ def rewritten() -> str:
 def test_ai_repair_uses_repair_with_model_and_the_judge(
     root: Path, repair: str, verdict: str, promoted: bool
 ) -> None:
-    """REPAIR-001/005, QUAL-006: relocation finds nothing on rewritten markup, so the model
+    """Relocation finds nothing on rewritten markup, so the model
     proposes; Studio promotes only when the job opts in and the judge agrees."""
     (root / "job.toml").write_text(JOB + f"\n[repair]\n{repair}\n", encoding="utf-8")
     model = JudgingModel(verdict)
@@ -171,7 +171,7 @@ def test_ai_repair_uses_repair_with_model_and_the_judge(
 
 
 def test_studio_reports_the_models_real_remoteness_not_the_flag(root: Path) -> None:
-    """P-001, P-008: a remote model reached through RASTRO_ALLOW_REMOTE is reported as
+    """A remote model reached through RASTRO_ALLOW_REMOTE is reported as
     remote even without --allow-remote, and a loopback model is not remote."""
     from rastro.adapters.openai_compatible import OpenAICompatibleModel
 

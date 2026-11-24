@@ -1,4 +1,4 @@
-"""Metric definitions and Wilson score intervals for the AI repair benchmark (QUAL-001).
+"""Metric definitions and Wilson score intervals for the AI repair benchmark.
 
 * ``correct``: the executor served exactly the expected records after the breakage.
 * ``wrong``: it served anything else without refusing: a silent error. For Rastro this

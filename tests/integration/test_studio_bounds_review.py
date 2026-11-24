@@ -1,4 +1,4 @@
-"""N3/N9 SEC-008: regression probes from the cross-model Studio review."""
+"""Regression probes from the cross-model Studio review."""
 
 import json
 import tomllib
@@ -16,7 +16,7 @@ pytestmark = pytest.mark.usefixtures("offline_cli_loop")
 
 @pytest.mark.parametrize(("override", "disabled"), [("", False), ('render = "http"', True)])
 def test_scroll_inherits_job_browser_render(tmp_path: Path, override: str, disabled: bool) -> None:
-    """N9: absent source render inherits acquisition; explicit HTTP wins."""
+    """Absent source render inherits acquisition; explicit HTTP wins."""
     path = tmp_path / "job.toml"
     path.write_text(f"""
 format_version = 1
@@ -42,7 +42,7 @@ url = "https://example.test/items"
 
 @pytest.mark.parametrize("suffix", ["toml", "json"])
 def test_non_bmp_policy_round_trip(tmp_path: Path, suffix: str) -> None:
-    """N3: Unicode path prefixes survive initial write and subsequent replacement."""
+    """Unicode path prefixes survive initial write and subsequent replacement."""
     app, token = create_app(tmp_path, acquisition=FakeAcquirer({URL: PAGE}))
     with serving(app, "http://127.0.0.1:8765") as client:
         client.headers["X-Studio-Token"] = token
@@ -80,14 +80,14 @@ def test_non_bmp_policy_round_trip(tmp_path: Path, suffix: str) -> None:
 
 
 def test_policy_write_does_not_add_trailing_spaces() -> None:
-    """N9: unchanged layout around a scalar is preserved."""
+    """Unchanged layout around a scalar is preserved."""
     assert edit_policy_table("[scroll]\nmax_steps = 2\n", "scroll", {"max_steps": 3}) == (
         "[scroll]\nmax_steps = 3\n"
     )
 
 
 def test_preview_refetches_when_operator_grants_change(tmp_path: Path) -> None:
-    """N1/SEC-008: a preview never carries old grants into a later create."""
+    """A preview never carries old grants into a later create."""
     from rastro.application.operator_trust import operator_trust
 
     acquirer = FakeAcquirer({URL: PAGE})

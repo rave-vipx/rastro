@@ -1,4 +1,4 @@
-"""Scripted ModelPort fakes for the offline run (QUAL-001, AI-001). NOT a quality claim.
+"""Scripted ModelPort fakes for the offline run. NOT a quality claim.
 
 The oracle sees only the requests Rastro sends. A recipe request carries the page: the
 oracle finds it by digest in a table built from the case definitions and answers with a

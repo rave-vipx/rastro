@@ -1,4 +1,4 @@
-"""DATA-001/003, SYNC-002/003/006: identical dataset behavior across adapters."""
+"""Identical dataset behavior across adapters."""
 
 import io
 import os

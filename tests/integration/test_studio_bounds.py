@@ -1,4 +1,4 @@
-"""N1/N3/N9, SEC-008: previews expire and bounded settings validate before writes."""
+"""Previews expire and bounded settings validate before writes."""
 
 import json
 from pathlib import Path
@@ -10,7 +10,7 @@ from rastro.studio.app import create_app
 from tests.integration.test_studio import post, serving
 from tests.integration.test_studio_ops import EXAMPLES, PAGE, URL, FakeAcquirer
 
-I18N = "src/rastro/studio/static/i18n.js"  # bounds.js labels come from the dictionary (N8)
+I18N = "src/rastro/studio/static/i18n.js"  # bounds.js labels come from the dictionary
 
 pytestmark = pytest.mark.usefixtures("offline_cli_loop")
 
@@ -82,7 +82,7 @@ def test_bounded_settings(tmp_path: Path) -> None:
 
 
 def test_disable_scroll_and_reject_malformed_policy(tmp_path: Path) -> None:
-    """N9/SEC-008: disabling removes the policy and invalid data never writes."""
+    """Disabling removes the policy and invalid data never writes."""
     from tests.integration.test_job_api import JOB
 
     path = tmp_path / "job.toml"
@@ -112,7 +112,7 @@ def test_disable_scroll_and_reject_malformed_policy(tmp_path: Path) -> None:
 
 
 def test_spider_result_line_only_uses_report_fields() -> None:
-    """N3/SEC-008: result rendering excludes arbitrary page bodies."""
+    """Result rendering excludes arbitrary page bodies."""
     import shutil
     import subprocess
 

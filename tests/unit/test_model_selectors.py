@@ -1,4 +1,4 @@
-"""Model-declared CSS selectors become a recipe (INT-001, REC-003)."""
+"""Model-declared CSS selectors become a recipe."""
 
 from typing import Annotated, ClassVar
 
@@ -102,7 +102,7 @@ def test_relative_links_resolve_only_on_url_fields():
 
 
 def test_marked_text_is_stripped_and_blank_required_text_is_invalid():
-    """QUAL-004: scrape treats blank text like jobs do: required blank fails, NBSP included."""
+    """Scrape treats blank text like jobs do: required blank fails, NBSP included."""
     from pydantic import ValidationError
 
     class Card(BaseModel):

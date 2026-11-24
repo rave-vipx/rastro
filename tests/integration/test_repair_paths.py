@@ -1,4 +1,4 @@
-"""REPAIR-002/SEC-004: OS directory aliases work without accepting job-owned symlinks."""
+"""OS directory aliases work without accepting job-owned symlinks."""
 
 import pytest
 from test_recipe_cli import setup_sample

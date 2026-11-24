@@ -1,4 +1,4 @@
-"""Engine browser tools for an agent over MCP, through the real protocol (N39, ADR 0035, 0037).
+"""Engine browser tools for an agent over MCP, through the real protocol (ADR 0035, 0037).
 
 A fake browser serves one synthetic page on loopback names only; the real page-step runner,
 network guard checks, capability gate and hardening run against it. Nothing leaves the test.

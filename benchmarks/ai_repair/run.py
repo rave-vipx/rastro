@@ -1,4 +1,4 @@
-"""Run the AI repair benchmark (QUAL-001, REPAIR-001-005, AI-001).
+"""Run the AI repair benchmark.
 
 Offline executors (default, no network, no model):
     python -m benchmarks.ai_repair.run

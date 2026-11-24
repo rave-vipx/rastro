@@ -1,4 +1,4 @@
-"""N9, ADR 0033: the `[scroll]` job table is bounded, strict and optional."""
+"""The `[scroll]` job table is bounded, strict and optional."""
 
 import pytest
 from pydantic import ValidationError

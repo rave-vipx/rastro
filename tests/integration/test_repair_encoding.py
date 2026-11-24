@@ -1,4 +1,4 @@
-"""REPAIR-002/JOB-001: Spanish sample data and reports use UTF-8 in other locales."""
+"""Spanish sample data and reports use UTF-8 in other locales."""
 
 import os
 import runpy

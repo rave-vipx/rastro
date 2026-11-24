@@ -1,4 +1,4 @@
-"""Verify the frozen recovery benchmark corpus (DIFF-001, REPAIR-001..006, DRIFT-001..005).
+"""Verify the frozen recovery benchmark corpus.
 
 Offline. No executor or repair code exists; the reference extractor below is a deliberately
 strict, selector-only oracle that checks the corpus labels are internally true.

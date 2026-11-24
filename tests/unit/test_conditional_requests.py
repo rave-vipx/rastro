@@ -1,4 +1,4 @@
-"""SYNC-004, ALERT-006: successful loads retain records on a conditional 304."""
+"""Successful loads retain records on a conditional 304."""
 
 import sqlite3
 from contextlib import closing
@@ -269,7 +269,7 @@ def _titles(tmp_path):
 
 
 def test_recipe_edit_between_runs_is_not_hidden_by_304(tmp_path, monkeypatch, offline_cli_loop):
-    """SYNC-004: validators apply only to the extraction inputs they were stored with."""
+    """Validators apply only to the extraction inputs they were stored with."""
     path = tmp_path / "job.toml"
     path.write_text(JOB)
     requests = _server(monkeypatch)
@@ -362,7 +362,7 @@ BROWSER_JOB = JOB.replace(
 def test_browser_render_still_uses_the_browser_with_session_and_conditional_settings(
     tmp_path, monkeypatch, offline_cli_loop
 ):
-    """SCR-003, SYNC-004: job load keeps browser rendering; a rendered page is never conditional."""
+    """Job load keeps browser rendering; a rendered page is never conditional."""
     from unittest.mock import AsyncMock
 
     import rastro.adapters.playwright_browser as playwright
@@ -425,7 +425,7 @@ def test_mixed_render_modes_keep_conditional_requests_for_http_sources(
 
 
 def test_engine_version_change_forces_a_fresh_fetch(tmp_path, monkeypatch, offline_cli_loop):
-    """SYNC-004: a parser change after an upgrade must not be hidden by a 304."""
+    """A parser change after an upgrade must not be hidden by a 304."""
     from rastro.application import conditional_inputs
 
     path = tmp_path / "job.toml"
@@ -442,7 +442,7 @@ def test_engine_version_change_forces_a_fresh_fetch(tmp_path, monkeypatch, offli
 def test_paginated_source_never_sends_validators_so_later_pages_are_seen(
     tmp_path, monkeypatch, offline_cli_loop
 ):
-    """SYNC-004, SYNC-002: a 304 on page 1 must not hide changes on later pages."""
+    """A 304 on page 1 must not hide changes on later pages."""
     path = tmp_path / "job.toml"
     path.write_text(JOB + '[recipe.pagination]\nnext = "a[rel=next]::attr(href)"\n')
     pages = {

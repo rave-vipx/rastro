@@ -1,6 +1,6 @@
 """Studio health and repair: propose, promote with reason, write to the job file.
 
-(P-008, REPAIR-002-005, REC-006, QUAL-006) Synthetic job cards from the public job API tests.
+Synthetic job cards from the public job API tests.
 """
 
 from collections.abc import Iterator
@@ -51,7 +51,7 @@ def proposed(client: TestClient, root: Path) -> dict[str, object]:
 
 
 def test_health_before_any_run_and_after_load(client: TestClient, root: Path) -> None:
-    """P-008: health shows origin and version; stale status appears once a dataset exists."""
+    """Health shows origin and version; stale status appears once a dataset exists."""
     fresh = post(client, "/api/health", FILE).json()
     (source,) = fresh["sources"]
     assert source["recipe_origin"] == "job" and source["recipe_version"] == 1
@@ -64,7 +64,7 @@ def test_health_before_any_run_and_after_load(client: TestClient, root: Path) ->
 
 
 def test_repair_shows_selector_diff_and_gates(client: TestClient, root: Path) -> None:
-    """REPAIR-002-005: the candidate diff names old and new selectors and every gate result."""
+    """The candidate diff names old and new selectors and every gate result."""
     report = proposed(client, root)
     (source,) = report["sources"]  # type: ignore[misc]
     comparison = source["comparisons"][0]
@@ -77,7 +77,7 @@ def test_repair_shows_selector_diff_and_gates(client: TestClient, root: Path) ->
 
 
 def test_promote_then_apply_writes_the_job_file(client: TestClient, root: Path) -> None:
-    """REC-006: promote with a reason, then write the serving recipe with a digest check."""
+    """Promote with a reason, then write the serving recipe with a digest check."""
     report = proposed(client, root)
     version = report["sources"][0]["comparisons"][0]["candidate_version"]  # type: ignore[index]
     body = {**FILE, "source": 1, "version": version, "reason": "Checked in Studio ✅"}

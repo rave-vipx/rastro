@@ -1,4 +1,4 @@
-"""Blank text never decides uniqueness or hides validation (SCR-003, DATA-004)."""
+"""Blank text never decides uniqueness or hides validation."""
 
 import pytest
 

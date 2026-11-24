@@ -237,7 +237,7 @@ async def test_invalid_proxy_routes_fail_before_any_session(monkeypatch, route):
 
 
 async def test_transport_preserves_separate_cookie_and_conditional_headers(monkeypatch):
-    """SCHED-005, SYNC-004, SEC-005: no comma folding of Set-Cookie (Expires has commas)."""
+    """No comma folding of Set-Cookie (Expires has commas)."""
     from curl_cffi.requests.headers import Headers
 
     async def get(session, url, **kwargs):

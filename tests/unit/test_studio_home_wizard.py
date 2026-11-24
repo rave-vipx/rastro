@@ -1,4 +1,4 @@
-"""Studio Home (projects, empty states) and the four-step wizard (N1, N2, N5)."""
+"""Studio Home (projects, empty states) and the four-step wizard."""
 
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ const list = document.getElementById("home-list");
 
 
 def test_home_shows_one_card_per_project_with_health_in_words() -> None:
-    """N1/N5: name, health word + shape, last update, records, problems, View results."""
+    """Name, health word + shape, last update, records, problems, View results."""
     run_node(
         SETUP
         + """
@@ -49,7 +49,7 @@ assert.deepEqual(opened, ["agenda.toml", "results"]);
 
 
 def test_empty_folder_and_unknown_databases_are_explained() -> None:
-    """N1: an empty folder offers both starts; unknown SQLite files are named, not opened."""
+    """An empty folder offers both starts; unknown SQLite files are named, not opened."""
     run_node(
         SETUP
         + """
@@ -68,7 +68,7 @@ assert.ok(!list.textContent.includes("No projects in this folder yet"));
 
 
 def test_missing_projects_route_falls_back_without_inventing_health() -> None:
-    """N5: an older Studio lists job files with "Status unknown"; a 500 is an error state."""
+    """An older Studio lists job files with "Status unknown"; a 500 is an error state."""
     run_node(
         SETUP
         + """
@@ -86,7 +86,7 @@ assert.ok(!list.textContent.includes("No projects in this folder yet"));
 
 
 def test_wizard_shows_one_step_at_a_time_and_names_files_from_the_project() -> None:
-    """N1: four steps, one decision each; file names derive from the project name."""
+    """Four steps, one decision each; file names derive from the project name."""
     run_node("""
 const wizard = await import("STATIC/wizard.js");
 wizard.goStep(3);

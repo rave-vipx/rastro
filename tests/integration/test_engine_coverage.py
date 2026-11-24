@@ -1,5 +1,5 @@
-"""Per-source rejections and reached caps in the engine's run metrics, seen by Studio (N5,
-OBS-003..007, SYNC-002). Invalid or capped runs never read as a clean success."""
+"""Per-source rejections and reached caps in the engine's run metrics, seen by Studio. Invalid or
+capped runs never read as a clean success."""
 
 from __future__ import annotations
 

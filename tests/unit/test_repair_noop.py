@@ -1,4 +1,4 @@
-"""REPAIR-001/REC-006: unchanged proposals cannot create lifecycle versions."""
+"""Unchanged proposals cannot create lifecycle versions."""
 
 import pytest
 from pydantic import BaseModel
