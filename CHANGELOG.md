@@ -40,6 +40,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Notifications: built-in email, Slack, Telegram and webhook channels (`--notify`, `RASTRO_NOTIFY`) on the failure-hook exits, and `rastro notify test CHANNEL`.
 - MCP browser tools for agents building a recipe: `browser_snapshot`, `browser_extract`, `browser_network` and `browser_screenshot` open one guarded page per call, replay page steps from the closed vocabulary and close it; they run as untrusted `mcp` input (steps need `--allow-untrusted mcp:page_actions`) and never evaluate JavaScript. See `docs/mcp.md`.
 - `rastro shell JOB [--source N]` opens an interactive Python shell on a job source's parsed page.
+- Studio for 1.0: a four-step guided create (hub offer first, an estimate in requests and minutes, a review with the page picture and fields outlined, click to fix a field, save, and an optional AI look for records behind a click); **Use this data instead** saves a project that reads the JSON the page loads (`/api/wizard/offers/use`); the Sites view shows a traffic light and a plain sentence per site and a running read with progress, a time-budget bar and the first records; the Hub view lists what others built for a site as cards, tries or installs it as a candidate, and asks before allowing extra permissions for one site; Advanced lists the page steps a recipe replays with delete and "look again" (`/api/steps`, `/api/steps/delete`). Views built in the page redraw when the language or Advanced changes; every view is checked at 360 px and desktop width, light and dark, in English and Spanish.
 
 ### Changed
 
@@ -50,6 +51,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `rastro.scrape` reports the acquisition ladder in the source's acquisition note.
 - A recipe with page steps is written with `render = "browser"`, which the steps need.
 - Page steps in a spider crawl run on the start page only; linked pages are extracted as they render.
+- Studio: the session stealth checkbox is removed; capabilities for shared or AI-written input are per-origin switches under Connections, and a Hub choice to allow a permission for one site applies only to registry input for jobs whose every address is on that site, while Studio installs, previews or runs them (kept in memory for the session). `operator_trust()` accepts `untrusted=` to scope such grants.
 
 ### Deprecated
 

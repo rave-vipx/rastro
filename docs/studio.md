@@ -68,22 +68,28 @@ with problems, and **View results**. **Projects** in the header always comes bac
 
 Four steps, one decision each:
 
-1. **URL.** Paste a page URL you have permission to scrape. Studio fetches the page
-   through the acquisition boundary; public-address checks, robots and the source
-   request budget apply. Saving HTML by hand is not required. A URL job fetches its URL on
-   every later run. If the page builds its list with JavaScript, see the
-   [browser extra and runtime](acquisition.md#javascript-pages).
-2. **Fields.** Name each field (letters, digits and `_`, starting with a letter) and copy an
-   example value exactly as the page shows it. Tick **Record key** on a field that identifies a
-   record (needed to store records). With a configured model, **Ask AI** can propose selectors
-   from names alone; proposals must extract valid records, the model does not supply them.
-3. **Preview.** **Preview records** shows up to 50 records found on the page; how each field is
-   read is folded under a technical detail. If a field comes out wrong, **Correct a field** goes
-   back to paste another example.
-4. **Name and save.** Give the project a name; the job, dataset and recipe-memory file names are
-   filled from it (`book-prices.toml`, `book-prices.sqlite`,
-   `book-prices-recipes.sqlite`) and can be changed under **File names (advanced)**. Studio
-   never overwrites a file. **Save and open** opens the new project on Results.
+1. **Address.** Paste a page address you have permission to read. Studio checks it as you type
+   ("Looks good: shop.example"). **Next** first asks the hub whether someone already built a
+   scraper for that site, before anything is fetched. If so, a card says what it brings and
+   offers **Try this one** (the Hub view opens on that site) or **I'd rather build it myself**.
+2. **What you want.** Name each field and copy one example value exactly as the page shows it;
+   tick **Record key** on a field that identifies a record. Before anything large is read,
+   Studio asks whether there are more pages or a "Load more" button (Yes, Not sure, No) and answers with an estimate in requests and minutes.
+   With a configured model, **Ask AI** can propose how to read fields from their names alone.
+3. **Review.** Up to 50 records found on the page, and, when a browser is installed, a picture
+   of the page with each field's matches outlined in its own style (solid, dashed, double,
+   dotted, thick), so the outline is readable without colour. If a field is wrong, **Fix a
+   field** lets you click the right element on the picture, or choose it from a list with the
+   keyboard. When the page loads its records from the site's own data (an API), a card says
+   so, how many records it holds and which of your fields it brings; **Use this data instead**
+   saves a project that opens the page in a browser and reads that data, and opens its results.
+4. **Name and save.** The job, dataset and recipe-memory file names are filled from the project
+   name and folded under **File names (advanced)**; Studio never overwrites a file. When the page
+   may hide records behind a click ("Load more"), the AI may look once: its steps are narrated
+   when the look ends, and nothing is saved until you choose **Use what the AI learned**.
+
+A project the Hub just installed opens on step 3 with its records, so you can check it before
+using it.
 
 ### Details that apply to every project
 
@@ -193,20 +199,51 @@ recent web check. **Close** or Esc returns focus to the record.
 
 ### Sources and Alerts
 
-**Sources** lists every site of the project with its status in words (*Up to date*, *Up to date,
-with a warning*, *Cap reached*, *Access denied by the site (robots.txt)*, *The site returned
-something that can't be read*, *The site's structure changed*, *Last load failed; earlier records
-kept*, *Not read yet*), the last fetch, records read and rejected ("Read 20 records; cap 20. There
-may be more."), warnings that did not stop the save, and one next step: **Retry** (runs Load into
-dataset), **Fix this site**, **Raise the cap** (opens Settings) or **Run a load**. **Details**
-shows the address and each issue code with its plain explanation. The previous health table
-(serving recipe, stored versions, the `--on-failure` command) is folded below as *Technical detail*.
+**Sites** lists every site of the project with a traffic light in words (*All good*, *Needs a
+look*, *Not working*, *Not read yet*) and, when something stands out, one sentence saying why, for
+example that the site blocked the read and how Studio got past it. Below it come the last fetch,
+records read and rejected ("Read 20 records; cap 20. There may be more."), warnings that did not
+stop the save, and one next step: **Retry** (runs Load into dataset), **Fix this site**, **Raise
+the cap** (opens Settings) or **Run a load**. **Details** shows the address and each issue code
+with its plain explanation. The previous health table (serving recipe, stored versions, the
+`--on-failure` command) is folded below as *Technical detail*.
+
+**Long reads.** Above the list, **Read now** runs the project without saving anything and shows
+progress while it runs: pages and records so far, sites done, time used (and the time budget of
+an unbounded crawl, with a bar), and the first few records. **Stop** ends it; a crawl that ran out
+of time says the next read continues where it stopped. Pages read here are kept in a development
+cache under `.rastro-studio/cache`, so a second read of the same pages does not fetch them again.
 
 **Alerts** lists what happened in the runs, newest first and grouped by day: failures, site
 changes, caps, warnings, quarantined fixes and refused fixes. Each one has a sentence written from
 its kind and issue code in the chosen language, and one action. Both views read their own
 endpoints (`/api/sources`, `/api/alerts`); when the endpoint is missing or fails, the view says so
 instead of showing an empty list.
+
+### Settings
+
+Settings are folded groups: next page, follow links, scroll, browser, network permissions and
+connecting your app. With **Advanced** on, **Browser** lists the steps the browser takes on the
+page before it reads it (often found by the AI's look), each in plain words with **Delete**;
+deleting one rewrites only that recipe, checked against the file you opened. **Let the AI look
+again** runs the same look as the guided create. What shared or AI-written input (agent tools,
+bundles, hub recipes, model output) may switch on is a set of per-origin switches under
+**Connections**, for this Studio session only; your own projects need no switch.
+
+### Hub
+
+**Hub** is outside any project. Type a site and Studio lists what other people built for it, as
+cards with the fields each brings, its health, when it was last verified and whether it needs a
+browser or extra permissions. **Try** installs it into a project as a candidate and opens the
+guided create's review on it; **Install** only installs. Nothing installed serves until you
+promote it. When a recipe asks for extra permissions (a stealth browser, page actions,
+proxies), Studio stops at a plain-language prompt first: **Allow only for this site** lets that
+recipe use those permissions for jobs whose every address is on that site, while Studio installs
+and runs them; other sites, jobs that also read another site, and other kinds of input get
+nothing. The choice is kept in memory for this Studio run only and is never written to a job or
+a file. **Publish** prepares a proposal for the hub repository from your project, with a
+description per field and a synthetic sample; it says what is uploaded (never your data or
+credentials) and pushes nothing.
 
 ### Fix a site
 
@@ -348,6 +385,13 @@ several `--example` records when one is not enough. Repair needs `recipe_memory`
 `[dataset]` in the job. Long-running actions keep their button disabled until they finish; progress names the
 running operation and its outcome, not a page count or an estimate of completion time. It is single-user and has no authentication beyond the
 per-run token.
+
+The "changed" chips in Results count records added, changed and removed between the last two
+loads; previous values are not stored, so a changed record shows its new value only. Changes
+need two loads that Studio recorded (loads from the command line are not in Studio's run log).
+The AI's narration arrives when its look ends, not step by step. Hub permission choices,
+notification toggles and the model and channel picked in Connections last for the Studio
+session only.
 
 ### Bounded links and scrolling
 
