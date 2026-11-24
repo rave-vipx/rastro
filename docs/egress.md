@@ -77,7 +77,8 @@ A refused source does not fail at once. `rastro job run`, `rastro job load` and
 impersonation, a browser, a stealth browser, challenge solving and, when the operator
 installed one, a solver plugin) and stop at the first level that returns the page. Levels
 the job's trust does not allow are skipped as `not_granted`. A robots.txt refusal never
-climbs. Recipe memory keeps the lowest level that worked and checks the levels below it
+climbs, and neither does a rate limit (429 or Retry-After): the host asked to wait, and the
+shared cooldown stands. Recipe memory keeps the lowest level that worked and checks the levels below it
 every ten runs. Each level tried is listed in the run report's `acquisition.ladder`; a
 source refused at every level reports `ladder_exhausted`. See
 [ADR 0039](decisions/0039-acquisition-ladder.md).
