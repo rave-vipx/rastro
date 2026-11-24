@@ -41,9 +41,9 @@ def test_every_static_text_key_exists_and_none_is_orphaned() -> None:
 
 
 def test_spanish_copy_uses_voseo() -> None:
-    """N8: Rioplatense Spanish ("Pegá la URL"), not "Pega" or "usted"."""
+    """N8: Rioplatense Spanish ("Usá páginas…"), not "Pega" or "usted"."""
     spanish = _messages()["es"]
-    assert spanish["wizard.url.intro"].startswith("Pegá")
+    assert spanish["wizard.url.intro"].startswith("Usá")
     assert not any(re.search(r"\busted\b", v, re.IGNORECASE) for v in spanish.values())
 
 

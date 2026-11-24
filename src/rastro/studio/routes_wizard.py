@@ -24,11 +24,12 @@ from rastro.application.job_from_url import (
 )
 from rastro.application.job_loader import _read_local_source
 from rastro.application.job_new import new_job
+from rastro.application.navigation_offer import exploration_offer
 from rastro.application.suggest import suggest
 from rastro.domain.job_fields import StringField
 from rastro.domain.models import ConfigurationError, Limits
 from rastro.domain.suggest import MAX_EXAMPLES, Suggestion
-from rastro.studio import files, routes_pick
+from rastro.studio import files, routes_pick, wizard_more
 from rastro.studio.web import Refused, Studio, body, integer, optional_text, reply, text
 
 MAX_ROWS = 50
@@ -62,9 +63,13 @@ def _cut(value: Any) -> Any:
     return value
 
 
-def _payload(found: Suggestion[Any], *, allow_http: bool = False) -> dict[str, Any]:
+def _payload(
+    found: Suggestion[Any], html: str, records_min: int, *, allow_http: bool = False
+) -> dict[str, Any]:
     rows = [record.data.model_dump(mode="json") for record in found.preview.records]
+    offer = exploration_offer(html, len(rows), records_min)
     return {
+        "explore": offer.reason if offer is not None else None,
         "ok": True,
         "data_trust": "untrusted_source_data",
         "recipe": found.recipe.model_dump(mode="json"),
@@ -93,14 +98,12 @@ def routes(studio: Studio) -> list[Route]:
         records_min = integer(data, "records_min", 1, 1000, default=2)
         page = optional_text(data, "page")
 
-        def run() -> tuple[Suggestion[Any], bool]:
+        def run() -> tuple[Suggestion[Any], bool, str]:
             if page is not None:
                 studio.url_preview = None
                 html = _read_local_source(page_path(data), Limits().max_html_bytes, "html")
-                return (
-                    suggest(html, fields, examples=examples, url=url, records_min=records_min),
-                    False,
-                )
+                found = suggest(html, fields, examples=examples, url=url, records_min=records_min)
+                return found, False, html
             if url is None:
                 raise Refused(400, "missing_url")
             fetched = html_from_url(url, acquisition=studio.acquisition)
@@ -114,10 +117,11 @@ def routes(studio: Studio) -> list[Route]:
                     records_min=records_min,
                 ),
                 fetched.allow_http,
+                fetched.html,
             )
 
-        found, allow_http = await run_in_threadpool(run)
-        return reply(_payload(found, allow_http=allow_http))
+        found, allow_http, html = await run_in_threadpool(run)
+        return reply(_payload(found, html, records_min, allow_http=allow_http))
 
     async def create(request: Request) -> Response:
         data = await body(request)
@@ -172,6 +176,7 @@ def routes(studio: Studio) -> list[Route]:
         studio.route("/api/suggest", suggested, post=True),
         studio.route("/api/create", create, post=True),
         *routes_pick.routes(studio),
+        *wizard_more.routes(studio),
     ]
 
 

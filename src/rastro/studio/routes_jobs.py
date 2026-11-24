@@ -41,6 +41,7 @@ ASSETS = frozenset(
         "alerts.js",
         "fix.js",
         "correct.js",
+        "pick.js",
         "home.js",
     }
 )
