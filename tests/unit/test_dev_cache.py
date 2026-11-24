@@ -150,3 +150,21 @@ async def test_dev_cache_never_used_by_load(tmp_path: Path) -> None:
         "cli.py",
     }
     assert not forbidden & set(importers)
+
+
+def test_expired_entries_are_deleted_on_the_next_write(tmp_path: Path):
+    import os
+
+    now = [1_000_000.0]
+    cache = DevCache(tmp_path / "cache", ttl_seconds=60, clock=lambda: now[0])
+    page = AcquisitionResult("https://a.example/", "<p>a</p>", Outcome.SUCCESS, None)
+    cache.put("https://a.example/old", "html", page)
+    old = next((tmp_path / "cache").glob("*.json"))
+    os.utime(old, (now[0] - 120, now[0] - 120))  # written two minutes ago
+    leftover = tmp_path / "cache" / ".x.tmp"
+    leftover.write_text("partial")
+    os.utime(leftover, (now[0] - 120, now[0] - 120))
+    cache.put("https://a.example/new", "html", page)
+    assert not old.exists() and not leftover.exists()
+    assert len(list((tmp_path / "cache").glob("*.json"))) == 1
+    assert cache.get("https://a.example/new", "html") is not None

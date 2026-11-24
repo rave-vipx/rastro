@@ -82,6 +82,7 @@ class DevCache:
             "body": result.body,
         }
         self.directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+        self.prune()
         path = self._path(url, representation)
         temp = path.with_name(f".{path.name}.{secrets.token_hex(6)}.tmp")
         flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
@@ -91,6 +92,30 @@ class DevCache:
             os.replace(temp, path)
         except OSError:
             temp.unlink(missing_ok=True)
+
+    def prune(self) -> int:
+        """Delete entries (and leftover temporary files) older than the TTL; return how many.
+
+        Age is the file's modification time, set when the entry was written, so pruning
+        never reads a document. Called on every write; symlinks are never followed.
+        """
+        removed = 0
+        try:
+            entries = list(self.directory.iterdir())
+        except OSError:
+            return 0
+        now = self._clock()
+        for path in entries:
+            if not path.name.endswith((".json", ".tmp")):
+                continue
+            try:
+                info = path.lstat()
+                if now - info.st_mtime >= self.ttl_seconds or path.is_symlink():
+                    path.unlink()
+                    removed += 1
+            except OSError:
+                continue
+        return removed
 
 
 class CachingAcquisition:
