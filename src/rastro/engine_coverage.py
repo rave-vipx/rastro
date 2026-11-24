@@ -49,6 +49,42 @@ _ACQ_EGRESS = "docs/acquisition.md#network-egress"
 _ACQ_PERMS = "docs/acquisition.md#operator-permissions"
 _ACQ_REGION = "docs/acquisition.md#metrics-and-regional-behavior"
 _JOBS_EXAMPLE = "docs/jobs.md#complete-toml-example"
+_BROWSER = "docs/browser.md"
+_NETWORK = "docs/network-recipes.md"
+_EGRESS_ROTATION = "docs/egress.md#rotation"
+_EGRESS_BROWSER = "docs/egress.md#browser-and-stealth-modes"
+_PER_HOST = "docs/crawling.md#per-host-pacing"
+_GRANT_ONLY = "docs/browser.md#grant-only-controls"
+_PROFILES = "docs/browser.md#persistent-sessions"
+_OWN_TRANSPORT = "Rastro keeps its own DNS-pinned transport and asks it for this itself (ADR 0038)."
+
+
+def _browser_controls(prefix: str) -> tuple[EngineFeature, ...]:
+    """The ``[acquisition.browser]`` controls both Playwright entry points share."""
+    wait = _BROWSER + "#waiting-for-the-page"
+    load = _BROWSER + "#what-the-page-may-load"
+    shared = _exp(
+        "browser",
+        prefix,
+        "job_key",
+        ("blocked_domains", "[acquisition.browser] blocked_domains", load),
+        ("disable_resources", "[acquisition.browser] disable_resources", load),
+        ("network_idle", "[acquisition.browser] network_idle", wait),
+        ("pierce_shadow", "[acquisition.browser] pierce_shadow", _NETWORK + "#shadow-dom"),
+        ("wait_selector", "[acquisition.browser] wait_selector", wait),
+        ("wait_selector_state", "[acquisition.browser] wait_state", wait),
+    )
+    fixed_wait = (
+        "wait",
+        "A fixed delay is replaced by wait_selector, network_idle and the wait page step.",
+    )
+    extra = (
+        _exp("browser", prefix, "job_key", ("block_ads", "[acquisition.browser] block_ads", load))
+        if prefix == "PlaywrightSession"
+        else ()
+    )
+    return (*shared, *extra, *_no("browser", prefix, fixed_wait))
+
 
 SCRAPLING_FEATURES: tuple[EngineFeature, ...] = (
     # Selector & SelectorsGeneration (parser & adaptive)
@@ -71,11 +107,21 @@ SCRAPLING_FEATURES: tuple[EngineFeature, ...] = (
         "get get_all_text getall has_class html_content iterancestors json next parent path "
         "prettify previous re re_first siblings tag text urljoin xpath",
     ),
-    *_plan(
+    *_exp(
         "adaptive",
         "Selector",
-        "find_by_regex find_by_text find_similar generate_css_selector generate_full_css_selector "
-        "generate_full_xpath_selector generate_xpath_selector",
+        "recipe_strategy",
+        ("find_by_regex", "rastro recipe repair (adaptive candidates)", "docs/repair.md"),
+        ("find_by_text", "rastro recipe repair (adaptive candidates)", "docs/repair.md"),
+        ("find_similar", "rastro recipe repair (adaptive candidates)", "docs/repair.md"),
+        ("generate_css_selector", "rastro recipe repair (adaptive candidates)", "docs/repair.md"),
+    ),
+    *_no(
+        "adaptive",
+        "Selector",
+        ("generate_full_css_selector", "Recipes keep short selectors that survive layout changes."),
+        ("generate_full_xpath_selector", "Recipes are CSS; XPath selectors are not stored."),
+        ("generate_xpath_selector", "Recipes are CSS; XPath selectors are not stored."),
     ),
     *_no(
         "adaptive",
@@ -102,8 +148,18 @@ SCRAPLING_FEATURES: tuple[EngineFeature, ...] = (
         ("proxy", "[acquisition.egress_profiles.<name>] proxy_url", _ACQ_EGRESS),
         ("proxy_auth", "[acquisition.egress_profiles.<name>] username_env", _ACQ_EGRESS),
     ),
-    *_plan("proxy", "RequestsSession", "proxy_rotator"),
-    *_plan("http", "RequestsSession", "http3 impersonate"),
+    *_exp(
+        "proxy",
+        "RequestsSession",
+        "job_key",
+        ("proxy_rotator", "[acquisition] rotate_egress", _EGRESS_ROTATION),
+    ),
+    *_no(
+        "http",
+        "RequestsSession",
+        ("http3", _OWN_TRANSPORT + ' Set [acquisition.http] http_version = "3".'),
+        ("impersonate", _OWN_TRANSPORT + " Set [acquisition.http] impersonate."),
+    ),
     *_int("http", "RequestsSession", "follow_redirects selector_config stealthy_headers"),
     *_no(
         "http",
@@ -128,21 +184,42 @@ SCRAPLING_FEATURES: tuple[EngineFeature, ...] = (
         ("extra_headers", "[region] languages", _ACQ_REGION),
         ("timeout", "[acquisition] request_timeout_seconds", _ACQ_DEFAULTS),
     ),
-    *_plan(
+    *_browser_controls("PlaywrightSession"),
+    *_browser_controls("PlaywrightFetchParams"),
+    *_exp(
         "browser",
         "PlaywrightSession",
-        "block_ads blocked_domains cdp_url disable_resources locale max_recorded_requests "
-        "network_idle pierce_shadow real_chrome record_requests timezone_id user_data_dir "
-        "wait wait_selector wait_selector_state",
+        "job_key",
+        ("locale", "[region] locale", _BROWSER + "#region"),
+        ("timezone_id", "[region] timezone", _BROWSER + "#region"),
+        ("record_requests", "[acquisition.browser] capture_network", _NETWORK),
     ),
-    *_plan("proxy", "PlaywrightSession", "proxy proxy_rotator"),
-    *_plan(
+    *_exp(
         "browser",
-        "PlaywrightFetchParams",
-        "blocked_domains disable_resources network_idle pierce_shadow wait wait_selector "
-        "wait_selector_state",
+        "PlaywrightSession",
+        "grant",
+        ("cdp_url", "[acquisition.browser] cdp_url_env", _BROWSER + "#grant-only-controls"),
+        ("real_chrome", "[acquisition.browser] real_chrome", _BROWSER + "#grant-only-controls"),
+        (
+            "user_data_dir",
+            "[acquisition.browser] session_profile",
+            _BROWSER + "#persistent-sessions",
+        ),
     ),
-    *_plan("proxy", "PlaywrightFetchParams", "proxy"),
+    *_int("browser", "PlaywrightSession", "max_recorded_requests"),
+    *_exp(
+        "proxy",
+        "PlaywrightSession",
+        "job_key",
+        ("proxy", "[acquisition.egress_profiles.<name>] proxy_url", _EGRESS_BROWSER),
+        ("proxy_rotator", "[acquisition] rotate_egress", _EGRESS_BROWSER),
+    ),
+    *_exp(
+        "proxy",
+        "PlaywrightFetchParams",
+        "job_key",
+        ("proxy", "[acquisition.egress_profiles.<name>] proxy_url", _EGRESS_BROWSER),
+    ),
     *_int(
         "browser",
         "PlaywrightSession",
@@ -179,12 +256,22 @@ SCRAPLING_FEATURES: tuple[EngineFeature, ...] = (
         ("start_urls", "[[sources]] url", _JOBS_EXAMPLE),
     ),
     *_exp("crawl", "Spider", "grant", ("robots_txt_obey", "--ignore-robots HOST", _ACQ_PERMS)),
-    *_plan(
+    *_exp(
         "crawl",
         "Spider",
-        "autothrottle_block_backoff autothrottle_enabled autothrottle_max_delay "
-        "autothrottle_start_delay autothrottle_target_concurrency concurrent_requests_per_domain "
-        "development_cache_dir development_mode",
+        "job_key",
+        ("autothrottle_enabled", '[acquisition.hosts."<host>"] autothrottle', _PER_HOST),
+        (
+            "concurrent_requests_per_domain",
+            '[acquisition.hosts."<host>"] max_concurrency',
+            _PER_HOST,
+        ),
+    ),
+    *_int(
+        "crawl",
+        "Spider",
+        "autothrottle_block_backoff autothrottle_max_delay autothrottle_start_delay "
+        "autothrottle_target_concurrency development_cache_dir development_mode",
     ),
     *_int(
         "crawl",

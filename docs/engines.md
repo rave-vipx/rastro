@@ -53,13 +53,13 @@ upgrade adds an unmapped feature.
 | Engine feature | Surface | Rastro location or reason | Docs |
 | --- | --- | --- | --- |
 | `Selector.relocate` | `recipe_strategy` | `rastro recipe repair` | [repair.md](repair.md) |
-| `Selector.find_by_regex` | `planned` | Used internally behind Rastro ports. | - |
-| `Selector.find_by_text` | `planned` | Used internally behind Rastro ports. | - |
-| `Selector.find_similar` | `planned` | Used internally behind Rastro ports. | - |
-| `Selector.generate_css_selector` | `planned` | Used internally behind Rastro ports. | - |
-| `Selector.generate_full_css_selector` | `planned` | Used internally behind Rastro ports. | - |
-| `Selector.generate_full_xpath_selector` | `planned` | Used internally behind Rastro ports. | - |
-| `Selector.generate_xpath_selector` | `planned` | Used internally behind Rastro ports. | - |
+| `Selector.find_by_regex` | `recipe_strategy` | `rastro recipe repair (adaptive candidates)` | [repair.md](repair.md) |
+| `Selector.find_by_text` | `recipe_strategy` | `rastro recipe repair (adaptive candidates)` | [repair.md](repair.md) |
+| `Selector.find_similar` | `recipe_strategy` | `rastro recipe repair (adaptive candidates)` | [repair.md](repair.md) |
+| `Selector.generate_css_selector` | `recipe_strategy` | `rastro recipe repair (adaptive candidates)` | [repair.md](repair.md) |
+| `Selector.generate_full_css_selector` | `not_exposed` | Recipes keep short selectors that survive layout changes. | - |
+| `Selector.generate_full_xpath_selector` | `not_exposed` | Recipes are CSS; XPath selectors are not stored. | - |
+| `Selector.generate_xpath_selector` | `not_exposed` | Recipes are CSS; XPath selectors are not stored. | - |
 | `Selector.retrieve` | `not_exposed` | Rastro persists relocation fingerprints in its own recipe memory. | - |
 | `Selector.save` | `not_exposed` | Rastro persists relocation fingerprints in its own recipe memory. | - |
 
@@ -72,8 +72,8 @@ upgrade adds an unmapped feature.
 | `RequestsSession.retries` | `job_key` | `[acquisition] max_retries` | [acquisition.md#policy-defaults](acquisition.md#policy-defaults) |
 | `RequestsSession.retry_delay` | `job_key` | `[acquisition] backoff_seconds` | [acquisition.md#policy-defaults](acquisition.md#policy-defaults) |
 | `RequestsSession.timeout` | `job_key` | `[acquisition] request_timeout_seconds` | [acquisition.md#policy-defaults](acquisition.md#policy-defaults) |
-| `RequestsSession.http3` | `planned` | Used internally behind Rastro ports. | - |
-| `RequestsSession.impersonate` | `planned` | Used internally behind Rastro ports. | - |
+| `RequestsSession.http3` | `not_exposed` | Rastro keeps its own DNS-pinned transport and asks it for this itself (ADR 0038). Set [acquisition.http] http_version = "3". | - |
+| `RequestsSession.impersonate` | `not_exposed` | Rastro keeps its own DNS-pinned transport and asks it for this itself (ADR 0038). Set [acquisition.http] impersonate. | - |
 | `RequestsSession.follow_redirects` | `internal` | Used internally behind Rastro ports. | - |
 | `RequestsSession.selector_config` | `internal` | Used internally behind Rastro ports. | - |
 | `RequestsSession.stealthy_headers` | `internal` | Used internally behind Rastro ports. | - |
@@ -90,28 +90,28 @@ upgrade adds an unmapped feature.
 | `PlaywrightSession.timeout` | `job_key` | `[acquisition] request_timeout_seconds` | [acquisition.md#policy-defaults](acquisition.md#policy-defaults) |
 | `PlaywrightFetchParams.extra_headers` | `job_key` | `[region] languages` | [acquisition.md#metrics-and-regional-behavior](acquisition.md#metrics-and-regional-behavior) |
 | `PlaywrightFetchParams.timeout` | `job_key` | `[acquisition] request_timeout_seconds` | [acquisition.md#policy-defaults](acquisition.md#policy-defaults) |
-| `PlaywrightSession.block_ads` | `planned` | Used internally behind Rastro ports. | - |
-| `PlaywrightSession.blocked_domains` | `planned` | Used internally behind Rastro ports. | - |
-| `PlaywrightSession.cdp_url` | `planned` | Used internally behind Rastro ports. | - |
-| `PlaywrightSession.disable_resources` | `planned` | Used internally behind Rastro ports. | - |
-| `PlaywrightSession.locale` | `planned` | Used internally behind Rastro ports. | - |
-| `PlaywrightSession.max_recorded_requests` | `planned` | Used internally behind Rastro ports. | - |
-| `PlaywrightSession.network_idle` | `planned` | Used internally behind Rastro ports. | - |
-| `PlaywrightSession.pierce_shadow` | `planned` | Used internally behind Rastro ports. | - |
-| `PlaywrightSession.real_chrome` | `planned` | Used internally behind Rastro ports. | - |
-| `PlaywrightSession.record_requests` | `planned` | Used internally behind Rastro ports. | - |
-| `PlaywrightSession.timezone_id` | `planned` | Used internally behind Rastro ports. | - |
-| `PlaywrightSession.user_data_dir` | `planned` | Used internally behind Rastro ports. | - |
-| `PlaywrightSession.wait` | `planned` | Used internally behind Rastro ports. | - |
-| `PlaywrightSession.wait_selector` | `planned` | Used internally behind Rastro ports. | - |
-| `PlaywrightSession.wait_selector_state` | `planned` | Used internally behind Rastro ports. | - |
-| `PlaywrightFetchParams.blocked_domains` | `planned` | Used internally behind Rastro ports. | - |
-| `PlaywrightFetchParams.disable_resources` | `planned` | Used internally behind Rastro ports. | - |
-| `PlaywrightFetchParams.network_idle` | `planned` | Used internally behind Rastro ports. | - |
-| `PlaywrightFetchParams.pierce_shadow` | `planned` | Used internally behind Rastro ports. | - |
-| `PlaywrightFetchParams.wait` | `planned` | Used internally behind Rastro ports. | - |
-| `PlaywrightFetchParams.wait_selector` | `planned` | Used internally behind Rastro ports. | - |
-| `PlaywrightFetchParams.wait_selector_state` | `planned` | Used internally behind Rastro ports. | - |
+| `PlaywrightSession.blocked_domains` | `job_key` | `[acquisition.browser] blocked_domains` | [browser.md#what-the-page-may-load](browser.md#what-the-page-may-load) |
+| `PlaywrightSession.disable_resources` | `job_key` | `[acquisition.browser] disable_resources` | [browser.md#what-the-page-may-load](browser.md#what-the-page-may-load) |
+| `PlaywrightSession.network_idle` | `job_key` | `[acquisition.browser] network_idle` | [browser.md#waiting-for-the-page](browser.md#waiting-for-the-page) |
+| `PlaywrightSession.pierce_shadow` | `job_key` | `[acquisition.browser] pierce_shadow` | [network-recipes.md#shadow-dom](network-recipes.md#shadow-dom) |
+| `PlaywrightSession.wait_selector` | `job_key` | `[acquisition.browser] wait_selector` | [browser.md#waiting-for-the-page](browser.md#waiting-for-the-page) |
+| `PlaywrightSession.wait_selector_state` | `job_key` | `[acquisition.browser] wait_state` | [browser.md#waiting-for-the-page](browser.md#waiting-for-the-page) |
+| `PlaywrightSession.block_ads` | `job_key` | `[acquisition.browser] block_ads` | [browser.md#what-the-page-may-load](browser.md#what-the-page-may-load) |
+| `PlaywrightSession.wait` | `not_exposed` | A fixed delay is replaced by wait_selector, network_idle and the wait page step. | - |
+| `PlaywrightFetchParams.blocked_domains` | `job_key` | `[acquisition.browser] blocked_domains` | [browser.md#what-the-page-may-load](browser.md#what-the-page-may-load) |
+| `PlaywrightFetchParams.disable_resources` | `job_key` | `[acquisition.browser] disable_resources` | [browser.md#what-the-page-may-load](browser.md#what-the-page-may-load) |
+| `PlaywrightFetchParams.network_idle` | `job_key` | `[acquisition.browser] network_idle` | [browser.md#waiting-for-the-page](browser.md#waiting-for-the-page) |
+| `PlaywrightFetchParams.pierce_shadow` | `job_key` | `[acquisition.browser] pierce_shadow` | [network-recipes.md#shadow-dom](network-recipes.md#shadow-dom) |
+| `PlaywrightFetchParams.wait_selector` | `job_key` | `[acquisition.browser] wait_selector` | [browser.md#waiting-for-the-page](browser.md#waiting-for-the-page) |
+| `PlaywrightFetchParams.wait_selector_state` | `job_key` | `[acquisition.browser] wait_state` | [browser.md#waiting-for-the-page](browser.md#waiting-for-the-page) |
+| `PlaywrightFetchParams.wait` | `not_exposed` | A fixed delay is replaced by wait_selector, network_idle and the wait page step. | - |
+| `PlaywrightSession.locale` | `job_key` | `[region] locale` | [browser.md#region](browser.md#region) |
+| `PlaywrightSession.timezone_id` | `job_key` | `[region] timezone` | [browser.md#region](browser.md#region) |
+| `PlaywrightSession.record_requests` | `job_key` | `[acquisition.browser] capture_network` | [network-recipes.md](network-recipes.md) |
+| `PlaywrightSession.cdp_url` | `grant` | `[acquisition.browser] cdp_url_env` | [browser.md#grant-only-controls](browser.md#grant-only-controls) |
+| `PlaywrightSession.real_chrome` | `grant` | `[acquisition.browser] real_chrome` | [browser.md#grant-only-controls](browser.md#grant-only-controls) |
+| `PlaywrightSession.user_data_dir` | `grant` | `[acquisition.browser] session_profile` | [browser.md#persistent-sessions](browser.md#persistent-sessions) |
+| `PlaywrightSession.max_recorded_requests` | `internal` | Used internally behind Rastro ports. | - |
 | `PlaywrightSession.additional_args` | `internal` | Used internally behind Rastro ports. | - |
 | `PlaywrightSession.extra_flags` | `internal` | Used internally behind Rastro ports. | - |
 | `PlaywrightSession.google_search` | `internal` | Used internally behind Rastro ports. | - |
@@ -139,10 +139,10 @@ upgrade adds an unmapped feature.
 | `RequestsSession.proxies` | `job_key` | `[acquisition.egress_profiles]` | [acquisition.md#network-egress](acquisition.md#network-egress) |
 | `RequestsSession.proxy` | `job_key` | `[acquisition.egress_profiles.<name>] proxy_url` | [acquisition.md#network-egress](acquisition.md#network-egress) |
 | `RequestsSession.proxy_auth` | `job_key` | `[acquisition.egress_profiles.<name>] username_env` | [acquisition.md#network-egress](acquisition.md#network-egress) |
-| `RequestsSession.proxy_rotator` | `planned` | Used internally behind Rastro ports. | - |
-| `PlaywrightSession.proxy` | `planned` | Used internally behind Rastro ports. | - |
-| `PlaywrightSession.proxy_rotator` | `planned` | Used internally behind Rastro ports. | - |
-| `PlaywrightFetchParams.proxy` | `planned` | Used internally behind Rastro ports. | - |
+| `RequestsSession.proxy_rotator` | `job_key` | `[acquisition] rotate_egress` | [egress.md#rotation](egress.md#rotation) |
+| `PlaywrightSession.proxy` | `job_key` | `[acquisition.egress_profiles.<name>] proxy_url` | [egress.md#browser-and-stealth-modes](egress.md#browser-and-stealth-modes) |
+| `PlaywrightSession.proxy_rotator` | `job_key` | `[acquisition] rotate_egress` | [egress.md#browser-and-stealth-modes](egress.md#browser-and-stealth-modes) |
+| `PlaywrightFetchParams.proxy` | `job_key` | `[acquisition.egress_profiles.<name>] proxy_url` | [egress.md#browser-and-stealth-modes](egress.md#browser-and-stealth-modes) |
 
 ### Spider and crawl engine
 
@@ -155,14 +155,14 @@ upgrade adds an unmapped feature.
 | `Spider.name` | `job_key` | `name` | [jobs.md#complete-toml-example](jobs.md#complete-toml-example) |
 | `Spider.start_urls` | `job_key` | `[[sources]] url` | [jobs.md#complete-toml-example](jobs.md#complete-toml-example) |
 | `Spider.robots_txt_obey` | `grant` | `--ignore-robots HOST` | [acquisition.md#operator-permissions](acquisition.md#operator-permissions) |
-| `Spider.autothrottle_block_backoff` | `planned` | Used internally behind Rastro ports. | - |
-| `Spider.autothrottle_enabled` | `planned` | Used internally behind Rastro ports. | - |
-| `Spider.autothrottle_max_delay` | `planned` | Used internally behind Rastro ports. | - |
-| `Spider.autothrottle_start_delay` | `planned` | Used internally behind Rastro ports. | - |
-| `Spider.autothrottle_target_concurrency` | `planned` | Used internally behind Rastro ports. | - |
-| `Spider.concurrent_requests_per_domain` | `planned` | Used internally behind Rastro ports. | - |
-| `Spider.development_cache_dir` | `planned` | Used internally behind Rastro ports. | - |
-| `Spider.development_mode` | `planned` | Used internally behind Rastro ports. | - |
+| `Spider.autothrottle_enabled` | `job_key` | `[acquisition.hosts."<host>"] autothrottle` | [crawling.md#per-host-pacing](crawling.md#per-host-pacing) |
+| `Spider.concurrent_requests_per_domain` | `job_key` | `[acquisition.hosts."<host>"] max_concurrency` | [crawling.md#per-host-pacing](crawling.md#per-host-pacing) |
+| `Spider.autothrottle_block_backoff` | `internal` | Used internally behind Rastro ports. | - |
+| `Spider.autothrottle_max_delay` | `internal` | Used internally behind Rastro ports. | - |
+| `Spider.autothrottle_start_delay` | `internal` | Used internally behind Rastro ports. | - |
+| `Spider.autothrottle_target_concurrency` | `internal` | Used internally behind Rastro ports. | - |
+| `Spider.development_cache_dir` | `internal` | Used internally behind Rastro ports. | - |
+| `Spider.development_mode` | `internal` | Used internally behind Rastro ports. | - |
 | `Spider.fp_include_headers` | `internal` | Used internally behind Rastro ports. | - |
 | `Spider.fp_include_kwargs` | `internal` | Used internally behind Rastro ports. | - |
 | `Spider.fp_keep_fragments` | `internal` | Used internally behind Rastro ports. | - |
