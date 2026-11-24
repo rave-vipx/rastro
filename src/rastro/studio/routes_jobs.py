@@ -27,6 +27,7 @@ ASSETS = frozenset(
         "wizard.js",
         "operate.js",
         "dom.js",
+        "changes.js",
         "ai.js",
         "controls.js",
         "registry.js",

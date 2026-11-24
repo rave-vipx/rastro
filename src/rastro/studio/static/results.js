@@ -4,11 +4,13 @@ import { $, api, bind, el, requireFile, show } from "./dom.js";
 import { onLangChange, t, when } from "./i18n.js";
 import { dateField, isLive, renderCell, sourceOf } from "./cells.js";
 import { chip, emptyState } from "./ui.js";
+import { clearChanges, renderChanges } from "./changes.js";
 
 const CHUNK = 100;
 const MAX_LOCAL = 2000;
 const DAY = 86_400_000;
-export const view = { records: [], fields: [], total: 0, page: 0, error: "", ready: false, imported: null };
+export const view = { records: [], fields: [], total: 0, page: 0, error: "", ready: false, imported: null,
+  changes: null, change: "" };
 let onSelect = () => {};
 
 export function onRecordSelected(handler) {
@@ -16,7 +18,9 @@ export function onRecordSelected(handler) {
 }
 
 export function resetResults() {
-  Object.assign(view, { records: [], fields: [], total: 0, page: 0, error: "", ready: false, imported: null });
+  Object.assign(view, { records: [], fields: [], total: 0, page: 0, error: "", ready: false,
+    imported: null, changes: null, change: "" });
+  clearChanges();
   $("dataset-result").replaceChildren();
   $("provenance").hidden = true;
   show("dataset-status", "");
@@ -41,7 +45,28 @@ export async function loadRecords() {
     Object.assign(view, { records: [], fields: [], total: 0, error: error.message, ready: true });
   }
   fillSources();
+  await loadChanges(file);
   render();
+}
+
+function pickChange(kind) {
+  view.change = kind;
+  view.page = 0;
+  renderChanges(view.changes, view.change, pickChange);
+  render();
+}
+
+// The comparison is a nicety: when it cannot be read the table still shows.
+async function loadChanges(file) {
+  view.change = "";
+  view.changes = null;
+  if (view.error) return clearChanges();
+  try {
+    view.changes = await api("/api/changes", { file });
+    renderChanges(view.changes, "", pickChange);
+  } catch {
+    clearChanges();
+  }
 }
 
 function fillSources() {
@@ -76,6 +101,7 @@ export function filtered() {
   const now = new Date();
   return view.records.filter((record) => {
     if (source && sourceOf(record) !== source) return false;
+    if (view.change && record.change !== view.change) return false;
     if (status === "live" && !isLive(record)) return false;
     if (status === "upcoming" && isLive(record)) return false;
     if (status === "stale" && !record.stale) return false;
@@ -168,7 +194,8 @@ export function render() {
 
 async function download(format) {
   const data = await api("/api/export", { file: requireFile(), format });
-  const url = URL.createObjectURL(new Blob([data.content], { type: data.media_type }));
+  const bytes = data.encoding === "base64" ? Uint8Array.from(atob(data.content), (c) => c.charCodeAt(0)) : data.content;
+  const url = URL.createObjectURL(new Blob([bytes], { type: data.media_type }));
   const link = el("a");
   Object.assign(link, { href: url, download: data.filename });
   link.click();
@@ -183,7 +210,19 @@ export function initResults() {
   $("prev-page").addEventListener("click", () => { view.page -= 1; render(); });
   $("next-page").addEventListener("click", () => { view.page += 1; render(); });
   bind("dataset", "dataset-status", loadRecords);
+  for (const [id, format] of [["export-csv", "csv"], ["export-xlsx", "xlsx"]]) {
+    const button = el("button", t(`dataset.${format}`), "small");
+    Object.assign(button, { type: "button", id });
+    button.dataset.i18n = `dataset.${format}`;
+    $("export-json").before(button);
+    bind(id, "export-status", () => download(format));
+  }
   bind("export-json", "export-status", () => download("json"));
   bind("export-html", "export-status", () => download("html"));
-  onLangChange(() => { if (view.ready) { fillSources(); render(); } });
+  onLangChange(() => {
+    if (view.ready) { fillSources();
+      if (view.changes) renderChanges(view.changes, view.change, pickChange);
+      render();
+    }
+  });
 }
