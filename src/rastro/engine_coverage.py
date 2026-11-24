@@ -1,13 +1,13 @@
-"""Engine capability map for Scrapling and static coverage inspection."""
+"""Engine capability map for Scrapling.
+
+Most of this module is one data table, ``SCRAPLING_FEATURES``; it stays in one file so every
+engine feature and its Rastro surface can be reviewed together.
+"""
 
 from __future__ import annotations
 
-import ast
-import importlib.util
-import pkgutil
-from pathlib import Path
-
 from rastro.domain.engine_map import EngineArea, EngineFeature, Surface
+from rastro.engine_inspect import inspect_scrapling_features
 
 __all__ = ["SCRAPLING_FEATURES", "inspect_scrapling_features", "render_engines_markdown"]
 
@@ -362,136 +362,9 @@ SCRAPLING_FEATURES: tuple[EngineFeature, ...] = (
     ),
 )
 
-_TYPED_DICTS = frozenset({"RequestsSession", "PlaywrightSession", "PlaywrightFetchParams"})
-_AREA_TITLES: dict[EngineArea, str] = {
-    "parser": "Parser and selectors",
-    "adaptive": "Adaptive relocation and selector generation",
-    "http": "HTTP sessions",
-    "browser": "Browser sessions and controls",
-    "proxy": "Proxy egress and rotation",
-    "crawl": "Spider and crawl engine",
-    "convert": "Content conversion",
-    "mcp": "Agent browser tools (MCP)",
-    "stealth": "Stealth rendering",
-    "cli": "Command line",
-}
-
-
-def _scrapling_root() -> Path:
-    spec = importlib.util.find_spec("scrapling")
-    if spec is None or spec.origin is None:
-        raise RuntimeError("scrapling is not installed")
-    return Path(spec.origin).parent
-
-
-def _class_functions(tree: ast.Module, class_name: str) -> set[str]:
-    found: set[str] = set()
-    for node in tree.body:
-        if isinstance(node, ast.ClassDef) and node.name == class_name:
-            for item in node.body:
-                if isinstance(
-                    item, ast.FunctionDef | ast.AsyncFunctionDef
-                ) and not item.name.startswith("_"):
-                    found.add(f"{class_name}.{item.name}")
-                elif isinstance(item, ast.Assign):
-                    for target in item.targets:
-                        if isinstance(target, ast.Name) and not target.id.startswith("_"):
-                            found.add(f"{class_name}.{target.id}")
-    return found
-
-
-def _class_targets(tree: ast.Module, class_names: set[str]) -> set[str]:
-    found: set[str] = set()
-    for node in tree.body:
-        if isinstance(node, ast.ClassDef) and node.name in class_names:
-            for item in node.body:
-                if isinstance(item, ast.AnnAssign) and isinstance(item.target, ast.Name):
-                    if not item.target.id.startswith("_"):
-                        found.add(f"{node.name}.{item.target.id}")
-                elif isinstance(item, ast.Assign):
-                    for target in item.targets:
-                        if isinstance(target, ast.Name) and not target.id.startswith("_"):
-                            found.add(f"{node.name}.{target.id}")
-    return found
-
-
-def _mcp_tools(tree: ast.Module) -> set[str]:
-    tools: set[str] = set()
-    for node in ast.walk(tree):
-        if (
-            isinstance(node, ast.Call)
-            and isinstance(node.func, ast.Attribute)
-            and node.func.attr == "add_tool"
-            and node.args
-            and isinstance(node.args[0], ast.Call)
-            and node.args[0].args
-            and isinstance(node.args[0].args[0], ast.Attribute)
-        ):
-            tools.add(f"mcp.{node.args[0].args[0].attr}")
-    return tools
-
-
-def _read_ast(root: Path, rel: str) -> ast.Module:
-    return ast.parse((root / rel).read_text(encoding="utf-8"))
-
-
-def inspect_scrapling_features() -> set[str]:
-    """Discover Scrapling's public features from source files without importing optional extras."""
-    root = _scrapling_root()
-    selector = _class_functions(_read_ast(root, "parser.py"), "Selector") | {
-        f"Selector.{name.split('.', 1)[1]}"
-        for name in _class_functions(_read_ast(root, "core/mixins.py"), "SelectorsGeneration")
-    }
-    templates = {
-        f"templates.{mod.name}"
-        for mod in pkgutil.iter_modules([str(root / "spiders" / "templates")])
-        if not mod.name.startswith("_")
-    }
-    return (
-        selector
-        | _class_targets(_read_ast(root, "engines/_browsers/_types.py"), set(_TYPED_DICTS))
-        | _class_targets(_read_ast(root, "spiders/spider.py"), {"Spider"})
-        | templates
-        | _mcp_tools(_read_ast(root, "core/ai/server.py"))
-    )
-
 
 def render_engines_markdown() -> str:
     """Render ``docs/engines.md`` from ``SCRAPLING_FEATURES``."""
-    lines = [
-        "# Acquisition and parsing engines",
-        "",
-        "<!-- Generated from src/rastro/engine_coverage.py; edit SCRAPLING_FEATURES instead. -->",
-        "",
-        "Rastro fetches, renders, parses, relocates and crawls through engines behind strategy",
-        "interfaces (`rastro.ports`). Scrapling is the default engine today; another engine can",
-        "implement the same ports without changing jobs, recipes, Studio or the public Python API.",
-        "",
-        "## Scrapling capability map",
-        "",
-        "Every public feature of Scrapling is mapped below to the Rastro surface where users",
-        "meet it, marked `internal` when Rastro drives it behind a port, `planned` while its",
-        "surface is landing, or `not_exposed` with the security or architecture reason.",
-        "A continuous-integration test inspects the installed Scrapling package and fails if an",
-        "upgrade adds an unmapped feature.",
-        "",
-    ]
-    for area, title in _AREA_TITLES.items():
-        rows = [f for f in SCRAPLING_FEATURES if f.area == area]
-        if not rows:
-            continue
-        lines += [
-            f"### {title}",
-            "",
-            "| Engine feature | Surface | Rastro location or reason | Docs |",
-            "| --- | --- | --- | --- |",
-        ]
-        for row in rows:
-            default_note = "Used internally behind Rastro ports."
-            detail = f"`{row.where}`" if row.where else (row.reason or default_note)
-            target = row.docs.removeprefix("docs/")
-            doc_link = f"[{target}]({target})" if row.docs else "-"
-            cell = detail.replace("|", "\\|")
-            lines.append(f"| `{row.name}` | `{row.surface}` | {cell} | {doc_link} |")
-        lines.append("")
-    return "\n".join(lines)
+    from rastro.engine_docs import render_markdown
+
+    return render_markdown(SCRAPLING_FEATURES)

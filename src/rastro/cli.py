@@ -7,8 +7,7 @@ import json
 import logging
 import sys
 from importlib.metadata import version
-from pathlib import Path
-from typing import NoReturn, TextIO
+from typing import TextIO
 
 from pydantic import ValidationError
 from pydantic_core import SchemaError
@@ -28,34 +27,27 @@ from rastro.application.job_summary import job_validation_summary
 from rastro.application.model_budget import model_cost_override
 from rastro.application.operator_trust import set_process_trust
 from rastro.cli_agent import COMMANDS as AGENT_COMMANDS
-from rastro.cli_agent import add_commands as add_agent_commands
 from rastro.cli_agent import agent_command
 from rastro.cli_config import COMMANDS as CONFIG_COMMANDS
-from rastro.cli_config import add_commands as add_config_commands
 from rastro.cli_config import config_command, template_command
-from rastro.cli_dataset import add_commands, dataset_command, load_job_command
+from rastro.cli_dataset import dataset_command, load_job_command
 from rastro.cli_errors import UsageError, classify, missing_extra_error
-from rastro.cli_estimate import add_estimate_command, estimate_command
-from rastro.cli_hook import add_hook_argument, hook_argv, notify, run_summary
-from rastro.cli_hub_group import add_command as add_hub_group
+from rastro.cli_estimate import estimate_command
+from rastro.cli_hook import hook_argv, notify, run_summary
 from rastro.cli_hub_group import hub_group_command
-from rastro.cli_model_setup import add_command as add_model_command
 from rastro.cli_model_setup import model_command
-from rastro.cli_notify import add_notify_parser, notify_test_command
+from rastro.cli_notify import notify_test_command
 from rastro.cli_ops import JOB_COMMANDS as OPS_JOB_COMMANDS
-from rastro.cli_ops import add_health_command, health_command
-from rastro.cli_ops import add_job_commands as add_ops_job_commands
+from rastro.cli_ops import health_command
 from rastro.cli_ops import job_command as ops_job_command
-from rastro.cli_recipe import add_commands as add_recipe_commands
+from rastro.cli_parser import build_parser as _build_parser
 from rastro.cli_recipe import recipe_command
-from rastro.cli_schedule import add_schedule_command, schedule_words_command, watch_job_command
-from rastro.cli_shell import add_shell_command, shell_command
-from rastro.cli_stats import add_stats_command, stats_command
-from rastro.cli_studio import add_command as add_studio_command
+from rastro.cli_schedule import schedule_words_command, watch_job_command
+from rastro.cli_shell import shell_command
+from rastro.cli_stats import stats_command
 from rastro.cli_studio import studio_command
-from rastro.cli_suggest import add_commands as add_suggest_commands
 from rastro.cli_suggest import new_command, suggest_command
-from rastro.cli_trust import add_trust_arguments, apply_trust, hoist_trust_flags, trust_options
+from rastro.cli_trust import apply_trust, hoist_trust_flags, trust_options
 from rastro.domain.health import job_health_json_schema
 from rastro.domain.job_dataset import job_preview_json_schema
 from rastro.domain.job_load import job_load_json_schema
@@ -64,105 +56,6 @@ from rastro.domain.job_load import job_load_json_schema
 _JSON_ERRORS = frozenset(
     {"job", "recipe", "suggest", "new", "health", "hub", "shell", *AGENT_COMMANDS, *CONFIG_COMMANDS}
 )
-
-
-class _ArgumentParser(argparse.ArgumentParser):
-    """Raise usage errors so `rastro job` can report them as JSON instead of human text."""
-
-    def error(self, message: str) -> NoReturn:
-        raise UsageError(message)
-
-
-def _build_parser() -> argparse.ArgumentParser:
-    parser = _ArgumentParser(
-        prog="rastro", description="Rastro: verifiable, schema-first extraction"
-    )
-    parser.add_argument("--version", action="version", version=f"rastro {__version__}")
-    parser.add_argument("--verbose", action="store_true", help="Write structured logs to stderr")
-    add_trust_arguments(parser, root=True)
-    subcommands = parser.add_subparsers(dest="command", required=True)
-    subcommands.add_parser("demo", help="Run a synthetic JSON-LD extraction without network access")
-    subcommands.add_parser("doctor", help="Report installed core versions and capabilities as JSON")
-    validate = subcommands.add_parser("validate-recipe", help="Validate a local declarative recipe")
-    validate.add_argument("path", type=Path, help="Recipe JSON file (at most 64 KiB)")
-
-    mcp = subcommands.add_parser("mcp", help="Serve jobs and datasets to an agent over stdio MCP")
-    mcp.add_argument("--root", type=Path, default=Path(), help="Workspace root (default: cwd)")
-    mcp.add_argument(
-        "--allow-override-gates",
-        action="store_true",
-        help="Let the agent call recipe_promote with override_gates (off: page content can "
-        "prompt-inject the agent; run rastro recipe promote --override-gates yourself)",
-    )
-    add_trust_arguments(mcp)
-    add_shell_command(subcommands)
-
-    job_parser = subcommands.add_parser("job", help="Validate, run, or inspect declarative jobs")
-    job_commands = job_parser.add_subparsers(dest="job_command", required=True)
-
-    job_validate = job_commands.add_parser("validate", help="Validate a TOML or JSON job file")
-    job_validate.add_argument("file", type=Path, help="Job file (.toml or .json)")
-    job_validate.add_argument(
-        "--allow-absolute-paths",
-        action="store_true",
-        help="Allow absolute paths for local source files and recipe memory",
-    )
-
-    job_run = job_commands.add_parser("run", help="Execute a TOML or JSON job file")
-    job_run.add_argument("file", type=Path, help="Job file (.toml or .json)")
-    job_run.add_argument(
-        "--output",
-        choices=("json",),
-        default="json",
-        help="Machine-readable output format (default: json)",
-    )
-    job_run.add_argument(
-        "--allow-absolute-paths",
-        action="store_true",
-        help="Allow absolute paths for local source files and recipe memory",
-    )
-    add_trust_arguments(job_run)
-    add_hook_argument(job_run)
-
-    job_preview = job_commands.add_parser(
-        "preview", help="Preview what a job would load into its [dataset]; writes nothing"
-    )
-    job_preview.add_argument("file", type=Path, help="Job file (.toml or .json)")
-    job_preview.add_argument(
-        "--output",
-        choices=("table", "json"),
-        default="table",
-        help="Human table (default) or machine-readable JSON",
-    )
-    job_preview.add_argument(
-        "--allow-absolute-paths",
-        action="store_true",
-        help="Allow absolute paths for local source files, recipe memory and the dataset",
-    )
-    add_trust_arguments(job_preview)
-
-    job_schema = job_commands.add_parser("schema", help="Print JSON Schema for declarative jobs")
-    job_schema.add_argument(
-        "--target",
-        choices=("job", "run", "preview", "load", "health"),
-        default="job",
-        help="Schema to print: 'job' input (default), 'run', 'preview', 'load' or 'health' output",
-    )
-    add_commands(subcommands, job_commands)
-    add_ops_job_commands(job_commands)
-    add_estimate_command(job_commands)
-    add_stats_command(job_commands)
-    add_schedule_command(job_commands)
-    add_health_command(subcommands)
-    add_recipe_commands(subcommands)
-    add_studio_command(subcommands)
-    add_hub_group(subcommands)
-    add_notify_parser(subcommands)
-    add_model_command(subcommands)
-    add_suggest_commands(subcommands)
-    add_agent_commands(subcommands)
-    add_config_commands(subcommands, job_commands)
-    return parser
 
 
 def _run_job_command(args: argparse.Namespace) -> int:

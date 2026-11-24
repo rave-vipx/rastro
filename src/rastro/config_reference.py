@@ -68,7 +68,7 @@ def env_entries() -> Iterator[ConfigEntry]:
 
 
 def cli_entries() -> Iterator[ConfigEntry]:
-    from rastro.cli import _build_parser
+    from rastro.cli_parser import build_parser as _build_parser
 
     yield from _parser_entries(_build_parser(), "rastro", "")
 
