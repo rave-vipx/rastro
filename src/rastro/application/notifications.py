@@ -70,7 +70,8 @@ def message_for(report: RunReport) -> Message:
         event="rastro_job_attention",
         subject=f"Rastro: {report.job} needs attention (exit {report.exit_code})",
         text="\n".join(lines),
-        report=report.model_dump(mode="json"),
+        # Hosts and counts only: a URL path can name a person, and this leaves the machine.
+        report=report.model_dump(mode="json", exclude={"sources": {"__all__": {"path"}}}),
     )
 
 

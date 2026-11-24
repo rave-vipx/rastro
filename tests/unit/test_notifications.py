@@ -137,6 +137,8 @@ def test_webhook_posts_the_pinned_address_with_a_content_free_report(monkeypatch
     assert call["target"] == "/services/T000/B000/s3cr3tt0ken"
     assert call["body"]["event"] == "rastro_job_attention"
     assert call["body"]["report"]["content"] == "content_free"
+    posted = json.dumps(call["body"])
+    assert "/private/catalog" not in posted and '"path"' not in posted
 
 
 def test_payload_is_content_free_report():
@@ -147,6 +149,8 @@ def test_payload_is_content_free_report():
     assert message.report["job"] == "prices.toml"
     for leaked in ("/private/catalog", "?", "token"):
         assert leaked not in message.text
+    assert all("path" not in source for source in message.report["sources"])
+    assert "/private/catalog" not in json.dumps(message.report)
 
 
 def test_slack_and_telegram_bodies(monkeypatch, connection):

@@ -196,7 +196,8 @@ rastro job watch job.toml --notify slack
 - **Content-free messages.** The message is built from the [run report](run-report.md):
   the job file name, exit code, counts, and the host and reason of each source that did not
   succeed. It never contains records, page text, URL paths or queries. The webhook channel
-  posts JSON `{"event", "subject", "text", "report"}`; Slack and Telegram get the text; email
+  posts JSON `{"event", "subject", "text", "report"}`, where `report` is the run report
+  without each source's `path`; Slack and Telegram get the text; email
   gets the subject and text.
 - **Failures never change the exit code.** A channel that fails writes
   `{"issue": "notification_failed", "channel": "slack", "reason": "destination_denied"}`
