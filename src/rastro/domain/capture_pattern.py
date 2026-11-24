@@ -14,10 +14,19 @@ from pydantic import AfterValidator, Field, StrictStr
 
 from rastro.domain.linear_regex import check_linear_pattern, linear_search
 
-__all__ = ["MAX_CAPTURE_PATH", "CapturePattern", "capture_matches", "check_capture_pattern"]
+__all__ = [
+    "MAX_CAPTURE_PATH",
+    "MAX_CAPTURE_PATTERN",
+    "CapturePattern",
+    "capture_matches",
+    "check_capture_pattern",
+]
 
 MAX_CAPTURE_PATH = 1024
 """Longer response paths are never captured, so a pattern only ever sees bounded input."""
+
+MAX_CAPTURE_PATTERN = 256
+"""The longest ``capture`` pattern a recipe may carry."""
 
 
 def check_capture_pattern(value: str) -> str:
@@ -26,7 +35,9 @@ def check_capture_pattern(value: str) -> str:
 
 
 type CapturePattern = Annotated[
-    StrictStr, Field(min_length=1, max_length=256), AfterValidator(check_capture_pattern)
+    StrictStr,
+    Field(min_length=1, max_length=MAX_CAPTURE_PATTERN),
+    AfterValidator(check_capture_pattern),
 ]
 
 

@@ -11,8 +11,9 @@ import re
 from dataclasses import dataclass
 
 from rastro.domain.acquisition import AcquisitionPolicy
+from rastro.domain.capture_pattern import MAX_CAPTURE_PATTERN
 from rastro.domain.json import escape_token, strict_json
-from rastro.domain.models import Limits
+from rastro.domain.models import ConfigurationError, Limits
 from rastro.domain.recipes import JsonRecipe
 from rastro.ports.discovery import RecipeDiscovery
 from rastro.ports.engine import CapturedResponse
@@ -45,8 +46,8 @@ def capture_offers(responses: tuple[CapturedResponse, ...]) -> tuple[CaptureOffe
     """An offer per successful response whose body is JSON."""
     offers = []
     for response in responses:
-        if not 200 <= response.status < 300:
-            continue
+        if not 200 <= response.status < 300 or len(_anchored(response.path)) > MAX_CAPTURE_PATTERN:
+            continue  # a failed response, or a path too long for a recipe's capture pattern
         try:
             payload = strict_json(response.body)
         except (ValueError, RecursionError):
@@ -75,10 +76,15 @@ def recipe_from_capture(
     max_candidates: int = 3,
 ) -> tuple[JsonRecipe, ...]:
     """JSON recipes over ``response`` for ``fields``, each reading it through ``capture``."""
+    capture = _anchored(response.path)
+    if len(capture) > MAX_CAPTURE_PATTERN:
+        raise ConfigurationError(
+            "The response path is too long for a recipe's capture pattern", location="capture"
+        )
     body = response.body.decode("utf-8", errors="replace")
     found = discovery.discover(body, fields, limits, max_candidates=max_candidates)
     return tuple(
-        JsonRecipe.model_validate({**item.model_dump(), "capture": _anchored(response.path)})
+        JsonRecipe.model_validate({**item.model_dump(), "capture": capture})
         for item in found
         if isinstance(item, JsonRecipe)
     )

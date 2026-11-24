@@ -68,7 +68,6 @@ def test_changes_since_reads_stored_timestamps():
     assert result.changed == ()
 
 
-
 def test_changes_since_skips_records_removed_before_that_time():
     jan1 = datetime(2026, 1, 1, tzinfo=UTC)
     nov20, nov23 = datetime(2026, 11, 20, tzinfo=UTC), datetime(2026, 11, 23, tzinfo=UTC)
@@ -87,6 +86,7 @@ def test_changes_since_skips_records_removed_before_that_time():
 def test_changes_since_never_calls_a_record_without_origins_removed():
     orphan = record("x").model_copy(update={"origins": {}})
     assert changes_since((orphan,), T2, latest_success={URL: T2}).removed == ()
+
 
 def _cells(data: bytes) -> dict[str, str]:
     ns = {"m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}

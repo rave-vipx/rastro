@@ -405,3 +405,20 @@ def test_documented_job_runs_a_json_source_in_the_browser():
     without = snippet.group(1).replace("capture_network = ['^/api/']", "")
     with pytest.raises(ConfigurationError):
         job_render_modes(parse_job(without, format="toml"))
+
+
+def test_a_path_too_long_for_a_capture_pattern_is_refused_with_a_typed_error():
+    from rastro.adapters.structured import JsonDiscovery
+    from rastro.application.network_recipes import capture_offers, recipe_from_capture
+    from rastro.domain.models import ConfigurationError
+    from rastro.ports.engine import CapturedResponse
+
+    body = json.dumps(ITEMS).encode()
+    long = CapturedResponse(
+        "shop.example", "/api/" + "a" * 260, "GET", 200, "application/json", body
+    )
+    short = CapturedResponse("shop.example", "/api/items", "GET", 200, "application/json", body)
+    assert [offer.path for offer in capture_offers((long, short))] == ["/api/items"]
+    with pytest.raises(ConfigurationError) as error:
+        recipe_from_capture(long, ("name", "price"), discovery=JsonDiscovery(), limits=Limits())
+    assert error.value.location == "capture"
