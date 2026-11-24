@@ -22,6 +22,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Repair in the run report: a source's report says whether a repair was promoted, quarantined or rejected, why promotion was refused and whether it needed a model, and Studio's Alerts view shows the latest stored report's repair and drift alerts.
 - Synthetic examples: the examples, benchmarks and documentation use invented event-agenda sources on `.example` hosts.
 - `rastro.Capability` and the catalog rows for the new public names, so `rastro capabilities` and `llms.txt` list them.
+- Unbounded crawls: `[spider] max_pages = "unbounded"` crawls until the frontier is empty, bounded by `time_budget_seconds`, with adaptive per-host pacing. A versioned JSON checkpoint next to the job is saved every minute and at the stop, and the next `rastro job run` or `rastro job load` resumes from it (`crawl_resumed`, `crawl_checkpoint_discarded`). See `docs/crawling.md` and ADR 0040.
+- Acquisition ladder: a refused source climbs from its own level through impersonation, a browser, a stealth browser, challenge solving and operator-installed solver plugins (entry points in the `rastro.solvers` group, grant-only) in `rastro job run`, `rastro job load` and `rastro.scrape`. Recipe memory keeps the lowest working level and re-checks the levels below every ten runs; the run report lists every level tried and a source refused at every level reports `ladder_exhausted`. See `docs/egress.md` and ADR 0039.
+- HTTP options: `[acquisition.http] impersonate = "chrome" | "firefox" | "safari" | "edge"` and `http_version = "1.1" | "2" | "3"` on Rastro's DNS-pinned transport. The run report records the HTTP version that answered; an option the installed client or route cannot honour reports `impersonation_unavailable` or `http3_unavailable`. See ADR 0038.
+- Per-host pacing: `[acquisition.hosts."<host>"]` with `min_interval_seconds`, `max_concurrency` and `autothrottle`, which also works on HTTP-only installs.
+- Egress rotation: `[acquisition] rotate_egress` cycles egress profiles per transfer and retries a failed proxy on the next one (`proxy_rotated`); browser and stealth modes use egress profiles too. A blocked source's run report entry names the kind of refusal and links to a guide in `docs/egress.md`.
+- Browser controls under `[acquisition.browser]`: `wait_selector`, `wait_state`, `network_idle`, `disable_resources`, `block_ads`, `blocked_domains`, `pierce_shadow`, `screenshot` evidence, and the grant-only `session_profile`, `real_chrome` and `cdp_url_env`. The job's `[region]` locale and timezone reach the browser. See `docs/browser.md`.
+- Page steps: CSS recipes carry `[[recipe.steps]]` (click, type, select, scroll, wait, follow) that replay in the source's browser page under the job's budget and network guard. `rastro new --explore JOB -o NEW`, `rastro.explore_job_file` and `rastro.explore_job` let a model find steps once and keep only the ones that replayed without it. See `docs/page-steps.md`.
+- Network recipes: `[acquisition.browser] capture_network` captures the JSON responses a page loads and a JSON recipe's `capture` pattern reads one of them (`capture_empty` when none matched). See `docs/network-recipes.md`.
+- Adaptive repair: elements similar to the remembered records are tried as repair candidates before any model, through the same gates; a passing one repairs with no model call (`origin = "adaptive"`). Model prompts carry a condensed, untrusted Markdown view of the page.
+- Nested model proposals: models propose list and object fields, the gates check members, drift tracks members, and every proposal path tells the model the source's region timezone.
+- Local models and cost: `rastro model detect` finds local model servers, `rastro model test` tries one, and the run report shows the cost per model call.
+- Hub: `rastro hub search URL`, `rastro hub install` and `rastro hub publish`, and `rastro.hub_candidates` (`rastro.HubCandidate`) offers registry recipes for a URL's domain. The synthetic registry ships sitemap, products.json and generic crawl starter recipes. See `docs/hub.md`.
+- `rastro.stream_job_async` yields each source's result as it finishes.
+- Studio guided flow: `/api/wizard/lookup` offers hub recipes for a URL before any fetch, `/api/wizard/page` renders the page in a browser with a highlight box per field match, and `/api/wizard/pick` turns a clicked element into a stable selector (and, with consent, a model-suggested field name). Studio keeps a short-lived development page cache that prunes expired entries.
+- Schedules: `[schedule] at = "HH:MM"` runs at a time of day in the job timezone, and `rastro job schedule "every day at 8:00"` reads a schedule in English or Spanish words. `rastro dataset changes` lists records new, removed or changed since a time or an earlier copy, and `rastro dataset export --format xlsx` writes a spreadsheet.
+- Notifications: built-in email, Slack, Telegram and webhook channels (`--notify`, `RASTRO_NOTIFY`) on the failure-hook exits, and `rastro notify test CHANNEL`.
 
 ### Changed
 
@@ -29,20 +45,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Planning documents are no longer kept in the repository. Public documentation, ADRs and the repository templates were rewritten for 1.0: one tagline, no internal process wording, GitHub private vulnerability reporting for security reports, and invented site names on `.example` hosts in the documentation.
 - `docs/issues.md`: `link_group_refused` now describes the refused comma selector group, `invalid_record` also covers evidence building and storage serialization, and `extraction_limit` also covers a nested list cut at its limit. The `tolerant_jsonld` issue is now `repaired_json`.
 - Release process: patch releases can be tagged from a maintenance branch; see `docs/releasing.md`.
+- `rastro.scrape` reports the acquisition ladder in the source's acquisition note.
+- A recipe with page steps is written with `render = "browser"`, which the steps need.
+- Page steps in a spider crawl run on the start page only; linked pages are extracted as they render.
 
 ### Deprecated
 
 - `--allow-stealth`, `RASTRO_ALLOW_STEALTH` and `allow_stealth=`: your own jobs need no grant. The flag still grants stealth to untrusted origins; prefer `--allow-untrusted ORIGIN:stealth`.
+- `allow_stealth=True` in the Python API now emits a `DeprecationWarning`.
 
 ### Fixed
 
 - A job file with invalid JSON raises `ConfigurationError` naming the line and column, not a raw decoder exception; the command line still prints the `syntax_error` envelope.
 - Lone UTF-16 surrogates in page JSON (a JSON-LD escape such as `\ud83d` without its low half) no longer fail a whole source: JSON-LD, embedded JSON and JSON parsing and discovery replace them with U+FFFD, valid pairs stay their real character, and a record that still cannot be serialized is rejected with the new `invalid_text` issue and counted in `rejected` instead of failing later (#151).
 - JSON-LD blocks with raw newlines or other control characters inside strings are retried once with those characters escaped; recovered records retain provenance and report `repaired_json`. Malformed structure, duplicate keys and non-finite numbers remain rejected.
+- Unbounded crawls no longer fail on installs without the browser extra: pacing falls back to a standard-library throttle with the same rules.
+- Repair candidate checks use the extraction's observation clock, so results no longer depend on the day the tests run.
 
 ### Security
 
 - Prompt-injection and trust boundaries: model proposals, MCP tool input, registry installs and bundle imports run as untrusted input and cannot use stealth, solvers, robots overrides or other grants unless the operator names the origin and capability. Details in `SECURITY.md`.
+- Capture patterns from recipes compile and match on the same linear-time regular expression engine as spider path patterns, so a shared recipe cannot cause catastrophic backtracking.
+- Browser modes use egress profiles under the same destination checks as HTTP; crawl checkpoints keep full URLs in owner-only files; registry `card.json` and `health.json` are untrusted data; solver plugins run outside Rastro's DNS pinning and are operator-installed and grant-only. Details in `SECURITY.md`.
 
 ## [0.9.0] - 2026-11-17
 
