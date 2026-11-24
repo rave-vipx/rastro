@@ -1,4 +1,4 @@
-"""Read-only state behind the Projects and Sources views (N5): one job's dataset status,
+"""Read-only state behind the Projects and Sources views: one job's dataset status,
 run metrics, open drift, waiting candidates and Studio's run log, reduced to plain statuses.
 
 Every code shown comes from Rastro's own vocabulary (``KNOWN_CODES``); anything else read

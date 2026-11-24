@@ -1,4 +1,4 @@
-"""Value gate and candidate reuse on top of recipe CI (REPAIR-002, REPAIR-004, REC-006).
+"""Value gate and candidate reuse on top of recipe CI.
 
 ``gate_values`` downgrades a passing evaluation to quarantine when a relocated
 field's values no longer look like that field's retained values. Job repair can

@@ -1,4 +1,4 @@
-"""Load records an app adapter built itself into a job's dataset (N15, DATA-001, SYNC-002).
+"""Load records an app adapter built itself into a job's dataset.
 
 The job file supplies the dataset, the declared fields and the identity. Records go through
 the same field validation, identity, complete-snapshot (``missing``) and per-field provenance

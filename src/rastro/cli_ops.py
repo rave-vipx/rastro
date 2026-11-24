@@ -1,5 +1,4 @@
-"""Operator commands: health, acknowledge open drift, forget a removed source (DRIFT-005,
-DATA-004, REPAIR-005)."""
+"""Operator commands: health, acknowledge open drift, forget a removed source."""
 
 import argparse
 import json

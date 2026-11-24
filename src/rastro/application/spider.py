@@ -1,4 +1,4 @@
-"""Breadth-first spider over one start source (N3; SEC-001, SEC-003, SEC-008).
+"""Breadth-first spider over one start source.
 
 One request budget and one document budget live in ``PAGINATION_SCOPE``, so pagination
 inside a spider page spends the same numbers. Pages are fetched through ``fetch_page``.
@@ -46,7 +46,7 @@ from rastro.domain.spider import SpiderPolicy
 from rastro.ports.parser import DocumentParser
 
 type FetchPage[T: BaseModel] = Callable[[Source, LinkHarvest], Awaitable[ExtractionResult[T]]]
-# A sitemap seed (N16): the bool says whether this is the start sitemap (an index may nest once).
+# A sitemap seed: the bool says whether this is the start sitemap (an index may nest once).
 type FetchSeed[T: BaseModel] = Callable[[bool, Source, LinkHarvest], Awaitable[ExtractionResult[T]]]
 
 

@@ -1,4 +1,4 @@
-"""Optional PostgreSQL datasets; one lazy connection, transactional snapshots (DATA-001)."""
+"""Optional PostgreSQL datasets; one lazy connection, transactional snapshots."""
 
 from __future__ import annotations
 

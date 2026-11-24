@@ -1,4 +1,4 @@
-"""N4/N12: change one operator-owned job property, reparse, compare, then replace atomically.
+"""Change one operator-owned job property, reparse, compare, then replace atomically.
 
 Two edits exist: a recipe's existing ``pagination`` (ADR 0026, no new engine) and the
 job's ``[repair] auto_promote``. TOML files keep their comments and layout outside the

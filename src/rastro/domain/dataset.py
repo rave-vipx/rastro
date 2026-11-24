@@ -1,4 +1,4 @@
-"""Dataset identity and observations (DATA-001/004/005, SYNC-002/003/005/006)."""
+"""Dataset identity and observations."""
 
 from collections.abc import Mapping
 from datetime import datetime, timedelta

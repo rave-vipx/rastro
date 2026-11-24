@@ -1,4 +1,4 @@
-"""Job `[dataset]` block and the read-only preview contract (DATA-002, JOB-002, AGENT-001).
+"""Job `[dataset]` block and the read-only preview contract.
 
 The block only *declares* where approved records would be stored and how they are identified.
 Nothing here opens, creates or writes a dataset file; storage belongs to the dataset store.

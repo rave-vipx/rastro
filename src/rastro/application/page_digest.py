@@ -1,4 +1,4 @@
-"""A compact, bounded, untrusted-labelled description of a page for model prompts (AI-001).
+"""A compact, bounded, untrusted-labelled description of a page for model prompts.
 
 Small models cannot read a whole page; the digest names repeated record containers with
 one or two sample records as indented ``tag.class`` trees, headings, JSON-LD types and

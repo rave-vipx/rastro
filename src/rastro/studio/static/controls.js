@@ -1,4 +1,4 @@
-// N4/N5/N12: next-page settings, the job's auto-promote switch, the session stealth grant,
+// Next-page settings, the job's auto-promote switch, the session stealth grant,
 // readable alerts and the observed operation line. Text is always set as text content.
 import { $, api, bind, el, requireFile, show, state } from "./dom.js";
 import { t } from "./i18n.js";

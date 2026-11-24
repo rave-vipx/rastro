@@ -1,4 +1,4 @@
-"""robots.txt enforcement for one request, with the run's cache (SEC-008, SEC-003).
+"""robots.txt enforcement for one request, with the run's cache.
 
 robots.txt is skipped for a host the operator listed with ``--ignore-robots`` and for a job
 with ``robots = "ignore"``, which needs the ``robots_ignore`` capability for its origin.
@@ -34,7 +34,7 @@ async def check_robots(
     parsed = urlsplit(url)
     hostname = parsed.hostname or ""
     if hostname in operation.policy.grants.ignore_robots:
-        # The operator asserts permission (SEC-003); every other check still applies.
+        # The operator asserts permission; every other check still applies.
         if hostname not in operation.overridden:
             operation.overridden.add(hostname)
             _LOG.info("robots_overridden", host=hostname)

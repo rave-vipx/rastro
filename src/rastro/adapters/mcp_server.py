@@ -1,5 +1,4 @@
-"""stdio MCP server exposing the Rastro job lifecycle to an agent (AGENT-002, AGENT-003, P-008,
-N18).
+"""stdio MCP server exposing the Rastro job lifecycle to an agent.
 
 Requires the optional ``mcp`` extra. Tools run in a worker thread because job execution owns
 its own event loop. Failures become typed tool errors carrying the same safe JSON object as
@@ -38,7 +37,7 @@ from rastro.adapters.mcp_common import (
 )
 from rastro.capabilities_render import render_json, render_mcp_instructions
 
-INSTRUCTIONS = render_mcp_instructions()  # generated from rastro.capabilities (N18)
+INSTRUCTIONS = render_mcp_instructions()  # generated from rastro.capabilities
 
 
 def build_server(
@@ -64,7 +63,7 @@ def build_server(
 
     @server.resource("rastro://capabilities", mime_type="application/json")
     def capabilities() -> str:
-        """Every task Rastro covers, with public names, CLI, MCP tools and limits (N18)."""
+        """Every task Rastro covers, with public names, CLI, MCP tools and limits."""
         return render_json(__version__)
 
     @server.resource("rastro://configuration", mime_type="application/json")

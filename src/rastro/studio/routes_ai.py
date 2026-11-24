@@ -1,4 +1,4 @@
-"""Studio "Ask AI": a configured model proposes, Rastro verifies (INT-001, REPAIR-001, P-008).
+"""Studio "Ask AI": a configured model proposes, Rastro verifies.
 
 Active only when Studio was started with a model (``--model`` or ``RASTRO_MODEL``). The
 wizard asks for a recipe from field names alone, kept only if it extracts valid records; the

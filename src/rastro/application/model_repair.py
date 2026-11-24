@@ -1,4 +1,4 @@
-"""Adaptive candidates, then model fallback and semantic gate for repair (REPAIR-001/002).
+"""Adaptive candidates, then model fallback and semantic gate for repair.
 
 Relocation, fallbacks and discovery run first. When none of their candidates would pass
 every gate, the engine's adaptive tools propose recipes anchored on the retained values

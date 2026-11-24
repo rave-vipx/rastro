@@ -1,4 +1,4 @@
-"""Build a verified job from a URL (N1, JOB-001).
+"""Build a verified job from a URL.
 
 Studio and callers fetch once through the acquisition port, suggest a recipe from
 examples, and write a ``kind = "url"`` source so later runs scrape that URL again.

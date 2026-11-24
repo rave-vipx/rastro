@@ -1,4 +1,4 @@
-"""Walk the job JSON Schema into one ``ConfigEntry`` per key (AGENT-001, N18).
+"""Walk the job JSON Schema into one ``ConfigEntry`` per key.
 
 Names, types, defaults and bounds come from the Pydantic models through
 ``job_json_schema``; descriptions come from the field or ``config_descriptions``. Each

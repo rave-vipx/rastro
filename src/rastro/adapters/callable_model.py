@@ -1,4 +1,4 @@
-"""Wrap an in-process Python function as a ModelPort (AI-001-005).
+"""Wrap an in-process Python function as a ModelPort.
 
 The function receives the ``ModelRequest`` (trusted ``system``, untrusted ``content`` and
 ``output_schema``) and returns JSON text. It may be ``async`` or blocking; a blocking

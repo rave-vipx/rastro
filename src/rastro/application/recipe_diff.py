@@ -1,4 +1,4 @@
-"""Selector-level diff of the comparisons in a repair report (REPAIR-005, P-008, AGENT-002).
+"""Selector-level diff of the comparisons in a repair report.
 
 Shared by Studio and the MCP tools: old and new selector per field and the record selector,
 read from the job's recipe store. Selectors are recipe definitions, never source values.

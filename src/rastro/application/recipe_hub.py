@@ -1,4 +1,4 @@
-"""Export and import recipe bundles for Git sharing (HUB-001, HUB-002; spec section 09).
+"""Export and import recipe bundles for Git sharing (spec section 09).
 
 Bundles are untrusted input: every file is size-bounded, hashed, and the recipe
 must reproduce the bundled records offline before it enters the store.

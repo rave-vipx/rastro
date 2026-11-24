@@ -1,4 +1,4 @@
-"""Versioned declarative job contract (JOB-001, JOB-002, AGENT-001)."""
+"""Versioned declarative job contract."""
 
 from __future__ import annotations
 

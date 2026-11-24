@@ -1,4 +1,4 @@
-"""Machine-readable error envelopes shared by the CLI, Studio and MCP (AGENT-001).
+"""Machine-readable error envelopes shared by the CLI, Studio and MCP.
 
 Every error is ``{"error": <code>, "message": <safe text>, "location": <key or null>}``
 with an optional ``"hint"``.
@@ -12,7 +12,7 @@ _EXTRA = re.compile(r"^[a-z][a-z0-9-]{0,31}$")
 
 
 class RunInProgressError(RastroError):
-    """Another job load or watch tick already holds the dataset lock (SCHED-003)."""
+    """Another job load or watch tick already holds the dataset lock."""
 
 
 def missing_extra_error(extra: str) -> dict[str, str | None]:

@@ -1,7 +1,7 @@
 """Digest of the inputs that shape a source's extraction, bound to its HTTP validators.
 
 A ``304`` only proves the page is unchanged. If the job, the recipe or the schema changed
-since the validators were stored, the dataset must be extracted again (SYNC-004).
+since the validators were stored, the dataset must be extracted again.
 """
 
 import json

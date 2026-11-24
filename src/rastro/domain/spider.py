@@ -1,4 +1,4 @@
-"""Spider policy and its content-free page report (N3; SEC-001, SEC-003, SEC-008).
+"""Spider policy and its content-free page report.
 
 A job may follow links from the pages it names. The links are read declaratively (a CSS
 expression or one of the recipe's own fields), never by a callback. A crawl is capped by
@@ -41,7 +41,7 @@ class SpiderPolicy(RedactedContract):
     """The job's ``[spider]`` table. ``mode = "list"`` (the default) is today's behaviour."""
 
     mode: Literal["list", "spider"] = "list"
-    # "sitemap": each start URL is a sitemap whose <loc>s are the depth-1 links (N16).
+    # "sitemap": each start URL is a sitemap whose <loc>s are the depth-1 links.
     seed: Literal["page", "sitemap"] = "page"
     seed_order: SeedOrder = "document"
     max_depth: StrictInt = Field(default=2, ge=1, le=4)

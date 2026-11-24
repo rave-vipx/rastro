@@ -1,4 +1,4 @@
-"""Accepted discovery source names from Pydantic aliases and an explicit map (INT-002)."""
+"""Accepted discovery source names from Pydantic aliases and an explicit map."""
 
 from __future__ import annotations
 

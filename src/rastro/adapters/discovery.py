@@ -1,4 +1,4 @@
-"""Conservative JSON-LD and microdata discovery through Scrapling (INT-002)."""
+"""Conservative JSON-LD and microdata discovery through Scrapling."""
 
 from __future__ import annotations
 

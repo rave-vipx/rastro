@@ -16,7 +16,7 @@ _TRANSITION_NETWORKS = tuple(
 
 
 # What the operator's private-network grant adds. Link-local (cloud metadata), unspecified,
-# multicast, reserved and mapped/transition forms are never reachable (SEC-001).
+# multicast, reserved and mapped/transition forms are never reachable.
 _PRIVATE_NETWORKS = tuple(
     ipaddress.ip_network(network)
     for network in (

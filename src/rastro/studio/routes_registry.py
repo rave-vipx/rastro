@@ -1,4 +1,4 @@
-"""N10, N12: root-confined registry sharing; imported recipes never gain operator trust."""
+"""Root-confined registry sharing; imported recipes never gain operator trust."""
 
 from __future__ import annotations
 

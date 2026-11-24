@@ -1,4 +1,4 @@
-"""Plain Chromium and shared browser network restrictions (SEC-005/008)."""
+"""Plain Chromium and shared browser network restrictions."""
 
 from __future__ import annotations
 

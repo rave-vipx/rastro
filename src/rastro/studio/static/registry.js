@@ -1,4 +1,4 @@
-// N10: Registry (URL). Search and install from a local registry folder or an HTTPS URL;
+// Registry (URL). Search and install from a local registry folder or an HTTPS URL;
 // publish writes into a local registry folder only (no account, no push, no Git).
 // Every source-derived value stays plain text.
 import { $, api, el, requireFile, table } from "./dom.js";

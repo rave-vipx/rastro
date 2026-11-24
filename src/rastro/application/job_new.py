@@ -1,4 +1,4 @@
-"""Create a declarative job file from a saved page, sites, or a goal (JOB-001, DISC-001..003)."""
+"""Create a declarative job file from a saved page, sites, or a goal."""
 
 from __future__ import annotations
 

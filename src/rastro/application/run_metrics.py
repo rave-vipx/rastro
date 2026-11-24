@@ -1,4 +1,4 @@
-"""Record one metrics row per source after a load (OBS-003, N5); SQLite datasets only."""
+"""Record one metrics row per source after a load; SQLite datasets only."""
 
 from collections.abc import Sequence
 from typing import Any

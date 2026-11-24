@@ -1,4 +1,4 @@
-"""Shared ``--model``, ``--allow-remote`` and model cost options (AI-001, P-001, COST-002)."""
+"""Shared ``--model``, ``--allow-remote`` and model cost options."""
 
 from __future__ import annotations
 

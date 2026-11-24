@@ -1,4 +1,4 @@
-"""Content-free outcome detail of a failed source (DATA-005, SCR-002, OPS).
+"""Content-free outcome detail of a failed source (OPS).
 
 Only Rastro's own issue codes and HTTP status numbers are used, never page content.
 """

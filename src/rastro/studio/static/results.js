@@ -1,4 +1,4 @@
-// Results: the stored records with search, filters, pages and export (N5 partly).
+// Results: the stored records with search, filters, pages and export.
 // Records are read in bounded chunks and filtered here; the page says when only part is covered.
 import { $, api, bind, el, requireFile, show } from "./dom.js";
 import { onLangChange, t, when } from "./i18n.js";

@@ -1,4 +1,4 @@
-"""Bounded deterministic proposal collection, with no persistence or activation (REPAIR-001).
+"""Bounded deterministic proposal collection, with no persistence or activation.
 
 Relocation, declared fallbacks and discovery only; a configured model is consulted
 afterwards, and only when none of these would pass (``application/model_repair``).

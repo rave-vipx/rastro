@@ -1,4 +1,4 @@
-"""Repair and promote a job source's recipe through measured CI (REPAIR-002-005, REC-006)."""
+"""Repair and promote a job source's recipe through measured CI."""
 
 from __future__ import annotations
 
@@ -54,7 +54,7 @@ def repair_job_source(
     would-be promotion. Remote specs need ``allow_remote=True``. Re-fetching through a
     job-declared egress proxy needs ``allow_egress=True`` and a stealth render mode
     needs ``allow_stealth=True``. ``max_model_cost`` caps the model's cost in USD and needs
-    a price: ``model_cost_per_call`` or the job's ``[model] cost_per_call`` (COST-002).
+    a price: ``model_cost_per_call`` or the job's ``[model] cost_per_call``.
     """
     overrides = {
         name: value

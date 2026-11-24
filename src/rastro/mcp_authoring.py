@@ -1,5 +1,5 @@
 """MCP authoring tools: suggest a recipe, create a job, extract once from a saved page
-(AGENT-002, INT-001, INT-002, JOB-001).
+.
 
 Pages are workspace files read with a byte bound and never through a symlink. These tools
 never fetch the network: ``url`` only sets the address used for relative links.

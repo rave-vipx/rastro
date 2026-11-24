@@ -1,4 +1,4 @@
-"""Optional per-source run metrics; stores without them simply record nothing (OBS-003)."""
+"""Optional per-source run metrics; stores without them simply record nothing."""
 
 from collections.abc import Sequence
 from datetime import datetime

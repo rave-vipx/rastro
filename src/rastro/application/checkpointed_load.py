@@ -1,4 +1,4 @@
-"""Run and load a job source by source with a recoverable checkpoint (SCHED-004)."""
+"""Run and load a job source by source with a recoverable checkpoint."""
 
 from __future__ import annotations
 

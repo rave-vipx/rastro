@@ -1,4 +1,4 @@
-"""Rastro's issue-code vocabulary at run time (N17): the rows of docs/issues.md, and more.
+"""Rastro's issue-code vocabulary at run time: the rows of docs/issues.md, and more.
 
 A persisted value shaped like a code is not trusted as one. Views that read codes back from
 files (Studio) keep members of ``KNOWN_CODES`` and show anything else as ``unknown``.

@@ -1,4 +1,4 @@
-"""Fetch one sitemap of a sitemap-seeded spider (N16; SEC-001, SEC-003, SEC-008).
+"""Fetch one sitemap of a sitemap-seeded spider.
 
 The sitemap goes through the same acquisition port as every page: allowlist, robots,
 pacing, DNS checks, egress, the request budget and the byte cap. Its ``<loc>`` values,

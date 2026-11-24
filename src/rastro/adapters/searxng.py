@@ -1,4 +1,4 @@
-"""Free self-hosted SearXNG JSON search adapter (DISC-001, SEC-004)."""
+"""Free self-hosted SearXNG JSON search adapter."""
 
 from __future__ import annotations
 

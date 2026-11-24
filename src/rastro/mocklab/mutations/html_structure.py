@@ -1,4 +1,4 @@
-"""HTML operators that move, wrap, copy or empty elements (MOCK-002)."""
+"""HTML operators that move, wrap, copy or empty elements."""
 
 from __future__ import annotations
 

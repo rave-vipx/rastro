@@ -1,4 +1,4 @@
-"""Read-only endpoints for the Projects, Sources and Alerts views (N5, P-008).
+"""Read-only endpoints for the Projects, Sources and Alerts views.
 
 ``GET /api/projects`` summarises every job under the root; ``POST /api/sources`` and
 ``POST /api/alerts`` take a root-relative ``file``. Responses carry statuses, counts, dates

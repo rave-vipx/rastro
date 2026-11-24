@@ -1,4 +1,4 @@
-"""Outcome contracts shared by every Mock Lab mutation operator (MOCK-002)."""
+"""Outcome contracts shared by every Mock Lab mutation operator."""
 
 from __future__ import annotations
 

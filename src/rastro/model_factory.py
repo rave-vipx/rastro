@@ -1,4 +1,4 @@
-"""``rastro.model()``: plug in whatever AI you use, with no provider special-cased (AI-001-005).
+"""``rastro.model()``: plug in whatever AI you use, with no provider special-cased.
 
 Three generic transports: an OpenAI-compatible HTTP endpoint, any local command, or a
 Python function. A ``ModelPort`` object passes through unchanged. Concrete products

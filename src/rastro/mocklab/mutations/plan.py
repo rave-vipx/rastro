@@ -1,4 +1,4 @@
-"""A versioned, serializable plan that applies operators reproducibly (MOCK-002, MOCK-006)."""
+"""A versioned, serializable plan that applies operators reproducibly."""
 
 from __future__ import annotations
 

@@ -17,7 +17,7 @@ from rastro.domain.sources import Contract, RastroError
 
 
 class RecipeState(StrEnum):
-    """Lifecycle state of one stored recipe version (REC-005)."""
+    """Lifecycle state of one stored recipe version."""
 
     CANDIDATE = "candidate"
     ACTIVE = "active"
@@ -61,7 +61,7 @@ class VersionStatus(Contract):
     """Lifecycle position of one stored version.
 
     ``validated_at`` is when the version first served as active. Only versions that
-    have served are eligible for rollback (REPAIR-006).
+    have served are eligible for rollback.
     """
 
     version: int = Field(ge=1, le=2_147_483_647)
@@ -108,7 +108,7 @@ def plan_creation(
 ) -> tuple[LifecycleChange, ...]:
     """Store a new version as a candidate, or as active by replacing the serving one.
 
-    A candidate never displaces the serving version (REC-006). A new version lower
+    A candidate never displaces the serving version. A new version lower
     than the serving one is also stored as a candidate, so a request that completes
     late cannot replace a newer recipe.
     """
@@ -140,7 +140,7 @@ def plan_transition(
 def plan_rollback(
     target: VersionStatus, *, serving: VersionStatus | None
 ) -> tuple[LifecycleChange, ...]:
-    """Return a retired, previously validated version to service (REPAIR-006)."""
+    """Return a retired, previously validated version to service."""
     if target.state is not RecipeState.RETIRED or target.validated_at is None:
         raise LifecycleTransitionError(
             "Rollback requires a retired, previously validated recipe version"

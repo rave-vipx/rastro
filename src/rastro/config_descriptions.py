@@ -1,4 +1,4 @@
-"""Plain descriptions of every job-file key, keyed ``Model.field`` (AGENT-001, N18).
+"""Plain descriptions of every job-file key, keyed ``Model.field``.
 
 The models stay the source of names, types, defaults and bounds; ``config_reference``
 reads those from the job JSON Schema and takes the text from here when a field has no

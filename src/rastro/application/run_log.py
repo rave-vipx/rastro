@@ -1,4 +1,4 @@
-"""WARNING log line per failed job source: index, host and outcome codes only (OBS, QUAL-005).
+"""WARNING log line per failed job source: index, host and outcome codes only (OBS.
 
 Python's last-resort handler prints WARNING records to stderr even without ``--verbose``.
 Paths, queries, page content and records are never logged.

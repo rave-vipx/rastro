@@ -1,5 +1,5 @@
-"""Render the configuration reference as JSON or as ``docs/configuration.md`` (N18,
-AGENT-001). Pure functions over ``config_reference.reference()``."""
+"""Render the configuration reference as JSON or as ``docs/configuration.md``. Pure functions over
+``config_reference.reference()``."""
 
 from __future__ import annotations
 

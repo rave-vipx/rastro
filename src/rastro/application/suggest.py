@@ -1,4 +1,4 @@
-"""Suggest a verified CSS recipe from a saved page and example values (INT-002, DISC-003).
+"""Suggest a verified CSS recipe from a saved page and example values.
 
 Candidates come from a ``RecipeSuggester`` port; each is run through the normal extraction
 pipeline with the caller's schema, and only a recipe that reproduces every example is

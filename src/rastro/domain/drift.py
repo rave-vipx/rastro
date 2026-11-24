@@ -1,4 +1,4 @@
-"""Observable structural degradation, separate from extraction failure (DRIFT-001-006)."""
+"""Observable structural degradation, separate from extraction failure."""
 
 from datetime import datetime
 from typing import Annotated, Literal, Self

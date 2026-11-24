@@ -1,4 +1,4 @@
-"""Deterministic synthetic HTTP failures for MOCK-003 and MOCK-004."""
+"""Deterministic synthetic HTTP failures for."""
 
 from dataclasses import dataclass, field
 from urllib.parse import urlsplit

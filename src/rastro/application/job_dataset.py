@@ -1,4 +1,4 @@
-"""Run a job and load its approved fields into the dataset (DATA-001/003, SYNC-008)."""
+"""Run a job and load its approved fields into the dataset."""
 
 from __future__ import annotations
 
@@ -77,7 +77,7 @@ def load_job_file(
     reports whether its recipe came from the job file or from ``recipe_memory``.
     ``allow_*`` and ``ignore_robots`` are the operator's opt-ins, as for ``run_job``.
     ``max_model_cost`` and ``model_cost_per_call`` limit the job's model for the whole load,
-    not per source (COST-002).
+    not per source.
     """
     file = Path(path)
     job = load_job(file, allow_absolute_paths=allow_absolute_paths)

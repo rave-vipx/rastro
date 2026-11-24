@@ -2,7 +2,7 @@
 
 Bundles render to fixed file names, so a manifest never chooses filesystem paths.
 Rendering is canonical (no timestamps, stable key order), so equal bundles are
-byte-identical on disk (MOCK-006). Loading checks digests and every file's label.
+byte-identical on disk. Loading checks digests and every file's label.
 """
 
 from __future__ import annotations

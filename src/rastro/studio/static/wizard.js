@@ -1,4 +1,4 @@
-// New scraper wizard in four steps (N1, N2): URL, fields with one example each, a preview of
+// New scraper wizard in four steps: URL, fields with one example each, a preview of
 // the records, then a project name. File names are an advanced detail filled from the name.
 // All source-derived text is set as plain text content; markup is never parsed.
 import { $, api, bind, el, show, table } from "./dom.js";

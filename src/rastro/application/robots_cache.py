@@ -1,4 +1,4 @@
-"""One run's robots.txt answers, in memory only (N10, SEC-008).
+"""One run's robots.txt answers, in memory only.
 
 A cache lives for one run or one registry install, entered with :func:`robots_cache`.
 It is never global across runs and never persisted. Outside a scope, each acquisition

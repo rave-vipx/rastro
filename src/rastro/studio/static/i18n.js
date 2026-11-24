@@ -1,4 +1,4 @@
-// Studio copy in English (default) and Rioplatense Spanish (N8). Static text only:
+// Studio copy in English (default) and Rioplatense Spanish. Static text only:
 // elements carry data-i18n="key" (textContent), data-i18n-placeholder or data-i18n-label.
 // Copy lives in one JSON file per view under i18n/, each with "en", "es" and an "advanced"
 // overlay: the technical wording shown only while the Advanced switch is on.

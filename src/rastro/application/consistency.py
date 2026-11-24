@@ -1,4 +1,4 @@
-"""Evaluate semantic consistency rules over candidate records (QUAL-005, QUAL-006).
+"""Evaluate semantic consistency rules over candidate records.
 
 Pure and deterministic: no clock, no I/O, no randomness. The caller supplies the observation
 time and the dataset history, taken *before* the candidate snapshot is applied.

@@ -1,5 +1,5 @@
 """Render the capability manifest as Markdown, llms.txt, MCP instructions, JSON or an agent
-snippet (N18, AGENT-001). Pure functions over ``rastro.capabilities``; no I/O."""
+snippet. Pure functions over ``rastro.capabilities``; no I/O."""
 
 from __future__ import annotations
 

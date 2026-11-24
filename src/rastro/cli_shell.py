@@ -1,4 +1,4 @@
-"""`rastro shell JOB`: an interactive Python shell on one source's parsed page (N39).
+"""`rastro shell JOB`: an interactive Python shell on one source's parsed page.
 
 The page is the job's local file, or its URL rendered once in a guarded browser with the
 job's own policy (allowed hosts, SSRF, robots, budget). The shell gets ``job``, ``page`` (a

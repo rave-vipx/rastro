@@ -1,4 +1,4 @@
-"""Unvalidated repair proposals and saved relocation evidence (REPAIR-001, SCR-002).
+"""Unvalidated repair proposals and saved relocation evidence.
 
 A candidate is not a serving recipe or a validation verdict. Only recipe CI and
 an explicit lifecycle transition may activate it. Fingerprints are private local

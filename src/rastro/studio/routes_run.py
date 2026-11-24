@@ -1,7 +1,7 @@
 """Run endpoints: extract without writing, and load approved records into the dataset.
 
 Extract runs the job against a read-only view of ``recipe_memory`` and writes no file;
-load is ``load_job_file`` (DATA-001, REC-006, P-008).
+load is ``load_job_file``.
 """
 
 from __future__ import annotations

@@ -1,4 +1,4 @@
-"""Shared HTTP plumbing for Studio routers: guard, bodies, typed inputs, JSON replies (P-008).
+"""Shared HTTP plumbing for Studio routers: guard, bodies, typed inputs, JSON replies.
 
 Security posture: loopback only, Host and Origin checks, a per-run token on every API call,
 paths confined to one root, bounded bodies, a strict Content-Security-Policy.
@@ -143,13 +143,13 @@ class Studio:
         # ``model_remote`` (--allow-remote) only speaks for a ModelPort that does not say.
         self.model_remote = model is not None and is_remote(model, model_remote)
         # Operator opt-ins from `rastro studio`, passed to every job run (audit H1). The
-        # stealth switch changes this process grant only, never a job file (N12, ADR 0034).
+        # stealth switch changes this process grant only, never a job file (ADR 0034).
         self.trust: dict[str, Any] = {
             "allow_egress": allow_egress,
             "allow_env": tuple(allow_env),
             "allow_stealth": allow_stealth is True,
         }
-        # N5: the last observed operation and the alerts of the last run, per job file.
+        # The last observed operation and the alerts of the last run, per job file.
         self.progress: dict[str, Any] = {"state": "idle"}
         self.attention: tuple[Path, list[str]] | None = None
         # Tests inject a fake acquirer; production uses the default HTTP acquirer.

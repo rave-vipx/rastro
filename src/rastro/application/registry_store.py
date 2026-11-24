@@ -1,4 +1,4 @@
-"""Registry directory layout, index reading and atomic index writes (HUB-003, HUB-005).
+"""Registry directory layout, index reading and atomic index writes.
 
 The registry is a plain Git checkout: never follow symlinks inside it. Besides ``index.json``
 and the bundles it may hold two optional files, both untrusted and validated like the index:

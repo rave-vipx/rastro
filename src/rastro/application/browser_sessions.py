@@ -1,4 +1,4 @@
-"""One browser context per source per run, closed when the source finishes (N2, ADR 0034).
+"""One browser context per source per run, closed when the source finishes (ADR 0034).
 
 ``source_session()`` opens a scope. The first rendered page of each renderer opens its
 session; later pages and scroll steps of that source reuse it. Nothing is shared across
