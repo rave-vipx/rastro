@@ -8,7 +8,7 @@ Values are never altered; flags only label them. Locators are capped like field 
 from __future__ import annotations
 
 from collections.abc import Mapping
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from rastro.application.changes import changes_since
@@ -104,7 +104,9 @@ def compare(
     if len(loads) < 2:
         return {"first_run": True, "new": 0, "removed": 0, "changed": 0}, {}
     since = loads[-2].at
-    found = changes_since(records, since, latest_success=last_success)
+    # Removed by the last load: listed by the one before it, which ran after loads[-3].
+    listed = loads[-3].at if len(loads) > 2 else datetime.min.replace(tzinfo=UTC)
+    found = changes_since(records, since, latest_success=last_success, listed_since=listed)
     keys = {r.key.identity: r.key.model_dump_json() for r in records}
     marks = {
         keys[item.identity]: kind

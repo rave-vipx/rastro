@@ -68,6 +68,26 @@ def test_changes_since_reads_stored_timestamps():
     assert result.changed == ()
 
 
+
+def test_changes_since_skips_records_removed_before_that_time():
+    jan1 = datetime(2026, 1, 1, tzinfo=UTC)
+    nov20, nov23 = datetime(2026, 11, 20, tzinfo=UTC), datetime(2026, 11, 23, tzinfo=UTC)
+    long_gone = record("b", jan1)  # last listed on Jan 1, missing from every run since
+    kept = record("a", nov23, first=jan1)
+    assert changes_since((kept, long_gone), nov20, latest_success={URL: nov23}).removed == ()
+    # Listed after `since`, missing from a later successful run: removed since.
+    dropped = record("c", datetime(2026, 11, 21, tzinfo=UTC), first=jan1)
+    found = changes_since((kept, dropped, long_gone), nov20, latest_success={URL: nov23})
+    assert [c.identity for c in found.removed] == [("c",)]
+    # An earlier listing floor widens the window on purpose.
+    wide = changes_since((kept, long_gone), nov20, latest_success={URL: nov23}, listed_since=jan1)
+    assert [c.identity for c in wide.removed] == [("b",)]
+
+
+def test_changes_since_never_calls_a_record_without_origins_removed():
+    orphan = record("x").model_copy(update={"origins": {}})
+    assert changes_since((orphan,), T2, latest_success={URL: T2}).removed == ()
+
 def _cells(data: bytes) -> dict[str, str]:
     ns = {"m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
     with zipfile.ZipFile(io.BytesIO(data)) as zf:

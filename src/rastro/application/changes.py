@@ -57,22 +57,27 @@ def changes_between(before: tuple[StoredRecord, ...], after: tuple[StoredRecord,
 
 
 def changes_since(
-    records: tuple[StoredRecord, ...], since: datetime, *, latest_success: Mapping[str, datetime]
+    records: tuple[StoredRecord, ...],
+    since: datetime,
+    *,
+    latest_success: Mapping[str, datetime],
+    listed_since: datetime | None = None,
 ) -> Changes:
     """New and removed records from stored timestamps alone.
 
-    New: first seen after `since`. Removed: every source that listed it has since had a newer
-    successful run that did not. The store keeps no earlier field values, so changed fields need
-    `changes_between` with an earlier reading.
+    New: first seen after ``since``. Removed: every source that listed it at or after
+    ``listed_since`` (default ``since``) has had a newer successful run that did not. The store
+    keeps no run history, so a record last listed before that time is never reported: it may
+    have vanished long before. Changed fields need ``changes_between`` with an earlier reading.
     """
+    floor = since if listed_since is None else listed_since
     new, removed = [], []
     for record in records:
         if record.first_observed_at > since:
             new.append(RecordChange(identity=record.key.identity))
-        elif all(
+        elif record.origins and all(
             (done := latest_success.get(url)) is not None
-            and done > origin.last_observed_at
-            and origin.last_observed_at <= since
+            and done > origin.last_observed_at >= floor
             for url, origin in record.origins.items()
         ):
             removed.append(RecordChange(identity=record.key.identity))

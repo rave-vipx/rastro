@@ -63,8 +63,10 @@ rastro job watch job.toml --once --on-failure 'notify-send "Rastro needs attenti
 ## What changed between readings
 
 `rastro dataset changes data.sqlite --since 2026-11-01T00:00:00Z` lists the records first
-seen, removed or changed since that time; `--against copy.sqlite` compares with an earlier
-copy of the dataset file instead. `rastro dataset export data.sqlite --format xlsx --output
+seen after that time, and the records listed at or after it that a later successful run no
+longer lists. The dataset keeps no run history, so a record last seen before that time is
+not reported as removed, and changed fields are not listed; `--against copy.sqlite`
+compares with an earlier copy of the dataset file instead and lists all three. `rastro dataset export data.sqlite --format xlsx --output
 data.xlsx` writes a spreadsheet; see [Dataset load and export](dataset.md).
 
 ## Exit codes
