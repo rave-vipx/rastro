@@ -1,0 +1,65 @@
+# Nested data without a custom adapter: each event carries its ticket tiers as a list
+# of objects, read by one nested recipe mapping. Synthetic page, offline.
+format_version = 1
+
+[region]
+locale = "es-UY"
+timezone = "Etc/GMT+3"
+
+[dataset]
+name = "tiers_agenda"
+path = "agenda.sqlite"
+identity = ["event_id"]
+
+[[sources]]
+kind = "file"
+path = "cartelera.html"
+url = "https://salanorte.example/cartelera/"
+
+[sources.recipe]
+version = 1
+strategy = "css"
+record_selector = "article.event"
+require_evidence = true
+
+[sources.recipe.fields]
+event_id = "::attr(data-id)"
+title = "h2::text"
+starts_at = "time::attr(datetime)"
+
+[sources.recipe.fields.tiers]
+each = "li.tier"
+members = { tier = "b::text", price = "i::text" }
+
+[[fields]]
+name = "event_id"
+type = "string"
+min_length = 1
+
+[[fields]]
+name = "title"
+type = "string"
+min_length = 1
+
+[[fields]]
+name = "starts_at"
+type = "datetime"
+
+[[fields]]
+name = "tiers"
+type = "list"
+min_items = 1
+max_items = 10
+
+[fields.item]
+name = "tier"
+type = "object"
+
+[[fields.item.members]]
+name = "tier"
+type = "string"
+
+[[fields.item.members]]
+name = "price"
+type = "decimal"
+ge = 0
