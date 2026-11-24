@@ -10,7 +10,6 @@ import pytest
 
 from rastro.application import spider_unbounded
 from rastro.application.acquisition import WebAcquirer
-from rastro.application.crawl_checkpoint import crawl_key, crawl_state
 from rastro.application.jobs import run_job
 from rastro.domain.acquisition import HttpResponse
 from rastro.domain.jobs import Job
@@ -93,14 +92,15 @@ SITE = {
 }
 
 
-def run(spec, transport):
+def run(spec, transport, folder: Path):
+    """Checkpoints live under ``folder``: a per-test directory, never the shared cwd."""
     acquirer = WebAcquirer(spec.acquisition, transport=transport, resolver=Resolver())
-    return run_job(spec, acquisition=acquirer, base_dir=Path.cwd()).results[0]
+    return run_job(spec, acquisition=acquirer, base_dir=folder).results[0]
 
 
-def test_robots_and_allowed_hosts_apply_unbounded():
+def test_robots_and_allowed_hosts_apply_unbounded(tmp_path):
     transport = Transport(SITE, robots="User-agent: *\nDisallow: /item/2\n")
-    result = run(job(), transport)
+    result = run(job(), transport, tmp_path)
     rows = {(p.path, p.outcome) for p in result.spider.pages}
     assert ("/item/2", "robots_denied") in rows
     assert ("/x", "off_host") in rows
@@ -108,10 +108,10 @@ def test_robots_and_allowed_hosts_apply_unbounded():
     assert not any("evil.example" in url for url in transport.urls)
 
 
-def test_request_budget_semantics_unbounded():
+def test_request_budget_semantics_unbounded(tmp_path):
     """An unbounded crawl is bounded by its time budget, not by ``max_requests``."""
     transport = Transport(SITE)
-    result = run(job(budget=2), transport)
+    result = run(job(budget=2), transport, tmp_path)
     assert sorted(transport.fetched()) == sorted(path for path in SITE if path != "/x")
     assert result.status == Outcome.SUCCESS
     assert result.pagination_stop == "spider_complete"
@@ -123,11 +123,10 @@ def test_unbounded_job_resumes_without_refetch(tmp_path, monkeypatch):
     clock = Clock()
     monkeypatch.setattr(spider_unbounded, "monotonic", clock)
     spec = job()
-    with crawl_state(tmp_path, crawl_key(spec)):
-        first_transport = Transport(SITE, clock=clock, step=25.0)
-        first = run(spec, first_transport)
-        second_transport = Transport(SITE, clock=clock, step=25.0)
-        second = run(spec, second_transport)
+    first_transport = Transport(SITE, clock=clock, step=25.0)
+    first = run(spec, first_transport, tmp_path)
+    second_transport = Transport(SITE, clock=clock, step=25.0)
+    second = run(spec, second_transport, tmp_path)
     assert first.notes is not None and first.notes.crawl is not None
     assert first.notes.crawl.stop == "time_budget"
     assert set(first_transport.fetched()).isdisjoint(second_transport.fetched())
@@ -137,12 +136,44 @@ def test_unbounded_job_resumes_without_refetch(tmp_path, monkeypatch):
     assert sorted(names) == ["Chair", "Desk", "Lamp", "List", "Shade"]
 
 
-def test_unbounded_crawl_runs_without_the_crawl_engine(monkeypatch):
+def test_unbounded_crawl_runs_without_the_crawl_engine(tmp_path, monkeypatch):
     """An HTTP-only install (no browser extra) paces with the stdlib throttle."""
     monkeypatch.setitem(sys.modules, "scrapling.spiders.throttle", None)
     monkeypatch.setitem(sys.modules, "scrapling.spiders", None)
     transport = Transport(SITE)
-    result = run(job(), transport)
+    result = run(job(), transport, tmp_path)
     assert result.status == Outcome.SUCCESS
     assert result.notes is not None and result.notes.crawl is not None
     assert result.notes.crawl.stop == "complete"
+
+
+class Crash(BaseException):
+    """A process that dies mid-crawl: nothing below the job run may catch it."""
+
+
+class Crashing(Transport):
+    def __init__(self, *args, crash_at, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.crash_at = crash_at
+
+    async def get(self, target, **kwargs):
+        if urlsplit(target.url).path == self.crash_at:
+            raise Crash
+        return await super().get(target, **kwargs)
+
+
+def test_a_crashed_unbounded_crawl_resumes_from_its_periodic_checkpoint(tmp_path, monkeypatch):
+    clock = Clock()
+    monkeypatch.setattr(spider_unbounded, "monotonic", clock)
+    spec = job()
+    spec = spec.model_copy(
+        update={"spider": spec.spider.model_copy(update={"time_budget_seconds": 3600})}
+    )
+    with pytest.raises((Crash, BaseExceptionGroup)):
+        run(spec, Crashing(SITE, clock=clock, step=40.0, crash_at="/item/4"), tmp_path)
+    saved = list(tmp_path.rglob("*.json"))
+    assert len(saved) == 1  # written while crawling, not at a stop that never came
+    second = run(spec, Transport(SITE, clock=clock, step=1.0), tmp_path)
+    assert second.notes is not None and second.notes.crawl is not None
+    assert second.notes.crawl.resumed and second.notes.crawl.stop == "complete"
+    assert sorted(r.name for r in second.items) == ["Chair", "Desk", "Lamp", "List", "Shade"]

@@ -145,6 +145,7 @@ class _Crawl[T: BaseModel]:
             if self.spider.unbounded and records_full(self.pages, self.links, self.limits, queue):
                 self.stopped = "record_limit"
                 break
+            self.checkpointing.progress(self.runtime.clock(), self.links, queue, self.frontier.seen)
         return self._finish(list(queue))
 
     def _resume(self) -> deque[Queued]:

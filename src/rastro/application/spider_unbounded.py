@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import asyncio
 from collections import deque
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass, field
 from time import monotonic, perf_counter
 from typing import Literal
@@ -37,6 +37,8 @@ __all__ = [
 
 UNBOUNDED = 2**62  # the page and request count of an unbounded crawl: time bounds it
 CHUNK_PER_WORKER = 2  # pages fetched between two looks at the clock, per worker
+SAVE_EVERY_SECONDS = 60.0
+"""How often an unbounded crawl rewrites its checkpoint while it runs."""
 type Stop = Literal["time_budget", "record_limit"]
 type CheckpointState = Literal["none", "saved", "finished", "discarded"]
 _BLOCKED_STATUS = frozenset({429, 503})
@@ -95,6 +97,29 @@ class CrawlCheckpointing:
     store: CheckpointStore | None
     resumed: bool = False
     discarded: bool = False
+    saved_at: float | None = None
+
+    def progress(
+        self,
+        now: float,
+        fetched: Iterable[tuple[int, Link]],
+        queued: Iterable[tuple[int, int, Link]],
+        seen: set[str],
+    ) -> None:
+        """Save every ``SAVE_EVERY_SECONDS`` while crawling, so a crash loses little.
+
+        The pages this run fetched go back into the saved frontier: their records are only
+        stored when the run ends, so a run that dies refetches them instead of losing them.
+        """
+        if self.store is None:
+            return
+        if self.saved_at is None:
+            self.saved_at = now
+        elif now - self.saved_at >= SAVE_EVERY_SECONDS:
+            self.saved_at = now
+            frontier = [(d, link.url) for d, link in fetched]
+            frontier += [(d, link.url) for _, d, link in queued]
+            self.store.save(frontier, sorted(seen))
 
     def load(self) -> CrawlCheckpoint | None:
         if self.store is None:
