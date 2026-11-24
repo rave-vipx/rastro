@@ -27,7 +27,10 @@ fingerprints; Cloudflare solving additionally requires `solve_challenges = true`
 are capabilities: the operator's own jobs use them, other input only with a grant (see
 the trust model below). Third-party CAPTCHA services and credentials in job files remain
 forbidden. Robots checks apply unless the operator turns them off for a host or a job;
-exact host/public-IP restrictions remain mandatory; browser modes refuse egress profiles.
+exact host/public-IP restrictions remain mandatory. Browser and stealth modes use the same
+egress profiles and rotation as HTTP, under the same target checks: the destination is
+pinned and checked locally before the browser starts, and a source's browser context keeps
+the proxy it opened with.
 Source allowlisting is the caller's permission assertion; it does not confer permission
 to access a site.
 A `Source` URL by itself never authorizes network access.
@@ -171,8 +174,22 @@ Recipes in job files, Hub bundles, MCP tool arguments (`scrape_file`, `recipe_pr
 escalation) are checked before evaluation against a CSS selector cost policy (no `:has()`, no sibling combinators, bounded compounds,
 alternatives and nesting), because lxml evaluates those shapes in quadratic or worse time
 and the evaluation cannot be interrupted. A bundle's hashes give integrity, not
-authenticity; see the [Hub guide](docs/hub.md#import). The MCP `job_preview` tool writes
+authenticity; see the [Hub guide](docs/hub.md#import). A registry's `card.json` (field
+descriptions, engine needs) and `health.json` (last verification) are untrusted too: they
+are size-bounded, validated like the index, shown as data and never grant a capability or
+change a gate. Regular expressions from recipes and jobs (`capture`, `capture_network`,
+`allow_pattern`, `deny_pattern`) compile and match on a linear-time engine, so a shared
+pattern cannot backtrack catastrophically. The MCP `job_preview` tool writes
 nothing but is not advertised as read-only, because a job can fetch URLs or call a model.
+
+Unbounded crawl checkpoints (`.rastro/crawl/` next to the job) keep the full URLs of the
+frontier and the seen set, queries included, so a resumed crawl fetches the same pages. The
+files are written atomically with mode `0600` in an owner-only folder, never followed through
+a symlink, and validated when read; treat them like the dataset file. Studio's guided flow
+(`/api/wizard/lookup`, `/page`, `/pick`) sits behind the Studio token and local-host checks;
+the page render and its highlight boxes are fetched under the URL's own single-host policy
+with the same destination checks, robots and budget as a job, and page text reaches a model
+only when the person asks to name a field with it.
 
 ## Acquisition limitations
 
