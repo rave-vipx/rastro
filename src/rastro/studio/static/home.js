@@ -2,6 +2,7 @@
 // sources with problems (N1, N5). Loading, empty folder and unknown databases are explained.
 import { $, api, el, show } from "./dom.js";
 import { onLangChange, t, when } from "./i18n.js";
+import { lightTone, lightWord } from "./alerts.js";
 import { actionButton, chip, emptyState } from "./ui.js";
 
 const HEALTH = { ok: "ok", warnings: "warn", failing: "fail", unknown: "none" };
@@ -16,7 +17,8 @@ function card(project) {
   const box = el("li", undefined, "project-card");
   const health = HEALTH[project.health] ? project.health : "unknown";
   box.append(el("h3", project.name || stem(project.file)), el("p", project.file, "muted mono"));
-  box.append(chip(HEALTH[health], t(`home.health.${health}`)));
+  if (project.light) box.append(chip(lightTone(project.light), lightWord(project.light)));
+  else box.append(chip(HEALTH[health], t(`home.health.${health}`)));
   const facts = el("dl", undefined, "facts");
   const fact = (label, value) => {
     const row = el("div");
