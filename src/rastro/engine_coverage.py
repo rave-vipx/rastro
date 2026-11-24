@@ -49,6 +49,9 @@ _ACQ_EGRESS = "docs/acquisition.md#network-egress"
 _ACQ_PERMS = "docs/acquisition.md#operator-permissions"
 _ACQ_REGION = "docs/acquisition.md#metrics-and-regional-behavior"
 _JOBS_EXAMPLE = "docs/jobs.md#complete-toml-example"
+_NO_SESSIONS = (
+    "Rastro keeps no browser between agent calls: each call opens one guarded page and closes it."
+)
 
 SCRAPLING_FEATURES: tuple[EngineFeature, ...] = (
     # Selector & SelectorsGeneration (parser & adaptive)
@@ -240,16 +243,25 @@ SCRAPLING_FEATURES: tuple[EngineFeature, ...] = (
             "docs/api.md#adapters-fetch-and-load-your-own-records",
         ),
     ),
-    *_plan(
+    *_exp(
         "mcp",
         "mcp",
-        "browser_actions browser_extract browser_fetch browser_fetch_once browser_network_request "
-        "browser_network_requests browser_open browser_screenshot close_session list_sessions",
+        "mcp_tool",
+        ("browser_fetch", "browser_snapshot", "docs/mcp.md#browser-tools"),
+        ("browser_fetch_once", "browser_snapshot", "docs/mcp.md#browser-tools"),
+        ("browser_actions", "browser_* steps", "docs/mcp.md#browser-tools"),
+        ("browser_extract", "browser_extract", "docs/mcp.md#browser-tools"),
+        ("browser_network_requests", "browser_network", "docs/mcp.md#browser-tools"),
+        ("browser_network_request", "browser_network", "docs/mcp.md#browser-tools"),
+        ("browser_screenshot", "browser_screenshot", "docs/mcp.md#browser-tools"),
     ),
     *_no(
         "mcp",
         "mcp",
         ("browser_evaluate", "Arbitrary JavaScript evaluation is never exposed to agents."),
+        ("browser_open", _NO_SESSIONS),
+        ("close_session", _NO_SESSIONS),
+        ("list_sessions", _NO_SESSIONS),
         (
             "browser_load_state",
             "Filesystem storage state paths are not exposed to MCP clients.",

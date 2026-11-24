@@ -32,6 +32,10 @@ async def _call(root: Path, tool: str, **arguments: Any) -> tuple[bool, Any]:
 
 
 TOOLS = {
+    "browser_snapshot",
+    "browser_extract",
+    "browser_network",
+    "browser_screenshot",
     "job_validate",
     "job_preview",
     "job_extract",
@@ -97,6 +101,11 @@ HINTS = {
     "semantic_review": (True, None, True, True),
     "suggest_context": (True, None, True, False),
     "recipe_try": (True, None, True, False),
+    # A live page in a guarded browser: steps may click, so not read-only (N39).
+    **dict.fromkeys(
+        ("browser_snapshot", "browser_extract", "browser_network", "browser_screenshot"),
+        (False, False, False, True),
+    ),
 }
 
 

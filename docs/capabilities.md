@@ -209,6 +209,15 @@ What Rastro already does, for people and for AI coding agents. Use these before 
 - **Do not build:** asking a model to write records or patch the dataset
 - **Docs:** [mcp.md#agent-in-the-loop](mcp.md#agent-in-the-loop)
 
+### Explore a live page while writing a recipe
+
+- **Use:** MCP `browser_snapshot` (hardened text and outline), `browser_extract` (try a recipe), `browser_network` and `browser_screenshot`, each after optional page steps; `rastro shell JOB` opens a Python shell on a source's parsed page
+- **CLI:** `rastro shell`
+- **MCP:** `browser_snapshot`, `browser_extract`, `browser_network`, `browser_screenshot`
+- **Limits:** One fresh guarded page per call on the job's allowed hosts; steps, screenshots and network need operator grants for MCP; no JavaScript evaluation
+- **Do not build:** driving a separate browser tool outside the job's network policy
+- **Docs:** [mcp.md#browser-tools](mcp.md#browser-tools)
+
 ### Use any AI model (optional)
 
 - **Use:** `rastro.model("ollama:...")`, an OpenAI-compatible endpoint, a command, or a `ModelPort` object; jobs take `[model]`

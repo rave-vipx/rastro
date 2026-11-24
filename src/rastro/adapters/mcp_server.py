@@ -17,7 +17,7 @@ from mcp.server.fastmcp import FastMCP
 from pydantic import Field
 
 from rastro import __version__, mcp_authoring, mcp_lifecycle, mcp_tools
-from rastro.adapters import mcp_agent_tools
+from rastro.adapters import mcp_agent_tools, mcp_browser_tools
 from rastro.adapters.mcp_common import (
     APPLY,
     CREATE,
@@ -60,6 +60,7 @@ def build_server(
     _register_recipes(server, workspace, trust, allow_override_gates)
     _register_authoring(server, workspace)
     mcp_agent_tools.register(server, workspace)
+    mcp_browser_tools.register(server, workspace)  # guarded live page; no evaluate tool
 
     @server.resource("rastro://capabilities", mime_type="application/json")
     def capabilities() -> str:

@@ -50,6 +50,18 @@ RECIPES_CAPABILITIES: tuple[Capability, ...] = (
         docs="docs/mcp.md#agent-in-the-loop",
     ),
     Capability(
+        task="Explore a live page while writing a recipe",
+        use="MCP `browser_snapshot` (hardened text and outline), `browser_extract` (try a "
+        "recipe), `browser_network` and `browser_screenshot`, each after optional page steps; "
+        "`rastro shell JOB` opens a Python shell on a source's parsed page",
+        cli=("rastro shell",),
+        mcp=_names("browser_snapshot browser_extract browser_network browser_screenshot"),
+        limits="One fresh guarded page per call on the job's allowed hosts; steps, screenshots "
+        "and network need operator grants for MCP; no JavaScript evaluation",
+        instead_of="driving a separate browser tool outside the job's network policy",
+        docs="docs/mcp.md#browser-tools",
+    ),
+    Capability(
         task="Use any AI model (optional)",
         use='`rastro.model("ollama:...")`, an OpenAI-compatible endpoint, a command, or a '
         "`ModelPort` object; jobs take `[model]`",

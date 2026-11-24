@@ -49,6 +49,7 @@ from rastro.cli_ops import job_command as ops_job_command
 from rastro.cli_recipe import add_commands as add_recipe_commands
 from rastro.cli_recipe import recipe_command
 from rastro.cli_schedule import add_schedule_command, schedule_words_command, watch_job_command
+from rastro.cli_shell import add_shell_command, shell_command
 from rastro.cli_stats import add_stats_command, stats_command
 from rastro.cli_studio import add_command as add_studio_command
 from rastro.cli_studio import studio_command
@@ -61,7 +62,7 @@ from rastro.domain.job_load import job_load_json_schema
 
 # Commands whose errors are reported as one JSON object on stderr.
 _JSON_ERRORS = frozenset(
-    {"job", "recipe", "suggest", "new", "health", "hub", *AGENT_COMMANDS, *CONFIG_COMMANDS}
+    {"job", "recipe", "suggest", "new", "health", "hub", "shell", *AGENT_COMMANDS, *CONFIG_COMMANDS}
 )
 
 
@@ -94,6 +95,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "prompt-inject the agent; run rastro recipe promote --override-gates yourself)",
     )
     add_trust_arguments(mcp)
+    add_shell_command(subcommands)
 
     job_parser = subcommands.add_parser("job", help="Validate, run, or inspect declarative jobs")
     job_commands = job_parser.add_subparsers(dest="job_command", required=True)
@@ -231,6 +233,7 @@ def _dispatch(args: argparse.Namespace) -> int:
 def _run_command(args: argparse.Namespace) -> int:
     handlers = {
         "mcp": _mcp_command,
+        "shell": shell_command,
         "recipe": recipe_command,
         "dataset": dataset_command,
         "studio": studio_command,

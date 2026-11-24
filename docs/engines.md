@@ -186,17 +186,17 @@ upgrade adds an unmapped feature.
 | Engine feature | Surface | Rastro location or reason | Docs |
 | --- | --- | --- | --- |
 | `mcp.make_request` | `python_api` | `rastro.fetch` | [api.md#adapters-fetch-and-load-your-own-records](api.md#adapters-fetch-and-load-your-own-records) |
-| `mcp.browser_actions` | `planned` | Used internally behind Rastro ports. | - |
-| `mcp.browser_extract` | `planned` | Used internally behind Rastro ports. | - |
-| `mcp.browser_fetch` | `planned` | Used internally behind Rastro ports. | - |
-| `mcp.browser_fetch_once` | `planned` | Used internally behind Rastro ports. | - |
-| `mcp.browser_network_request` | `planned` | Used internally behind Rastro ports. | - |
-| `mcp.browser_network_requests` | `planned` | Used internally behind Rastro ports. | - |
-| `mcp.browser_open` | `planned` | Used internally behind Rastro ports. | - |
-| `mcp.browser_screenshot` | `planned` | Used internally behind Rastro ports. | - |
-| `mcp.close_session` | `planned` | Used internally behind Rastro ports. | - |
-| `mcp.list_sessions` | `planned` | Used internally behind Rastro ports. | - |
+| `mcp.browser_fetch` | `mcp_tool` | `browser_snapshot` | [mcp.md#browser-tools](mcp.md#browser-tools) |
+| `mcp.browser_fetch_once` | `mcp_tool` | `browser_snapshot` | [mcp.md#browser-tools](mcp.md#browser-tools) |
+| `mcp.browser_actions` | `mcp_tool` | `browser_* steps` | [mcp.md#browser-tools](mcp.md#browser-tools) |
+| `mcp.browser_extract` | `mcp_tool` | `browser_extract` | [mcp.md#browser-tools](mcp.md#browser-tools) |
+| `mcp.browser_network_requests` | `mcp_tool` | `browser_network` | [mcp.md#browser-tools](mcp.md#browser-tools) |
+| `mcp.browser_network_request` | `mcp_tool` | `browser_network` | [mcp.md#browser-tools](mcp.md#browser-tools) |
+| `mcp.browser_screenshot` | `mcp_tool` | `browser_screenshot` | [mcp.md#browser-tools](mcp.md#browser-tools) |
 | `mcp.browser_evaluate` | `not_exposed` | Arbitrary JavaScript evaluation is never exposed to agents. | - |
+| `mcp.browser_open` | `not_exposed` | Rastro keeps no browser between agent calls: each call opens one guarded page and closes it. | - |
+| `mcp.close_session` | `not_exposed` | Rastro keeps no browser between agent calls: each call opens one guarded page and closes it. | - |
+| `mcp.list_sessions` | `not_exposed` | Rastro keeps no browser between agent calls: each call opens one guarded page and closes it. | - |
 | `mcp.browser_load_state` | `not_exposed` | Filesystem storage state paths are not exposed to MCP clients. | - |
 | `mcp.browser_save_state` | `not_exposed` | Filesystem storage state paths are not exposed to MCP clients. | - |
 | `mcp.open_request_session` | `not_exposed` | HTTP fetches go through Rastro's pinned policy acquirer. | - |
