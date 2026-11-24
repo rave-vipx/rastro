@@ -1,4 +1,4 @@
-"""N4/N10/N12: registry wiring, JSON jobs, invalid settings, stealth refusal, CLI grant."""
+"""Registry wiring, JSON jobs, invalid settings, stealth refusal, CLI grant."""
 
 import json
 from pathlib import Path
@@ -38,7 +38,7 @@ def _client(root: Path, **options: object):
 
 
 def test_registry_routes_assets_and_init_are_wired(tmp_path: Path) -> None:
-    """N10: create_app serves the registry API and both new modules; studio.js starts them."""
+    """Create_app serves the registry API and both new modules; studio.js starts them."""
     client_cm, token = _client(tmp_path)
     with client_cm as client:
         client.headers["X-Studio-Token"] = token
@@ -55,7 +55,7 @@ def test_registry_routes_assets_and_init_are_wired(tmp_path: Path) -> None:
 
 
 def test_json_job_pagination_and_auto_promote_change_only_that_property(tmp_path: Path) -> None:
-    """N4/N12: the JSON writer keeps every other value; reparsed job differs only there."""
+    """The JSON writer keeps every other value; reparsed job differs only there."""
     import tomllib
 
     path = tmp_path / "job.json"
@@ -100,7 +100,7 @@ def test_json_job_pagination_and_auto_promote_change_only_that_property(tmp_path
     ],
 )
 def test_invalid_pagination_writes_nothing(tmp_path: Path, extra: dict[str, object]) -> None:
-    """N4: bad index, cap, expression, digest or path is refused and the bytes stay."""
+    """Bad index, cap, expression, digest or path is refused and the bytes stay."""
     path = tmp_path / "job.toml"
     path.write_text(JOB)
     client_cm, token = _client(tmp_path)
@@ -114,7 +114,7 @@ def test_invalid_pagination_writes_nothing(tmp_path: Path, extra: dict[str, obje
 
 
 def test_auto_promote_toml_keeps_comments_and_refuses_bad_input(tmp_path: Path) -> None:
-    """N12: off/on round trip edits one key; non-boolean or missing values are refused."""
+    """Off/on round trip edits one key; non-boolean or missing values are refused."""
     path = tmp_path / "job.toml"
     path.write_bytes((JOB + "\n[repair]\nmin_records = 1  # keep\n").encode())
     client_cm, token = _client(tmp_path, allow_stealth=True)
@@ -160,7 +160,7 @@ def test_stealth_job_reaches_the_stealth_renderer_without_a_session_grant(
 def test_cli_passes_the_stealth_grant_to_create_app(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """N12: `rastro studio --allow-stealth` reaches create_app beside the trust options."""
+    """`rastro studio --allow-stealth` reaches create_app beside the trust options."""
     import uvicorn
 
     from rastro.cli import main
@@ -183,7 +183,7 @@ def test_cli_passes_the_stealth_grant_to_create_app(
 
 
 def test_unusual_repair_layout_is_refused_by_the_reparse_check(tmp_path: Path) -> None:
-    """N12: a dotted ``repair.*`` key the line editor cannot place safely is never written."""
+    """A dotted ``repair.*`` key the line editor cannot place safely is never written."""
     path = tmp_path / "job.toml"
     original = JOB.replace("format_version = 1\n", "format_version = 1\nrepair.min_records = 1\n")
     path.write_text(original)
@@ -201,7 +201,7 @@ def test_unusual_repair_layout_is_refused_by_the_reparse_check(tmp_path: Path) -
 
 @pytest.mark.parametrize("repair", ["", "\n[repair]\nmin_records = 1  # keep\n"])
 def test_crlf_job_settings_preserve_newlines_and_comments(tmp_path: Path, repair: str) -> None:
-    """N4/N12: Windows jobs keep CRLF and comments across both settings writers."""
+    """Windows jobs keep CRLF and comments across both settings writers."""
     path = tmp_path / "job.toml"
     original = "# keep job comment\n" + JOB + repair
     path.write_bytes(original.replace("\n", "\r\n").encode())

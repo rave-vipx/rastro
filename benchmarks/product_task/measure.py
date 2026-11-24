@@ -1,4 +1,4 @@
-"""DIFF-002 offline product-task comparison."""
+"""Offline product-task comparison."""
 
 import argparse
 import hashlib

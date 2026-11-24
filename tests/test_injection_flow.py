@@ -1,5 +1,5 @@
-"""Containment of instruction-like page content in repair and MCP payloads (N19, SEC-008,
-REPAIR-002, REPAIR-005, AGENT-002, AI-001). Models are deterministic offline fakes."""
+"""Containment of instruction-like page content in repair and MCP payloads. Models are
+deterministic offline fakes."""
 
 import json
 from datetime import UTC, datetime

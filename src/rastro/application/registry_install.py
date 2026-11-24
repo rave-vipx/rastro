@@ -1,4 +1,4 @@
-"""Install gates shared by the local and the URL registry (HUB-003, HUB-005, HUB-006, N10).
+"""Install gates shared by the local and the URL registry.
 
 A package directory is untrusted bytes until every gate passes; the result is a candidate.
 """

@@ -1,4 +1,4 @@
-"""Bounded JSON response parsing and discovery with RFC 6901 pointers (INT-002)."""
+"""Bounded JSON response parsing and discovery with RFC 6901 pointers."""
 
 from __future__ import annotations
 

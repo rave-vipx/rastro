@@ -1,4 +1,4 @@
-"""SCR-003, SEC-005: SDK consent parity and render-mode routing for undeclared URLs."""
+"""SDK consent parity and render-mode routing for undeclared URLs."""
 
 from unittest.mock import AsyncMock
 

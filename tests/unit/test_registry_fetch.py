@@ -1,4 +1,4 @@
-"""N10, HUB-002..HUB-006, SEC-001, SEC-005, SEC-008: install and search over a registry URL.
+"""Install and search over a registry URL.
 
 A fake transport serves a copy of the synthetic ``examples/registry`` directory; the real
 ``WebAcquirer`` policy (SSRF, pinning, redirects, robots, size caps) runs in front of it.
@@ -329,7 +329,7 @@ def _robots_requests(site: Site) -> int:
 def test_one_install_fetches_robots_txt_once(served: Path, tmp_path: Path) -> None:
     site = Site(served)
     _install(site, tmp_path)
-    assert len(site.requests) == 7  # six package files and one robots.txt (N10, SEC-008)
+    assert len(site.requests) == 7  # six package files and one robots.txt
     assert _robots_requests(site) == 1
 
 

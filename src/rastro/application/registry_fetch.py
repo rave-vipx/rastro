@@ -1,4 +1,4 @@
-"""Search and install from a registry URL (HUB-002..HUB-006, SEC-001, SEC-005, SEC-008).
+"""Search and install from a registry URL.
 
 The bytes come through ``WebAcquirer`` (https only, public addresses unless the operator
 granted otherwise, DNS pinning, every redirect re-checked, robots enforced). They are written

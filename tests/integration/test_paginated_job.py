@@ -1,4 +1,4 @@
-"""Offline paginated agenda loading, retention and egress (SYNC-002, SEC-008)."""
+"""Offline paginated agenda loading, retention and egress."""
 
 import asyncio
 from pathlib import Path

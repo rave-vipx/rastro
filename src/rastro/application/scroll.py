@@ -1,4 +1,4 @@
-"""Bounded scroll: re-extract after each scroll step until nothing new appears (N9, ADR 0033).
+"""Bounded scroll: re-extract after each scroll step until nothing new appears (ADR 0033).
 
 Scroll runs through the source's open browser context (``browser_sessions``), spends the same
 request budget as pagination, and never changes what the operator granted: it does not enable

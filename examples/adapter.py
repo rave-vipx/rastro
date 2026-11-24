@@ -1,4 +1,4 @@
-"""An app adapter on Rastro's public API only: fetch, extract, load your own records (N15).
+"""An app adapter on Rastro's public API only: fetch, extract, load your own records.
 
 Run with `uv run python examples/adapter.py`. All data is synthetic and nothing touches the
 network: the detail page is inline HTML (in production it is `rastro.fetch(url).body`), and

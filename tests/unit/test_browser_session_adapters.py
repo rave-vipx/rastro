@@ -1,4 +1,4 @@
-"""N2, N9, SEC-005/008: the Chromium and Scrapling sessions, against fake drivers (no browser)."""
+"""The Chromium and Scrapling sessions, against fake drivers (no browser)."""
 
 from contextlib import asynccontextmanager
 from types import SimpleNamespace

@@ -1,4 +1,4 @@
-"""Registry domain models, trust indicators and semver ordering (HUB-002..HUB-006)."""
+"""Registry domain models, trust indicators and semver ordering."""
 
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ class RegistryError(RecipeBundleError):
 
 
 class TrustIndicators(Contract):
-    """Reproducible trust indicators computed from offline verification (HUB-006)."""
+    """Reproducible trust indicators computed from offline verification."""
 
     replay_verified: bool
     days_since_verified: int = Field(ge=0)
@@ -40,7 +40,7 @@ class TrustIndicators(Contract):
 
 
 class RegistryEntry(Contract):
-    """One published recipe package entry in ``<registry>/index.json`` (HUB-003, HUB-006)."""
+    """One published recipe package entry in ``<registry>/index.json``."""
 
     id: str = Field(pattern=BUNDLE_ID_PATTERN)
     version: str = Field(pattern=SEMVER_PATTERN)
@@ -64,7 +64,7 @@ def compute_trust(
     has_sample: bool,
     format_version: Literal[1, 2],
 ) -> TrustIndicators:
-    """Compute trust indicators from current replay result and verification date (HUB-006)."""
+    """Compute trust indicators from current replay result and verification date."""
     return TrustIndicators(
         replay_verified=replay_verified,
         days_since_verified=max(0, (today - last_verified).days),
@@ -138,7 +138,7 @@ def source_matches(url: str, patterns: tuple[str, ...]) -> bool:
 
 
 def check_compatibility(manifest: BundleManifest, *, engine_version: str) -> None:
-    """Refuse a package that needs a newer engine or does not cover its own source (HUB-002)."""
+    """Refuse a package that needs a newer engine or does not cover its own source."""
     compatibility = manifest.compatibility
     if compatibility is None:
         return

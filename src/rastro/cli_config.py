@@ -1,5 +1,5 @@
 """`rastro config` and `rastro job template`: every configurable point, generated from code
-(N18, AGENT-001). Output goes to stdout; nothing is written."""
+. Output goes to stdout; nothing is written."""
 
 from __future__ import annotations
 

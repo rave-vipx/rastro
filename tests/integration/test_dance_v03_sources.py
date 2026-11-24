@@ -1,4 +1,4 @@
-"""Offline proof that one job reads three venue pages (SYNC-002, DATA-004/005)."""
+"""Offline proof that one job reads three venue pages."""
 
 import json
 import shutil

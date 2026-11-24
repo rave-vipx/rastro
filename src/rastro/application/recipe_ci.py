@@ -1,6 +1,6 @@
-"""Offline candidate CI, independent of persistence and activation (REPAIR-002/004/005).
+"""Offline candidate CI, independent of persistence and activation.
 
-Containment (N19): a candidate whose current values, or the success samples the semantic
+Containment: a candidate whose current values, or the success samples the semantic
 judge would read, look like instructions is never promoted automatically. It is held in
 quarantine with the reason ``instruction_like_content``; an operator can still promote it
 with a reason and ``--override-gates``.
@@ -144,7 +144,7 @@ def _sample_rates(schema: type[BaseModel], fixtures: Sequence[FixtureBundle]) ->
     An optional value may thin out (one card in five without a stock label scores 0.8)
     but losing it in half the records stays below the completeness threshold.
     Required fields keep the strict default rate of 1.0. Without samples, optional fields
-    are not counted (QUAL-006).
+    are not counted.
     """
     rows = [r.data for fixture in fixtures for r in fixture.expected.records]
     return {

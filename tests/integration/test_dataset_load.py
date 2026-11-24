@@ -1,4 +1,4 @@
-"""Load/export boundaries and reports: DATA-001/003, SYNC-006/008, AGENT-003."""
+"""Load/export boundaries and reports."""
 
 import json
 import shutil
@@ -266,7 +266,7 @@ def test_held_source_reported_stale_with_consistency_failed_and_exit_3(sample, c
 
 @pytest.fixture
 def price_job(tmp_path):
-    """Synthetic numeric history for QUAL-005 and DRIFT-002 regression proofs."""
+    """Synthetic numeric history for regression proofs."""
     path = tmp_path / "job.json"
     config = {
         "format_version": 1,
@@ -352,7 +352,7 @@ def test_held_load_cannot_become_drift_baseline(price_job, capsys):
 
 
 def test_partial_load_reports_rejected_candidates(sample):
-    """QUAL-006: three valid candidates and one rejection give validity 0.75."""
+    """Three valid candidates and one rejection give validity 0.75."""
     job = load_job(sample / "job.toml")
     report = run_job(job, base_dir=sample)
     source = report.results[0]
@@ -394,7 +394,7 @@ def test_venue_title_trap_extracts_venue_and_is_held(tmp_path, capsys):
 
 
 def test_repair_suite_readme_matches_measured_counts():
-    """DIFF-002: published claims must match the measured artifact."""
+    """Published claims must match the measured artifact."""
     folder = Path("benchmarks/repair_suite")
     counts = json.loads((folder / "results.json").read_text())["counts"]
     readme = (folder / "README.md").read_text()

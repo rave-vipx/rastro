@@ -1,4 +1,4 @@
-"""Context-aware normalization before job field validation (DATA-005, JOB-002)."""
+"""Context-aware normalization before job field validation."""
 
 import re
 from datetime import datetime

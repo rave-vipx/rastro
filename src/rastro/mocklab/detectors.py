@@ -1,4 +1,4 @@
-"""Detect credential, token and personal-data patterns in text bound for artifacts (MOCK-005).
+"""Detect credential, token and personal-data patterns in text bound for artifacts.
 
 Detection is a second line of defense: the sanitizer replaces all unextracted text
 and every attribute token the recipe does not name. Detectors guard the values Mock

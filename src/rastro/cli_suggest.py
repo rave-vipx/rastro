@@ -1,4 +1,4 @@
-"""`rastro suggest` and `rastro new`: recipes and jobs from examples, sites or a goal (JOB-001)."""
+"""`rastro suggest` and `rastro new`: recipes and jobs from examples, sites or a goal."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""PostgreSQL connection boundary and forward-only schema (DATA-001, SEC-011)."""
+"""PostgreSQL connection boundary and forward-only schema."""
 
 from __future__ import annotations
 

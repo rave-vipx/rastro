@@ -1,4 +1,4 @@
-"""Engine browser tools for an agent building a recipe (N39, ADR 0035, ADR 0037).
+"""Engine browser tools for an agent building a recipe (ADR 0035, ADR 0037).
 
 Each tool opens the job source's page in one fresh guarded browser session, replays the
 caller's page steps from the closed vocabulary (click, type, select, scroll, wait, follow),

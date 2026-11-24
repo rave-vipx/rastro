@@ -1,4 +1,4 @@
-"""Real relocation, historical replay and lifecycle gates (REPAIR-001/002/004)."""
+"""Real relocation, historical replay and lifecycle gates."""
 
 from pathlib import Path
 

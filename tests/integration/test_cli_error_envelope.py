@@ -1,4 +1,4 @@
-"""AGENT-001 / DATA-003: every CLI error is one JSON envelope with error, message and location."""
+"""Every CLI error is one JSON envelope with error, message and location."""
 
 import json
 import sys
@@ -76,7 +76,7 @@ def test_cli_reports_missing_extras_with_the_helper(capsys, monkeypatch, argv, m
 
 
 def test_job_load_names_a_missing_dataset_folder(tmp_path, capsys):
-    """DATA-001: a dataset folder that does not exist is named, with its TOML key."""
+    """A dataset folder that does not exist is named, with its TOML key."""
     (tmp_path / "page.html").write_text("<ul><li><h3>A</h3></li><li><h3>B</h3></li></ul>")
     job = tmp_path / "job.toml"
     job.write_text(

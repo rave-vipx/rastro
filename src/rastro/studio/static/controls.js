@@ -1,14 +1,16 @@
-// N4/N5/N12: next-page settings, the job's auto-promote switch, the session stealth grant,
+// Next-page settings, the job's auto-promote switch, the session stealth grant,
 // readable alerts and the observed operation line. Text is always set as text content.
 import { $, api, bind, el, requireFile, show, state } from "./dom.js";
 import { t } from "./i18n.js";
 
 import { fillBounds, initBounds } from "./bounds.js";
+import { initConnections, refreshConnections } from "./connections.js";
 
 let recipes = [];
 let paginationDefault;
 
 export function fillControls(data) {
+  refreshConnections();
   fillBounds(data.bounds);
   paginationDefault = data.bounds.limits.pagination.max_pages.default;
   $("auto-promote").checked = data.auto_promote === true;
@@ -89,6 +91,7 @@ async function saveAutoPromote(enabled) {
 
 function showStealth(session) {
   const input = $("allow-stealth");
+  if (!input) return;
   input.checked = session.allow_stealth;
   input.dataset.locked = String(session.locked_by_operator);
   input.disabled = session.locked_by_operator;
@@ -102,10 +105,11 @@ async function saveStealth(enabled) {
 
 export async function initControls() {
   initBounds();
+  initConnections();
   showStealth(await api("/api/session"));
-  if ($("allow-stealth").disabled) show("controls-status", t("switch.stealthLocked"), "muted");
+  if ($("allow-stealth")?.disabled) show("controls-status", t("switch.stealthLocked"), "muted");
   $("pagination-source").addEventListener("change", selectRecipe);
   bind("save-pagination", "controls-status", savePagination);
   $("auto-promote").addEventListener("change", () => toggle($("auto-promote"), saveAutoPromote, "auto-promote-status"));
-  $("allow-stealth").addEventListener("change", () => toggle($("allow-stealth"), saveStealth, "controls-status"));
+  $("allow-stealth")?.addEventListener("change", () => toggle($("allow-stealth"), saveStealth, "controls-status"));
 }

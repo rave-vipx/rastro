@@ -1,4 +1,4 @@
-"""Per-source metrics, aggregates and `rastro job stats` (OBS-003..007, SYNC-007 report)."""
+"""Per-source metrics, aggregates and `rastro job stats`."""
 
 import json
 from datetime import timedelta
@@ -134,7 +134,7 @@ def test_aggregates_latency_rates_freshness_and_coverage(job):
     )
     assert [d["day"] for d in group["trend"]] == ["2026-11-15"]
     assert group["trend"][0]["runs"] == 3
-    assert group["observed_interval_seconds"] == 3602.0  # SYNC-007: report only
+    assert group["observed_interval_seconds"] == 3602.0  # report only
 
 
 def test_groups_by_host_strategy_day_and_since_window(job):

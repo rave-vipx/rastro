@@ -1,8 +1,8 @@
-"""Outline a page's repeated structure for model prompts (AI-001, INT-002).
+"""Outline a page's repeated structure for model prompts.
 
 Selectors are built only from safe tag names and stable class tokens (as in suggestion);
 texts and attribute values are clipped and stay untrusted. Content a person cannot see
-(hidden elements, comments, templates) is dropped first (N19). Deterministic and offline.
+(hidden elements, comments, templates) is dropped first. Deterministic and offline.
 """
 
 from __future__ import annotations

@@ -1,5 +1,5 @@
 # ruff: noqa: E501
-"""Studio guided create: the words and shapes the wizard builds from route data (N1, N2)."""
+"""Studio guided create: the words and shapes the wizard builds from route data."""
 
 from __future__ import annotations
 

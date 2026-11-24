@@ -1,4 +1,4 @@
-"""N2, N9, SEC-001/005/008: one browser context per source, and bounded scroll (fake browser)."""
+"""One browser context per source, and bounded scroll (fake browser)."""
 
 from contextlib import asynccontextmanager
 from pathlib import Path

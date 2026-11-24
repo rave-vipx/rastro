@@ -1,4 +1,4 @@
-"""Example-driven recipe suggestions: notes, results and example matching (INT-002, DISC-003).
+"""Example-driven recipe suggestions: notes, results and example matching.
 
 A suggestion is a deterministic proposal: a CSS recipe built from a saved page and a few
 example values, plus the preview of running it through the normal extraction pipeline.

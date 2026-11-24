@@ -1,4 +1,4 @@
-"""N10, N12, HUB-002..006: guarded registry operations never promote or grant trust."""
+"""Guarded registry operations never promote or grant trust."""
 
 from collections.abc import Iterator
 from pathlib import Path

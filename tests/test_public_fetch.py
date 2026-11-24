@@ -1,5 +1,4 @@
-"""rastro.fetch: one URL under the job acquirer's policy, explicit outcomes (N15; SEC-001,
-SEC-003, SEC-008).
+"""rastro.fetch: one URL under the job acquirer's policy, explicit outcomes.
 
 Offline: the real ``WebAcquirer`` runs against a fake transport and resolver, so robots.txt,
 the host allowlist and the byte bound are exercised exactly as for ``rastro.scrape`` URLs.

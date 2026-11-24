@@ -1,4 +1,4 @@
-"""Decide what a fixture may keep: only values the recipe extracts (MOCK-005).
+"""Decide what a fixture may keep: only values the recipe extracts.
 
 The plan is built from parser candidates, so it covers every field the recipe and
 its fallbacks read, including candidates later rejected by validation. Extracted

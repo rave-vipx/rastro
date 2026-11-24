@@ -1,4 +1,4 @@
-"""MCP tools run the offline v0.3 job through the real protocol (AGENT-002, AGENT-003, P-008)."""
+"""MCP tools run the offline v0.3 job through the real protocol."""
 
 import json
 import shutil
@@ -78,7 +78,7 @@ DESTRUCTIVE = {
     "recipe_apply",
     "recipe_propose",
 }
-# (readOnlyHint, destructiveHint, idempotentHint, openWorldHint) per tool (AGENT-002).
+# (readOnlyHint, destructiveHint, idempotentHint, openWorldHint) per tool.
 HINTS = {
     "job_validate": (True, None, True, False),
     # Writes nothing, but a job can fetch URLs or call a model (audit): not read-only.
@@ -101,7 +101,7 @@ HINTS = {
     "semantic_review": (True, None, True, True),
     "suggest_context": (True, None, True, False),
     "recipe_try": (True, None, True, False),
-    # A live page in a guarded browser: steps may click, so not read-only (N39).
+    # A live page in a guarded browser: steps may click, so not read-only.
     **dict.fromkeys(
         ("browser_snapshot", "browser_extract", "browser_network", "browser_screenshot"),
         (False, False, False, True),
@@ -111,7 +111,7 @@ HINTS = {
 
 @pytest.mark.asyncio
 async def test_lists_every_tool_with_annotations_and_instructions(workspace: Path) -> None:
-    """AGENT-002: names, hints and the server workflow text are what clients rely on."""
+    """Names, hints and the server workflow text are what clients rely on."""
     async with create_connected_server_and_client_session(
         build_server(workspace)._mcp_server
     ) as client:
@@ -150,7 +150,7 @@ async def test_lists_every_tool_with_annotations_and_instructions(workspace: Pat
 
 @pytest.mark.asyncio
 async def test_deprecated_job_run_still_loads_the_dataset(workspace: Path) -> None:
-    """AGENT-003: the old name keeps working for one minor release."""
+    """The old name keeps working for one minor release."""
     failed, loaded = await _call(workspace, "job_run", path="jobs/job.toml")
     assert not failed and loaded["sources"]
     assert (workspace / "jobs" / "agenda.sqlite").exists()
@@ -187,7 +187,7 @@ async def test_paths_outside_the_workspace_are_rejected(workspace: Path, path: s
 @pytest.mark.asyncio
 @pytest.mark.parametrize("path", ["/etc/passwd", "C:\\Windows\\job.toml", "C:/x.toml"])
 async def test_absolute_paths_are_named_as_such(workspace: Path, path: str) -> None:
-    """AGENT-002: an absolute path is refused as absolute, not as a symlink."""
+    """An absolute path is refused as absolute, not as a symlink."""
     failed, text = await _call(workspace, "job_validate", path=path)
     assert failed
     error = json.loads(text[text.index("{") :])
@@ -196,7 +196,7 @@ async def test_absolute_paths_are_named_as_such(workspace: Path, path: str) -> N
 
 @pytest.mark.asyncio
 async def test_preview_of_a_memory_job_writes_nothing(workspace: Path) -> None:
-    """DATA-002, AGENT-002: job_preview works for recipe_memory jobs and creates no store."""
+    """Job_preview works for recipe_memory jobs and creates no store."""
     job = workspace / "jobs" / "job.toml"
     job.write_text(
         job.read_text(encoding="utf-8").replace(
@@ -268,7 +268,7 @@ _JOB_SUMMARY = {
 
 
 def test_bounded_preview_caps_records_and_long_values() -> None:
-    """AGENT-002: agent and Studio previews are bounded and say when they were cut."""
+    """Agent and Studio previews are bounded and say when they were cut."""
     from rastro.application.job_preview import bounded_preview
     from rastro.domain.job_dataset import JobPreview
 
@@ -305,7 +305,7 @@ def test_bounded_preview_caps_records_and_long_values() -> None:
 
 
 def test_bounded_caps_dict_size_at_every_depth() -> None:
-    """AGENT-002: wide objects are cut like long lists, including nested ones."""
+    """Wide objects are cut like long lists, including nested ones."""
     from rastro.mcp_tools import bounded
 
     wide = {f"k{i}": i for i in range(150)}
@@ -320,7 +320,7 @@ def test_bounded_caps_dict_size_at_every_depth() -> None:
 async def test_dataset_records_values_are_bounded(
     workspace: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """AGENT-002: long stored values are cut and flagged."""
+    """Long stored values are cut and flagged."""
     await _call(workspace, "job_load", path="jobs/job.toml")
     from rastro import mcp_tools
 

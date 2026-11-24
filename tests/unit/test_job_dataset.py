@@ -1,4 +1,4 @@
-"""`[dataset]` job block contract (DATA-002, JOB-002)."""
+"""`[dataset]` job block contract."""
 
 import json
 from typing import Any

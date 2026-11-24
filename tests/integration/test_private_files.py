@@ -1,4 +1,4 @@
-"""Dataset and recipe-memory files are private to the owner (QUAL-006, SECURITY.md)."""
+"""Dataset and recipe-memory files are private to the owner (SECURITY.md)."""
 
 import os
 import stat

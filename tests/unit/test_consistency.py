@@ -1,4 +1,4 @@
-"""Semantic consistency rules and the three separate indicators (QUAL-005, QUAL-006)."""
+"""Semantic consistency rules and the three separate indicators."""
 
 from __future__ import annotations
 
@@ -165,7 +165,7 @@ def test_missing_store_has_no_history_and_does_not_create_database(tmp_path) -> 
 
 
 def test_nearly_empty_optional_field_still_lowers_completeness():
-    """QUAL-006: an optional field the samples filled 80% of the time but the candidate fills
+    """An optional field the samples filled 80% of the time but the candidate fills
     in 1 of 20 records scores 1/16, so completeness stays below the default threshold."""
     from datetime import UTC, datetime
 

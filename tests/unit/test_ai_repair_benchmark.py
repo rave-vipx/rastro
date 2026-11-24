@@ -1,4 +1,4 @@
-"""AI repair benchmark scoring and offline execution (QUAL-001, REPAIR-001-005, AI-001).
+"""AI repair benchmark scoring and offline execution.
 
 The scripted oracle is a fake ModelPort: these tests check the harness and Rastro's
 gates, never the quality of a real model.
@@ -114,7 +114,7 @@ def test_oracle_judges_candidate_values_truthfully_or_adversarially() -> None:
 
 @pytest.mark.parametrize("mode", ["wrong_recipe", "adversarial"])
 def test_a_wrong_meaning_proposal_is_rejected_before_any_judge(mode: str) -> None:
-    """REPAIR-002, QUAL-005: value checks reject swapped meanings; an approve-all judge
+    """Value checks reject swapped meanings; an approve-all judge
     cannot wave them through."""
     oracle = ScriptedOracle(CASES, mode)  # type: ignore[arg-type]
     verdict = run_rastro(CASE["cards-semantic_swap"], provider=PLACEHOLDER, fake=oracle)

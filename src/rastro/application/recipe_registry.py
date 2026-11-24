@@ -1,4 +1,4 @@
-"""Git-directory recipe registry: publish, search and install packages (HUB-003..HUB-006)."""
+"""Git-directory recipe registry: publish, search and install packages."""
 
 from __future__ import annotations
 

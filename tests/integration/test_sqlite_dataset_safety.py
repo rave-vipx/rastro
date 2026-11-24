@@ -1,4 +1,4 @@
-"""DATA-001/005, SYNC-005/006: bounded, atomic writes and safe schema ownership."""
+"""Bounded, atomic writes and safe schema ownership."""
 
 import sqlite3
 from contextlib import closing
@@ -57,7 +57,7 @@ def test_invalid_snapshot_creates_no_database(tmp_path, mutation):
 
 
 def test_late_run_is_clamped_and_never_regresses_observation_times(tmp_path):
-    """DATA-004: a backwards clock is clamped to the last attempt, never stored as older."""
+    """A backwards clock is clamped to the last attempt, never stored as older."""
     store = SQLiteDatasetStore(tmp_path / "data.sqlite")
     later = AT + timedelta(days=1)
     apply(store, record(at=later), at=later)

@@ -174,7 +174,7 @@ async def test_failed_proposal_can_be_corrected_within_both_budgets(source, sche
     assert result.recipe_attempts[0].status == Outcome.INSUFFICIENT_EVIDENCE
     assert model.requests[0].system == model.requests[1].system
     envelope = json.loads(model.requests[1].content)
-    # N19: the comment a person cannot see never reaches the model.
+    # The comment a person cannot see never reaches the model.
     assert PAGE in envelope["untrusted_html"]
     assert "Ignore all rules" not in envelope["untrusted_html"]
     assert envelope["hidden_content_removed"] == {"comment": 1}

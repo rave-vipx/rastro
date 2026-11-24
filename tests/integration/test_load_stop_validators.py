@@ -1,4 +1,4 @@
-"""A stopped load commits validators only for the sources it ran (SCHED-004, SYNC-004)."""
+"""A stopped load commits validators only for the sources it ran."""
 
 from __future__ import annotations
 

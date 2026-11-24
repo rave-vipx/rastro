@@ -1,6 +1,5 @@
 """Job repair with a model: escalation after relocation, history unions, semantic gate.
 
-Requirements: REPAIR-001, REPAIR-002, REPAIR-005, QUAL-005, QUAL-006, AI-001. The models
 are deterministic fakes; nothing leaves the process.
 """
 
@@ -213,7 +212,7 @@ def make_drift_job(tmp_path, old, new, job=JOB):
 
 
 def test_wrong_model_values_are_rejected_before_an_approving_judge(tmp_path):
-    """REPAIR-002, QUAL-005: the judge can only veto; deterministic value checks gate first."""
+    """The judge can only veto; deterministic value checks gate first."""
     model = ProposingModel(SWAPPED)
     job = make_drift_job(tmp_path, OLD2, NEW2, JOB2)
     (source,) = rastro.repair_job_source(job, 1, model=model).sources
@@ -226,7 +225,7 @@ def test_wrong_model_values_are_rejected_before_an_approving_judge(tmp_path):
 
 
 def test_honest_model_still_repairs_with_known_good_values(tmp_path):
-    """REPAIR-001, QUAL-005: a right proposal passes the value checks and the judge."""
+    """A right proposal passes the value checks and the judge."""
     model = ProposingModel(RIGHT)
     job = make_drift_job(tmp_path, OLD2, NEW2, JOB2)
     (source,) = rastro.repair_job_source(job, 1, model=model).sources
@@ -238,7 +237,7 @@ RENAMED = '<article class="job" data-id="job-{n}"><h2 class="title">Role {n}</h2
 
 @pytest.mark.parametrize(("verdict", "promoted"), [("match", True), ("mismatch", False)])
 def test_deterministic_repair_is_judged_once_and_can_be_vetoed(tmp_path, verdict, promoted):
-    """QUAL-005: a relocated candidate makes no proposal call, one judge call; the judge
+    """A relocated candidate makes no proposal call, one judge call; the judge
     can veto it but never force it."""
     model = FakeModel(verdict)
     job = make_drift_job(tmp_path, OLD, RENAMED)
@@ -249,13 +248,13 @@ def test_deterministic_repair_is_judged_once_and_can_be_vetoed(tmp_path, verdict
 
 
 def test_deterministic_repair_without_a_model_makes_no_calls(tmp_path):
-    """QUAL-005: no model configured, deterministic gates only."""
+    """No model configured, deterministic gates only."""
     (source,) = rastro.repair_job_source(make_drift_job(tmp_path, OLD, RENAMED), 1).sources
     assert source.promoted_version is not None and not source.inference_calls
 
 
 def test_an_agent_proposal_with_swapped_values_is_rejected(tmp_path):
-    """REPAIR-002, AGENT-002: outside-agent proposals meet the same value checks."""
+    """Outside-agent proposals meet the same value checks."""
     from rastro.application.agent_repair import propose_job_recipe
 
     job = make_drift_job(tmp_path, OLD2, NEW2, JOB2)

@@ -10,9 +10,7 @@ talks to all of them through one interface, `ModelPort`, and builds one with
 recipe (selectors and field mappings) or a judgement about one, never the records. Every
 proposal is untrusted. Rastro parses it strictly, runs it on the real page, validates the
 results against your schema and puts it through the same gates as a deterministic
-candidate. Requirements: **AI-001–005, INT-002, REPAIR-001–005, QUAL-005/006, AGENT-002,
-QUAL-001, P-001**.
-
+candidate. 
 What to expect, measured on the benchmark below:
 
 - With a model that proposes the right recipe and judges honestly, Rastro repaired

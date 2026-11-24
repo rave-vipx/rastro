@@ -1,4 +1,4 @@
-"""Where operator trust comes from: environment, CLI flags, or an SDK call (SEC-004/005).
+"""Where operator trust comes from: environment, CLI flags, or an SDK call.
 
 Sources combine: ``RASTRO_ALLOW_REMOTE=1`` (``1``, ``true`` or ``yes``, as every
 ``RASTRO_ALLOW_*`` flag; see :func:`env_flag`) and ``RASTRO_ALLOWED_ENV="A,B"`` in the
@@ -6,7 +6,7 @@ environment; a process-wide value set by the CLI (``--allow-remote``, ``--allow-
 a scoped value set by SDK keywords such as ``run_job_file(..., allow_remote=True)``.
 The network widenings (``--allow-private-network``, ``--allow-port``, ``--ignore-robots`` and
 ``RASTRO_ALLOW_PRIVATE_NETWORK``, ``RASTRO_ALLOWED_PORTS``, ``RASTRO_IGNORE_ROBOTS``) come the
-same three ways and can never be set from a job file (SEC-001/002/003).
+same three ways and can never be set from a job file.
 Capability grants (``--allow-capability``, ``--allow-untrusted ORIGIN:NAME`` and
 ``RASTRO_ALLOW_CAPABILITIES``, ``RASTRO_ALLOW_UNTRUSTED``) come from the CLI or the
 environment. The input origin of the job being run is set by its entry point with

@@ -1,4 +1,4 @@
-"""Semantic judge contract and model choice resolution (QUAL-005, QUAL-006, AI-001, P-001)."""
+"""Semantic judge contract and model choice resolution."""
 
 import asyncio
 import json
@@ -137,7 +137,7 @@ def test_resolve_model_accepts_any_port_and_rejects_other_objects(monkeypatch):
 
 
 def test_response_schema_refs_resolve_from_its_root():
-    """QUAL-005, AI-005: schema-enforcing providers (Ollama, strict APIs) resolve every
+    """Schema-enforcing providers (Ollama, strict APIs) resolve every
     ``$ref`` from the root; a nested ``$defs`` made them reject each judge call."""
     schema = judge_request(Offer, ("title", "city"), [], []).output_schema
     refs = [prop["properties"]["verdict"]["$ref"] for prop in schema["properties"].values()]

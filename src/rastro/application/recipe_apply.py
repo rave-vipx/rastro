@@ -1,4 +1,4 @@
-"""Write a source's serving recipe from ``recipe_memory`` back into its job file (REC-006).
+"""Write a source's serving recipe from ``recipe_memory`` back into its job file.
 
 The rest of the file is kept: TOML files are edited in place (see ``recipe_toml``), JSON
 files are rewritten with the same data. The result is reparsed and must equal the old

@@ -1,4 +1,4 @@
-"""Propose extraction fields and selectors from observed repeated structures (DISC-003, P-002)."""
+"""Propose extraction fields and selectors from observed repeated structures."""
 
 from __future__ import annotations
 

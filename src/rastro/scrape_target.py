@@ -1,4 +1,4 @@
-"""Turn a ``rastro.scrape`` target into one bounded document (INT-001, SEC-001, SEC-005).
+"""Turn a ``rastro.scrape`` target into one bounded document.
 
 A target is HTML text, a ``pathlib.Path`` or an ``http(s)://`` URL. Files are read
 with a byte bound and never through a symlink. A URL is fetched once, under a

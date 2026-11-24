@@ -1,4 +1,4 @@
-"""Prompt envelopes that small models can follow (AI-001-004, REPAIR-001).
+"""Prompt envelopes that small models can follow.
 
 Trusted parts: the fixed instructions, field names, and each field's type and
 ``Field(description=...)`` from the caller's schema, and the recipe under repair.

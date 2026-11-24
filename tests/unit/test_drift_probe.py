@@ -1,4 +1,4 @@
-"""Measured counts and content-free fingerprints (DRIFT-001, SEC-004/008)."""
+"""Measured counts and content-free fingerprints."""
 
 import pytest
 

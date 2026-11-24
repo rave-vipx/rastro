@@ -1,4 +1,4 @@
-"""REPAIR-002/004/005: measured CI gates, with no serving side effects."""
+"""Measured CI gates, with no serving side effects."""
 
 from datetime import UTC, datetime
 from unittest.mock import patch
@@ -85,7 +85,7 @@ def test_ambiguous_evaluation_is_quarantined():
         limits=Limits(),
         observed_at=datetime(2026, 11, 7, tzinfo=UTC),
     )
-    # REPAIR-005: ambiguity never hides a hard failure; the evaluator rejects first.
+    # Ambiguity never hides a hard failure; the evaluator rejects first.
     assert evaluation.decision == "reject"
 
 

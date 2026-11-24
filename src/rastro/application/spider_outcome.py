@@ -1,4 +1,4 @@
-"""What became of one spider page, from its result's status and issue codes (N3)."""
+"""What became of one spider page, from its result's status and issue codes."""
 
 from __future__ import annotations
 

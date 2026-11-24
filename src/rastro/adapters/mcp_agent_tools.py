@@ -1,5 +1,5 @@
 """Agent-in-the-loop MCP tools: the client's model proposes and judges, Rastro verifies
-(AGENT-002, AGENT-003, REPAIR-001-005, INT-001).
+.
 
 Read-only tools that may read a job's URL sources declare ``openWorldHint``. recipe_propose
 stores a candidate and never promotes (the calling agent is the semantic judge), but it can

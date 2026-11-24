@@ -125,7 +125,7 @@ def forbid_native_network(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def pin_observation_clock():
-    """QUAL-005, SYNC-008: November samples retain semantics and ordered observations."""
+    """November samples retain semantics and ordered observations."""
     from contextlib import ExitStack
 
     observed = datetime(2026, 11, 7, 12, tzinfo=UTC)

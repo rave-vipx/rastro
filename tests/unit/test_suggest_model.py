@@ -1,4 +1,4 @@
-"""rastro.suggest with a model: optional examples, same verification (INT-002, AI-001).
+"""rastro.suggest with a model: optional examples, same verification.
 
 The models are deterministic fakes; nothing leaves the process.
 """

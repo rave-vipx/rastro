@@ -1,4 +1,4 @@
-"""Sitemap parser and the sitemap seed policy (N16; SEC-001, SEC-008)."""
+"""Sitemap parser and the sitemap seed policy."""
 
 import gzip
 
@@ -85,7 +85,7 @@ def test_sitemap_seed_needs_no_link_source_but_a_page_seed_does():
 
 
 def test_parser_captures_lastmod_in_any_child_order_and_ignores_overlong_lastmod():
-    """N16: <lastmod> is paired with <loc> for both urlset and sitemapindex."""
+    """<lastmod> is paired with <loc> for both urlset and sitemapindex."""
     xml = (
         b"<urlset>"
         b"<url><lastmod>2026-05-01</lastmod><loc>/a</loc></url>"
@@ -110,7 +110,7 @@ def test_parser_captures_lastmod_in_any_child_order_and_ignores_overlong_lastmod
 
 
 def test_order_entries_supports_document_reverse_and_lastmod():
-    """N16, MOCK-006: lastmod orders newest UTC first; ties and undated keep document order."""
+    """Lastmod orders newest UTC first; ties and undated keep document order."""
     entries = (
         SitemapEntry("/undated-1", None),
         SitemapEntry("/older", "2026-05-01"),
@@ -148,7 +148,7 @@ def test_order_entries_supports_document_reverse_and_lastmod():
     ],
 )
 def test_unknown_seed_order_suggests_the_closest_valid_value(bad, expected):
-    """N16, AGENT-001: typos in seed_order are refused with the closest valid option."""
+    """Typos in seed_order are refused with the closest valid option."""
     with pytest.raises(ValidationError) as caught:
         SpiderPolicy(mode="spider", seed="sitemap", seed_order=bad)
     message = caught.value.errors(include_url=False, include_input=False)[0]["msg"]
@@ -159,7 +159,7 @@ def test_unknown_seed_order_suggests_the_closest_valid_value(bad, expected):
 
 
 def test_seed_order_and_allow_pattern_validation():
-    """N16, SEC-001: seed_order needs seed='sitemap' and allow_pattern rejects ReDoS features."""
+    """Seed_order needs seed='sitemap' and allow_pattern rejects ReDoS features."""
     assert SpiderPolicy(mode="spider", seed="sitemap").seed_order == "document"
     with pytest.raises(ValidationError, match="document, reverse, lastmod") as caught:
         SpiderPolicy(mode="spider", seed="sitemap", seed_order="SECRET_TOKEN_XYZ")

@@ -1,4 +1,4 @@
-"""`rastro init --agent` writes the agent block or skill safely (N18, AGENT-001, SEC-008)."""
+"""`rastro init --agent` writes the agent block or skill safely."""
 
 import contextlib
 import json
@@ -25,7 +25,7 @@ def _init(capsys: pytest.CaptureFixture[str], *args: str) -> tuple[int, dict[str
 
 
 def test_snippet_carries_the_rules() -> None:
-    """N18: public imports, the gap template and the untrusted-data rule, in that order."""
+    """Public imports, the gap template and the untrusted-data rule, in that order."""
     snippet = render_snippet("0.0.0")
     positions = [
         snippet.index(text)
@@ -40,7 +40,7 @@ def test_snippet_carries_the_rules() -> None:
 def test_block_is_idempotent_and_keeps_other_text(
     tmp_path: Path, capsys: pytest.CaptureFixture[str], agent: str, name: str
 ) -> None:
-    """N18: the block is appended once, replaced in place and the rest is untouched."""
+    """The block is appended once, replaced in place and the rest is untouched."""
     target = tmp_path / name
     target.write_text("# My project\n\nKeep this.", encoding="utf-8")
     code, result = _init(capsys, "--agent", agent, "--path", str(tmp_path))
@@ -63,7 +63,7 @@ def test_block_is_idempotent_and_keeps_other_text(
 
 @needs_dir_fd
 def test_block_creates_a_missing_file(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    """N18: generic agents get AGENTS.md, created when missing."""
+    """Generic agents get AGENTS.md, created when missing."""
     code, result = _init(capsys, "--agent", "generic", "--path", str(tmp_path))
     assert code == 0 and result["action"] == "created"
     assert (tmp_path / "AGENTS.md").read_text(encoding="utf-8").startswith(BEGIN)
@@ -71,7 +71,7 @@ def test_block_creates_a_missing_file(tmp_path: Path, capsys: pytest.CaptureFixt
 
 @needs_dir_fd
 def test_skill_has_frontmatter(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    """N18: --format skill writes .agents/skills/rastro/SKILL.md with name and description."""
+    """--format skill writes .agents/skills/rastro/SKILL.md with name and description."""
     code, result = _init(capsys, "--agent", "codex", "--path", str(tmp_path), "--format", "skill")
     assert code == 0 and result["path"] == ".agents/skills/rastro/SKILL.md"
     text = (tmp_path / result["path"]).read_text(encoding="utf-8")
@@ -81,7 +81,7 @@ def test_skill_has_frontmatter(tmp_path: Path, capsys: pytest.CaptureFixture[str
 
 @needs_dir_fd
 def test_refuses_symlink_targets(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    """SEC-008: a symlinked file or directory is never followed; the outside file is unchanged."""
+    """A symlinked file or directory is never followed; the outside file is unchanged."""
     outside = tmp_path / "outside.md"
     outside.write_text("secret\n", encoding="utf-8")
     project = tmp_path / "project"
@@ -103,7 +103,7 @@ def test_refuses_symlink_targets(tmp_path: Path, capsys: pytest.CaptureFixture[s
 def test_refuses_unbalanced_markers_and_bad_files(
     tmp_path: Path, capsys: pytest.CaptureFixture[str], text: str
 ) -> None:
-    """N18: ambiguous markers fail closed with exit 2 and leave the file as it was."""
+    """Ambiguous markers fail closed with exit 2 and leave the file as it was."""
     target = tmp_path / "AGENTS.md"
     target.write_bytes(text.encode("latin-1") if "\xff" in text else text.encode())
     before = target.read_bytes()
@@ -113,7 +113,7 @@ def test_refuses_unbalanced_markers_and_bad_files(
 
 
 def test_refuses_a_missing_directory(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    """N18: --path must be an existing directory."""
+    """--path must be an existing directory."""
     code, error = _init(capsys, "--agent", "codex", "--path", str(tmp_path / "missing"))
     assert code == 2 and error["error"] == "configuration_error"
 
@@ -133,7 +133,7 @@ def _swap_for_link(monkeypatch: pytest.MonkeyPatch, directory: Path, outside: Pa
 def test_skill_directory_swap_cannot_write_outside(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """SEC-008: a parent swapped for a symlink mid-write never redirects the write outside."""
+    """A parent swapped for a symlink mid-write never redirects the write outside."""
     project, outside = tmp_path / "project", tmp_path / "outside"
     target = project / ".agents" / "skills" / "rastro"
     target.mkdir(parents=True)
@@ -150,7 +150,7 @@ def test_skill_directory_swap_cannot_write_outside(
 def test_block_root_swap_cannot_write_outside(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """SEC-008: --path swapped for a symlink mid-write never redirects the write outside."""
+    """--path swapped for a symlink mid-write never redirects the write outside."""
     project, outside = tmp_path / "project", tmp_path / "outside"
     project.mkdir()
     outside.mkdir()
@@ -163,7 +163,7 @@ def test_block_root_swap_cannot_write_outside(
 
 
 def test_without_dir_fd_init_fails_closed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """PR #145 re-check, SEC-008: without dir_fd (Windows) init writes nothing and says why."""
+    """Without dir_fd (Windows) init writes nothing and says why."""
     monkeypatch.setattr("rastro.cli_agent._ANCHORED", False)
     project = tmp_path / "project"
     project.mkdir()
@@ -174,7 +174,7 @@ def test_without_dir_fd_init_fails_closed(tmp_path: Path, monkeypatch: pytest.Mo
 
 
 def test_snippet_tells_the_agent_how_results_reach_studio() -> None:
-    """N18: results go through a job dataset; no ad hoc database for Studio."""
+    """Results go through a job dataset; no ad hoc database for Studio."""
     from rastro.capabilities_render import render_llms
     from rastro.config_catalog import STUDIO_RESULTS_RULE
 

@@ -1,4 +1,4 @@
-"""Strict, redacted base contract shared by declarative job models (JOB-002)."""
+"""Strict, redacted base contract shared by declarative job models."""
 
 from __future__ import annotations
 

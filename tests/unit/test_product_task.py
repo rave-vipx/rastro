@@ -1,4 +1,4 @@
-"""DIFF-002: independent baseline persistence and honest offline measurement."""
+"""Independent baseline persistence and honest offline measurement."""
 
 import json
 from pathlib import Path
@@ -168,7 +168,7 @@ def test_partial_source_never_overwrites_previous_snapshot(tmp_path: Path) -> No
 
 
 def test_rastro_uses_identical_inputs_and_field_mappings() -> None:
-    """DIFF-002: adapters receive the same source bytes, identity and selectors."""
+    """Adapters receive the same source bytes, identity and selectors."""
     from benchmarks.product_task.measure import HERE
 
     job = json.loads((HERE / "rastro/job.json").read_text(encoding="utf-8"))
@@ -183,7 +183,7 @@ def test_rastro_uses_identical_inputs_and_field_mappings() -> None:
 
 
 def test_rastro_network_attempt_aborts_measurement(tmp_path, monkeypatch) -> None:
-    """DIFF-002: a Rastro-side network attempt cannot be reported as zero."""
+    """A Rastro-side network attempt cannot be reported as zero."""
     import socket
 
     from benchmarks.product_task.rastro_path import run

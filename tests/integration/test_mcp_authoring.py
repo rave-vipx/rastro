@@ -1,4 +1,4 @@
-"""MCP authoring tools: suggest_recipe, job_new, scrape_file (AGENT-002, INT-001, INT-002, JOB-001).
+"""MCP authoring tools: suggest_recipe, job_new, scrape_file.
 
 Synthetic saved page; no tool touches the network.
 """
@@ -56,7 +56,7 @@ async def test_suggest_recipe_without_a_match_is_an_error(workspace: Path) -> No
 
 @pytest.mark.asyncio
 async def test_job_new_writes_a_runnable_job_and_refuses_overwrite(workspace: Path) -> None:
-    """JOB-001: the created job extracts the page; a second call never overwrites it."""
+    """The created job extracts the page; a second call never overwrites it."""
     arguments = {
         "path": "work/shop.toml",
         "page_path": "work/page.html",
@@ -87,7 +87,7 @@ async def test_job_new_paths_stay_in_the_workspace(workspace: Path, path: str) -
 
 @pytest.mark.asyncio
 async def test_scrape_file_with_fields_or_recipe(workspace: Path) -> None:
-    """INT-001: one-off extraction from a workspace file, no job and no network."""
+    """One-off extraction from a workspace file, no job and no network."""
     fields = {"name": ".name::text", "price": ".price::text"}
     failed, result = await call(
         workspace, "scrape_file", page_path="work/page.html", fields=fields, records="li.item"
@@ -151,7 +151,7 @@ async def test_page_symlink_is_refused(workspace: Path, tmp_path_factory: Any) -
 
 @pytest.mark.asyncio
 async def test_job_new_with_recipe_memory_enables_repair(workspace: Path) -> None:
-    """REC-006, AGENT-003: an MCP-only agent can create a job that recipe_repair accepts."""
+    """An MCP-only agent can create a job that recipe_repair accepts."""
     failed, _ = await call(
         workspace,
         "job_new",
@@ -173,7 +173,7 @@ async def test_job_new_with_recipe_memory_enables_repair(workspace: Path) -> Non
 
 @pytest.mark.asyncio
 async def test_server_reports_the_rastro_version(workspace: Path) -> None:
-    """AGENT-002: serverInfo.version is Rastro's package version, not the MCP library's."""
+    """ServerInfo.version is Rastro's package version, not the MCP library's."""
     import rastro
 
     async with create_connected_server_and_client_session(
@@ -191,7 +191,7 @@ async def test_server_reports_the_rastro_version(workspace: Path) -> None:
 async def test_job_new_refuses_paths_that_name_the_same_file(
     workspace: Path, dataset: str | None, memory: str | None
 ) -> None:
-    """JOB-001, AGENT-003: resolved paths, not raw strings, are compared."""
+    """Resolved paths, not raw strings, are compared."""
     failed, error = await call(
         workspace,
         "job_new",

@@ -1,4 +1,4 @@
-"""HUB-001, REC-006: a consumer adopts a shared bundle on a fresh recipe store."""
+"""A consumer adopts a shared bundle on a fresh recipe store."""
 
 import json
 import shutil
@@ -28,7 +28,7 @@ def _consumer(tmp_path: Path, folder: Path, bundle: Path) -> Path:
 
 
 def test_export_import_promote_load_on_a_fresh_store(exported, tmp_path, capsys):  # noqa: F811
-    """HUB-001, REC-006: an imported candidate is promotable on a store with no serving
+    """An imported candidate is promotable on a store with no serving
     version, and a consumer job without an explicit recipe then loads it."""
     folder, _, bundle = exported
     job = _consumer(tmp_path, folder, bundle)
@@ -49,7 +49,7 @@ def test_reimporting_the_same_bundle_reuses_the_stored_version(
     tmp_path,
     capsys,
 ):
-    """HUB-001: an identical recipe definition for the same key is not stored twice."""
+    """An identical recipe definition for the same key is not stored twice."""
     _, _, bundle = exported
     store = tmp_path / "b.sqlite"
     assert main(["recipe", "import", str(bundle), "--store", str(store)]) == 0
@@ -61,7 +61,7 @@ def test_reimporting_the_same_bundle_reuses_the_stored_version(
 
 
 def test_adoption_still_runs_the_gates_on_the_consumer_page(exported, tmp_path, capsys):  # noqa: F811
-    """REC-006: with nothing serving, a candidate that fails on the consumer's page stays
+    """With nothing serving, a candidate that fails on the consumer's page stays
     a candidate and the job still has no recipe to load."""
     folder, _, bundle = exported
     job = _consumer(tmp_path, folder, bundle)
@@ -75,7 +75,7 @@ def test_adoption_still_runs_the_gates_on_the_consumer_page(exported, tmp_path, 
 
 
 def test_reimport_after_retirement_stores_a_new_candidate(exported, tmp_path):  # noqa: F811
-    """HUB-001, REC-005: an equal but retired version is not reused by import."""
+    """An equal but retired version is not reused by import."""
     from datetime import UTC, datetime
 
     from rastro.adapters.sqlite import SQLiteRecipeRepository

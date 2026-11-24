@@ -1,4 +1,4 @@
-"""Deterministic pseudo-random streams for reproducible artifacts (MOCK-006).
+"""Deterministic pseudo-random streams for reproducible artifacts.
 
 Streams use SHA-256 in counter mode, so output depends only on the seed, the
 namespace and the call order: never on the Python version, ``random`` internals or

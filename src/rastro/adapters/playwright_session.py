@@ -1,4 +1,4 @@
-"""One Chromium context for one source: navigations and scroll steps share a page (N2, N9)."""
+"""One Chromium context for one source: navigations and scroll steps share a page."""
 
 from __future__ import annotations
 

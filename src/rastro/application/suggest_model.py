@@ -1,4 +1,4 @@
-"""Model-proposed CSS recipes for ``suggest``, verified like example-built ones (INT-002, AI-001).
+"""Model-proposed CSS recipes for ``suggest``, verified like example-built ones.
 
 The model sees the page, the field names, types and descriptions, and proposes one
 recipe per call within the policy's budget. Each proposal must reproduce every example

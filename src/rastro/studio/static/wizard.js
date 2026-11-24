@@ -1,4 +1,4 @@
-// Guided create in four steps (N1, N2): the page address (with a hub offer first), what you
+// Guided create in four steps: the page address (with a hub offer first), what you
 // want (fields with one example, plus an estimate), review (records, the page snapshot with
 // the fields marked, click to fix a field, the site's own data), then name and save, where
 // the AI may look once for records behind a click. File names are an advanced detail.

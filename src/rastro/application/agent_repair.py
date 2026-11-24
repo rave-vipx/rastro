@@ -1,4 +1,4 @@
-"""Gate a recipe proposed by an outside agent like a model repair candidate (REPAIR-001-005).
+"""Gate a recipe proposed by an outside agent like a model repair candidate.
 
 The agent (an MCP client's model) only proposes a recipe definition. Each changed CSS locator
 is composed with the serving one (``"<serving>, <proposed>"``, as model repair does) so old

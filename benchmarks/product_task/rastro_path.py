@@ -1,4 +1,4 @@
-"""DIFF-002 real CLI workflow over the baseline's exact offline inputs."""
+"""Real CLI workflow over the baseline's exact offline inputs."""
 
 import io
 import json

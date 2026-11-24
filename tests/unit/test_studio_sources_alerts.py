@@ -1,4 +1,4 @@
-"""Studio Sources and Alerts views over /api/sources and /api/alerts (N5)."""
+"""Studio Sources and Alerts views over /api/sources and /api/alerts."""
 
 from __future__ import annotations
 
@@ -43,7 +43,7 @@ ALERTS = [
 
 
 def test_every_source_status_has_words_a_shape_and_a_next_step() -> None:
-    """N5: each status reads as words (robots and caps included) with a shape and an action."""
+    """Each status reads as words (robots and caps included) with a shape and an action."""
     run_node(
         """
 const dom = await import("STATIC/dom.js");
@@ -73,7 +73,7 @@ assert.ok(!text.includes("undefined") && !text.includes("null"));
 
 
 def test_missing_routes_show_an_error_state_never_an_empty_success() -> None:
-    """N5: a 404 or a server error is said in words; no "no problems" message appears."""
+    """A 404 or a server error is said in words; no "no problems" message appears."""
     run_node(
         """
 const dom = await import("STATIC/dom.js");
@@ -93,7 +93,7 @@ assert.ok(!alerts.includes("No alerts") && !sources.includes("up to date"));
 
 
 def test_alerts_are_grouped_by_day_with_one_sentence_and_one_action() -> None:
-    """N5: plain sentence from kind + code in the chosen language, one action per alert."""
+    """Plain sentence from kind + code in the chosen language, one action per alert."""
     run_node(
         """
 const dom = await import("STATIC/dom.js");

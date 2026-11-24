@@ -1,5 +1,5 @@
-"""`rastro studio --model/--allow-remote` resolves any provider through rastro.model (INT-001,
-P-008); nothing is configured unless the user asks."""
+"""`rastro studio --model/--allow-remote` resolves any provider through rastro.model; nothing is
+configured unless the user asks."""
 
 from typing import Any
 
@@ -53,7 +53,7 @@ def test_missing_factory_is_an_explicit_error() -> None:
 def test_cli_notice_follows_the_models_real_remoteness(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Any, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """P-001: RASTRO_MODEL names a hosted model and RASTRO_ALLOW_REMOTE allows it; without
+    """RASTRO_MODEL names a hosted model and RASTRO_ALLOW_REMOTE allows it; without
     --allow-remote Studio must still say page content may go to a remote model."""
     pytest.importorskip("starlette")
     uvicorn = pytest.importorskip("uvicorn")

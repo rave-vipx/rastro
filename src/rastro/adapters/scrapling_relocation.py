@@ -1,4 +1,4 @@
-"""Offline adaptive relocation at the parser boundary (SCR-002, REPAIR-001).
+"""Offline adaptive relocation at the parser boundary.
 
 Container and field fingerprints from the first success propose a template; CI must validate
 all records, history and semantics. No fetcher, adaptive storage or activation is involved.

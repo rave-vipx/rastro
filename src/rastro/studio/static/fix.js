@@ -1,7 +1,7 @@
-// Fix a site (N7, N12): find a proposed recipe, compare it field by field, then apply it with a
+// Fix a site: find a proposed recipe, compare it field by field, then apply it with a
 // reason or discard it. Applying re-runs every check; Studio cannot override a failed one.
 import { $, api, el, requireFile, show, state, switchView } from "./dom.js";
-import { onLangChange, t } from "./i18n.js";
+import { advanced, onLangChange, t } from "./i18n.js";
 import { showAlerts, withProgress } from "./controls.js";
 import { sources } from "./sources.js";
 import { actionButton, chip, emptyState } from "./ui.js";
@@ -87,14 +87,19 @@ async function writeToJob(source) {
   status(data.changed ? t("fix.written", { n: data.recipe_version }) : t("fix.alreadyWritten"), "good");
 }
 
+// One approve button. The reason field is a technical detail: it shows only with Advanced on;
+// otherwise Studio records a fixed reason. Promotion still re-runs every check.
 function decision(source, version, box) {
   const form = el("div", undefined, "decision");
   const id = `fix-reason-${source}-${version}`;
-  const label = el("label", t("fix.reason"));
-  label.htmlFor = id;
   const reason = el("input");
-  Object.assign(reason, { id, type: "text", maxLength: 500, required: true });
-  const apply = actionButton(t("fix.apply"), async () => {
+  Object.assign(reason, { id, type: "text", maxLength: 500, required: true, value: t("fix.defaultReason") });
+  if (advanced()) {
+    const label = el("label", t("fix.reason"));
+    label.htmlFor = id;
+    form.append(label, reason);
+  }
+  const apply = actionButton(t(advanced() ? "fix.apply" : "fix.approve"), async () => {
     try {
       if (!reason.value.trim()) throw new Error(t("fix.reasonNeeded"));
       const data = await withProgress(() => api("/api/promote", { file: requireFile(), source, version, reason: reason.value }));
@@ -113,8 +118,7 @@ function decision(source, version, box) {
   });
   const buttons = el("div", undefined, "row");
   buttons.append(apply, discard);
-  form.append(label, reason, buttons);
-  form.append(el("p", t("fix.applyNote"), "muted"));
+  form.append(buttons, el("p", t(advanced() ? "fix.applyNote" : "fix.approveHelp"), "muted"));
   return form;
 }
 

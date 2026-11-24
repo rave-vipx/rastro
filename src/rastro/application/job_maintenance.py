@@ -56,7 +56,7 @@ def acknowledge_job_drift(
 def forget_job_source(
     path: str | Path, source_url: str, *, allow_absolute_paths: bool = False
 ) -> dict[str, Any]:
-    """Forget a dataset origin that is no longer one of the job's sources (DATA-004).
+    """Forget a dataset origin that is no longer one of the job's sources.
 
     Deletes its source status, drift history and open drift. Relocation samples are stored
     by a digest of the full source, so only samples of this exact URL under one of the

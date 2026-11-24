@@ -1,4 +1,4 @@
-"""Lone UTF-16 surrogates never fail a whole source (DATA-004, N3).
+"""Lone UTF-16 surrogates never fail a whole source.
 
 JSON decoding replaces them with U+FFFD; a record that still holds unstorable text is
 rejected on its own as ``invalid_text``.

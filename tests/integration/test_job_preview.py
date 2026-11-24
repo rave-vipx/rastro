@@ -1,4 +1,4 @@
-"""`rastro job preview` (DATA-002, JOB-002, AGENT-001): offline, read-only, provenance-complete."""
+"""`rastro job preview`: offline, read-only, provenance-complete."""
 
 import json
 from pathlib import Path

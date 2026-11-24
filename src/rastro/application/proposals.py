@@ -1,4 +1,4 @@
-"""Strict proposal decoding and bounded inference retries (AI-001-004, REPAIR-001).
+"""Strict proposal decoding and bounded inference retries.
 
 A page too large for the context budget is replaced by its digest in the prompt; the
 candidate is still executed and validated against the full original document.

@@ -1,4 +1,4 @@
-"""Operator opt-in flags for every command (security audit H1, SEC-004/005/011).
+"""Operator opt-in flags for every command (security audit H1.
 
 ``--allow-remote``, ``--allow-egress``, ``--allow-env NAME``, the network permissions
 ``--allow-private-network``, ``--allow-port N`` and ``--ignore-robots HOST``, and the capability

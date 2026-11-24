@@ -1,4 +1,4 @@
-"""Synthetic multi-address acquisition: SEC-001/002/003."""
+"""Synthetic multi-address acquisition."""
 
 import asyncio
 

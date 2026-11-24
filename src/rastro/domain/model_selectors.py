@@ -1,4 +1,4 @@
-"""CSS selectors declared on Pydantic model fields, turned into a recipe (INT-001, REC-003).
+"""CSS selectors declared on Pydantic model fields, turned into a recipe.
 
 ``Annotated[str, css("h3::text")]`` keeps the selector next to the field it fills.
 The marker never changes the JSON Schema; it strips text and resolves relative links.

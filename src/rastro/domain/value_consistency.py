@@ -1,4 +1,4 @@
-"""Deterministic value-consistency gate for relocated fields (REPAIR-002, REPAIR-004).
+"""Deterministic value-consistency gate for relocated fields.
 
 A relocated selector can match a different element whose text still validates,
 for example a city where the title used to be. This gate compares the values a

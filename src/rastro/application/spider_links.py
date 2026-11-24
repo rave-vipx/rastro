@@ -1,4 +1,4 @@
-"""Declarative link reading and URL rules for the spider (N3; SEC-001, SEC-008).
+"""Declarative link reading and URL rules for the spider.
 
 Links come from a CSS expression or from one of the recipe's own fields, never from a
 callback. A URL is normalised (fragment dropped, host lowercased, the query kept) and its
@@ -108,8 +108,8 @@ class LinkHarvest:
     def __init__(self, spider: SpiderPolicy, parser: DocumentParser, limits: Limits) -> None:
         self._spider, self._parser, self._limits = spider, parser, limits
         self.hrefs: list[str] = []
-        self.sitemaps: list[SitemapEntry] = []  # a sitemap index's child sitemaps (N16)
-        self.seed_entries: list[SitemapEntry] = []  # <url> entries from a sitemap seed (N16)
+        self.sitemaps: list[SitemapEntry] = []  # a sitemap index's child sitemaps
+        self.seed_entries: list[SitemapEntry] = []  # <url> entries from a sitemap seed
         self.discovery: DiscoveryNote = DiscoveryNote(
             seed=spider.seed,
             order=spider.seed_order,

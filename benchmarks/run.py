@@ -1,4 +1,4 @@
-"""Run DIFF-001's offline extraction comparison: python -m benchmarks.run --output report.json."""
+"""Run the offline extraction comparison: python -m benchmarks.run --output report.json."""
 
 from __future__ import annotations
 

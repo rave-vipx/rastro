@@ -1,8 +1,8 @@
-"""What Rastro can do, as data: the one source for llms.txt, docs, MCP and agent snippets (N18).
+"""What Rastro can do, as data: the one source for llms.txt, docs, MCP and agent snippets.
 
 Adding a capability is one ``Capability`` entry. Renderers live in ``capabilities_render``;
 tests check that every MCP tool, CLI command and ``rastro.__all__`` name appears here or in
-``REFERENCE_ONLY``. Data only: this module imports nothing heavy (AGENT-001).
+``REFERENCE_ONLY``. Data only: this module imports nothing heavy.
 """
 
 from __future__ import annotations

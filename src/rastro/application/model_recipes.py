@@ -1,4 +1,4 @@
-"""Ask any ``ModelPort`` for a recipe for a saved page, then verify it (INT-001).
+"""Ask any ``ModelPort`` for a recipe for a saved page, then verify it.
 
 The recipe is kept only if it extracts valid records from that page (repair proposals go
 through ``repair_job_source(..., model=...)`` instead). The model sees field names, their types

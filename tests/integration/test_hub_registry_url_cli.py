@@ -1,4 +1,4 @@
-"""N10, HUB-005, SEC-001: ``recipe search|install --registry-url`` end to end (offline).
+"""``recipe search|install --registry-url`` end to end (offline).
 
 The curl transport and the system resolver are replaced; the CLI, the acquisition policy and
 the install gates are the real ones.

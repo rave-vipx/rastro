@@ -1,4 +1,4 @@
-"""N4/N5/N12: next-link pagination, the job's auto-promote switch, the session stealth
+"""Next-link pagination, the job's auto-promote switch, the session stealth
 grant and the observed operation snapshot.
 
 Auto-promote is job policy and is written to the operator's job file. Stealth is a grant
@@ -14,6 +14,7 @@ from starlette.routing import Route
 
 from rastro.application.operator_trust import current_trust
 from rastro.domain.recipes import Pagination
+from rastro.studio import routes_connections
 from rastro.studio.bounds import numeric_limits, save_bounds
 from rastro.studio.settings import save_auto_promote, save_pagination
 from rastro.studio.web import Refused, Studio, body, flag, integer, reply, text
@@ -85,4 +86,5 @@ def routes(studio: Studio) -> list[Route]:
         studio.route("/api/auto-promote", auto_promote, post=True),
         studio.route("/api/progress", progress),
         studio.route("/api/bounds", bounds, post=True),
+        *routes_connections.routes(studio),
     ]

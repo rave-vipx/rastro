@@ -1,4 +1,4 @@
-"""Content-free failure detail tells robots, 403, 429 and timeouts apart (DATA-005, SCR-002)."""
+"""Content-free failure detail tells robots, 403, 429 and timeouts apart."""
 
 from datetime import UTC, datetime
 

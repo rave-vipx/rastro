@@ -1,4 +1,4 @@
-"""One user action fetches robots.txt at most once per origin (N1, N10; SEC-008).
+"""One user action fetches robots.txt at most once per origin.
 
 Every public application entry that acquires pages enters ``robots_cache()``; two separate
 actions never share an answer, and an ``ignore_robots`` host is never asked. Offline: a fake

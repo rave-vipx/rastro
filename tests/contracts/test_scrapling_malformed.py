@@ -1,4 +1,4 @@
-"""DRIFT-003/INT-003/SEC-005: malformed HTML must stay inside typed parser errors."""
+"""Malformed HTML must stay inside typed parser errors."""
 
 import pytest
 

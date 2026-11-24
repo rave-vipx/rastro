@@ -1,4 +1,4 @@
-"""One scroll step of a source's open browser context, under the shared budget (N9, SEC-001)."""
+"""One scroll step of a source's open browser context, under the shared budget."""
 
 from __future__ import annotations
 

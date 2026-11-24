@@ -1,4 +1,4 @@
-"""Opt-in `expand:` CSS field: one record per matched value (DATA-004/005, JOB-002)."""
+"""Opt-in `expand:` CSS field: one record per matched value."""
 
 import pytest
 from pydantic import ValidationError
@@ -62,7 +62,7 @@ def test_relocation_refuses_expand_field():
 
 
 def test_issue_record_index_counts_expanded_records_not_cards():
-    """DATA-004: after an expanded card, issues blame the right record position."""
+    """After an expanded card, issues blame the right record position."""
     from rastro import CssRecipe, Limits
     from rastro.adapters.scrapling import ScraplingParser
 
@@ -80,7 +80,7 @@ def test_issue_record_index_counts_expanded_records_not_cards():
 
 
 def test_expand_values_are_bounded_before_records_are_built():
-    """DATA-004: one card with too many values fails before building candidates."""
+    """One card with too many values fails before building candidates."""
     import pytest
 
     from rastro import CssRecipe, Limits, ResourceLimitError

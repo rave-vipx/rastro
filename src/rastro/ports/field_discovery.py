@@ -1,4 +1,4 @@
-"""Observe repeated structures and per-record field selectors in a saved page (DISC-003)."""
+"""Observe repeated structures and per-record field selectors in a saved page."""
 
 from dataclasses import dataclass
 from typing import Protocol

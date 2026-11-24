@@ -23,7 +23,7 @@ class RecipeRepository(Protocol):
 
 @runtime_checkable
 class RecipeLifecycle(Protocol):
-    """Lifecycle control used by repair, drift and operators (REC-005, REPAIR-006).
+    """Lifecycle control used by repair, drift and operators.
 
     Stores that implement only ``RecipeRepository`` hold no candidate or retired
     rows, so learning on them stores version 1 exactly as in 0.1.0.

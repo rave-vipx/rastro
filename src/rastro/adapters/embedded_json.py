@@ -1,4 +1,4 @@
-"""JSON embedded in an HTML attribute or script, read through one CSS selector (N16)."""
+"""JSON embedded in an HTML attribute or script, read through one CSS selector."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Default-on, fail-closed sanitization of fixture artifacts (MOCK-005).
+"""Default-on, fail-closed sanitization of fixture artifacts.
 
 ``sanitize_body`` rewrites an acquired HTML or JSON body according to a retention
 plan; ``allowed_headers`` keeps only allowlisted response headers; ``assert_clean``

@@ -1,4 +1,4 @@
-"""MOCK-003: synthetic failures remain explicit through the public API."""
+"""Synthetic failures remain explicit through the public API."""
 
 import pytest
 from pydantic import BaseModel

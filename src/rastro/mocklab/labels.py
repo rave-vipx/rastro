@@ -1,4 +1,4 @@
-"""The synthetic label every Mock Lab artifact carries (MOCK-004).
+"""The synthetic label every Mock Lab artifact carries.
 
 Mutations and failure scenarios reuse ``SyntheticLabel``; it is deliberately small,
 versioned and stable. HTML artifacts embed it as a leading comment and JSON artifacts

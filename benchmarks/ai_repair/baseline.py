@@ -1,4 +1,4 @@
-"""A careful hand-written Scrapling + Pydantic scraper with generic fallbacks (DIFF-002).
+"""A careful hand-written Scrapling + Pydantic scraper with generic fallbacks.
 
 It knows the base selectors and, when they find nothing, tries the fallbacks a
 defensive scraper author typically adds. It refuses when a record fails validation or

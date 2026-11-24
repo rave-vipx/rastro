@@ -1,4 +1,4 @@
-"""SEC-008/DRIFT-001: composition forwards configured storage budgets."""
+"""Composition forwards configured storage budgets."""
 
 import pytest
 from test_recipe_cli import setup_sample

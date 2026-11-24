@@ -1,13 +1,14 @@
 """Dataset browser: paginated records with stale markers, and JSON or HTML export.
 
 Reads the job's ``[dataset]`` file without creating it; values stay labelled untrusted
-and every field value is capped at ``MAX_CHARS`` with a ``truncated`` flag (DATA-004, P-008).
+and every field value is capped at ``MAX_CHARS`` with a ``truncated`` flag.
 The store has no paged read, so a page reads the whole dataset; that read is bounded by the
 job's ``Limits`` (``max_records``, ``max_json_bytes``).
 """
 
 from __future__ import annotations
 
+import base64
 import json
 from pathlib import Path
 from typing import Any
@@ -18,19 +19,23 @@ from starlette.responses import Response
 from starlette.routing import Route
 
 from rastro.adapters.sqlite_dataset import SQLiteDatasetStore
+from rastro.adapters.xlsx_export import xlsx_export
 from rastro.application.dataset_load import stale_sources
 from rastro.application.job_loader import resolve_job_path
-from rastro.cli_dataset_export import html_export
+from rastro.cli_dataset_export import csv_export, html_export
 from rastro.domain.dataset import StoredRecord
 from rastro.domain.jobs import Job
 from rastro.domain.models import ConfigurationError
-from rastro.studio.record_extras import extras, is_adapter
+from rastro.studio import run_log
+from rastro.studio.record_extras import compare, extras, is_adapter, why_partial
 from rastro.studio.web import Refused, Studio, body, integer, reply, text
 
 MAX_PAGE = 100
 MAX_OFFSET = 1_000_000
 MAX_EXPORT = 5_000
 MAX_CHARS = 2_000
+XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+FORMATS = ("json", "html", "csv", "xlsx")
 
 
 def _store(studio: Studio, path: Path, job: Job) -> tuple[SQLiteDatasetStore, str]:
@@ -92,10 +97,16 @@ def _dumped(record: StoredRecord) -> tuple[dict[str, Any], bool]:
 
 
 def _row(
-    record: StoredRecord, stale: set[str], declared: list[str], urls: set[str]
+    record: StoredRecord,
+    stale: set[str],
+    declared: list[str],
+    urls: set[str],
+    marks: dict[str, str],
 ) -> dict[str, Any]:
     data, cut = _dumped(record)
+    mark = marks.get(record.key.model_dump_json())
     return {
+        **({"change": mark} if mark else {}),
         "identity": data["key"]["identity"],
         "fields": data["fields"],
         "truncated": cut,
@@ -105,10 +116,34 @@ def _row(
     }
 
 
+def _compared(
+    store: SQLiteDatasetStore,
+    name: str,
+    records: tuple[StoredRecord, ...],
+    runs: tuple[run_log.LoggedRun, ...],
+) -> tuple[dict[str, Any], dict[str, str]]:
+    done = {s.source_url: s.last_success for s in store.source_status(name) if s.last_success}
+    return compare(records, done, runs)
+
+
+def _changes(
+    store: SQLiteDatasetStore, name: str, runs: tuple[run_log.LoggedRun, ...]
+) -> dict[str, Any]:
+    summary, _ = _compared(store, name, store.records(name), runs)
+    loads = [run for run in runs if run.kind == "load"]
+    return {"ok": True, **summary, "partial": why_partial(loads[-1] if loads else None)}
+
+
 def _page(
-    store: SQLiteDatasetStore, name: str, offset: int, limit: int, declared: list[str]
+    store: SQLiteDatasetStore,
+    name: str,
+    offset: int,
+    limit: int,
+    declared: list[str],
+    runs: tuple[run_log.LoggedRun, ...] = (),
 ) -> dict[str, Any]:
     records = store.records(name)
+    marks = _compared(store, name, records, runs)[1]
     stale = _stale_keys(store, name)
     urls = {s.source_url for s in stale_sources(store, name)}
     fields = list(dict.fromkeys(field for record in records for field in record.fields))
@@ -121,7 +156,7 @@ def _page(
         "fields": fields,
         "total": len(records),
         "offset": offset,
-        "records": [_row(record, stale, declared, urls) for record in shown],
+        "records": [_row(record, stale, declared, urls, marks) for record in shown],
         "stale_sources": len(urls),
         **({"imported_at": max(imported).isoformat()} if imported else {}),
     }
@@ -135,6 +170,18 @@ def _export(store: SQLiteDatasetStore, name: str, kind: str) -> dict[str, Any]:
         )
     capped = [_capped(record) for record in stored]
     records = tuple(record for record, _ in capped)
+    if kind == "csv":
+        content = csv_export(records)
+        return {"ok": True, "filename": f"{name}.csv", "media_type": "text/csv", "content": content}
+    if kind == "xlsx":
+        sheet = base64.b64encode(xlsx_export(records)).decode("ascii")
+        return {
+            "ok": True,
+            "filename": f"{name}.xlsx",
+            "media_type": XLSX,
+            "content": sheet,
+            "encoding": "base64",
+        }
     if kind == "html":
         stale = {k for s in stale_sources(store, name) for k in s.affected_keys}
         fields = list(dict.fromkeys(field for record in records for field in record.fields))
@@ -165,12 +212,20 @@ def routes(studio: Studio) -> list[Route]:
         limit = integer(data, "limit", 1, MAX_PAGE, default=25)
         store, name = _store(studio, path, job)
         declared = [field.name for field in job.fields]
-        return reply(await run_in_threadpool(_page, store, name, offset, limit, declared))
+        runs = run_log.read_runs(studio.root, path)
+        return reply(await run_in_threadpool(_page, store, name, offset, limit, declared, runs))
+
+    async def changes(request: Request) -> Response:
+        data = await body(request)
+        path, _, job = studio.load(text(data, "file"))
+        store, name = _store(studio, path, job)
+        runs = run_log.read_runs(studio.root, path)
+        return reply(await run_in_threadpool(_changes, store, name, runs))
 
     async def export(request: Request) -> Response:
         data = await body(request)
         kind = text(data, "format")
-        if kind not in ("json", "html"):
+        if kind not in FORMATS:
             raise Refused(400, "invalid_format")
         path, _, job = studio.load(text(data, "file"))
         store, name = _store(studio, path, job)
@@ -178,5 +233,6 @@ def routes(studio: Studio) -> list[Route]:
 
     return [
         studio.route("/api/records", records, post=True),
+        studio.route("/api/changes", changes, post=True),
         studio.route("/api/export", export, post=True),
     ]

@@ -1,4 +1,4 @@
-"""JSON operators that reorder, duplicate or empty one array or object (MOCK-002)."""
+"""JSON operators that reorder, duplicate or empty one array or object."""
 
 from __future__ import annotations
 

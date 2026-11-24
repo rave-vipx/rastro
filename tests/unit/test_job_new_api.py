@@ -1,4 +1,4 @@
-"""`new_job` keeps a typed signature and the CLI keeps its option help (JOB-001)."""
+"""`new_job` keeps a typed signature and the CLI keeps its option help."""
 
 from __future__ import annotations
 

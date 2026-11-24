@@ -1,4 +1,4 @@
-"""Foreground persistent scheduler (`rastro job watch`, SCHED-001..007, SYNC-001)."""
+"""Foreground persistent scheduler (`rastro job watch`."""
 
 from __future__ import annotations
 

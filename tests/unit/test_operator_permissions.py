@@ -1,7 +1,4 @@
-"""Operator network permissions: destinations, ports, trust sources and the auth schema.
-
-Requirement IDs: SEC-001, SEC-002, SEC-003, SEC-004, SEC-011.
-"""
+"""Operator network permissions: destinations, ports, trust sources and the auth schema."""
 
 from __future__ import annotations
 
@@ -264,7 +261,7 @@ def test_auth_defaults_and_duplicates():
 
 @pytest.mark.asyncio
 async def test_request_headers_never_reach_a_proxy_in_the_tunnel_setup(monkeypatch):
-    """SEC-004: with a proxy, libcurl must not copy custom headers to the CONNECT request."""
+    """With a proxy, libcurl must not copy custom headers to the CONNECT request."""
     from curl_cffi import CurlOpt
     from curl_cffi.requests import AsyncSession, Response
 

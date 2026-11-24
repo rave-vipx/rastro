@@ -1,4 +1,4 @@
-"""Recipe bundle and registry CLI: export, import, publish, search, install (HUB-001..HUB-006)."""
+"""Recipe bundle and registry CLI: export, import, publish, search, install."""
 
 from __future__ import annotations
 

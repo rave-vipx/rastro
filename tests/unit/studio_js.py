@@ -24,6 +24,7 @@ class Node {
   append(...items) {
     for (const x of items) this.children.push(typeof x === "string" ? new Text(x) : x);
   }
+  remove() {}
   replaceChildren(...items) { this.children = []; this.append(...items); }
   set textContent(v) { this.children = [new Text(v)]; }
   get textContent() { return this.children.map((c) => c.textContent).join(""); }
@@ -36,7 +37,12 @@ class Node {
   get tHead() { return this.children.find((c) => c.tagName === "THEAD"); }
   get tBodies() { return this.children.filter((c) => c.tagName === "TBODY"); }
 }
+import { readFileSync } from "node:fs";
 const byId = {};
+// Studio loads its copy with fetch(); here file: URLs are read from disk.
+const diskFetch = async (url) => ({ ok: true, status: 200,
+  json: async () => JSON.parse(readFileSync(new URL(url), "utf8")) });
+globalThis.fetch = diskFetch;
 const events = [];
 globalThis.Node = Node;
 globalThis.Option = class extends Node {
@@ -65,6 +71,7 @@ const buttons = (n) => walk(n).filter((x) => x.tagName === "BUTTON");
 const calls = [];
 const reply = (table) => {
   globalThis.fetch = async (path, options) => {
+    if (String(path).startsWith("file:")) return diskFetch(path);
     calls.push({ path, body: options?.body ? JSON.parse(options.body) : undefined });
     const [status, body] = table[path.split("?")[0]] ?? [404, null];
     return { ok: status < 400, status,

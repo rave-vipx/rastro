@@ -1,4 +1,4 @@
-"""Locate example values in a parsed page and describe elements as safe CSS (INT-002).
+"""Locate example values in a parsed page and describe elements as safe CSS.
 
 Page content is untrusted: selectors are built only from tag names and class tokens that
 match strict identifier patterns, never from text, ids or generated-looking classes.

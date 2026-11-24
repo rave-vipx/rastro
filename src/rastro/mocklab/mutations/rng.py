@@ -1,4 +1,4 @@
-"""Seeded choices built on Mock Lab's SHA-256 stream (MOCK-006).
+"""Seeded choices built on Mock Lab's SHA-256 stream.
 
 ``random.Random`` is avoided: its sampling algorithms are an implementation detail of
 CPython. ``DeterministicStream`` depends only on the seed, a namespace and call order.

@@ -1,4 +1,4 @@
-"""Fetch one URL under an acquisition policy, for app adapters (N15, SEC-001, SEC-003, SEC-008).
+"""Fetch one URL under an acquisition policy, for app adapters.
 
 ``rastro.fetch`` uses the same HTTP acquirer as ``rastro.scrape`` URL targets and jobs:
 exact host allowlist, robots.txt, egress rules, request budgets, redirect checks and the

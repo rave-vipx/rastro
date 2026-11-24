@@ -8,7 +8,7 @@ from rastro.cli import main
 
 
 def test_demo_is_executable_and_offline(capsys):
-    """AGENT-001: decimals stay exact JSON strings, as in every other JSON output."""
+    """Decimals stay exact JSON strings, as in every other JSON output."""
     assert main(["demo"]) == 0
     result = json.loads(capsys.readouterr().out)
     assert result["status"] == "success"

@@ -1,4 +1,4 @@
-"""Machine-readable `rastro job` error objects (AGENT-001, AGENT-003).
+"""Machine-readable `rastro job` error objects.
 
 Every job configuration or usage failure becomes one JSON object on stderr:
 ``{"error": <stable code>, "message": <safe text>, "location": <field path or null>}``,

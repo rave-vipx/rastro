@@ -1,4 +1,4 @@
-"""SCR-003 amended: opt-in real Chromium rendering against a synthetic response."""
+"""Opt-in real Chromium rendering against a synthetic response."""
 
 import os
 

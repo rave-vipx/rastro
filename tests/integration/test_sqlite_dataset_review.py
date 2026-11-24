@@ -1,4 +1,4 @@
-"""PR 56 regressions: DATA-001/004/005 and SYNC-002/003/005/006."""
+"""PR 56 regressions."""
 
 import sqlite3
 from concurrent.futures import ThreadPoolExecutor

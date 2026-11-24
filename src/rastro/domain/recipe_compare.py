@@ -1,4 +1,4 @@
-"""Versioned repair decisions and comparisons (REPAIR-002-005, QUAL-006)."""
+"""Versioned repair decisions and comparisons."""
 
 from typing import Annotated, Literal
 

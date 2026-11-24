@@ -66,7 +66,7 @@ class Metrics(Contract):
     storage_seconds: float = 0
     acquisition_method: Literal["provided_html", "provided_json", "http"] = "provided_html"
     egress: str = Field(default="direct", pattern=EGRESS_NAME)
-    # Only present when the operator disabled robots.txt for a host of this source (SEC-003).
+    # Only present when the operator disabled robots.txt for a host of this source.
     robots_overridden: bool = Field(default=False, exclude_if=lambda value: value is False)
     acquisition_seconds: float = 0
     network_seconds: float = 0
@@ -143,7 +143,7 @@ class ExtractionResult[T: BaseModel](Contract):
         ]
         | None
     ) = Field(default=None, exclude_if=_absent)
-    # Present only for a spider run: every discovered URL and its outcome (N3).
+    # Present only for a spider run: every discovered URL and its outcome.
     spider: SpiderReport | None = Field(default=None, exclude_if=_absent)
     learned_recipe: Recipe | None = None
     recipe_version: int | None = None

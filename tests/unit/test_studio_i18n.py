@@ -1,4 +1,4 @@
-"""Studio copy split per view, English and Spanish, with technical wording behind Advanced (N8)."""
+"""Studio copy split per view, English and Spanish, with technical wording behind Advanced."""
 
 from __future__ import annotations
 
@@ -63,7 +63,9 @@ def test_page_shows_no_jargon_outside_advanced_sections() -> None:
 
 def test_loader_imports_every_view_file_and_each_is_served() -> None:
     source = (STATIC / "i18n.js").read_text(encoding="utf-8")
-    imported = set(re.findall(r'from "\./i18n/(\w+)\.json" with \{ type: "json" \}', source))
+    listed = re.search(r"const NAMES = \[([^\]]*)\]", source)
+    assert listed is not None
+    imported = set(re.findall(r'"(\w+)"', listed.group(1)))
     assert imported == set(view_messages())
     assert {f"{name}.json" for name in imported} == I18N_ASSETS
 

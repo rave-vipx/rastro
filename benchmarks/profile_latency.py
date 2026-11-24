@@ -2,7 +2,7 @@
 
 Profiles the same two executors as `benchmarks.run` on three representative corpus
 cases and records the top cumulative functions per call. Measurement only: no engine
-change is implied by a hotspot (spec P-010).
+change is implied by a hotspot (spec.
 """
 
 from __future__ import annotations

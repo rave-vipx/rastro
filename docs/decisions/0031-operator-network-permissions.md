@@ -1,7 +1,6 @@
 # ADR 0031: operator network permissions
 
 - **Status:** accepted for 0.7.0.
-- **Requirements:** SEC-001, SEC-002, SEC-003, SEC-004, SEC-011.
 
 ## Problem
 

@@ -1,4 +1,4 @@
-"""N7/N12: Studio's auto-promote switch never promotes a repair without a semantic judge."""
+"""Studio's auto-promote switch never promotes a repair without a semantic judge."""
 
 from pathlib import Path
 
@@ -41,7 +41,7 @@ def _repair_after_drift(root: Path, model: FakeModel | None = None) -> dict:
 
 
 def test_auto_promote_without_a_model_keeps_the_candidate_and_says_why(tmp_path: Path) -> None:
-    """N12: no Studio, job or repair-env model means no judge: candidate only, v1 serves."""
+    """No Studio, job or repair-env model means no judge: candidate only, v1 serves."""
     payload = _repair_after_drift(tmp_path)
     (source,) = payload["report"]["sources"]
     assert source["promoted_version"] is None
@@ -57,7 +57,7 @@ def test_auto_promote_without_a_model_keeps_the_candidate_and_says_why(tmp_path:
 def test_a_configured_judge_decides_and_can_veto(
     tmp_path: Path, verdict: str, promoted: bool
 ) -> None:
-    """N7/N12: with the Studio model the gates plus the judge decide; a mismatch vetoes."""
+    """With the Studio model the gates plus the judge decide; a mismatch vetoes."""
     model = FakeModel(verdict)
     payload = _repair_after_drift(tmp_path, model)
     (source,) = payload["report"]["sources"]
@@ -67,7 +67,7 @@ def test_a_configured_judge_decides_and_can_veto(
 
 
 def test_judge_detection_mirrors_repair_model_resolution(monkeypatch: pytest.MonkeyPatch) -> None:
-    """N12: Studio model, job [model], or [repair] model = true with RASTRO_MODEL; nothing else."""
+    """Studio model, job [model], or [repair] model = true with RASTRO_MODEL; nothing else."""
     monkeypatch.delenv("RASTRO_MODEL", raising=False)
     plain = parse_job(JOB, format="toml")
     env_job = parse_job(JOB + "\n[repair]\nmodel = true\n", format="toml")
