@@ -2,21 +2,27 @@
 
 A decision to allow a capability for one site is held in memory for this Studio run only and is
 never written to a job or a file; the grant-only capabilities cannot be allowed from the page.
+``site_scope`` applies it: registry input for a job whose every URL is on an allowed site gets
+those capabilities while Studio installs or runs that job; other sites and origins get nothing.
 """
 
 from __future__ import annotations
 
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from weakref import WeakKeyDictionary
 
 from rastro.application.hub_publish import PackageInfo, publish_job_to_hub
 from rastro.application.hub_search import url_domain
+from rastro.application.operator_trust import operator_trust
 from rastro.cli_hub import _parser_for as parser_for
-from rastro.domain.capability_grants import CAPABILITIES, GRANT_ONLY
+from rastro.domain.capability_grants import CAPABILITIES, GRANT_ONLY, Capability
+from rastro.domain.jobs import Job
+from rastro.domain.models import ConfigurationError
 from rastro.studio.web import Refused, Studio, integer, optional_text, plain, text
 
 _HOST = re.compile(r"[A-Za-z0-9.-]+(:\d{1,5})?")
@@ -33,6 +39,29 @@ def record_decision(studio: Studio, decision: tuple[str, frozenset[str]] | None)
         site, names = decision
         held = _SITE_GRANTS.setdefault(studio, {})
         held[site] = held.get(site, frozenset()) | names
+
+
+def _job_sites(job: Job) -> set[str]:
+    urls = [getattr(source, "url", None) for source in job.sources]
+    try:
+        return {url_domain(url) for url in urls if url}
+    except ConfigurationError:
+        return set()  # a URL with no site cannot match a decision
+
+
+@contextmanager
+def site_scope(
+    studio: Studio, job: Job, decision: tuple[str, frozenset[str]] | None = None
+) -> Iterator[None]:
+    """Grant registry input the capabilities allowed for every site ``job`` reads."""
+    held = site_grants(studio)
+    if decision is not None:
+        held[decision[0]] = held.get(decision[0], frozenset()) | decision[1]
+    sites = _job_sites(job)
+    allowed = frozenset.intersection(*(held.get(s, frozenset()) for s in sites)) if sites else None
+    granted = cast(frozenset[Capability], allowed or frozenset())  # names checked on record
+    with operator_trust(untrusted={"registry": granted} if granted else None):
+        yield
 
 
 def decision_from(data: dict[str, Any]) -> tuple[str, frozenset[str]] | None:

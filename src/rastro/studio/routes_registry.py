@@ -26,7 +26,13 @@ from rastro.application.recipe_registry import (
 from rastro.cli_hub import _parser_for
 from rastro.domain.models import ConfigurationError
 from rastro.studio import files
-from rastro.studio.hub_actions import decision_from, publish_job, record_decision, site_grants
+from rastro.studio.hub_actions import (
+    decision_from,
+    publish_job,
+    record_decision,
+    site_grants,
+    site_scope,
+)
 from rastro.studio.web import Refused, Studio, body, optional_text, plain, reply, text
 
 
@@ -107,13 +113,20 @@ def _install(studio: Studio, data: dict[str, Any]) -> dict[str, Any]:
         _path(studio.root, relative.as_posix() + suffix)
     repository = SQLiteRecipeRepository(memory)
     options: dict[str, Any] = {"at": datetime.now(UTC), "limits": job.limits}
-    installed = (
-        install_from_registry(registry, spec, repository, _parser_for, **options)
-        if isinstance(registry, Path)
-        else _url_call(
-            studio, "install_from_registry_url", registry, spec, repository, _parser_for, **options
+    with site_scope(studio, job, decision):  # only this job's sites, only registry input
+        installed = (
+            install_from_registry(registry, spec, repository, _parser_for, **options)
+            if isinstance(registry, Path)
+            else _url_call(
+                studio,
+                "install_from_registry_url",
+                registry,
+                spec,
+                repository,
+                _parser_for,
+                **options,
+            )
         )
-    )
     stored = installed.imported.stored
     record_decision(studio, decision)
     return {

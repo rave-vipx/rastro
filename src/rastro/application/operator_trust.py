@@ -219,8 +219,11 @@ def operator_trust(
     allow_private_network: bool = False,
     allow_ports: Iterable[int] = (),
     ignore_robots: Iterable[str] = (),
+    untrusted: Mapping[InputOrigin, frozenset[Capability]] | None = None,
 ) -> Iterator[None]:
     """Scope an SDK caller's opt-in to the job functions called inside this block.
+
+    ``untrusted`` grants capabilities to untrusted origins, such as Studio's per-site choice.
 
     ``allow_stealth`` is the deprecated stealth switch: operator jobs need no grant, and it
     grants stealth and challenge solving to untrusted origins only, and emits a
@@ -235,6 +238,7 @@ def operator_trust(
         allow_private_network=allow_private_network is True,
         allowed_ports=env_ports(allow_ports),
         ignore_robots=env_hosts(ignore_robots),
+        untrusted_capabilities=dict(untrusted or {}),
     )
     token = _SCOPED.set((_SCOPED.get() or OperatorTrust()).merged(added))
     try:

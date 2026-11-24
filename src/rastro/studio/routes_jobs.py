@@ -17,6 +17,7 @@ from rastro.application.job_preview import bounded_preview, preview_job
 from rastro.domain.jobs import Job
 from rastro.studio import editing, files
 from rastro.studio.bounds import controls
+from rastro.studio.hub_actions import site_scope
 from rastro.studio.web import HEADERS, Refused, Studio, body, reply, text
 
 STATIC = Path(__file__).parent / "static"
@@ -137,7 +138,12 @@ def routes(studio: Studio) -> list[Route]:
     async def preview(request: Request) -> Response:
         data = await body(request)
         path, original, job, _ = _edited(studio, data)
-        shown = await run_in_threadpool(preview_job, job, base_dir=path.parent, **studio.trust)
+
+        def run() -> Any:
+            with site_scope(studio, job):
+                return preview_job(job, base_dir=path.parent, **studio.trust)
+
+        shown = await run_in_threadpool(run)
         return reply(
             {"ok": True, "sha256": files.digest(original), "preview": bounded_preview(shown)}
         )

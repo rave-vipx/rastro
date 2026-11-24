@@ -26,6 +26,7 @@ from rastro.application.preview_recipes import read_only_job
 from rastro.cli_errors import classify
 from rastro.domain.job_results import JobRunResult
 from rastro.studio import run_log
+from rastro.studio.hub_actions import site_scope
 from rastro.studio.operations import alerts, operation
 from rastro.studio.run_live import LiveRun, dev_acquisition
 from rastro.studio.web import Studio, body, flag, plain, reply, text
@@ -39,10 +40,11 @@ async def _drive(studio: Studio, live: LiveRun, path: Any, job: Any, finish: Any
     try:
         view = await run_in_threadpool(lambda: read_only_job(job, base_dir=path.parent))
         acquisition = dev_acquisition(view, studio.acquisition, studio.root)
-        async for result in stream_job_async(
-            view, base_dir=path.parent, acquisition=acquisition, **studio.trust
-        ):
-            live.add(result)
+        with site_scope(studio, job):
+            async for result in stream_job_async(
+                view, base_dir=path.parent, acquisition=acquisition, **studio.trust
+            ):
+                live.add(result)
         live.finish("done")
     except asyncio.CancelledError:
         live.finish("stopped")
@@ -83,7 +85,8 @@ def routes(studio: Studio) -> list[Route]:
         def run() -> dict[str, Any]:
             _, selections = active_job(job, base_dir=path.parent, allow_absolute_paths=False)
             view = read_only_job(job, base_dir=path.parent)
-            report = run_job(view, base_dir=path.parent, **studio.trust)
+            with site_scope(studio, job):
+                report = run_job(view, base_dir=path.parent, **studio.trust)
             return _extract_summary(report, [plain(s) for s in selections])
 
         with operation(studio, "extract", path) as outcome:
@@ -96,10 +99,14 @@ def routes(studio: Studio) -> list[Route]:
         data = await body(request)
         path = studio.job_path(text(data, "file"))
         drift = flag(data, "drift")
+        _, _, job = studio.load(text(data, "file"))
+
+        def run() -> Any:
+            with site_scope(studio, job):
+                return load_job_file(path, drift=drift, **studio.trust)
+
         with operation(studio, "load", path) as outcome:
-            loaded = await run_in_threadpool(
-                lambda: load_job_file(path, drift=drift, **studio.trust)
-            )
+            loaded = await run_in_threadpool(run)
             result = plain(loaded)
             run_log.remember(studio.root, path, run_log.from_load(loaded, datetime.now(UTC)))
             messages = alerts(result)
