@@ -12,6 +12,8 @@ domains. The examples make no network requests.
 - `sample/v03/job.toml`: three listing layouts, representing Teatro Central,
   Sala Norte (`salanorte.example`) and Club Faro (`clubfaro.example`).
 - `queries/upcoming.sql`: an example dataset query.
+- `sample/tiers/job.toml`: Sala Norte events with ticket tiers (a list of objects per event).
+- `read_agenda.py`: runs that job and reads the nested records from Python.
 - `repair_demo.py`: a complete offline drift and repair demonstration.
 
 The first two jobs share a schema with required `title`, `performers`, `venue`, `city`,
@@ -46,6 +48,29 @@ cp -R examples/event-agenda/sample "$scratch/sample"
 uv run rastro job load "$scratch/sample/job.toml"
 uv run rastro dataset export "$scratch/sample/agenda.sqlite" --format html \
   --sort-field starts_at --upcoming > "$scratch/agenda.html"
+```
+
+## Nested data and results from code
+
+Each event in `sample/tiers/` has several ticket tiers. No custom adapter is needed: the
+job declares `tiers` as a `list` of `object` fields (`tier`, `price`), the recipe reads
+them with one nested mapping (`each` plus `members`), and `rastro.read_records` returns
+them with provenance.
+
+```sh
+uv run python examples/event-agenda/read_agenda.py
+```
+
+Expected output:
+
+```text
+success: 1 source, 3 accepted, 0 rejected
+Noche de candombe: General 450, Platea 700, Palco 1200
+  title provenance: article.event [match 0] >> h2::text
+Tango en la rambla: General 500, Platea 800
+  title provenance: article.event [match 1] >> h2::text
+Milonga abierta: Entrada libre 0
+  title provenance: article.event [match 2] >> h2::text
 ```
 
 ## Drift and repair offline
