@@ -110,3 +110,32 @@ assert.equal(document.getElementById("wiz-step-2").hidden, false);
 assert.equal(document.getElementById("wiz-step-1").hidden, true);
 """
     )
+
+
+def test_hub_try_opens_the_review_step_with_the_installed_records() -> None:
+    """The Hub's "Try" sends studio:review {spec, file}; the wizard shows those records."""
+    run_node(
+        IMPORTS
+        + """
+const handlers = {};
+document.addEventListener = (kind, run) => { handlers[kind] = run; };
+const preview = {sources: [{source_url: "https://shop.example/", status: "success", issues: [], records: [
+  {index: 0, status: "accepted", fields: [{name: "name", value: "Lamp"}, {name: "price", value: "10"}]},
+  {index: 1, status: "rejected", reasons: [{code: "missing_data", field: "price"}]},
+]}]};
+reply({"/api/preview": [200, {ok: true, sha256: "x", preview}]});
+const views = [];
+const opened = [];
+wizard.initWizard({ switchView: (v) => views.push(v), openJob: async (f) => opened.push(f) });
+await handlers["studio:review"]({detail: {spec: "shop-example@3.0.0", file: "shop.toml"}});
+assert.deepEqual(calls.at(-1), {path: "/api/preview", body: {file: "shop.toml"}});
+assert.deepEqual(views, ["wizard"]);
+assert.equal(document.getElementById("wiz-step-3").hidden, false);
+const text = document.getElementById("suggest-result").textContent;
+assert.ok(text.includes("Trying shop-example@3.0.0 on shop.toml") && text.includes("1 records found"));
+assert.ok(text.includes("Lamp") && text.includes("price"));
+await document.getElementById("wiz-next-3").click();
+assert.deepEqual(opened, ["shop.toml"]);
+assert.deepEqual(views, ["wizard", "results"]);
+"""
+    )

@@ -194,3 +194,29 @@ export function fixField(box, { snapshot, found, url, use }) {
   begin();
   return true;
 }
+
+// Records of a project's preview (accepted ones only), as field names and rows for review.
+export function installedRows(preview) {
+  const names = [];
+  const rows = [];
+  for (const source of preview.sources || []) {
+    for (const record of source.records || []) {
+      if (record.status === "rejected") continue;
+      const row = {};
+      for (const field of record.fields) {
+        row[field.name] = field.value;
+        if (!names.includes(field.name)) names.push(field.name);
+      }
+      rows.push(row);
+    }
+  }
+  return { names, rows };
+}
+
+// Put the picked text as the field's example, so the next check finds that element.
+export function setExample(rows, field, value) {
+  for (const row of rows.children) {
+    const [name, example] = row.querySelectorAll("input");
+    if (name.value.trim() === field) example.value = value;
+  }
+}

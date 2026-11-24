@@ -133,7 +133,8 @@
     "wizard.verb.scroll": "scrolled",
     "wizard.verb.wait": "waited for",
     "wizard.verb.follow": "followed",
-    "wizard.verb.step": "tried"
+    "wizard.verb.step": "tried",
+    "wizard.hub.reviewing": "Trying {spec} on {file}. These records come from today's page."
   },
   "es": {
     "wizard.url.title": "¿Qué página querés seguir?",
@@ -269,7 +270,8 @@
     "wizard.verb.scroll": "Bajé por",
     "wizard.verb.wait": "Esperé a",
     "wizard.verb.follow": "Seguí",
-    "wizard.verb.step": "Probé"
+    "wizard.verb.step": "Probé",
+    "wizard.hub.reviewing": "Probando {spec} en {file}. Estos registros salen de la página de hoy."
   },
   "advanced": {
     "en": {

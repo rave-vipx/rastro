@@ -7,13 +7,14 @@ import { $, api, bind, el, request, show, state } from "./dom.js";
 import { t } from "./i18n.js";
 import { chip, openable } from "./ui.js";
 import { estimateCard, exploreCard, hubCard, offerCard } from "./correct.js";
-import { fixField, reviewTable, showPage } from "./pick.js";
+import { fixField, installedRows, reviewTable, setExample, showPage } from "./pick.js";
 
 const MAX_FIELDS = 30;
 let rowCount = 0;
 let edited = false; // the person typed file names: stop filling them from the project name
 let found = null; // the last suggestion; review and create read it
 let snapshot = null; // {wrap, page} of the last drawn snapshot
+let reviewing = null; // a project the Hub just installed into: review it, then open it
 const boxes = {};
 
 export function goStep(n) {
@@ -120,15 +121,14 @@ function fillFileNames() {
 }
 
 function defaultName(url) {
-  try {
-    const parsed = new URL(url);
-    const leaf = parsed.pathname.split("/").filter(Boolean).pop();
-    return leaf ? `${parsed.hostname} ${leaf}` : parsed.hostname;
-  } catch { return ""; }
+  const parsed = new URL(url); // only called with an address urlState accepted
+  const leaf = parsed.pathname.split("/").filter(Boolean).pop();
+  return leaf ? `${parsed.hostname} ${leaf}` : parsed.hostname;
 }
 
 // Step 1: someone may already have built this; the hub is asked before anything is fetched.
 async function lookUp(app) {
+  reviewing = null;
   const { host } = urlState(pageUrl());
   const box = area("wiz-step-1", "hub");
   show("url-status", t("wizard.hub.searching", { host }), "muted");
@@ -184,13 +184,6 @@ async function suggestRecipe() {
   snapshot = shot;
 }
 
-function setExample(field, value) {
-  for (const row of $("field-rows").children) {
-    const [name, example] = row.querySelectorAll("input");
-    if (name.value.trim() === field) example.value = value;
-  }
-}
-
 // Step 4: save; when the page may hide records behind a click, the AI may look once.
 async function createJob(app) {
   const body = collect();
@@ -211,7 +204,20 @@ async function createJob(app) {
   return undefined;
 }
 
+// From the Hub: what someone else built was installed into a project; check its records here.
+async function reviewInstalled(app, { spec, file }) {
+  const data = await api("/api/preview", { file });
+  const { names, rows } = installedRows(data.preview);
+  reviewing = file;
+  app.switchView("wizard");
+  goStep(3);
+  $("suggest-result").replaceChildren(el("p", t("wizard.hub.reviewing", { spec, file })),
+    chip(rows.length ? "ok" : "warn", t("wizard.found", { n: rows.length })), reviewTable(names, rows));
+}
+
 export function initWizard(app) {
+  document.addEventListener("studio:review", (event) => reviewInstalled(app, event.detail || {})
+    .catch((error) => show("suggest-status", t("msg.error", { why: error.message }), "bad")));
   addRow();
   addRow();
   $("page-url").addEventListener("input", () => {
@@ -221,10 +227,15 @@ export function initWizard(app) {
   bind("wiz-next-1", "url-status", () => lookUp(app));
   bind("wiz-back-2", "suggest-status", () => goStep(1));
   bind("wiz-back-3", "suggest-status", () => {
-    const ctx = { snapshot, found, url: pageUrl(), use: async (field, text) => { setExample(field, text); await suggestRecipe(); } };
+    const ctx = { snapshot, found, url: pageUrl(), use: async (field, text) => { setExample($("field-rows"), field, text); await suggestRecipe(); } };
     if (!fixField(area("wiz-step-3", "fix"), ctx)) goStep(2);
   });
-  bind("wiz-next-3", "create-status", () => { fillFileNames(); goStep(4); });
+  bind("wiz-next-3", "create-status", async () => {
+    if (!reviewing) { fillFileNames(); goStep(4); return; }
+    const file = reviewing;
+    reviewing = null;
+    await app.openJob(file).then(() => app.switchView("results"));
+  });
   bind("wiz-back-4", "create-status", () => goStep(3));
   bind("add-field", "suggest-status", () => addRow().focus());
   bind("suggest", "suggest-status", suggestRecipe);
