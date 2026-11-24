@@ -23,6 +23,7 @@ from starlette.routing import Route
 from rastro.application.atomic_files import FileChangedError
 from rastro.application.job_from_url import FetchedUrl
 from rastro.application.job_loader import load_job
+from rastro.application.operator_trust import stealth_notice_given
 from rastro.cli_errors import classify
 from rastro.domain.jobs import Job
 from rastro.domain.models import RastroError
@@ -186,7 +187,8 @@ class Studio:
         async def endpoint(request: Request) -> Response:
             try:
                 self.guard(request, api=path.startswith("/api/"))
-                return await handler(request)
+                with stealth_notice_given():  # the page's own switch, not the deprecated keyword
+                    return await handler(request)
             except FileChangedError:
                 return reply({"ok": False, "error": "file_changed"}, 409)
             except Refused as refused:

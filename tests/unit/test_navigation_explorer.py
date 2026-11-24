@@ -19,6 +19,7 @@ from rastro.application.browser_acquisition import BrowserAcquirer
 from rastro.application.job_render import render_job
 from rastro.application.navigation_explorer import (
     ExplorationBudget,
+    ExplorationResult,
     Observation,
     explore_navigation,
 )
@@ -409,3 +410,79 @@ async def test_steps_stop_at_max_steps_and_need_the_model_grant():
     )
     assert refused.recipe.steps == () and refused.stop_reason == "model_stopped"
     assert refused.events[1].reason == "invalid_model_step"
+
+
+JOB_TOML = """
+format_version = 1
+[recipe]
+strategy = "css"
+record_selector = "article"
+[recipe.fields]
+name = "h2::text"
+[[fields]]
+name = "name"
+type = "string"
+[[sources]]
+url = "https://shop.example/list"
+[acquisition]
+allowed_hosts = ["shop.example"]
+min_interval_seconds = 0
+max_retries = 0
+render = "browser"
+"""
+
+
+def test_explore_job_file_writes_a_browser_job_with_the_kept_steps(tmp_path, monkeypatch):
+    from rastro.application import navigation_file
+
+    original = tmp_path / "job.toml"
+    original.write_text(JOB_TOML, encoding="utf-8")
+    monkeypatch.setattr(navigation_file, "job_web_acquirer", lambda spec: browser(spec, Site()))
+    explored = tmp_path / "explored.toml"
+    result = navigation_file.explore_job_file(
+        original,
+        explored,
+        model=Model(reply(action="click", selector="button.more")),
+        expected_records=4,
+    )
+    assert result.records_after == 4
+    written = parse_job(explored.read_text(encoding="utf-8"), format="toml")
+    assert written.acquisition.render == "browser"
+    assert written.recipe.steps == result.recipe.steps
+    assert original.read_text(encoding="utf-8") == JOB_TOML  # the original is never changed
+    with pytest.raises(ConfigurationError, match="already exists"):
+        navigation_file.explore_job_file(original, explored, model=Model())
+
+
+def test_a_recipe_with_steps_renders_in_a_browser_even_from_an_http_policy():
+    spec = job(render="http", steps=[{"action": "click", "selector": "button.more"}])
+    source = UrlJobSource(url="https://shop.example/list")
+    text = render_job(spec.fields, spec.recipe, [source], policy=spec.acquisition)
+    assert 'render = "browser"' in text
+
+
+def test_rastro_new_explore_writes_the_explored_job(tmp_path, monkeypatch, capsys):
+    from rastro import cli, cli_explore
+
+    original = tmp_path / "job.toml"
+    original.write_text(JOB_TOML, encoding="utf-8")
+    seen = {}
+
+    def fake(job_path, output, **kwargs):
+        seen.update(kwargs, job=job_path, output=output)
+        return ExplorationResult(
+            recipe=job().recipe,
+            records_before=2,
+            records_after=4,
+            stop_reason="expected_records",
+            model_calls=1,
+            events=(),
+        )
+
+    monkeypatch.setattr(cli_explore, "explore_job_file", fake)
+    out = tmp_path / "explored.toml"
+    code = cli.main(["new", "--explore", str(original), "-o", str(out), "--expect", "4"])
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["records_after"] == 4 and payload["created"] == str(out)
+    assert seen["expected_records"] == 4 and seen["model"] == "env"

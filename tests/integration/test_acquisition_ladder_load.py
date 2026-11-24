@@ -13,6 +13,7 @@ from rastro.application.active_recipes import source_key
 from rastro.application.checkpointed_load import run_checkpointed_load
 from rastro.application.job_dataset import load_job_file
 from rastro.application.job_loader import load_job
+from rastro.application.jobs import run_job_file
 from rastro.application.ladder_levels import PROBE_EVERY, floor_level
 from rastro.domain.acquisition import HttpResponse
 from rastro.domain.jobs import Job, UrlJobSource
@@ -52,9 +53,10 @@ class Site:
     def __init__(self, monkeypatch: pytest.MonkeyPatch, blocked: set[str]) -> None:
         self.blocked = blocked
         self.built: list[str] = []
-        monkeypatch.setattr("rastro.application.job_dataset._web_acquirer", self.acquirer)
+        monkeypatch.setattr("rastro.application.job_dataset.job_web_acquirer", self.acquirer)
+        monkeypatch.setattr("rastro.application.job_ladder_run.job_web_acquirer", self.acquirer)
 
-    def acquirer(self, job: Job, conditional):
+    def acquirer(self, job: Job, conditional=None):
         level = level_of(job)
         self.built.append(level)
         transport = _Leveled(self, level)
@@ -145,6 +147,7 @@ def test_every_step_in_report(job_file, monkeypatch) -> None:
     ]
     result = runs[0][0].results[0]
     assert "ladder_exhausted" in {issue.code for issue in result.issues}
+    assert "ladder_exhausted" in {issue.code for issue in loaded.sources[0].issues}
 
 
 def test_lowest_working_level_remembered(job_file, monkeypatch) -> None:
@@ -180,3 +183,22 @@ def test_an_unblocked_source_has_one_step_and_builds_no_other_level(job_file, mo
     loaded = load_job_file(job_file)
     assert _ladder(loaded) == [("http", "ok")]
     assert site.built == ["http"]
+
+
+def test_job_run_climbs_the_same_ladder(job_file, monkeypatch) -> None:
+    Site(monkeypatch, blocked={"http", "impersonation"})
+    result = run_job_file(job_file)
+    assert result.job.status == "success" and result.job.records_accepted == 1
+    use = result.report.sources[0].acquisition
+    assert [(step.level, step.outcome) for step in use.ladder] == [
+        ("http", "blocked"),
+        ("impersonation", "blocked"),
+        ("browser", "ok"),
+    ]
+
+
+def test_job_run_blocked_everywhere_is_ladder_exhausted(job_file, monkeypatch) -> None:
+    Site(monkeypatch, blocked={"http", "impersonation", "browser", "stealth", "challenge"})
+    result = run_job_file(job_file)
+    assert result.job.status == "failed"
+    assert "ladder_exhausted" in {issue.code for issue in result.results[0].issues}

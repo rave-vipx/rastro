@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import os
 import re
+import warnings
 from collections.abc import Iterable, Iterator, Mapping
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -191,6 +192,24 @@ def set_process_trust(trust: OperatorTrust) -> OperatorTrust:
     return previous
 
 
+_STEALTH_NOTICE_GIVEN: ContextVar[bool] = ContextVar("stealth_notice_given", default=False)
+STEALTH_DEPRECATION = (
+    "allow_stealth= is deprecated: your own jobs need no grant; grant untrusted input with "
+    "an untrusted capability grant (ORIGIN:stealth) instead"
+)
+
+
+@contextmanager
+def stealth_notice_given() -> Iterator[None]:
+    """Mark calls whose stealth grant is Rastro's own switch (Studio) or was already reported
+    (the command line prints its own notice for ``--allow-stealth``)."""
+    token = _STEALTH_NOTICE_GIVEN.set(True)
+    try:
+        yield
+    finally:
+        _STEALTH_NOTICE_GIVEN.reset(token)
+
+
 @contextmanager
 def operator_trust(
     *,
@@ -204,8 +223,11 @@ def operator_trust(
     """Scope an SDK caller's opt-in to the job functions called inside this block.
 
     ``allow_stealth`` is the deprecated stealth switch: operator jobs need no grant, and it
-    grants stealth and challenge solving to untrusted origins only.
+    grants stealth and challenge solving to untrusted origins only, and emits a
+    ``DeprecationWarning``.
     """
+    if allow_stealth is True and not _STEALTH_NOTICE_GIVEN.get():
+        warnings.warn(STEALTH_DEPRECATION, DeprecationWarning, stacklevel=4)
     added = OperatorTrust(
         allow_remote=allow_remote is True,
         allow_stealth=allow_stealth is True,

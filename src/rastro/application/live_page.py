@@ -102,7 +102,7 @@ def engine_parts(mode: str) -> tuple[Any, Any, Any]:
     """The renderer for ``mode``, an HTTP transport (robots) and a resolver."""
     from rastro.adapters.dns import SystemResolver
     from rastro.adapters.http import CurlTransport
-    from rastro.browser import _renderer
+    from rastro.browser import renderer_for as _renderer
 
     return _renderer(mode), CurlTransport(), SystemResolver()
 

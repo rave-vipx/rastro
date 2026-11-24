@@ -48,6 +48,7 @@ def _job(tmp_path):
     return path
 
 
+@pytest.mark.filterwarnings("ignore:allow_stealth= is deprecated:DeprecationWarning")
 def test_load_job_file_forwards_allow_stealth(tmp_path, monkeypatch):
     import rastro.application.job_dataset as module
 
@@ -96,6 +97,7 @@ def test_repair_entry_points_forward_allow_stealth(entry, tmp_path, monkeypatch)
     assert seen == [True, False]
 
 
+@pytest.mark.filterwarnings("ignore:allow_stealth= is deprecated:DeprecationWarning")
 @pytest.mark.asyncio
 async def test_repair_evidence_fetch_renders_with_stealth_consent(tmp_path, monkeypatch):
     import rastro.adapters.dns as dns

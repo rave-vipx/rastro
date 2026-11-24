@@ -15,7 +15,7 @@ from pydantic import BaseModel, ValidationError
 
 from rastro.application.job_new import new_job
 from rastro.application.suggest import suggest
-from rastro.cli_suggest import suggestion_payload
+from rastro.cli_suggest_output import suggestion_payload
 from rastro.domain.injection import record_flags
 from rastro.domain.job_fields import StringField, build_job_schema
 from rastro.domain.models import ConfigurationError, Limits, Recipe

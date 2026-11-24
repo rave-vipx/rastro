@@ -31,6 +31,10 @@ nav:
       - Declarative jobs: jobs.md
       - Recipes from examples: suggest.md
       - HTTP acquisition: acquisition.md
+      - Proxies and blocked sources: egress.md
+      - Browser controls: browser.md
+      - Page steps: page-steps.md
+      - Network recipes: network-recipes.md
       - Reading results: reading-results.md
       - Dataset load and export: dataset.md
       - Run report: run-report.md

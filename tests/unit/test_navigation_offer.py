@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from rastro.application.job_new import new_job_from_sites
+from rastro.application.job_new_sites import new_job_from_sites
 from rastro.application.navigation_offer import exploration_offer
 from rastro.domain.acquisition import AcquisitionResult
 from rastro.domain.models import Outcome, Representation, Source

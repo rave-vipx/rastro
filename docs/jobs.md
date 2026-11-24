@@ -561,6 +561,14 @@ See [dataset usage and the executed offline sequence](dataset.md#load-inspect-an
 - [Crawling linked pages](crawling.md): path filters, page identity and evidence.
 - [Engines](engines.md): which Scrapling feature maps to which Rastro setting.
 - [Reading results](reading-results.md): `read_records`, export and the command line.
+- [Proxies and blocked sources](egress.md): egress profiles, rotation, the acquisition
+  ladder and what to do when a site refuses automated access.
+- [Browser controls](browser.md): waits, blocked resources, region, screenshots and the
+  grant-only browser options.
+- [Page steps](page-steps.md): clicks, typing and links before extraction, and letting a
+  model find them once.
+- [Network recipes](network-recipes.md): recipes over the JSON responses a page loads.
+- [Recipe hub](hub.md): start from a recipe someone already shared for the site.
 
 ## Pagination
 

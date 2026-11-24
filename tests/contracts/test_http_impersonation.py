@@ -156,3 +156,25 @@ def test_every_browser_family_has_an_installed_target():
 
 def test_http3_detection_reads_the_libcurl_features():
     assert isinstance(http_options.http3_available(), bool)
+
+
+@pytest.mark.asyncio
+async def test_the_response_says_which_protocol_answered_and_what_fell_back(monkeypatch):
+    seen: dict = {}
+    capture = _capture(seen)
+
+    async def answered_h2(session, url, **kwargs):
+        result = await capture(session, url, **kwargs)
+        result.http_version = CurlHttpVersion.V2_0
+        return result
+
+    monkeypatch.setattr(AsyncSession, "get", answered_h2)
+    monkeypatch.setattr(http_options, "http3_available", lambda: False)
+    monkeypatch.setattr(http_options, "browser_target", lambda family: None)
+    response = await CurlTransport().get(
+        TARGET, headers={}, timeout=1, max_bytes=10, impersonate="edge", http_version="3"
+    )
+    assert response.http_version == "2"
+    assert response.fallbacks == ("impersonation_unavailable", "http3_unavailable")
+    assert http_options.negotiated(CurlHttpVersion.V3) == "3"
+    assert http_options.negotiated(0) is None

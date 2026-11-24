@@ -9,10 +9,15 @@ from rastro.application.crawl_estimate import CrawlEstimate
 from rastro.application.crawl_estimate import estimate as estimate_crawl
 from rastro.application.engine import Rastro
 from rastro.application.health import job_health
+from rastro.application.hub_search import HubCandidate, hub_candidates
 from rastro.application.job_dataset import load_job_file
 from rastro.application.job_maintenance import acknowledge_job_drift, forget_job_source
 from rastro.application.job_repair import promote_job_recipe, repair_job_source
+from rastro.application.job_stream import stream_job_async
 from rastro.application.jobs import load_job, run_job, run_job_async, run_job_file
+from rastro.application.navigation_explorer import ExplorationResult
+from rastro.application.navigation_file import explore_job_file
+from rastro.application.navigation_job import explore_job
 from rastro.application.recipe_apply import apply_job_recipe
 from rastro.application.suggest import suggest
 from rastro.capabilities import Capability
@@ -166,12 +171,14 @@ __all__ = [
     "EgressProfile",
     "EmbeddedJsonRecipe",
     "Evidence",
+    "ExplorationResult",
     "ExtractionRecord",
     "ExtractionResult",
     "Fetched",
     "FieldConfidence",
     "FileJobSource",
     "FixtureBundle",
+    "HubCandidate",
     "InferencePolicy",
     "IntegerField",
     "Issue",
@@ -251,9 +258,12 @@ __all__ = [
     "build_job_schema",
     "css",
     "estimate_crawl",
+    "explore_job",
+    "explore_job_file",
     "fetch",
     "fetch_async",
     "forget_job_source",
+    "hub_candidates",
     "job_health",
     "job_json_schema",
     "job_run_json_schema",
@@ -272,6 +282,7 @@ __all__ = [
     "schema_fingerprint",
     "scrape",
     "scrape_async",
+    "stream_job_async",
     "suggest",
     "verify_fixture",
 ]

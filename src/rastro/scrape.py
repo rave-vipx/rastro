@@ -129,13 +129,15 @@ async def scrape_async[T: BaseModel](
     )
     if page.document is None:  # acquisition failed: the engine reports the explicit outcome
         engine = _engine(page, limits, discover=seed is None, assist=assist)
-        return await _extract(engine, page, schema, seed)
+        return page.annotate(await _extract(engine, page, schema, seed))
     if memory is None:
         if seed is None and assist is None:
             seed = await asyncio.to_thread(_discover, page.document, schema, limits)
-        return await _extract(_engine(page, limits, assist=assist), page, schema, seed)
+        return page.annotate(
+            await _extract(_engine(page, limits, assist=assist), page, schema, seed)
+        )
     store = ScrapeMemory(memory, limits)
-    return await _remembered(store, page, schema, seed, repair, limits, assist)
+    return page.annotate(await _remembered(store, page, schema, seed, repair, limits, assist))
 
 
 async def _remembered[T: BaseModel](

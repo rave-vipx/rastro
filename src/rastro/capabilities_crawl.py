@@ -27,6 +27,28 @@ CRAWL_CAPABILITIES: tuple[Capability, ...] = (
         docs="docs/jobs.md#spider",
     ),
     Capability(
+        task="Crawl a whole site without a page cap and resume where it stopped",
+        use='`[spider] max_pages = "unbounded"` with `time_budget_seconds`; the crawl saves a '
+        "checkpoint next to the job and resumes from it; `stream_job_async` yields each "
+        "source's result as it finishes",
+        python=_names("stream_job_async"),
+        limits="Bounded by the time budget and the record limit; robots.txt and allowed hosts "
+        "still apply; adaptive per-host pacing",
+        instead_of="a crawler that restarts from scratch or keeps every page in memory",
+        docs="docs/crawling.md#unbounded-crawls",
+    ),
+    Capability(
+        task="Click, type or follow links before extracting, or let a model find those steps",
+        use="`[[recipe.steps]]` page steps with a browser render; `rastro new --explore JOB "
+        "-o NEW` (or `explore_job_file`) asks a model once and keeps only steps that replayed",
+        python=_names("explore_job explore_job_file ExplorationResult"),
+        cli=("rastro new --explore",),
+        limits="Steps from a fixed vocabulary, bounded in count and time, under the job's "
+        "request budget and network guard; exploration is operator-started only",
+        instead_of="a hand-written browser script per site",
+        docs="docs/page-steps.md",
+    ),
+    Capability(
         task="Load more records by scrolling",
         use='`[scroll] max_steps = 10` with `render = "browser"`',
         limits="1 to 30 steps; stops when a step adds no record; never enables stealth",

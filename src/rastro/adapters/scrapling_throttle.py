@@ -10,10 +10,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from rastro.ports.engine import CrawlThrottle
+
 if TYPE_CHECKING:
     from scrapling.spiders.throttle import AutoThrottle
 
-__all__ = ["ScraplingThrottle"]
+__all__ = ["ScraplingThrottle", "default_throttle"]
 
 
 class ScraplingThrottle:
@@ -40,3 +42,18 @@ class ScraplingThrottle:
         """Record one response and return the host's new delay in seconds."""
         floor = self._floors.get(host, 0.0)
         return self._throttle().record(host, latency, ok, floor=floor, retry_after=retry_after)
+
+
+def default_throttle() -> CrawlThrottle:
+    """The engine's throttle when it can be loaded, else the same arithmetic in the stdlib.
+
+    The engine's spider package needs the browser extra; an HTTP-only install still paces
+    adaptively.
+    """
+    try:
+        import scrapling.spiders.throttle  # noqa: F401
+    except ImportError:
+        from rastro.application.adaptive_throttle import AdaptiveThrottle
+
+        return AdaptiveThrottle()
+    return ScraplingThrottle()

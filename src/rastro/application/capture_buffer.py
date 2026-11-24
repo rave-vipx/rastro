@@ -7,13 +7,12 @@ job's ``capture_network`` patterns, and keeps bodies within a count and byte bud
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 from urllib.parse import urlsplit
 
 from rastro.application.destinations import permitted_url
 from rastro.domain.acquisition import AcquisitionError, AcquisitionPolicy
-from rastro.domain.capture_pattern import MAX_CAPTURE_PATH
+from rastro.domain.capture_pattern import capture_matches
 from rastro.ports.engine import CapturedResponse
 
 __all__ = [
@@ -56,7 +55,7 @@ class CaptureBuffer:
 
     def __init__(self, policy: AcquisitionPolicy) -> None:
         self._policy = policy
-        self._patterns = tuple(re.compile(p) for p in policy.browser.capture_network)
+        self._patterns = policy.browser.capture_network
         self._responses: list[CapturedResponse] = []
         self._accepted = self._bytes = 0
         self._closed = False
@@ -81,7 +80,7 @@ class CaptureBuffer:
             return None
         parts = urlsplit(url)
         path = parts.path or "/"
-        if len(path) > MAX_CAPTURE_PATH or not any(p.search(path) for p in self._patterns):
+        if not any(capture_matches(p, path) for p in self._patterns):
             return None
         self._accepted += 1
         media = content_type.split(";", 1)[0].strip().lower()

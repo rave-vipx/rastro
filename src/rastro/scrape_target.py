@@ -12,6 +12,7 @@ import os
 import stat
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 from urllib.parse import urlsplit
 
 from pydantic import ValidationError
@@ -28,7 +29,8 @@ from rastro.domain.models import (
     ResourceLimitError,
     Source,
 )
-from rastro.domain.source_notes import LadderStep
+from rastro.domain.results import ExtractionResult, Issue
+from rastro.domain.source_notes import AcquisitionUse, LadderStep, SourceNotes
 from rastro.ports.acquisition import AcquisitionPort
 
 DEFAULT_URL = "https://localhost/"
@@ -52,6 +54,23 @@ class Page:
         if self.fetched is None:
             return self.source
         return Source.model_validate({**self.source.model_dump(), "url": self.fetched.url})
+
+    def annotate[R: ExtractionResult[Any]](self, result: R) -> R:
+        """``result`` with the ladder in its acquisition note; ``ladder_exhausted`` at the top."""
+        if not self.ladder:
+            return result
+        notes = result.notes or SourceNotes()
+        render = self.fetched.render if self.fetched is not None else "http"
+        use = (notes.acquisition or AcquisitionUse(render=render)).model_copy(
+            update={"render": render, "ladder": self.ladder}
+        )
+        issues = result.issues
+        if self.ladder[-1].outcome == "blocked" and "ladder_exhausted" not in {
+            issue.code for issue in issues
+        }:
+            issues = (*issues, Issue(code="ladder_exhausted"))
+        notes = notes.model_copy(update={"acquisition": use})
+        return result.model_copy(update={"notes": notes, "issues": issues})
 
 
 class Prefetched:
@@ -139,18 +158,9 @@ def ladder_port(rung: Rung) -> AcquisitionPort:
         return port
     if rung.policy.render == "http":
         return web_acquirer(rung.policy)
-    try:
-        from rastro.adapters.dns import SystemResolver
-        from rastro.adapters.http import CurlTransport
-        from rastro.application.browser_acquisition import BrowserAcquirer
-        from rastro.browser import _renderer as renderer_for
+    from rastro.browser import browser_acquirer
 
-        renderer = renderer_for(rung.policy.render)
-    except ModuleNotFoundError:
-        raise ConfigurationError("This level needs rastro-engine[browser]") from None
-    return BrowserAcquirer(
-        rung.policy, renderer=renderer, transport=CurlTransport(), resolver=SystemResolver()
-    )
+    return browser_acquirer(rung.policy)
 
 
 def looks_like_path(target: str) -> bool:

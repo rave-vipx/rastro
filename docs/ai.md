@@ -74,7 +74,7 @@ configured, runs work as before.
 | --- | --- | --- |
 | `scrape` with no selectors | JSON-LD and microdata discovery | The model proposes a recipe from field names, types and descriptions. It is kept only if it extracts valid records |
 | `suggest` | Selectors that reproduce your examples | Examples become optional. A model recipe must still reproduce every given example |
-| Repair (`scrape(..., memory=)`, `recipe repair`) | Relocation, declared fallbacks, discovery | Consulted **only when no deterministic candidate would pass**. Its recipe is joined with the serving selectors (`old, new`), gated like any other and then held to the deterministic value checks: values of the field's type and shape, never taken from another field's earlier values. A failure rejects it |
+| Repair (`scrape(..., memory=)`, `recipe repair`) | Relocation, declared fallbacks, discovery, then adaptive candidates (elements similar to the remembered records) | Consulted **only when no deterministic candidate would pass**. Its recipe is joined with the serving selectors (`old, new`), gated like any other and then held to the deterministic value checks: values of the field's type and shape, never taken from another field's earlier values. A failure rejects it |
 | Semantic gate | `[[consistency]]` rules and replay of the last good sample | Before any automatic promotion, relocated or proposed, the model judges whether each changed field still means the same. `mismatch` or a failed answer quarantines; it can block a promotion, never force one |
 | MCP agent in the loop | `recipe_repair`, `recipe_promote` (a reason is required) | The agent's own model proposes and judges through the tools. The same recipe CI decides |
 

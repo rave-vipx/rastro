@@ -17,6 +17,9 @@ from rastro.domain.job_load import LoadedSource
 from rastro.domain.models import ExtractionResult, Issue, Outcome
 from rastro.ports.dataset import DatasetStore, DatasetValidators, SourceFailureRecorder
 
+SURFACED = frozenset({"ladder_exhausted"})
+"""Run issues a loaded source repeats, so ``job load`` output says why the site stayed shut."""
+
 
 def unloaded(result: ExtractionResult[Any]) -> LoadedSource:
     """Nothing of this source was written because dataset storage failed."""
@@ -87,7 +90,7 @@ def load_source(
         consistency=consistency,
         next_action=next_action,
         reason=reason,
-        issues=dropped,
+        issues=(*dropped, *(i for i in result.issues if i.code in SURFACED)),
     )
 
 

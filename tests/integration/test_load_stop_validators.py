@@ -64,7 +64,7 @@ identity = ["title"]
             job.acquisition, transport=Transport(), resolver=Resolver(), conditional=conditional
         )
 
-    monkeypatch.setattr("rastro.application.job_dataset._web_acquirer", acquirer)
+    monkeypatch.setattr("rastro.application.job_dataset.job_web_acquirer", acquirer)
     return path
 
 

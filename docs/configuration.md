@@ -1092,6 +1092,8 @@ Create a job file from a saved page, known sites or a goal. Docs: [suggest.md#cr
 | `--output-file` | Path | - |  | New .toml job file |
 | `--from` | Path | - |  | Saved HTML page |
 | `--goal` | value | - |  | Research goal text for source discovery |
+| `--explore` | JOB | - |  | Explore JOB's first page with a model and write its recipe with page steps |
+| `--expect` | N | - |  | With --explore: stop once N records show |
 | `--site` | URL (repeatable) | - |  | Page URLs to scrape |
 | `--fields` | A,B (repeatable) | - |  | Field names to propose |
 | `--search` | value | - | one of searxng, model | How --goal finds candidate sources |

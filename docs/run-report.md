@@ -47,6 +47,11 @@ A spider that stops at `max_pages` reports `reason: "page_cap"` with a partial o
 source that answers `500` reports `reason: "failed"` and `detail: "http_500"`. Telling the
 two apart is the point of the report.
 
+When a site refused the first fetch, the source's `acquisition` entry lists every level of
+the acquisition ladder that was tried in `ladder` (`level` and `outcome`), the level the
+run started at in `start_level`, and `http_version` when the transport knows which HTTP
+version answered. A source still refused at the top level also carries `ladder_exhausted`.
+
 `totals` sums the sources; `open_drift` counts unacknowledged drift on a load.
 
 ## Failure hook payload

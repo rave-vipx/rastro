@@ -32,6 +32,14 @@ class PlaywrightSession:
         self._page: Any = None
         self._capture = CaptureListener()
 
+    async def element_boxes(self, selectors: Sequence[str]) -> dict[str, list[dict[str, float]]]:
+        """Viewport boxes of each selector's matches on the page this session last rendered."""
+        if self._page is None:
+            return {selector: [] for selector in selectors}
+        from rastro.adapters.element_boxes import measure_boxes
+
+        return await measure_boxes(self._page, selectors)
+
     def captured(self) -> tuple[CapturedResponse, ...]:
         """The responses captured by the last render or page steps."""
         return self._capture.last

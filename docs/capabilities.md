@@ -130,6 +130,23 @@ What Rastro already does, for people and for AI coding agents. Use these before 
 - **Do not build:** hand-built link following, detail-page fetching or your own sitemap parser
 - **Docs:** [jobs.md#spider](jobs.md#spider)
 
+### Crawl a whole site without a page cap and resume where it stopped
+
+- **Use:** `[spider] max_pages = "unbounded"` with `time_budget_seconds`; the crawl saves a checkpoint next to the job and resumes from it; `stream_job_async` yields each source's result as it finishes
+- **Python:** `stream_job_async`
+- **Limits:** Bounded by the time budget and the record limit; robots.txt and allowed hosts still apply; adaptive per-host pacing
+- **Do not build:** a crawler that restarts from scratch or keeps every page in memory
+- **Docs:** [crawling.md#unbounded-crawls](crawling.md#unbounded-crawls)
+
+### Click, type or follow links before extracting, or let a model find those steps
+
+- **Use:** `[[recipe.steps]]` page steps with a browser render; `rastro new --explore JOB -o NEW` (or `explore_job_file`) asks a model once and keeps only steps that replayed
+- **Python:** `explore_job`, `explore_job_file`, `ExplorationResult`
+- **CLI:** `rastro new --explore`
+- **Limits:** Steps from a fixed vocabulary, bounded in count and time, under the job's request budget and network guard; exploration is operator-started only
+- **Do not build:** a hand-written browser script per site
+- **Docs:** [page-steps.md](page-steps.md)
+
 ### Load more records by scrolling
 
 - **Use:** `[scroll] max_steps = 10` with `render = "browser"`
@@ -237,6 +254,7 @@ What Rastro already does, for people and for AI coding agents. Use these before 
 ### Start from a recipe someone already shared for a site
 
 - **Use:** `rastro hub search URL` offers recipes for the URL's domain from the public hub or any hub URL; `rastro hub install` stores one as a candidate; `rastro hub publish` writes your recipe, a synthetic sample and field descriptions into a hub checkout
+- **Python:** `hub_candidates`, `HubCandidate`
 - **CLI:** `rastro hub search`, `rastro hub install`, `rastro hub publish`
 - **Limits:** Offers are candidates until your local gates pass; publish writes locally, sharing is a pull request to the hub repository
 - **Do not build:** writing a recipe for a site someone already scraped

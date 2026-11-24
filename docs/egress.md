@@ -70,6 +70,18 @@ stays `direct`.
 browser launches with the chosen proxy; a source's browser context keeps the proxy it
 opened with for all of its pages.
 
+## The acquisition ladder
+
+A refused source does not fail at once. `rastro job run`, `rastro job load` and
+`rastro.scrape` climb from the job's own level through stronger ones (browser
+impersonation, a browser, a stealth browser, challenge solving and, when the operator
+installed one, a solver plugin) and stop at the first level that returns the page. Levels
+the job's trust does not allow are skipped as `not_granted`. A robots.txt refusal never
+climbs. Recipe memory keeps the lowest level that worked and checks the levels below it
+every ten runs. Each level tried is listed in the run report's `acquisition.ladder`; a
+source refused at every level reports `ladder_exhausted`. See
+[ADR 0039](decisions/0039-acquisition-ladder.md).
+
 ## What stays checked
 
 The proxy changes the network path, not what may be fetched:

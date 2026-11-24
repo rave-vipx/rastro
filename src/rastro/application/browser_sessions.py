@@ -88,6 +88,11 @@ class SourceSessions:
             return None
         return entry.session
 
+    def last_rendered(self, renderer: object) -> BrowserSession | None:
+        """The renderer's session when its last render succeeded on the bound host."""
+        entry = self._open.get(id(renderer))
+        return entry.session if entry is not None and entry.rendered is not None else None
+
     async def close(self) -> None:
         entries, self._open = list(self._open.values()), {}
         for entry in reversed(entries):

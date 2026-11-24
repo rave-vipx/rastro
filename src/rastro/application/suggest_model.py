@@ -33,8 +33,11 @@ def suggest_with_model(
     verify: Verify,
     records_min: int,
     policy: InferencePolicy | None = None,
+    timezone: str | None = None,
 ) -> Suggestion[Any]:
-    """Run the bounded proposal loop; raise ``SuggestionError`` when nothing verifies."""
+    """Run the bounded proposal loop; raise ``SuggestionError`` when nothing verifies.
+
+    ``timezone`` is the page's region timezone, given to the model for local dates."""
     try:
         asyncio.get_running_loop()
     except RuntimeError:
@@ -42,7 +45,7 @@ def suggest_with_model(
     else:
         raise ConfigurationError("suggest with a model cannot run inside a running event loop")
     with asyncio.Runner(loop_factory=asyncio.SelectorEventLoop) as runner:
-        return runner.run(_propose(model, html, schema, verify, records_min, policy))
+        return runner.run(_propose(model, html, schema, verify, records_min, policy, timezone))
 
 
 async def _propose(
@@ -52,6 +55,7 @@ async def _propose(
     verify: Verify,
     records_min: int,
     policy: InferencePolicy | None,
+    timezone: str | None = None,
 ) -> Suggestion[Any]:
     found: list[Suggestion[Any]] = []
 
@@ -86,6 +90,7 @@ async def _propose(
         attempts=attempts,
         evaluate=evaluate,
         hints=schema_hints(schema),
+        timezone=timezone,
     )
     best = next((s for s in found if s.status is Outcome.SUCCESS), found[0] if found else None)
     if best is None:

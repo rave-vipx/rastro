@@ -108,6 +108,36 @@ time_budget_seconds = 1800
   input from agent tools, bundles, registry recipes or model output needs
   `--allow-untrusted <origin>:unbounded_crawl`.
 
+- While it runs, an unbounded crawl rewrites its checkpoint every minute. A run that dies
+  (a crash, a killed process) resumes from the last one; the pages it had fetched go back
+  into the frontier, because their records are stored only when a run ends.
+- An install without the browser extra still adapts its pace: Rastro uses its own
+  throttle with the same rules when the engine's crawl package is not installed.
+- `stream_job_async(job)` yields each source's result as it finishes instead of waiting
+  for the whole job.
+
 The run report's crawl note gives the pages fetched, the frontier left, whether the run
 resumed and the checkpoint state (`saved`, `finished`, `discarded` or `none`). Past 600
 rows, the crawl report counts the rest in `unreported` and totals every page by outcome.
+
+## Per-host pacing
+
+`[acquisition.hosts."shop.example"]` overrides the job-wide pacing for one allowed host:
+
+```toml
+[acquisition.hosts."shop.example"]
+min_interval_seconds = 2    # seconds between requests to this host (0 to 60)
+max_concurrency = 2         # transfers in flight to this host; unset: the job-wide value
+autothrottle = true         # widen the spacing when the host slows down or answers 429
+```
+
+With `autothrottle`, the spacing starts at `min_interval_seconds`, follows the response
+time, doubles on a refusal or waits what `Retry-After` asks, and never drops below the
+floor or rises past 60 seconds. It works on HTTP-only installs too.
+
+## Starter recipes
+
+The synthetic registry in `examples/registry/` ships three starting points for crawls:
+`sitemap-crawl`, `shopify-products` and `generic-crawl`. Install one with `rastro hub
+install`, point its job at your site's URL and allowed host, then preview it with
+`rastro job run`. They are templates: the selectors are generic and need a real site.

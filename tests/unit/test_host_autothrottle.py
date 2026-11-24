@@ -7,9 +7,10 @@ import time
 import pytest
 
 from rastro.application.acquisition import WebAcquirer
+from rastro.application.adaptive_throttle import AdaptiveThrottle
 from rastro.domain.acquisition import AcquisitionPolicy, HttpResponse
 from rastro.domain.browser_controls import HostLimits
-from rastro.domain.models import ConfigurationError, Source
+from rastro.domain.models import Source
 
 
 class Resolver:
@@ -124,10 +125,10 @@ async def test_slow_host_widens_its_spacing_with_the_engine_throttle():
     assert transport.starts[2] - transport.starts[1] >= 0.25
 
 
-def test_autothrottle_without_the_engine_fails_loudly(monkeypatch):
-    monkeypatch.setitem(sys.modules, "rastro.adapters.scrapling_throttle", None)
-    with pytest.raises(ConfigurationError, match="autothrottle"):
-        _acquirer(Transport())
+def test_autothrottle_without_the_engine_uses_the_stdlib_throttle(monkeypatch):
+    monkeypatch.setitem(sys.modules, "scrapling.spiders.throttle", None)
+    acquirer = _acquirer(Transport())
+    assert isinstance(acquirer._throttle._throttle, AdaptiveThrottle)
 
 
 def test_no_engine_needed_when_no_host_asks_for_autothrottle(monkeypatch):

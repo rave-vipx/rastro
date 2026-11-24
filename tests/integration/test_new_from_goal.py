@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from rastro.application.acquisition import WebAcquirer
-from rastro.application.job_new import new_job_from_goal, new_job_from_sites
+from rastro.application.job_new_sites import new_job_from_goal, new_job_from_sites
 from rastro.cli import main
 from rastro.domain.acquisition import (
     AcquisitionPolicy,

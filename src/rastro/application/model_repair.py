@@ -20,16 +20,16 @@ from dataclasses import dataclass
 from functools import partial
 from typing import Literal
 
-from pydantic import BaseModel, JsonValue, ValidationError
+from pydantic import BaseModel, JsonValue
 
 from rastro.application.adaptive_candidates import (
-    PASSING_REASONS,
     adaptive_repair,
     passing,
 )
 from rastro.application.adaptive_candidates import with_history as with_history
-from rastro.application.extraction import validate_recipe
 from rastro.application.proposals import propose_with_model, schema_hints
+from rastro.application.repair_checks import _candidate as _candidate
+from rastro.application.repair_checks import check_values as check_values
 from rastro.application.semantic_judge import apply_verdicts, judge, judge_request
 from rastro.domain.intelligence import InferencePolicy
 from rastro.domain.models import (
@@ -42,7 +42,6 @@ from rastro.domain.models import (
 )
 from rastro.domain.recipe_compare import CandidateEvaluation, RecipeComparison
 from rastro.domain.repair import RepairCandidate
-from rastro.domain.value_consistency import value_consistency
 from rastro.ports.engine import AdaptiveLocator
 from rastro.ports.model import ModelPort
 
@@ -79,11 +78,13 @@ async def assist_repair(
     history: Sequence[Mapping[str, JsonValue]],
     adaptive: AdaptiveLocator | None = None,
     limits: Limits | None = None,
+    timezone: str | None = None,
 ) -> AssistedRepair:
     """Try adaptive candidates, then gated model proposals; judge every would-be promotion.
 
     ``adaptive`` defaults to the engine's locator. A passing adaptive candidate ends
-    repair without any model call; failing ones are dropped, not stored.
+    repair without any model call; failing ones are dropped, not stored. ``timezone`` is the
+    source's region timezone, given to the model so local dates parse as the site means them.
     """
     origin: Origin | None = "relocation" if evaluated else None
     evaluated = list(evaluated)
@@ -110,7 +111,14 @@ async def assist_repair(
             else "serving_recipe_fails_gates"
         )
         proposed, calls, issues = await _propose(
-            assist, html, schema, previous, strict_gate, samples=history, failure=failure
+            assist,
+            html,
+            schema,
+            previous,
+            strict_gate,
+            samples=history,
+            failure=failure,
+            timezone=timezone,
         )
         if proposed:
             origin = "model"
@@ -126,31 +134,6 @@ async def assist_repair(
     return AssistedRepair(judged, origin, calls, issues)
 
 
-def check_values(
-    evaluation: CandidateEvaluation,
-    recipe: Recipe,
-    schema: type[BaseModel],
-    previous: Recipe,
-    rows: Callable[[Recipe], Rows],
-    history: Sequence[Mapping[str, JsonValue]],
-) -> CandidateEvaluation:
-    """Reject a model candidate whose values do not look like the known-good ones.
-
-    Checks the changed fields (every field when only the record container moved) against
-    the retained samples with the deterministic value gate. A failure is a rejection, not
-    a quarantine: model output is untrusted and the judge must never be its only gate.
-    """
-    if evaluation.decision == "reject":
-        return evaluation
-    changed = RecipeComparison.between(previous, recipe).changed_fields
-    failed = value_consistency(rows(recipe), history, changed or tuple(schema.model_fields))
-    if not failed:
-        return evaluation
-    kept = tuple(r for r in evaluation.reasons if r not in PASSING_REASONS)
-    reasons = tuple(dict.fromkeys((*kept, *failed)))
-    return evaluation.model_copy(update={"decision": "reject", "reasons": reasons})
-
-
 async def _propose(
     assist: ModelAssist,
     html: str,
@@ -160,6 +143,7 @@ async def _propose(
     *,
     samples: Sequence[Mapping[str, JsonValue]],
     failure: str,
+    timezone: str | None = None,
 ) -> tuple[Evaluated, int, tuple[Issue, ...]]:
     proposed: Evaluated = []
 
@@ -205,6 +189,7 @@ async def _propose(
         hints=schema_hints(schema),
         previous=previous,
         samples=samples,
+        timezone=timezone,
     )
     return proposed, calls, () if complete else (Issue(code=failure),)
 
@@ -224,31 +209,3 @@ async def _judge(
     current = await asyncio.to_thread(rows, candidate.recipe)
     request = judge_request(schema, fields, current, history)
     return apply_verdicts(evaluation, await judge(assist.model, assist.policy, request, fields))
-
-
-def _candidate(
-    proposal: Recipe,
-    schema: type[BaseModel],
-    previous: Recipe,
-    origin: Literal["adaptive", "model"] = "model",
-) -> RepairCandidate | None:
-    if previous.pagination is not None and proposal.strategy != previous.strategy:
-        return None
-    data = proposal.model_dump()
-    data.update(
-        require_evidence=True,
-        fallbacks=(),
-        version=previous.version,
-        pagination=previous.pagination,
-    )
-    try:
-        recipe = validate_recipe(schema, Recipe.model_validate(data), previous.representation)
-    except ValidationError:
-        raise ConfigurationError("Invalid model repair candidate") from None
-    baseline = previous.model_copy(update={"require_evidence": True, "fallbacks": ()})
-    if recipe == baseline:
-        return None
-    rationale = "Model proposal" if origin == "model" else "Adaptive match on retained values"
-    return RepairCandidate(
-        recipe=recipe, origin=origin, rationale=rationale + "; requires recipe CI"
-    )

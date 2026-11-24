@@ -15,11 +15,16 @@ and optional per-source `every` overrides (SCHED-001, SCHED-006, SYNC-001):
 [schedule]
 every = "6h"    # units: s, m, h, d; min 1m, max 30d
 jitter = "5m"   # optional; bounded <= every / 4
+# at = "08:00"  # optional time of day in the job timezone; needs every in whole days
 
 [[sources]]
 url = "https://fast.example/events"
 every = "1h"    # optional per-source override
 ```
+
+`rastro job schedule "every day at 8:00" --timezone Europe/Madrid` reads a schedule in
+plain words (English or Spanish, such as `"cada 6 horas"`), prints the `[schedule]` values to
+paste and the next run times, and fails on words it cannot read.
 
 Run in the foreground or trigger one tick from cron or CI:
 
@@ -55,6 +60,13 @@ rastro job watch job.toml --once --on-failure 'notify-send "Rastro needs attenti
   already-completed sources keep their records and status. One load uses one acquisition
   client for all its sources, so host pacing (`min_interval_seconds`) and run-local
   sessions carry over from one source to the next.
+
+## What changed between readings
+
+`rastro dataset changes data.sqlite --since 2026-11-01T00:00:00Z` lists the records first
+seen, removed or changed since that time; `--against copy.sqlite` compares with an earlier
+copy of the dataset file instead. `rastro dataset export data.sqlite --format xlsx --output
+data.xlsx` writes a spreadsheet; see [Dataset load and export](dataset.md).
 
 ## Exit codes
 
