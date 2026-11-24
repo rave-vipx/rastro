@@ -47,7 +47,7 @@ def _assert_typed(func, documented: tuple[str, ...]) -> None:
 
 
 def test_new_job_from_goal_rejects_unknown_keywords_and_documents_its_options(tmp_path: Path):
-    from rastro.application.job_new import new_job_from_goal
+    from rastro.application.job_new_sites import new_job_from_goal
 
     with pytest.raises(TypeError):
         new_job_from_goal(tmp_path / "j.toml", goal="events", aprove=("a.example",))  # type: ignore[call-arg]
@@ -58,7 +58,7 @@ def test_new_job_from_goal_rejects_unknown_keywords_and_documents_its_options(tm
 
 
 def test_new_job_from_sites_rejects_unknown_keywords_and_documents_its_options(tmp_path: Path):
-    from rastro.application.job_new import new_job_from_sites
+    from rastro.application.job_new_sites import new_job_from_sites
 
     with pytest.raises(TypeError):
         new_job_from_sites(tmp_path / "j.toml", sites=("https://a.example/x",), alow_remote=True)  # type: ignore[call-arg]

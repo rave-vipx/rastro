@@ -14,7 +14,7 @@ import pytest
 
 from rastro.application.acquisition import WebAcquirer
 from rastro.application.job_from_url import html_from_url
-from rastro.application.job_new import new_job_from_sites
+from rastro.application.job_new_sites import new_job_from_sites
 from rastro.application.job_repair import run_sync
 from rastro.application.operator_trust import operator_trust
 from rastro.application.source_proposals import acquire_approved_pages
