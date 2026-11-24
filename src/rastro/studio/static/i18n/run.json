@@ -12,7 +12,22 @@
     "run.loaded": "Load {status} into dataset \"{dataset}\".",
     "run.openDrift": "{n} source(s) have open drift: review, fix or acknowledge it.",
     "run.notMeasured": "not measured",
-    "run.stale": "{n} source(s) are stale."
+    "run.stale": "{n} source(s) are stale.",
+    "run.live.start": "Read now",
+    "run.live.stop": "Stop",
+    "run.live.title": "Reading now",
+    "run.live.progress": "{pages} pages read, {records} results so far.",
+    "run.live.sites": "{done} of {total} sites finished",
+    "run.live.timeOf": "{used} of {budget} used",
+    "run.live.time": "{used} used",
+    "run.live.done": "Finished: {pages} pages read, {records} results. Nothing was saved.",
+    "run.live.stopped": "Stopped: {pages} pages read, {records} results so far.",
+    "run.live.failed": "The read stopped before it finished: {why}",
+    "run.live.failedSites": "{n} site(s) could not be read.",
+    "run.live.continue": "Time ran out. It will continue from here on the next run.",
+    "run.live.sample": "Results so far",
+    "run.live.cacheHint": "While you adjust things, pages seen in the last 15 minutes are reused. Saving to the dataset always reads fresh pages.",
+    "run.live.noResults": "No results yet."
   },
   "es": {
     "run.title": "Ejecutar",
@@ -27,16 +42,33 @@
     "run.loaded": "Carga {status} en el dataset \"{dataset}\".",
     "run.openDrift": "{n} fuente(s) tienen cambios abiertos: revisalos, arreglalos o confirmalos.",
     "run.notMeasured": "sin medir",
-    "run.stale": "{n} fuente(s) están desactualizadas."
+    "run.stale": "{n} fuente(s) están desactualizadas.",
+    "run.live.start": "Leer ahora",
+    "run.live.stop": "Detener",
+    "run.live.title": "Leyendo ahora",
+    "run.live.progress": "{pages} páginas leídas, {records} resultados hasta ahora.",
+    "run.live.sites": "{done} de {total} sitios terminados",
+    "run.live.timeOf": "{used} de {budget} usados",
+    "run.live.time": "{used} usados",
+    "run.live.done": "Terminó: {pages} páginas leídas, {records} resultados. No se guardó nada.",
+    "run.live.stopped": "Detenido: {pages} páginas leídas, {records} resultados hasta ahora.",
+    "run.live.failed": "La lectura se detuvo antes de terminar: {why}",
+    "run.live.failedSites": "{n} sitio(s) no se pudieron leer.",
+    "run.live.continue": "Se acabó el tiempo. Va a continuar desde acá en la próxima ejecución.",
+    "run.live.sample": "Resultados hasta ahora",
+    "run.live.cacheHint": "Mientras ajustás cosas, se reutilizan las páginas vistas en los últimos 15 minutos. Guardar en el dataset siempre lee páginas nuevas.",
+    "run.live.noResults": "Todavía no hay resultados."
   },
   "advanced": {
     "en": {
       "run.fromMemory": "recipe memory {version}",
-      "run.fromJob": "job file {version}"
+      "run.fromJob": "job file {version}",
+      "run.live.continue": "The time budget is spent. The crawl saved its checkpoint and resumes from it on the next run."
     },
     "es": {
       "run.fromMemory": "memoria de recetas {version}",
-      "run.fromJob": "archivo del job {version}"
+      "run.fromJob": "archivo del job {version}",
+      "run.live.continue": "Se agotó el presupuesto de tiempo. El rastreo guardó su punto de control y sigue desde ahí en la próxima ejecución."
     }
   }
 }
