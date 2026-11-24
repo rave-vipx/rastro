@@ -2,15 +2,16 @@
 // elements carry data-i18n="key" (textContent), data-i18n-placeholder or data-i18n-label.
 // Copy lives in one JSON file per view under i18n/, each with "en", "es" and an "advanced"
 // overlay: the technical wording shown only while the Advanced switch is on.
-import core from "./i18n/core.json" with { type: "json" };
-import health from "./i18n/health.json" with { type: "json" };
-import hub from "./i18n/hub.json" with { type: "json" };
-import results from "./i18n/results.json" with { type: "json" };
-import run from "./i18n/run.json" with { type: "json" };
-import settings from "./i18n/settings.json" with { type: "json" };
-import wizard from "./i18n/wizard.json" with { type: "json" };
+const NAMES = ["core", "wizard", "results", "health", "settings", "hub", "run"];
 
-const VIEWS = [core, wizard, results, health, settings, hub, run];
+// fetch() works in every browser that runs Studio; JSON module imports do not.
+async function load(name) {
+  const response = await fetch(new URL(`./i18n/${name}.json`, import.meta.url));
+  if (!response.ok) throw new Error(`copy_${name}_${response.status}`);
+  return response.json();
+}
+
+const VIEWS = await Promise.all(NAMES.map(load));
 
 function merge(pick) {
   return { en: Object.assign({}, ...VIEWS.map((v) => pick(v).en)),

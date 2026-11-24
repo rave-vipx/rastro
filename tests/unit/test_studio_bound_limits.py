@@ -80,6 +80,9 @@ def check_browser_controls(payload: dict) -> None:
             "-e",
             """
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+const load = (url) => JSON.parse(readFileSync(new URL(url), 'utf8'));
+globalThis.fetch = async (url) => ({ ok: true, json: async () => load(url) });
 const nodes = {};
 const $ = id => nodes[id] ??= {};
 const show = (id, text) => { $(id).textContent = text; };
