@@ -42,7 +42,7 @@ def row(n: int = 0, *, url: str = "https://a.example/list") -> RunMetric:
 
 
 def to_v2(path):
-    """A real schema 2 file: v1 plus the validators table and version 2 (slice B's migrate)."""
+    """A real schema 2 file: v1 plus the validators table and version 2 (the earlier migration)."""
     status = v1(path)
     with closing(sqlite3.connect(path)) as db:
         db.execute(
