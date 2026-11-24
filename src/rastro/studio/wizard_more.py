@@ -144,7 +144,7 @@ def _event(event: ExplorationEvent) -> dict[str, Any]:
     return {**event.model_dump(mode="json"), "message": event.message}
 
 
-def _field_names(data: dict[str, Any]) -> tuple[str, ...]:
+def field_names(data: dict[str, Any]) -> tuple[str, ...]:
     raw = data.get("fields", [])
     if not isinstance(raw, list) or len(raw) > MAX_FIELDS:
         raise Refused(400, "invalid_fields")
@@ -166,7 +166,7 @@ def routes(studio: Studio) -> list[Route]:
 
     async def offers(request: Request) -> Response:
         data = await body(request)
-        url, fields = text(data, "url"), _field_names(data)
+        url, fields = text(data, "url"), field_names(data)
         prepare_url_policy(url)  # a bad URL is the caller's error before any render
         try:
             responses = await run_in_threadpool(_captured, url, studio)

@@ -197,3 +197,16 @@ class Studio:
                 return reply({"ok": False, **classify(error)}, 400)
 
         return Route(path, endpoint, methods=["POST"] if post else ["GET"])
+
+
+def beside(target: Path, name: str | None, key: str) -> str | None:
+    """Job paths are relative to the job file: the file lives in the job's folder or below
+    it, in a folder that already exists."""
+    if name is None:
+        return None
+    wanted = (target.parent / name).resolve()
+    if not wanted.is_relative_to(target.parent.resolve()):
+        raise Refused(400, f"{key}_outside_job_folder")
+    if not wanted.parent.is_dir():
+        raise Refused(400, f"{key}_folder_missing")
+    return name

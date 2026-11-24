@@ -181,11 +181,21 @@ export function hubCard(offer, host, onTry, onMine) {
   return card;
 }
 
-export function offerCard(offer) {
+export function offerCard(offer, onUse) {
   const card = el("div", undefined, "card api-offer");
   card.append(el("h4", t("wizard.api.title")), ...offerLines(offer).map((line) => el("p", line)),
     el("p", t("wizard.api.later"), "muted"));
+  if (offer.covers.length) card.append(actionButton(t("wizard.api.use"), onUse, "primary"));
   return card;
+}
+
+// "Use this data instead": a job that reads the response the page loads, then its results.
+export async function useOffer(app, url, offer, file) {
+  const made = await api("/api/wizard/offers/use", { url, host: offer.host, path: offer.path, fields: offer.covers, file });
+  show("suggest-status", t("wizard.api.made", { file: made.file }), "good");
+  await app.refreshJobs(made.file);
+  await app.openJob(made.file);
+  app.switchView("results");
 }
 
 // "More pages?" (Yes / Not sure / No) and the estimate sentence; returns a refresh function.

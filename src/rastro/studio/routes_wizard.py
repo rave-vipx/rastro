@@ -29,8 +29,8 @@ from rastro.application.suggest import suggest
 from rastro.domain.job_fields import StringField
 from rastro.domain.models import ConfigurationError, Limits
 from rastro.domain.suggest import MAX_EXAMPLES, Suggestion
-from rastro.studio import files, routes_pick, wizard_more
-from rastro.studio.web import Refused, Studio, body, integer, optional_text, reply, text
+from rastro.studio import api_offer, files, routes_pick, wizard_more
+from rastro.studio.web import Refused, Studio, beside, body, integer, optional_text, reply, text
 
 MAX_ROWS = 50
 MAX_CHARS = 500
@@ -129,8 +129,8 @@ def routes(studio: Studio) -> list[Route]:
         identity = data.get("identity", [])
         if not isinstance(identity, list) or not all(isinstance(i, str) for i in identity):
             raise Refused(400, "invalid_identity")
-        dataset = _beside(target, optional_text(data, "dataset"), "dataset")
-        memory = _beside(target, optional_text(data, "recipe_memory"), "recipe_memory")
+        dataset = beside(target, optional_text(data, "dataset"), "dataset")
+        memory = beside(target, optional_text(data, "recipe_memory"), "recipe_memory")
         examples = _examples(data)
         url = optional_text(data, "url")
         page = optional_text(data, "page")
@@ -177,20 +177,8 @@ def routes(studio: Studio) -> list[Route]:
         studio.route("/api/create", create, post=True),
         *routes_pick.routes(studio),
         *wizard_more.routes(studio),
+        *api_offer.routes(studio),
     ]
-
-
-def _beside(target: Path, name: str | None, key: str) -> str | None:
-    """Job paths are relative to the job file: the file lives in the job's folder or below
-    it, in a folder that already exists."""
-    if name is None:
-        return None
-    wanted = (target.parent / name).resolve()
-    if not wanted.is_relative_to(target.parent.resolve()):
-        raise Refused(400, f"{key}_outside_job_folder")
-    if not wanted.parent.is_dir():
-        raise Refused(400, f"{key}_folder_missing")
-    return name
 
 
 def _preview(studio: Studio, url: str) -> FetchedUrl | None:

@@ -6,7 +6,7 @@
 import { $, api, bind, el, request, show, state } from "./dom.js";
 import { t } from "./i18n.js";
 import { chip, openable } from "./ui.js";
-import { estimateCard, exploreCard, hubCard, offerCard } from "./correct.js";
+import { estimateCard, exploreCard, hubCard, offerCard, useOffer } from "./correct.js";
 import { fixField, installedRows, reviewTable, setExample, showPage } from "./pick.js";
 
 const MAX_FIELDS = 30;
@@ -154,16 +154,18 @@ function enterFields() {
   return refresh();
 }
 
-async function showOffers(body) {
+// The page loads its records from an API: write a job that reads that response instead.
+async function showOffers(app, body) {
   const box = area("wiz-step-3", "api");
   box.replaceChildren();
   const data = await api("/api/wizard/offers", { url: body.url, fields: Object.keys(body.examples[0]) })
     .catch(() => ({ offers: [] }));
   if (!data.offers.length) return;
-  box.append(offerCard(data.offers[0]));
+  const offer = data.offers[0];
+  box.append(offerCard(offer, () => useOffer(app, body.url, offer, $("new-file").value.trim())));
 }
 
-async function suggestRecipe() {
+async function suggestRecipe(app) {
   const { identity, ...body } = collect();
   show("suggest-status", t("wizard.fetching"), "muted");
   found = await api("/api/suggest", body);
@@ -180,7 +182,7 @@ async function suggestRecipe() {
   if (!$("new-name").value) $("new-name").value = defaultName(body.url);
   fillFileNames();
   goStep(3);
-  const [shot] = await Promise.all([showPage(area("wiz-step-3", "page"), body.url, found.recipe), showOffers(body)]);
+  const [shot] = await Promise.all([showPage(area("wiz-step-3", "page"), body.url, found.recipe), showOffers(app, body)]);
   snapshot = shot;
 }
 
@@ -227,7 +229,7 @@ export function initWizard(app) {
   bind("wiz-next-1", "url-status", () => lookUp(app));
   bind("wiz-back-2", "suggest-status", () => goStep(1));
   bind("wiz-back-3", "suggest-status", () => {
-    const ctx = { snapshot, found, url: pageUrl(), use: async (field, text) => { setExample($("field-rows"), field, text); await suggestRecipe(); } };
+    const ctx = { snapshot, found, url: pageUrl(), use: async (field, text) => { setExample($("field-rows"), field, text); await suggestRecipe(app); } };
     if (!fixField(area("wiz-step-3", "fix"), ctx)) goStep(2);
   });
   bind("wiz-next-3", "create-status", async () => {
@@ -238,7 +240,7 @@ export function initWizard(app) {
   });
   bind("wiz-back-4", "create-status", () => goStep(3));
   bind("add-field", "suggest-status", () => addRow().focus());
-  bind("suggest", "suggest-status", suggestRecipe);
+  bind("suggest", "suggest-status", () => suggestRecipe(app));
   bind("create", "create-status", () => createJob(app));
   $("new-name").addEventListener("input", fillFileNames);
   for (const id of ["new-file", "new-dataset", "new-memory"]) {
