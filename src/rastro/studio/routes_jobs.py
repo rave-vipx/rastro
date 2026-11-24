@@ -25,6 +25,7 @@ ASSETS = frozenset(
     {
         "studio.js",
         "studio.css",
+        "studio-parts.css",
         "wizard.js",
         "wizard_parts.js",
         "operate.js",

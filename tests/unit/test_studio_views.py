@@ -178,3 +178,16 @@ def test_provenance_panel_is_a_labelled_region_with_a_close_button() -> None:
     assert page.get_element_by_id("prov-title").get("tabindex") == "-1"
     assert page.get_element_by_id("prov-close").tag == "button"
     assert '"Escape"' in (STATIC / "provenance.js").read_text(encoding="utf-8")
+
+
+def test_stylesheets_stay_small_and_style_every_class_the_scripts_use() -> None:
+    sheets = {p.name: p.read_text(encoding="utf-8") for p in STATIC.glob("*.css")}
+    assert all(len(text.splitlines()) <= 400 for text in sheets.values()), sheets.keys()
+    css = "".join(sheets.values())
+    used = set()
+    for text in _scripts().values():
+        for names in re.findall(r'el\("[a-z0-9]+", [^,()]*, "([a-z0-9 -]+)"\)', text):
+            used |= set(names.split())
+    plain = {"primary", "small", "muted", "warn", "good", "bad", "row", "card", "block", "label"}
+    missing = {c for c in used - plain if not re.search(rf"\.{re.escape(c)}\b", css)}
+    assert missing == set(), missing

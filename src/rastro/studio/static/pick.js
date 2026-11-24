@@ -6,8 +6,7 @@ import { api, el } from "./dom.js";
 import { t } from "./i18n.js";
 import { confirmPick } from "./correct.js";
 
-// Five outlines that differ without color: solid, dashed, double, dotted, thick.
-const STROKES = ["3px solid", "3px dashed", "4px double", "3px dotted", "5px solid"];
+// Five outlines that differ without color (solid, dashed, double, dotted, thick): .hl1-.hl5.
 const MAX_MARKED = 5;
 
 // Data mapping, DOM-free: field -> outline number (1-5), label and boxes; sixth field on unmarked.
@@ -27,7 +26,7 @@ export function boxStyle(box, width, height) {
 }
 
 function place(node, box, size) {
-  Object.assign(node.style, { position: "absolute", boxSizing: "border-box" }, boxStyle(box, size.w, size.h));
+  Object.assign(node.style, boxStyle(box, size.w, size.h));
 }
 
 async function bitmap(base64) {
@@ -41,13 +40,11 @@ const marks = new Map(); // field -> [box nodes]
 export function focusField(field, on) {
   for (const node of marks.get(field) || []) {
     node.dataset.on = on ? "true" : "false";
-    node.style.boxShadow = on ? "0 0 0 3px var(--surface), 0 0 0 6px currentColor" : "none";
   }
 }
 
 function frame(size) {
   const wrap = el("div", undefined, "snapshot");
-  Object.assign(wrap.style, { position: "relative", maxWidth: "100%", lineHeight: "0" });
   wrap.dataset.w = String(size.w);
   return wrap;
 }
@@ -62,7 +59,6 @@ export async function drawSnapshot(holder, page) {
   const size = { w: image.width, h: image.height };
   const canvas = el("canvas");
   Object.assign(canvas, { width: size.w, height: size.h });
-  Object.assign(canvas.style, { width: "100%", height: "auto", display: "block" });
   canvas.setAttribute("role", "img");
   canvas.setAttribute("aria-label", t("wizard.review.shot"));
   canvas.getContext("2d").drawImage(image, 0, 0);
@@ -72,12 +68,8 @@ export async function drawSnapshot(holder, page) {
     const nodes = item.boxes.map((box, i) => {
       const mark = el("div", undefined, `hl hl${item.n}`);
       place(mark, box, size);
-      Object.assign(mark.style, { outline: `${STROKES[item.n - 1]} var(--hl-${item.n})`, color: `var(--hl-${item.n})` });
       if (i === 0) {
-        const label = el("span", item.field, "hl-label");
-        Object.assign(label.style, { position: "absolute", top: "-1.4em", left: "0", lineHeight: "1.3",
-          font: "600 12px/1.3 inherit", padding: "0 4px", background: `var(--hl-${item.n})`, color: "var(--hl-text)" });
-        mark.append(label);
+        mark.append(el("span", item.field, "hl-label"));
       }
       mark.setAttribute("aria-hidden", "true");
       wrap.append(mark);
@@ -103,7 +95,6 @@ export function pickMode(wrap, list, elements, field, choose) {
       spot.type = "button";
       spot.setAttribute("aria-label", label);
       place(spot, element.boxes[0], wrap.size);
-      Object.assign(spot.style, { background: "transparent", outline: "2px dashed var(--accent)", cursor: "pointer" });
       spot.addEventListener("click", () => choose(element));
       wrap.append(spot);
       buttons.push(spot);
