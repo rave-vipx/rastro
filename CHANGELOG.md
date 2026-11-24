@@ -38,6 +38,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Studio guided flow: `/api/wizard/lookup` offers hub recipes for a URL before any fetch, `/api/wizard/page` renders the page in a browser with a highlight box per field match, and `/api/wizard/pick` turns a clicked element into a stable selector (and, with consent, a model-suggested field name). Studio keeps a short-lived development page cache that prunes expired entries.
 - Schedules: `[schedule] at = "HH:MM"` runs at a time of day in the job timezone, and `rastro job schedule "every day at 8:00"` reads a schedule in English or Spanish words. `rastro dataset changes` lists records new, removed or changed since a time or an earlier copy, and `rastro dataset export --format xlsx` writes a spreadsheet.
 - Notifications: built-in email, Slack, Telegram and webhook channels (`--notify`, `RASTRO_NOTIFY`) on the failure-hook exits, and `rastro notify test CHANNEL`.
+- MCP browser tools for agents building a recipe: `browser_snapshot`, `browser_extract`, `browser_network` and `browser_screenshot` open one guarded page per call, replay page steps from the closed vocabulary and close it; they run as untrusted `mcp` input (steps need `--allow-untrusted mcp:page_actions`) and never evaluate JavaScript. See `docs/mcp.md`.
+- `rastro shell JOB [--source N]` opens an interactive Python shell on a job source's parsed page.
 
 ### Changed
 
@@ -61,6 +63,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - JSON-LD blocks with raw newlines or other control characters inside strings are retried once with those characters escaped; recovered records retain provenance and report `repaired_json`. Malformed structure, duplicate keys and non-finite numbers remain rejected.
 - Unbounded crawls no longer fail on installs without the browser extra: pacing falls back to a standard-library throttle with the same rules.
 - Repair candidate checks use the extraction's observation clock, so results no longer depend on the day the tests run.
+- The browser acquirer keeps a render's screenshot on the acquisition result, so Studio's guided flow can show the page with its highlight boxes.
 
 ### Security
 
