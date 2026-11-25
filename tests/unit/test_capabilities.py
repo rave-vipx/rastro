@@ -129,7 +129,7 @@ def test_generated_outputs_identical() -> None:
         ("docs/capabilities.md", render_markdown()),
         ("docs/configuration.md", render_configuration()),
     ):
-        assert (ROOT / path).read_bytes() == output.encode("utf-8")
+        assert (ROOT / path).read_text(encoding="utf-8").replace("\r\n", "\n") == output
     for name, schema in (
         ("job", job_json_schema()),
         ("job-run", job_run_json_schema()),

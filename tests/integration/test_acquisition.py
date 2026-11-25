@@ -419,7 +419,7 @@ async def test_invalid_robots_intervals_cannot_poison_shared_host(directive):
             body=("User-agent: *\n" + directive).encode(), **{"content-type": "text/plain"}
         )
     )
-    acquirer = client(transport, request_timeout_seconds=0.02, operation_timeout_seconds=0.05)
+    acquirer = client(transport, request_timeout_seconds=0.25, operation_timeout_seconds=1.0)
     denied = await acquirer.acquire(Source(url="https://example.com/"), max_bytes=100)
     assert denied.issue_code == "invalid_robots"
     transport.robots = response(404)

@@ -184,7 +184,8 @@ class CheckpointStore:
         if self.path.is_symlink():
             raise ConfigurationError("Symbolic links are not followed")
         fd = os.open(self.path, os.O_WRONLY | os.O_CREAT | _NOFOLLOW, 0o600)
-        os.fchmod(fd, 0o600)
+        if hasattr(os, "fchmod"):  # POSIX; Windows keeps the folder's access rules
+            os.fchmod(fd, 0o600)
         os.close(fd)
 
     def _check_folder(self) -> None:
