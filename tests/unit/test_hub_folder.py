@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import shutil
 import stat
 import sys
@@ -75,7 +76,8 @@ def test_layout_check_accepts_the_hub_and_refuses_strays(tmp_path: Path) -> None
     (copy / "link.json").symlink_to(copy / "index.json")
     found = " ".join(layout.problems(copy))
     assert "stray.txt: outside" in found
-    assert "sample.html: executable" in found
+    if os.name != "nt":  # Windows has no executable bit to detect
+        assert "sample.html: executable" in found
     assert "link.json: symbolic" in found
 
 
