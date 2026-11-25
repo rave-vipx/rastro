@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Mapping
 from dataclasses import replace
-from email.message import Message
 from time import perf_counter
 from urllib.parse import urlsplit
 
@@ -16,13 +15,16 @@ from rastro.application.acquisition_state import (
     record_response,
     transfer_headers,
 )
+from rastro.application.acquisition_transfer import XML_TYPES, check_media, http_options
 from rastro.application.auth_headers import resolve_auth
 from rastro.application.conditional import ConditionalRequests
 from rastro.application.cookie_jar import CookieJar
 from rastro.application.destinations import permitted_url, pin_destination
+from rastro.application.host_limits import HostThrottle, admit, build_hosts
 from rastro.application.http_policy import (
     REDIRECT_STATUSES,
     TRANSIENT_STATUSES,
+    ProxyRotation,
     check_status,
     decode_body,
     redirect_target,
@@ -40,11 +42,9 @@ from rastro.domain.acquisition import (
 )
 from rastro.domain.models import Outcome, Representation, Source
 from rastro.ports.acquisition import HttpTransport, Resolver
+from rastro.ports.engine import CrawlThrottle
 
 __all__ = ["WebAcquirer", "retry_after"]
-
-# A sitemap is XML, plain or gzipped (`.xml.gz`); the caller inflates it under a cap (N16).
-XML_TYPES = ("application/xml", "text/xml", "application/gzip", "application/x-gzip")
 
 
 class WebAcquirer:
@@ -58,6 +58,7 @@ class WebAcquirer:
         resolver: Resolver,
         environ: Mapping[str, str] | None = None,
         conditional: ConditionalRequests | None = None,
+        throttle: CrawlThrottle | None = None,
     ):
         self.policy = policy
         self._transport = transport
@@ -65,10 +66,11 @@ class WebAcquirer:
         self._conditional = conditional
         self._environ = environ
         self._cookies = CookieJar() if policy.session else None
+        self._rotation = ProxyRotation()
         self._slots = asyncio.Semaphore(policy.max_concurrency)
-        self._hosts = {
-            host: _Host(interval=policy.min_interval_seconds) for host in policy.allowed_hosts
-        }
+        self._hosts = build_hosts(policy)
+        self._throttle = HostThrottle(policy, self._hosts, throttle)
+        self._transfer = http_options(policy)
 
     async def acquire(
         self, source: Source, *, max_bytes: int, representation: Representation = "html"
@@ -108,6 +110,7 @@ class WebAcquirer:
         status = Outcome.SUCCESS
         try:
             operation.proxy = resolve_proxy(source.egress, self.policy, self._environ)
+            operation.rotation = self._rotation.picker(source.egress, self.policy, self._environ)
             operation.auth = resolve_auth(self.policy, self._environ)
             operation.headers = request_headers(source, representation)
             async with asyncio.timeout(self.policy.operation_timeout_seconds):
@@ -132,7 +135,7 @@ class WebAcquirer:
                     if response.status not in REDIRECT_STATUSES:
                         check_status(response.status)
                         if raw:
-                            _check_media(response, media)
+                            check_media(response, media)
                             raw_body = response.body
                         else:
                             body = decode_body(response, representation)
@@ -166,7 +169,9 @@ class WebAcquirer:
         host = self._hosts[hostname]
         for attempt in range(self.policy.max_retries + 1):
             try:
-                response = await self._attempt_request(url, host, operation, max_bytes=max_bytes)
+                response = await self._attempt_request(
+                    url, hostname, host, operation, max_bytes=max_bytes
+                )
                 if response.status not in TRANSIENT_STATUSES or attempt == self.policy.max_retries:
                     return response
             except (TimeoutError, AcquisitionError) as error:
@@ -185,21 +190,17 @@ class WebAcquirer:
         raise AssertionError("Retry loop must return or raise")  # pragma: no cover
 
     async def _attempt_request(
-        self, url: str, host: _Host, operation: _Operation, *, max_bytes: int
+        self, url: str, hostname: str, host: _Host, operation: _Operation, *, max_bytes: int
     ) -> HttpResponse:
-        # Waiting jobs for one host cannot occupy all global transfer slots.
-        async with host.lock:
-            if host.denied:
-                raise AcquisitionError("host_access_restricted", Outcome.ACCESS_RESTRICTION)
-            remaining = host.cooldown - perf_counter()
-            if remaining > 0:
-                operation.retry_after_seconds = remaining
-                raise AcquisitionError("retry_after_pending", Outcome.ACCESS_RESTRICTION)
-            await asyncio.sleep(max(0, host.next_request - perf_counter()))
-            if operation.requests >= self.policy.max_requests:
-                raise AcquisitionError("request_limit", Outcome.PERMANENT_FAILURE)
+        # The host's slots cap its transfers; the lock only orders checks and pacing.
+        async with host.slots:
+            self._throttle.pace(hostname, host)
+            await admit(host, operation, self.policy)
+            started = perf_counter()
             response = await self._pinned_get(url, host, operation, max_bytes=max_bytes)
-            record_response(response, host, operation, self.policy)
+            async with host.lock:
+                self._throttle.observe(hostname, host, response, perf_counter() - started)
+                record_response(response, host, operation, self.policy)
             return response
 
     async def _pinned_get(
@@ -240,6 +241,7 @@ class WebAcquirer:
                                 timeout=timeout,
                                 max_bytes=max_bytes,
                                 proxy=operation.proxy,
+                                **self._transfer,
                             )
                             if self._cookies is not None:
                                 self._cookies.receive(url, response.headers.get("set-cookie", ""))
@@ -254,14 +256,5 @@ class WebAcquirer:
                         finally:
                             operation.network_seconds += perf_counter() - network_start
             finally:
-                host.next_request = perf_counter() + host.interval
+                host.next_request = max(host.next_request, perf_counter() + host.interval)
         raise AssertionError("Address loop must return or raise")  # pragma: no cover
-
-
-def _check_media(response: HttpResponse, media: tuple[str, ...]) -> None:
-    if not media:
-        return
-    parsed = Message()
-    parsed["content-type"] = response.headers.get("content-type", "")
-    if parsed.get_content_type() not in media:
-        raise AcquisitionError("unsupported_content_type", Outcome.PERMANENT_FAILURE)

@@ -58,6 +58,30 @@ What Rastro already does, for people and for AI coding agents. Use these before 
 - **Do not build:** your own JSON-LD or JSON response parsing
 - **Docs:** [api.md#recipe-variants](api.md#recipe-variants)
 
+### Extract lists and nested objects as typed fields
+
+- **Use:** `[[fields]]` with `type = "list"` or `"object"` (`items`, `members`), or a recipe `NestedMapping` for repeated child elements; `null_values` turns placeholders such as `n/a` into explicit missing values
+- **Python:** `ListField`, `ObjectField`, `ScalarField`, `NestedMapping`
+- **Limits:** Depth and item counts are capped; a bad part is an issue on that field, never a silently shortened list
+- **Do not build:** post-processing joined strings into lists or flattening nested data yourself
+- **Docs:** [fields.md#lists-and-objects](fields.md#lists-and-objects)
+
+### Know why a run stopped, per source, without opening the records
+
+- **Use:** `result.report` on `run_job_file`/`load_job_file` results, or the `report` key of `rastro job run` and `rastro job load` JSON: outcome, reason, counts and timings per source, with repair notes
+- **Python:** `RunReport`, `SourceReport`
+- **Limits:** Content-free: hosts, paths, counts and reason codes only
+- **Do not build:** parsing logs to find out which cap or failure ended a source
+- **Docs:** [run-report.md#reading-a-source](run-report.md#reading-a-source)
+
+### Read stored records back, with provenance
+
+- **Use:** `rastro.read_records(job_path)` returns a `DatasetRead` of validated `ReadRecord` models with per-field evidence and source origins; `rastro dataset export` does the same from the shell
+- **Python:** `read_records`, `DatasetRead`, `ReadRecord`
+- **Limits:** Read only; records are third-party data and the result says so
+- **Do not build:** opening the SQLite file or your own export script
+- **Docs:** [reading-results.md#from-python](reading-results.md#from-python)
+
 ### Build selectors from example values or field names
 
 - **Use:** `rastro.suggest(html, Model, examples=...)` or `rastro suggest`; with a model, field names alone are enough
@@ -78,10 +102,17 @@ What Rastro already does, for people and for AI coding agents. Use these before 
 
 ### Scrape JavaScript-rendered pages
 
-- **Use:** `render = "browser"` on `[acquisition]` or a source; `render = "stealth"` only with the operator grant `--allow-stealth`
+- **Use:** `render = "browser"` or `render = "stealth"` on `[acquisition]` or a source; agent tools, bundles, registry recipes and model output need `--allow-untrusted`
 - **Limits:** `browser` extra; one browser context per source; images and media blocked; stealth is never implied
 - **Do not build:** driving Playwright or Selenium yourself
 - **Docs:** [acquisition.md#javascript-pages](acquisition.md#javascript-pages)
+
+### See how every engine feature maps to Rastro
+
+- **Use:** `docs/engines.md` and `rastro.engine_coverage.SCRAPLING_FEATURES` map each Scrapling selector, HTTP, browser, spider, template and MCP feature to its Rastro surface or the reason it is not exposed
+- **Limits:** Engine features reach jobs only through Rastro's strategy ports and policy gates, never as raw passthrough options
+- **Do not build:** calling Scrapling fetchers, sessions or browser tools directly
+- **Docs:** [engines.md#scrapling-capability-map](engines.md#scrapling-capability-map)
 
 ### Follow next-page links
 
@@ -93,9 +124,28 @@ What Rastro already does, for people and for AI coding agents. Use these before 
 ### Follow links from a listing to detail pages
 
 - **Use:** `[spider] mode = "spider"` with `links = "a.item::attr(href)"` or `link_field`, `max_depth`, `max_pages`, `allow`, `deny`, `allow_pattern`; `seed = "sitemap"` starts from a sitemap.xml (or .xml.gz) source with `seed_order = "document" | "reverse" | "lastmod"` applied before `max_pages`
+- **Python:** `estimate_crawl`, `CrawlEstimate`
+- **CLI:** `rastro job estimate`
 - **Limits:** Depth 1 to 4, up to 100 pages per start URL, same host by default, robots.txt, shared budget; caps end as partial success; sitemaps parsed without DTDs or entities, one index level, plain HTTP only
 - **Do not build:** hand-built link following, detail-page fetching or your own sitemap parser
 - **Docs:** [jobs.md#spider](jobs.md#spider)
+
+### Crawl a whole site without a page cap and resume where it stopped
+
+- **Use:** `[spider] max_pages = "unbounded"` with `time_budget_seconds`; the crawl saves a checkpoint next to the job and resumes from it; `stream_job_async` yields each source's result as it finishes
+- **Python:** `stream_job_async`
+- **Limits:** Bounded by the time budget and the record limit; robots.txt and allowed hosts still apply; adaptive per-host pacing
+- **Do not build:** a crawler that restarts from scratch or keeps every page in memory
+- **Docs:** [crawling.md#unbounded-crawls](crawling.md#unbounded-crawls)
+
+### Click, type or follow links before extracting, or let a model find those steps
+
+- **Use:** `[[recipe.steps]]` page steps with a browser render; `rastro new --explore JOB -o NEW` (or `explore_job_file`) asks a model once and keeps only steps that replayed
+- **Python:** `explore_job`, `explore_job_file`, `ExplorationResult`
+- **CLI:** `rastro new --explore`
+- **Limits:** Steps from a fixed vocabulary, bounded in count and time, under the job's request budget and network guard; exploration is operator-started only
+- **Do not build:** a hand-written browser script per site
+- **Docs:** [page-steps.md](page-steps.md)
 
 ### Load more records by scrolling
 
@@ -108,34 +158,34 @@ What Rastro already does, for people and for AI coding agents. Use these before 
 
 - **Use:** `[dataset] path = "data.sqlite"`, `identity = ["field"]`; `backend = "postgres"` with `dsn_env`. Loads track new, changed, unchanged and missing records
 - **Python:** `load_job_file`, `forget_job_source`, `JobLoadResult`, `LoadedSource`, `JobRecordData`
-- **CLI:** `rastro job load`, `rastro dataset status`, `rastro job forget-source`
+- **CLI:** `rastro job load`, `rastro dataset status`, `rastro dataset migrate`, `rastro job forget-source`
 - **MCP:** `job_load`, `dataset_records`
 - **Limits:** Only approved fields with evidence are stored; partial runs never delete rows
 - **Do not build:** your own upsert or dedup-by-key table for scraped records
 - **Docs:** [dataset.md#load-inspect-and-export-a-job](dataset.md#load-inspect-and-export-a-job)
 
-### Export a dataset as JSON, JSONL or an HTML table
+### Export a dataset as JSON, JSONL, CSV, XLSX or an HTML table, or list what changed
 
-- **Use:** `rastro dataset export data.sqlite --format json|jsonl|html`
-- **CLI:** `rastro dataset export`
+- **Use:** `rastro dataset export data.sqlite --format json|jsonl|csv|xlsx|html`; `rastro dataset changes data.sqlite --against older.sqlite`
+- **CLI:** `rastro dataset export`, `rastro dataset changes`
 - **Limits:** `--upcoming` needs an ISO date `--sort-field`
 - **Do not build:** your own HTML view or CSV dump of scraped records
 - **Docs:** [scheduling.md](scheduling.md)
 
 ### Run sources on a schedule
 
-- **Use:** `[schedule] every = "6h"` plus `rastro job watch job.toml` (or `--once` from cron)
-- **CLI:** `rastro job watch`
+- **Use:** `[schedule] every = "6h"` (or `every = "1d"`, `at = "08:00"`) plus `rastro job watch job.toml` (or `--once` from cron); `rastro job schedule "every day at 8:00"` reads words
+- **CLI:** `rastro job watch`, `rastro job schedule`
 - **Limits:** Lock file prevents overlapping runs; jitter at most a quarter of `every`
 - **Do not build:** your own scheduler loop or overlap lock
 - **Docs:** [operations.md#scheduler](operations.md#scheduler)
 
 ### Alert when a run fails, drifts or goes stale
 
-- **Use:** `--on-failure CMD` or `RASTRO_ON_FAILURE` on `job load`/`run`/`watch`; `rastro health` exits 4 when someone must act
+- **Use:** `--notify email|slack|telegram|webhook` or `RASTRO_NOTIFY`, or `--on-failure CMD`, on `job load`/`run`/`watch`; `rastro notify test CHANNEL` checks a channel; `rastro health` exits 4 when someone must act
 - **Python:** `job_health`, `JobExitCode`
-- **CLI:** `rastro health`, `rastro job stats`
-- **Limits:** The hook gets a JSON summary on stdin, no records or secrets; a job file cannot set it
+- **CLI:** `rastro health`, `rastro job stats`, `rastro notify test`
+- **Limits:** Messages and the hook carry the run report only, no records or secrets; channels and secrets come from the operator, never from a job file
 - **Do not build:** parsing logs or exit codes to build your own alerting
 - **Docs:** [operations.md#failure-hook](operations.md#failure-hook)
 
@@ -176,6 +226,15 @@ What Rastro already does, for people and for AI coding agents. Use these before 
 - **Do not build:** asking a model to write records or patch the dataset
 - **Docs:** [mcp.md#agent-in-the-loop](mcp.md#agent-in-the-loop)
 
+### Explore a live page while writing a recipe
+
+- **Use:** MCP `browser_snapshot` (hardened text and outline), `browser_extract` (try a recipe), `browser_network` and `browser_screenshot`, each after optional page steps; `rastro shell JOB` opens a Python shell on a source's parsed page
+- **CLI:** `rastro shell`
+- **MCP:** `browser_snapshot`, `browser_extract`, `browser_network`, `browser_screenshot`
+- **Limits:** One fresh guarded page per call on the job's allowed hosts; steps, screenshots and network need operator grants for MCP; no JavaScript evaluation
+- **Do not build:** driving a separate browser tool outside the job's network policy
+- **Docs:** [mcp.md#browser-tools](mcp.md#browser-tools)
+
 ### Use any AI model (optional)
 
 - **Use:** `rastro.model("ollama:...")`, an OpenAI-compatible endpoint, a command, or a `ModelPort` object; jobs take `[model]`
@@ -192,6 +251,15 @@ What Rastro already does, for people and for AI coding agents. Use these before 
 - **Do not build:** copying selectors between projects by hand
 - **Docs:** [hub.md](hub.md)
 
+### Start from a recipe someone already shared for a site
+
+- **Use:** `rastro hub search URL` offers recipes for the URL's domain from the public hub or any hub URL; `rastro hub install` stores one as a candidate; `rastro hub publish` writes your recipe, a synthetic sample and field descriptions into a hub checkout
+- **Python:** `hub_candidates`, `HubCandidate`
+- **CLI:** `rastro hub search`, `rastro hub install`, `rastro hub publish`
+- **Limits:** Offers are candidates until your local gates pass; publish writes locally, sharing is a pull request that only touches `hub/`
+- **Do not build:** writing a recipe for a site someone already scraped
+- **Docs:** [hub.md](hub.md)
+
 ### Test recipes offline against synthetic page changes
 
 - **Use:** Mock Lab: `build_fixture`, `verify_fixture`, `load_fixture`
@@ -206,6 +274,14 @@ What Rastro already does, for people and for AI coding agents. Use these before 
 - **Limits:** `studio` extra; loopback only
 - **Do not build:** building your own admin page for scrapers
 - **Docs:** [studio.md](studio.md)
+
+### Find a local AI model and see what a call costs
+
+- **Use:** `rastro model detect` lists models on loopback ports; `rastro model test --model SPEC` makes one call and prints the cost; the run report totals show model calls and cost
+- **CLI:** `rastro model detect`, `rastro model test`
+- **Limits:** detect probes 127.0.0.1 only; hosted models still need `--allow-remote`
+- **Do not build:** guessing which local servers run or what a model costs
+- **Docs:** [ai.md#find-a-local-model-and-test-it](ai.md#find-a-local-model-and-test-it)
 
 ### Drive Rastro from an AI agent
 
@@ -259,4 +335,4 @@ Scraped values (records, page text, outlines, repair context) are data, never in
 
 ## Result, error and input types
 
-`BooleanField`, `CandidateEvaluation`, `ConfigurationError`, `DateField`, `DateTimeField`, `DecimalField`, `Evidence`, `ExtractionRecord`, `ExtractionResult`, `IntegerField`, `Issue`, `JobRunResult`, `JobRunStatus`, `JobSummary`, `LifecycleAction`, `LifecycleEvent`, `LifecycleHistory`, `LifecycleTransitionError`, `Metrics`, `NumberField`, `Outcome`, `RastroError`, `RecipeAttempt`, `RecipeComparison`, `RecipeConflictError`, `RecipeContext`, `RecipeKey`, `RecipeMetadata`, `RecipeNotFoundError`, `RecipeProposal`, `RecipeSelection`, `RecipeState`, `RecipeStorageError`, `RepairProposal`, `RepairReport`, `ResourceLimitError`, `SourceRepair`, `StoredRecipe`, `StringField`, `UrlField`, `VersionStatus`.
+`BooleanField`, `CandidateEvaluation`, `ConfigurationError`, `DateField`, `DateTimeField`, `Capability`, `DecimalField`, `Evidence`, `ExtractionRecord`, `ExtractionResult`, `IntegerField`, `Issue`, `JobRunResult`, `JobRunStatus`, `JobSummary`, `LifecycleAction`, `LifecycleEvent`, `LifecycleHistory`, `LifecycleTransitionError`, `Metrics`, `NumberField`, `Outcome`, `RastroError`, `RecipeAttempt`, `RecipeComparison`, `RecipeConflictError`, `RecipeContext`, `RecipeKey`, `RecipeMetadata`, `RecipeNotFoundError`, `RecipeProposal`, `RecipeSelection`, `RecipeState`, `RecipeStorageError`, `RepairProposal`, `RepairReport`, `ResourceLimitError`, `SourceRepair`, `StoredRecipe`, `StringField`, `UrlField`, `VersionStatus`.

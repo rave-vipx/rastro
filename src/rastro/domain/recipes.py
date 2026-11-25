@@ -3,80 +3,51 @@
 from __future__ import annotations
 
 import re
-from typing import Annotated, Any, ClassVar, Literal, Self, cast, get_args
+from typing import Annotated, ClassVar, Literal, Self
 
-from pydantic import (
-    BaseModel,
-    Field,
-    GetCoreSchemaHandler,
-    StrictInt,
-    field_validator,
-    model_validator,
-)
-from pydantic_core import CoreSchema, core_schema
+from pydantic import Field, StrictInt, field_validator, model_validator
 
+from rastro.domain.capture_pattern import CapturePattern
 from rastro.domain.json import POINTER
+from rastro.domain.page_steps import PageSteps
+from rastro.domain.recipe_nested import (
+    MAX_POINTERS,
+    FieldMapping,
+    NestedMapping,
+    PointerList,
+    check_pointer,
+    pointer_list,
+    scalar_expression,
+)
+from rastro.domain.recipe_steps import check_recipe_steps
+from rastro.domain.recipe_union import StrategyUnion, seal_union
 from rastro.domain.sources import ConfigurationError, Contract, Representation
+
+__all__ = [
+    "DOCUMENT_PREFIX",
+    "EXPAND_PREFIX",
+    "MAX_ITEM_TYPES",
+    "MAX_POINTERS",
+    "CssRecipe",
+    "EmbeddedJsonRecipe",
+    "FieldMapping",
+    "ItemType",
+    "JsonLdRecipe",
+    "JsonRecipe",
+    "NestedMapping",
+    "Pagination",
+    "PointerList",
+    "Recipe",
+    "StrategyUnion",
+    "pointer_list",
+    "scalar_expression",
+    "seal_union",
+]
 
 DOCUMENT_PREFIX = "document:"  # CSS field evaluated against the page root, not the record
 EXPAND_PREFIX = "expand:"  # CSS field whose every match becomes its own record
-MAX_POINTERS = 4  # JSON-LD fields may list 1..4 fallback pointers
-PointerList = Annotated[tuple[str, ...], Field(min_length=1, max_length=MAX_POINTERS)]
-_SELECTORS = frozenset({"item_type", "record_selector", "record_path", "source"})
 MAX_ITEM_TYPES = 8  # JSON-LD item_type may list 1..8 accepted types
 ItemType = Annotated[str, Field(min_length=1, max_length=256)]
-
-
-class StrategyUnion(Contract):
-    """A family discriminated by ``strategy``. Its base constructs and validates variants.
-
-    ``Base(...)``, ``Base.model_validate(...)`` and fields annotated with the base
-    select the variant named by ``strategy``; each variant rejects other strategies' keys.
-    """
-
-    _variants: ClassVar[dict[str, type[StrategyUnion]]] = {}
-
-    def __new__(cls, *args: Any, **data: Any) -> Self:
-        variants = cls.__dict__.get("_variants")
-        if not variants:
-            return super().__new__(cls)
-        strategy = data.get("strategy")
-        variant = variants.get(strategy) if isinstance(strategy, str) else None
-        # An unknown or missing strategy raises the union's discriminator error.
-        selected = variant or type(cls.__pydantic_validator__.validate_python(data))
-        return cast(Self, super().__new__(selected))
-
-    @classmethod
-    def __get_pydantic_core_schema__(
-        cls, source: type[BaseModel], handler: GetCoreSchemaHandler, /
-    ) -> CoreSchema:
-        variants = cls.__dict__.get("_variants")
-        if not variants:
-            return handler(source)
-        return core_schema.tagged_union_schema(
-            {tag: handler.generate_schema(variant) for tag, variant in variants.items()},
-            discriminator="strategy",
-        )
-
-    @model_validator(mode="before")
-    @classmethod
-    def omit_null_selectors(cls, data: Any) -> Any:
-        # Serializations before the union wrote every strategy's selector, often as null.
-        if isinstance(data, dict):
-            return {
-                name: value
-                for name, value in data.items()
-                if value is not None or name not in _SELECTORS or name in cls.model_fields
-            }
-        return data
-
-
-def seal_union(base: type[StrategyUnion], *variants: type[StrategyUnion]) -> None:
-    """Make ``base`` construct and validate as the discriminated union of ``variants``."""
-    base._variants = {
-        get_args(variant.model_fields["strategy"].annotation)[0]: variant for variant in variants
-    }
-    base.model_rebuild(force=True)
 
 
 class Pagination(Contract):
@@ -87,14 +58,14 @@ class Pagination(Contract):
 
 
 class Recipe(StrategyUnion):
-    """A declarative definition of scalar field mappings: what to extract, never history.
+    """A declarative definition of field mappings: what to extract, never history.
 
     ``Recipe(...)`` and ``Recipe.model_validate(...)`` return a ``CssRecipe``,
     ``JsonLdRecipe``, ``EmbeddedJsonRecipe`` or ``JsonRecipe`` selected by ``strategy``.
     """
 
     strategy: Literal["jsonld", "css", "json", "embedded_json"]
-    fields: dict[str, str] = Field(min_length=1, max_length=100)
+    fields: dict[str, FieldMapping] = Field(min_length=1, max_length=100)
     version: int = Field(default=1, ge=1, le=2_147_483_647)
     require_evidence: bool = False
     fallbacks: tuple[Recipe, ...] = Field(default=(), max_length=3)
@@ -105,7 +76,12 @@ class Recipe(StrategyUnion):
     @model_validator(mode="after")
     def check_mapping(self) -> Self:
         # Fallback variants are typed per representation; only flatness needs checking.
-        if any(item.fallbacks or item.version != self.version for item in self.fallbacks):
+        if any(
+            item.fallbacks or getattr(item, "steps", ()) or getattr(item, "capture", None)
+            for item in self.fallbacks
+        ):
+            raise ValueError("Fallbacks must be flat and cannot carry page steps or a capture")
+        if any(item.version != self.version for item in self.fallbacks):
             raise ValueError("Fallbacks must be flat and share the recipe version")
         if any(item.pagination is not None for item in self.fallbacks):
             raise ConfigurationError("Fallback recipes cannot declare pagination")
@@ -114,24 +90,38 @@ class Recipe(StrategyUnion):
             if expression.startswith((DOCUMENT_PREFIX, EXPAND_PREFIX)):
                 raise ValueError("Pagination requires a scalar page expression")
             self.check_expression(expression)
-        for name, mapping in self.fields.items():
-            expressions = (mapping,) if isinstance(mapping, str) else mapping
-            if not name or len(name) > 256 or not 1 <= len(expressions) <= MAX_POINTERS:
-                raise ValueError("Field names and expressions must be nonempty and bounded")
+        self.check_fields(self.fields)
+        return self
+
+    def check_fields(self, fields: dict[str, FieldMapping]) -> None:
+        for name, mapping in fields.items():
+            if not name or len(name) > 256:
+                raise ValueError("Field names must be nonempty and bounded")
+            if isinstance(mapping, NestedMapping):
+                self.check_each(mapping.each)
+                expressions = (
+                    tuple(mapping.members.values()) if mapping.members else (mapping.value,)
+                )
+                if any(not key or len(key) > 256 for key in mapping.members):
+                    raise ValueError("Member names must be nonempty and bounded")
+            else:
+                expressions = (mapping,) if isinstance(mapping, str) else mapping
+                if isinstance(mapping, tuple) and self.strategy != "jsonld":
+                    raise ValueError("Fallback pointers require the JSON-LD strategy")
             for expression in expressions:
                 if not expression or len(expression) > 1024:
-                    raise ValueError("Field names and expressions must be nonempty and bounded")
+                    raise ValueError("Field expressions must be nonempty and bounded")
                 self.check_expression(expression)
-        return self
+
+    def check_each(self, expression: str) -> None:
+        """Validate an absolute array pointer selecting one level of items."""
+        check_pointer(expression)
+        if not expression.startswith("/") or expression.split("/").count("*") != 1:
+            raise ValueError("Nested JSON mappings require exactly one wildcard segment")
 
     @staticmethod
     def check_expression(expression: str) -> None:
         """Raise ValueError if a field expression is invalid for this strategy."""
-
-
-def _check_pointer(expression: str) -> None:
-    if not expression.startswith("/") or POINTER.fullmatch(expression) is None:
-        raise ValueError("JSON mappings must be valid absolute JSON pointers")
 
 
 def _check_record_path(value: str) -> str:
@@ -141,18 +131,39 @@ def _check_record_path(value: str) -> str:
 
 
 class CssRecipe(Recipe):
-    """Select HTML records with ``record_selector``; fields end in ::text or ::attr(name)."""
+    """Records at ``record_selector``; fields end in ::text or ::attr(name); steps run first."""
 
     strategy: Literal["css"] = "css"
     fallbacks: tuple[HtmlRecipe, ...] = Field(default=(), max_length=3)
     record_selector: str = Field(min_length=1, max_length=1024)
+    steps: PageSteps = Field(
+        default=(),
+        exclude_if=lambda value: not value,
+        description="Browser actions (click, type, select, scroll, wait, follow) run before "
+        "extraction; data only, never code.",
+    )
     representation: ClassVar[Representation] = "html"
 
     @model_validator(mode="after")
     def check_expand(self) -> Self:
-        if sum(value.startswith(EXPAND_PREFIX) for value in self.fields.values()) > 1:
+        check_recipe_steps(self.steps)
+        if (
+            sum(
+                isinstance(value, str) and value.startswith(EXPAND_PREFIX)
+                for value in self.fields.values()
+            )
+            > 1
+        ):
             raise ValueError("At most one field can use the expand: prefix")
         return self
+
+    def check_each(self, expression: str) -> None:
+        if (
+            not expression.strip()
+            or "::" in expression
+            or expression.startswith((DOCUMENT_PREFIX, EXPAND_PREFIX))
+        ):
+            raise ValueError("Nested CSS mappings require a plain scope selector")
 
     @staticmethod
     def check_expression(expression: str) -> None:
@@ -174,9 +185,6 @@ class JsonLdRecipe(Recipe):
     """
 
     strategy: Literal["jsonld"] = "jsonld"
-    fields: dict[str, str | PointerList] = Field(  # type: ignore[assignment]
-        min_length=1, max_length=100
-    )
     fallbacks: tuple[HtmlRecipe, ...] = Field(default=(), max_length=3)
     item_type: (
         ItemType
@@ -184,7 +192,7 @@ class JsonLdRecipe(Recipe):
         | None
     ) = None
     representation: ClassVar[Representation] = "html"
-    check_expression = staticmethod(_check_pointer)
+    check_expression = staticmethod(check_pointer)
 
     @property
     def item_types(self) -> frozenset[str]:
@@ -195,13 +203,20 @@ class JsonLdRecipe(Recipe):
 
 
 class JsonRecipe(Recipe):
-    """Select JSON records at ``record_path``; fields are pointers relative to each record."""
+    """Select JSON records at ``record_path``; fields are pointers relative to each record.
+
+    ``capture`` reads the first JSON response the page loaded whose path matches it."""
 
     strategy: Literal["json"] = "json"
     fallbacks: tuple[JsonRecipe, ...] = Field(default=(), max_length=3)
     record_path: str = Field(max_length=1024)
+    capture: CapturePattern | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+        description="Path regular expression choosing a captured network response to read.",
+    )
     representation: ClassVar[Representation] = "json"
-    check_expression = staticmethod(_check_pointer)
+    check_expression = staticmethod(check_pointer)
 
     check_record_path = field_validator("record_path")(_check_record_path)
 
@@ -219,7 +234,7 @@ class EmbeddedJsonRecipe(Recipe):
     source: str = Field(min_length=1, max_length=1024)
     record_path: str = Field(max_length=1024)
     representation: ClassVar[Representation] = "html"
-    check_expression = staticmethod(_check_pointer)
+    check_expression = staticmethod(check_pointer)
     check_record_path = field_validator("record_path")(_check_record_path)
 
     @field_validator("source")

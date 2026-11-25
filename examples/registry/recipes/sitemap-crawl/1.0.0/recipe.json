@@ -1,0 +1,11 @@
+{
+  "fallbacks": [],
+  "fields": {
+    "summary": "p::text",
+    "title": "h1::text"
+  },
+  "record_selector": ".page",
+  "require_evidence": true,
+  "strategy": "css",
+  "version": 1
+}

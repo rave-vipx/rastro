@@ -1,4 +1,4 @@
-"""Unit tests for job scheduling, due calculation, jitter and locks (SCHED-001..007, SYNC-001)."""
+"""Unit tests for job scheduling, due calculation, jitter and locks."""
 
 from __future__ import annotations
 
@@ -45,7 +45,7 @@ BASE_JOB: dict[str, Any] = {
 
 
 def test_schedule_parses_valid_durations_and_source_overrides() -> None:
-    """SCHED-001, SCHED-006, SCHED-007: valid [schedule] and per-source every parse cleanly."""
+    """Valid [schedule] and per-source every parse cleanly."""
     assert parse_duration("60s") == timedelta(seconds=60)
     assert parse_duration("1m") == timedelta(minutes=1)
     assert parse_duration("6h") == timedelta(hours=6)
@@ -100,7 +100,7 @@ def test_schedule_parses_valid_durations_and_source_overrides() -> None:
 def test_schedule_validation_errors_are_configuration_error_without_echoing_values(
     bad_schedule: dict[str, Any],
 ) -> None:
-    """SCHED-001, SCHED-006: invalid schedule raises ConfigurationError and never echoes input."""
+    """Invalid schedule raises ConfigurationError and never echoes input."""
     with pytest.raises(ConfigurationError) as exc_info:
         Job.model_validate({**BASE_JOB, "schedule": bad_schedule})
     text = f"{exc_info.value} {exc_info.value!r}"
@@ -112,7 +112,7 @@ def test_schedule_validation_errors_are_configuration_error_without_echoing_valu
 def test_source_every_validation_errors_are_configuration_error_without_echoing(
     bad_every: Any,
 ) -> None:
-    """SCHED-001: per-source every validates bounds and units without echoing values."""
+    """Per-source every validates bounds and units without echoing values."""
     with pytest.raises(ConfigurationError) as exc_info:
         parse_job(
             f"""
@@ -135,7 +135,7 @@ every = {bad_every!r}
 
 
 def test_due_computation_with_per_source_every() -> None:
-    """SCHED-001, SYNC-001: due sources computed from last_attempt and per-source every."""
+    """Due sources computed from last_attempt and per-source every."""
     job = Job.model_validate(BASE_JOB)
     t0 = datetime(2026, 11, 15, 12, 0, tzinfo=UTC)
 
@@ -165,7 +165,7 @@ def test_due_computation_with_per_source_every() -> None:
 
 
 def test_jitter_is_bounded_and_deterministic() -> None:
-    """SCHED-006: jitter is deterministic per (job_path, source_url) and bounded <= every/4."""
+    """Jitter is deterministic per (job_path, source_url) and bounded <= every/4."""
     cap = timedelta(minutes=5)
     j1 = deterministic_jitter(Path("/jobs/a.toml"), "https://a.example/items", cap)
     j1_repeat = deterministic_jitter(Path("/jobs/a.toml"), "https://a.example/items", cap)
@@ -201,7 +201,7 @@ def test_jitter_is_bounded_and_deterministic() -> None:
 def test_lock_held_and_stale_lock_replacement(
     tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """SCHED-003: live lock raises RunInProgressError; stale lock is replaced with WARNING."""
+    """Live lock raises RunInProgressError; stale lock is replaced with WARNING."""
     db_path = tmp_path / "items.sqlite"
     t0 = datetime(2026, 11, 15, 12, 0, tzinfo=UTC)
     lpath = lock_path(db_path)
@@ -252,7 +252,7 @@ def test_lock_held_and_stale_lock_replacement(
 
 
 def test_checkpoint_roundtrip_and_permissions(tmp_path: Path) -> None:
-    """SCHED-004: .run.json is written atomically with mode 0600 and cleared on completion."""
+    """.run.json is written atomically with mode 0600 and cleared on completion."""
     db_path = tmp_path / "items.sqlite"
     cpath = write_checkpoint(db_path, "run-1", ((0, "https://a.example/items"),), dataset="items")
     assert cpath == checkpoint_path(db_path)
@@ -269,7 +269,7 @@ def test_checkpoint_roundtrip_and_permissions(tmp_path: Path) -> None:
 
 
 def test_checkpoint_keys_same_url_sources_by_index(tmp_path: Path) -> None:
-    """SCHED-004: two sources sharing one URL (other regions) complete independently."""
+    """Two sources sharing one URL (other regions) complete independently."""
     db_path = tmp_path / "items.sqlite"
     url = "https://a.example/items"
     write_checkpoint(db_path, "run-1", ((0, url), (2, url), (0, url)), dataset="items")

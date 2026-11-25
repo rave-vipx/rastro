@@ -1,4 +1,4 @@
-"""Job file endpoints: page, listing, validate, preview, correct a selector, connect (P-008)."""
+"""Job file endpoints: page, listing, validate, preview, correct a selector, connect."""
 
 from __future__ import annotations
 
@@ -17,6 +17,7 @@ from rastro.application.job_preview import bounded_preview, preview_job
 from rastro.domain.jobs import Job
 from rastro.studio import editing, files
 from rastro.studio.bounds import controls
+from rastro.studio.hub_actions import site_scope
 from rastro.studio.web import HEADERS, Refused, Studio, body, reply, text
 
 STATIC = Path(__file__).parent / "static"
@@ -24,12 +25,22 @@ ASSETS = frozenset(
     {
         "studio.js",
         "studio.css",
+        "studio-parts.css",
         "wizard.js",
+        "wizard_parts.js",
         "operate.js",
         "dom.js",
+        "changes.js",
         "ai.js",
         "controls.js",
+        "connections.js",
+        "connections-data.js",
+        "connections-ui.js",
+        "connections-advanced.js",
         "registry.js",
+        "hub_model.js",
+        "hub_explore.js",
+        "hub_publish.js",
         "bounds.js",
         "i18n.js",
         "prefs.js",
@@ -38,16 +49,21 @@ ASSETS = frozenset(
         "results.js",
         "provenance.js",
         "sources.js",
+        "run_view.js",
+        "steps.js",
         "alerts.js",
         "fix.js",
         "correct.js",
+        "pick.js",
         "home.js",
     }
 )
+# Per-view copy (English and Spanish); fixed names, so a path can never leave the folder.
+I18N_ASSETS = frozenset(path.name for path in (STATIC / "i18n").glob("*.json"))
 
 
 def _recipes(job: Job) -> list[dict[str, Any]]:
-    """Recipes the page may edit (N4): the job recipe (``source`` None) and per-source ones."""
+    """Recipes the page may edit: the job recipe (``source`` None) and per-source ones."""
     declared = [(None, job.recipe), *((i, s.recipe) for i, s in enumerate(job.sources))]
     return [
         {
@@ -96,6 +112,12 @@ def routes(studio: Studio) -> list[Route]:
             return reply({"error": "not_found"}, 404)
         return FileResponse(STATIC / name, headers=HEADERS)
 
+    async def copy(request: Request) -> Response:
+        name = request.path_params["name"]
+        if name not in I18N_ASSETS:
+            return reply({"error": "not_found"}, 404)
+        return FileResponse(STATIC / "i18n" / name, headers=HEADERS)
+
     async def jobs(request: Request) -> Response:
         found, truncated = files.list_job_files(studio.root)
         return reply({"root": studio.root.name, "files": found, "truncated": truncated})
@@ -120,7 +142,12 @@ def routes(studio: Studio) -> list[Route]:
     async def preview(request: Request) -> Response:
         data = await body(request)
         path, original, job, _ = _edited(studio, data)
-        shown = await run_in_threadpool(preview_job, job, base_dir=path.parent, **studio.trust)
+
+        def run() -> Any:
+            with site_scope(studio, job):
+                return preview_job(job, base_dir=path.parent, **studio.trust)
+
+        shown = await run_in_threadpool(run)
         return reply(
             {"ok": True, "sha256": files.digest(original), "preview": bounded_preview(shown)}
         )
@@ -145,6 +172,7 @@ def routes(studio: Studio) -> list[Route]:
     return [
         studio.route("/", page),
         studio.route("/static/{name}", asset),
+        studio.route("/static/i18n/{name}", copy),
         studio.route("/api/jobs", jobs),
         studio.route("/api/connect", connect),
         studio.route("/api/validate", validate, post=True),

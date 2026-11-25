@@ -1,5 +1,5 @@
 // Alerts: what happened in the runs, newest first, grouped by day; one plain sentence and one
-// action each (N5). The sentence is written here from kind + code, so it follows the language.
+// action each. The sentence is written here from kind + code, so it follows the language.
 import { $, api, el, request, requireFile, show, switchView } from "./dom.js";
 import { issueText, lang, onLangChange, t, when } from "./i18n.js";
 import { sources } from "./sources.js";
@@ -33,7 +33,7 @@ function sourceIndex(url) {
 export function actionFor(alert) {
   const action = alert.action;
   if (action === "retry") return [t("alert.action.retry"), () => { switchView("results"); $("load").click(); }];
-  if (action === "fix") return [t("alert.action.fix"), () => request("fix", { source: sourceIndex(alert.source) })];
+  if (action === "fix") return [t(alert.kind === "quarantine" ? "alert.action.review" : "alert.action.fix"), () => request("fix", { source: sourceIndex(alert.source) })];
   if (action === "raise_cap") return [t("alert.action.raiseCap"), () => request("settings", { focus: "pagination-cap" })];
   return [t("alert.action.details"), () => switchView("sources")];
 }
@@ -104,4 +104,26 @@ export function resetAlerts() {
 export function initAlerts() {
   $("alerts-refresh").addEventListener("click", () => loadAlerts());
   onLangChange(renderAlerts);
+}
+
+// Per-site traffic light and sentence, from the hint the server derives from the run report.
+
+const LIGHT = { green: "ok", amber: "warn", red: "fail", grey: "none" };
+
+export function lightTone(light) {
+  return LIGHT[light] ? LIGHT[light] : "none";
+}
+
+export function lightWord(light) {
+  return t(`health.light.${LIGHT[light] ? light : "grey"}`);
+}
+
+// The sentence for a hint, or "" when nothing stands out.
+export function sayText(say) {
+  if (!say || typeof say.key !== "string") return "";
+  if (say.key === "blocked_passed") {
+    return t("say.blocked_passed", { why: t(`say.kind.${say.kind}`), how: t(`say.rung.${say.rung}`) });
+  }
+  if (say.key === "blocked") return t("say.blocked", { why: t(`say.kind.${say.kind}`) });
+  return t(`say.${say.key}`);
 }

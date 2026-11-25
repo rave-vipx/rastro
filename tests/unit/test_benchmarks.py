@@ -1,4 +1,4 @@
-"""Verify the release evidence oracle and scoring (DIFF-001, QUAL-003)."""
+"""Verify the release evidence oracle and scoring."""
 
 import asyncio
 from dataclasses import replace
@@ -115,7 +115,7 @@ def test_report_runs_without_git_in_source_distribution(monkeypatch) -> None:
     assert report["git_dirty"] is None
 
 
-# Held-out DIFF-001 evaluation (benchmarks/heldout.py, benchmarks/heldout.json).
+# Held-out evaluation (benchmarks/heldout.py, benchmarks/heldout.json).
 
 HELDOUT = {source.name: source for source in heldout.load_sources()}
 SILENT = {"related_product_added", "sponsored_duplicate", "price_class_reassigned"}

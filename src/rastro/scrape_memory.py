@@ -1,4 +1,4 @@
-"""Recipe memory, success samples and offline self-repair for ``rastro.scrape`` (REPAIR-001-005).
+"""Recipe memory, success samples and offline self-repair for ``rastro.scrape``.
 
 The recipe database holds versions and their lifecycle. A sibling samples file
 (``recipes.samples.db`` next to ``recipes.db``) keeps the latest sanitized success
@@ -167,6 +167,8 @@ class ScrapeMemory:
             gate=evaluate,
             rows=rows,
             history=history,
+            limits=self._limits,
+            timezone=source.timezone,
         )
         comparisons = await asyncio.to_thread(
             store_candidates,
@@ -193,6 +195,6 @@ class ScrapeMemory:
             promoted=promoted is not None,
             promoted_version=promoted,
             candidates=proposals,
-            origin=assisted.origin if assist is not None else None,
+            origin=assisted.origin,
             model_calls=assisted.model_calls,
         )

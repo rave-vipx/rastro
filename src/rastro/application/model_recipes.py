@@ -1,7 +1,8 @@
-"""Ask any ``ModelPort`` for a recipe for a saved page, then verify it (INT-001).
+"""Ask any ``ModelPort`` for a recipe for a saved page, then verify it.
 
 The recipe is kept only if it extracts valid records from that page (repair proposals go
-through ``repair_job_source(..., model=...)`` instead). The model sees field names and the
+through ``repair_job_source(..., model=...)`` instead). The model sees field names, their types
+(list and object members included), the region timezone and the
 page (a bounded digest when it is large), never records; its output is parsed as a strict
 proposal and only kept when verification passes.
 Retries are bounded by the ``InferencePolicy``. No provider is special-cased.
@@ -15,7 +16,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel
 
-from rastro.application.proposals import propose_with_model
+from rastro.application.proposals import propose_with_model, schema_hints
 from rastro.domain.intelligence import InferencePolicy
 from rastro.domain.models import ExtractionResult, Outcome, RastroError, Recipe, Source
 from rastro.ports.model import ModelPort
@@ -41,6 +42,7 @@ async def _ask(
     failure: str,
     evaluate: Any,
     policy: InferencePolicy | None,
+    timezone: str,
 ) -> tuple[bool, str, int]:
     complete, failure, calls, _ = await propose_with_model(
         model=model,
@@ -52,6 +54,8 @@ async def _ask(
         failure=failure,
         attempts=[],
         evaluate=evaluate,
+        hints=schema_hints(schema),
+        timezone=timezone,
     )
     return complete, failure, calls
 
@@ -63,8 +67,13 @@ async def recipe_for_page(
     *,
     url: str | None = None,
     policy: InferencePolicy | None = None,
+    timezone: str = "UTC",
 ) -> ModelAnswer:
-    """A model-proposed CSS recipe kept only if it extracts valid records from ``html``."""
+    """A model-proposed recipe kept only if it extracts valid records from ``html``.
+
+    List and object fields may come back as nested mappings; ``timezone`` is the region
+    the page's naive dates belong to, given to the model and used for validation.
+    """
     from rastro.application.engine import Rastro
 
     answer = ModelAnswer()
@@ -76,7 +85,7 @@ async def recipe_for_page(
             result = await asyncio.to_thread(
                 engine.extract_html,
                 html,
-                source=Source(url=url or LOCAL_URL),
+                source=Source(url=url or LOCAL_URL, timezone=timezone),
                 schema=schema,
                 recipe=candidate,
             )
@@ -94,6 +103,7 @@ async def recipe_for_page(
         failure="new_recipe",
         evaluate=evaluate,
         policy=policy,
+        timezone=timezone,
     )
     if not complete:
         answer.recipe = answer.result = None

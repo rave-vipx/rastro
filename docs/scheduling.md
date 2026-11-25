@@ -1,4 +1,8 @@
-# Daily dataset and agenda (SCHED-007, DATA-004)
+# Daily dataset and agenda
+
+Without cron or launchd, `[schedule] every = "1d"` with `at = "08:00"` and `rastro job
+watch job.toml` run the job at that time of day in the job's timezone; see
+[Monitoring and alerts](operations.md#scheduler). This page shows the system scheduler way.
 
 Use the same job for each run. These examples run at 08:00 local time; replace
 absolute paths and the `rastro` executable path with your own. Both save the

@@ -157,6 +157,7 @@ class RecipeLearner:
                 attempts=session.attempts,
                 evaluate=session.evaluate,
                 hints=schema_hints(schema),
+                timezone=source.timezone,
             )
         storage_seconds = await self._persist_learned(prepared, session.selected)
         result = stamp_learning(

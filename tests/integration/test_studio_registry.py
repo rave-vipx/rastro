@@ -1,4 +1,4 @@
-"""N10, N12, HUB-002..006: guarded registry operations never promote or grant trust."""
+"""Guarded registry operations never promote or grant trust."""
 
 from collections.abc import Iterator
 from pathlib import Path
@@ -29,7 +29,7 @@ record_selector = "article.item"
 fields = { title = "h2::text" }
 [[sources]]
 path = "page.html"
-url = "https://sodre.gub.uy/espectaculos/"
+url = "https://agenda.example/espectaculos/"
 [[fields]]
 name = "title"
 type = "string"
@@ -62,12 +62,12 @@ def publish(client: TestClient) -> None:
 
 def test_publish_search_install_candidate(client: TestClient, tmp_path: Path) -> None:
     publish(client)
-    response = client.post("/api/registry/search", json={"registry": "registry", "query": "sodre"})
+    response = client.post("/api/registry/search", json={"registry": "registry", "query": "teatro"})
     assert response.status_code == 200
     entry = response.json()["entries"][0]
-    assert entry["id"] == "uy-sodre-agenda" and entry["trust"]["has_sample"]
+    assert entry["id"] == "teatro-central-agenda" and entry["trust"]["has_sample"]
     before = (tmp_path / "job.toml").read_bytes()
-    payload = {"registry": "registry", "spec": "uy-sodre-agenda@1.0.0", "file": "job.toml"}
+    payload = {"registry": "registry", "spec": "teatro-central-agenda@1.0.0", "file": "job.toml"}
     installed = client.post("/api/registry/install", json=payload)
     assert installed.status_code == 200, installed.text
     result = installed.json()
@@ -101,7 +101,7 @@ def test_refuse_registry_escape(client: TestClient, registry: str) -> None:
     for endpoint, extra in [
         ("search", {"query": ""}),
         ("publish", {"bundle": "bundle"}),
-        ("install", {"file": "job.toml", "spec": "uy-sodre-agenda"}),
+        ("install", {"file": "job.toml", "spec": "teatro-central-agenda"}),
     ]:
         response = client.post(f"/api/registry/{endpoint}", json={"registry": registry, **extra})
         assert response.status_code == 400
@@ -127,7 +127,7 @@ def test_refuse_symlinks(client: TestClient, tmp_path: Path, target: str) -> Non
             "registry": "registry",
             "bundle": "bundle",
             "file": "job.toml",
-            "spec": "uy-sodre-agenda",
+            "spec": "teatro-central-agenda",
         },
     )
     assert response.status_code == 400
@@ -142,11 +142,11 @@ def test_private_publish_and_corrupt_install_fail(client: TestClient, tmp_path: 
     assert refused.status_code == 400
     assert not (tmp_path / "registry").exists()
     publish(client)
-    package = tmp_path / "registry/recipes/uy-sodre-agenda/1.0.0"
+    package = tmp_path / "registry/recipes/teatro-central-agenda/1.0.0"
     (package / "sample.html").write_text("tampered")
     refused = client.post(
         "/api/registry/install",
-        json={"registry": "registry", "spec": "uy-sodre-agenda", "file": "job.toml"},
+        json={"registry": "registry", "spec": "teatro-central-agenda", "file": "job.toml"},
     )
     assert refused.status_code == 400 and not refused.json()["ok"]
     assert not (tmp_path / "memory.sqlite").exists()
@@ -157,7 +157,7 @@ def test_missing_memory_and_bad_inputs(client: TestClient, tmp_path: Path) -> No
     (tmp_path / "job.toml").write_text(JOB.replace('recipe_memory = "memory.sqlite"\n', ""))
     response = client.post(
         "/api/registry/install",
-        json={"registry": "registry", "spec": "uy-sodre-agenda", "file": "job.toml"},
+        json={"registry": "registry", "spec": "teatro-central-agenda", "file": "job.toml"},
     )
     assert response.status_code == 400 and response.json()["error"] == "recipe_memory_required"
     (tmp_path / "registry/index.json").write_text("invalid")
@@ -193,14 +193,14 @@ def test_bundle_file_and_nested_store_symlinks(client: TestClient, tmp_path: Pat
     (tmp_path / "job.toml").write_text(JOB.replace('"memory.sqlite"', '"linked/memory.sqlite"'))
     response = client.post(
         "/api/registry/install",
-        json={"registry": "registry", "spec": "uy-sodre-agenda", "file": "job.toml"},
+        json={"registry": "registry", "spec": "teatro-central-agenda", "file": "job.toml"},
     )
     assert response.status_code == 400 and not (tmp_path / "store/memory.sqlite").exists()
 
 
 def test_bad_package_and_missing_bundle_never_succeed(client: TestClient, tmp_path: Path) -> None:
     publish(client)
-    for spec in ("../escape", "missing-package", "uy-sodre-agenda@9.0.0"):
+    for spec in ("../escape", "missing-package", "teatro-central-agenda@9.0.0"):
         response = client.post(
             "/api/registry/install", json={"registry": "registry", "spec": spec, "file": "job.toml"}
         )

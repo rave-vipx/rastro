@@ -1,7 +1,6 @@
 # ADR 0032: vibe-coder Studio, JavaScript, and a bounded spider
 
-- **Status:** accepted by owner request, 2026-11-16.
-- **Requirements:** product needs N1–N8. Amends the product bans implied by ADR 0020 and by the "you name the pages" comparison. Does not amend SEC-001–SEC-011.
+- **Status:** accepted, 2026-11-16.
 
 ## Problem
 
@@ -15,13 +14,12 @@ Rastro extracts known pages reliably and refuses wrong repairs. A newcomer still
 
 ## Decision
 
-Option 3. The product needs are the planning source for this cut. Where `RASTRO_MASTER_SPEC.md` forbids discovered links, a URL-first Studio, or progress for a long run, this ADR wins. Do not edit the master spec in place.
+Option 3. Where earlier requirements forbid discovered links, a URL-first Studio, or progress for a long run, this ADR wins.
 
-Security boundaries listed in the product needs stay in force. In particular, stealth, private networks, ignore-robots, and egress remain operator grants; a spider does not grant them.
+The security boundaries stay in force. In particular, stealth, private networks, ignore-robots, and egress remain operator grants; a spider does not grant them.
 
 ## Consequences
 
-- Claude implements the spider and same-source browser reuse, with offline tests.
-- Codex implements the Studio and README surface on the current services. Spider controls in Studio wait until the `[spider]` schema exists.
-- A richer React Studio, a hosted registry, and infinite-scroll capture stay out of this cut.
+- The spider and same-source browser reuse ship with offline tests. Spider controls in Studio follow the `[spider]` job schema.
+- A richer React Studio, a hosted registry, and infinite-scroll capture are out of scope for this decision; ADR 0033 covers the last two.
 - The README may describe bounded crawling. It may not claim higher accuracy than the published benchmarks.

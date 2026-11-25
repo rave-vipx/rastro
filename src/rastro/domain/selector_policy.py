@@ -13,11 +13,13 @@ from __future__ import annotations
 
 import re
 
+from rastro.domain.recipe_steps import step_selectors
 from rastro.domain.recipes import (
     DOCUMENT_PREFIX,
     EXPAND_PREFIX,
     CssRecipe,
     EmbeddedJsonRecipe,
+    NestedMapping,
     Recipe,
 )
 from rastro.domain.sources import ConfigurationError
@@ -104,6 +106,15 @@ def check_untrusted_recipe[R: Recipe](recipe: R) -> R:
         if candidate.pagination is not None:
             check_untrusted_field(candidate.pagination.next)
         check_untrusted_selector(candidate.record_selector)
+        for selector in step_selectors(candidate.steps):  # page steps, the browser evaluates
+            check_untrusted_selector(selector)
         for expression in candidate.fields.values():
-            check_untrusted_field(expression)
+            if isinstance(expression, NestedMapping):
+                check_untrusted_selector(expression.each)
+                for member in expression.members.values():
+                    check_untrusted_field(member)
+                if expression.value is not None:
+                    check_untrusted_field(expression.value)
+            elif isinstance(expression, str):
+                check_untrusted_field(expression)
     return recipe

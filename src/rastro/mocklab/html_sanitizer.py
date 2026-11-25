@@ -1,4 +1,4 @@
-"""Rewrite HTML so only structure and the recipe's extracted values survive (MOCK-005).
+"""Rewrite HTML so only structure and the recipe's extracted values survive.
 
 The rewriter keeps tags and attribute names so selectors replay unchanged. Text,
 comments, scripts and styles are replaced or dropped unless the retention plan

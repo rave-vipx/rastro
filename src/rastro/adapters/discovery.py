@@ -1,4 +1,4 @@
-"""Conservative JSON-LD and microdata discovery through Scrapling (INT-002)."""
+"""Conservative JSON-LD and microdata discovery through Scrapling."""
 
 from __future__ import annotations
 
@@ -7,9 +7,10 @@ import re
 from pydantic import ValidationError
 from scrapling.parser import Selector
 
-from rastro.adapters.scrapling import _objects, _parse_html
-from rastro.domain.json import strict_json
+from rastro.adapters.jsonld_objects import jsonld_objects
+from rastro.adapters.scrapling import _parse_html
 from rastro.domain.models import CssRecipe, JsonLdRecipe, Limits, Recipe, ResourceLimitError
+from rastro.domain.tolerant_json import tolerant_json
 from rastro.ports.discovery import AliasMap
 
 _SAFE_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]{0,255}")
@@ -45,10 +46,10 @@ class ScraplingDiscovery:
         examined = 0
         for block in blocks:
             try:
-                payload = strict_json(str(block), repair_text=True)
+                payload, _ = tolerant_json(str(block))
             except (ValueError, RecursionError):
                 continue
-            for item, _ in _objects(payload):
+            for item, _ in jsonld_objects(payload):
                 examined += 1
                 if examined > limits.max_records:
                     raise ResourceLimitError("JSON-LD object count exceeds max_records")
@@ -74,7 +75,7 @@ class ScraplingDiscovery:
         for node in nodes:
             mapping = _microdata_mapping(node, names)
             if mapping:
-                add(CssRecipe(record_selector="[itemscope]:not([itemprop])", fields=mapping))
+                add(CssRecipe(record_selector="[itemscope]:not([itemprop])", fields=dict(mapping)))
             if len(candidates) == max_candidates:
                 break
         return tuple(candidates)

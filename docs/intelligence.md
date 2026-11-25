@@ -9,7 +9,6 @@ A model proposes a **recipe** (selectors and field mappings), never the extracte
 Rastro executes the recipe on the original document and validates every observation with
 the same deterministic gates as a hand-written recipe. Model output is untrusted: it can only
 help Rastro find more correct recipes and reject more wrong ones.
-Requirements: **INT-002, AI-001–005, REC-004, REPAIR-001, SEC-004/005/011, P-001**.
 
 ## Start without a model
 
@@ -173,8 +172,16 @@ The trusted system message gives numbered rules and a one-line example of the JS
 The data envelope carries:
 
 - `fields` and `required_fields`, plus `field_hints`: each field's type and the
-  `Field(description=...)` you wrote;
-- `untrusted_html`, or for a page too large for `max_context_bytes`, `untrusted_page_digest`;
+  `Field(description=...)` you wrote. List and object fields show their members, for
+  example `list[object{name: str, price: Decimal | null}]`, and the rules show a nested
+  mapping (`{"each": "li.ticket", "members": {"price": ".price::text"}}`), so a model can
+  answer "each ticket type with its price" with one recipe;
+- `region_timezone` when the job's region sets one: dates without an offset on the page
+  are local to it, and the model is told to select them as written;
+- `untrusted_html` (hardened: hidden elements, comments and invisible characters removed)
+  with `untrusted_page_text`, the same visible page condensed to Markdown (at most 3,000
+  characters); or, for a page too large for `max_context_bytes`, `untrusted_page_digest`.
+  Page text that looks like instructions is listed in `content_flags`;
 - for repair, `previous_recipe` (the serving recipe, without version or fallbacks), a safe
   `last_failure` category such as `serving_recipe_extracts_no_records`, and
   `untrusted_last_success_samples` (up to two records from the last retained success,
@@ -267,8 +274,7 @@ limits across its bounded workers.
 
 `model=` accepts any object implementing `ModelPort`, the provider strategy
 interface; `rastro.model()` builds one for you. The HTTP strategies need HTTPX, so the
-core install never does (P-002). Requirements: **AI-001–005, SEC-004/005/011, P-001, P-007**.
-
+core install never does. 
 | Provider | Install | Endpoint | Use when |
 | --- | --- | --- | --- |
 | `OllamaModel` | `rastro-engine[ollama]` | native `/api/chat`, loopback only | A local Ollama service; strictest local-only checks |
@@ -358,7 +364,7 @@ multiple choices, a `finish_reason` other than `stop` (`length`, `content_filter
 
 **Privacy.** Opting into any model sends the page document to that endpoint. With
 `allow_remote=True`, that is a third-party service under its own retention terms;
-keep the default loopback endpoint when local processing is mandatory (P-001). The
+keep the default loopback endpoint when local processing is mandatory. The
 recorded live check against Ollama's `/v1` endpoint is described in
 [ADR 0010](decisions/0010-model-providers.md); it is not a model-quality claim.
 
@@ -476,7 +482,7 @@ stays intact; there is no automatic version increment or replacement.
 Discovery is intentionally conservative. It does not infer synonyms, crawl links,
 fetch alternate APIs, resolve remote JSON-LD contexts, or render JavaScript.
 Supplied structured metadata precedes DOM discovery; acquisition of separate
-structured API representations remains a documented INT-002 gap.
+structured API representations remains a documented gap.
 
 ## Budgets and outcomes
 
@@ -493,8 +499,7 @@ structured API representations remains a documented INT-002 gap.
 | `max_discovery_candidates` | 8 | 32 |
 
 Calls are bounded by `min(max_calls, 1 + max_repair_attempts)`. “Repair” here means
-correcting a rejected cold-context proposal; the v0.2 stored-recipe lifecycle is not
-implemented. Provider failures and response-budget failures stop immediately without
+correcting a rejected cold-context proposal; the [recipe lifecycle](recipe-lifecycle.md) is separate. Provider failures and response-budget failures stop immediately without
 transport retries. A retry includes only a safe failure category, never the previous
 model output or validator error text.
 
@@ -545,11 +550,11 @@ destinations or bypass source policy. Recipes/evidence may include literal selec
 values from source content; keep the database and results private when needed.
 
 Default tests use synthetic pages and fake model/HTTP transports with sockets
-disabled. They cover attacks, limits, cancellation, activation, restart and M3
-payload compatibility. Core wheel installation is checked without HTTPX or Ollama. The OpenAI-compatible
+disabled. They cover attacks, limits, cancellation, activation, restart and
+recipe-payload compatibility. Core wheel installation is checked without HTTPX or Ollama. The OpenAI-compatible
 adapter has its own offline contract and mock-server learning tests.
 These tests do not claim real-model quality. The separate
-The maintainer's live Ollama evidence (kept outside the repository) records one local `qwen3:4b` run
+The recorded live Ollama run (`benchmarks/results/live-ollama.json`) covers one local `qwen3:4b` run
 with its opt-in harness, model digest and limitations.
 
 See [ADR 0004](decisions/0004-bounded-recipe-learning.md) for adapter and trust decisions.

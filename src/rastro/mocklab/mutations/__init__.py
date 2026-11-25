@@ -1,4 +1,4 @@
-"""Deterministic, seeded structural mutations of HTML and JSON documents (MOCK-002, MOCK-006).
+"""Deterministic, seeded structural mutations of HTML and JSON documents.
 
 Build a ``MutationPlan`` from operator configs and a seed, then ``apply`` it. Every
 operator reports what it changed or why no target applied.

@@ -1,4 +1,4 @@
-"""Offline load-repair-load and legacy snapshots (REPAIR-001, SCR-002)."""
+"""Offline load-repair-load and legacy snapshots."""
 
 import json
 import sqlite3

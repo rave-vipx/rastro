@@ -1,4 +1,4 @@
-"""Versioned repair decisions and comparisons (REPAIR-002-005, QUAL-006)."""
+"""Versioned repair decisions and comparisons."""
 
 from typing import Annotated, Literal
 
@@ -106,8 +106,8 @@ class SourceRepair(Contract):
     promoted_version: int | None = None
     # Audit notes, e.g. ``candidate_retired`` or ``page_not_usable`` (candidate kept).
     notes: tuple[str, ...] = Field(default=(), exclude_if=lambda v: not v)
-    # With a model: whether candidates came from relocation or the model fallback.
-    origin: Literal["relocation", "model"] | None = Field(
+    # Whether candidates came from relocation, adaptive matching or the model fallback.
+    origin: Literal["relocation", "adaptive", "model"] | None = Field(
         default=None, exclude_if=lambda v: v is None
     )
 

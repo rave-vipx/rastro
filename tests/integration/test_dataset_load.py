@@ -1,4 +1,4 @@
-"""Load/export boundaries and reports: DATA-001/003, SYNC-006/008, AGENT-003."""
+"""Load/export boundaries and reports."""
 
 import json
 import shutil
@@ -22,7 +22,7 @@ from rastro.domain.models import Outcome
 
 @pytest.fixture
 def sample(tmp_path):
-    shutil.copytree(Path("examples/uy-dance-agenda/sample"), tmp_path / "sample")
+    shutil.copytree(Path("examples/event-agenda/sample"), tmp_path / "sample")
     return tmp_path / "sample"
 
 
@@ -122,8 +122,8 @@ def test_partial_snapshot_is_not_complete(sample):
     assert {key.identity for key in loaded.stale_sources[0].affected_keys} == {
         ("candombe-1",),
         ("candombe-2",),
-        ("gala-sodre",),
-        ("suite-sodre",),
+        ("gala-venue",),
+        ("suite-venue",),
     }
     assert len(store.records(job.dataset.name)) == 6
 
@@ -172,7 +172,7 @@ def test_multiple_datasets_require_name(sample, capsys):
     assert main(["job", "load", str(sample / "job.toml")]) == 0
     capsys.readouterr()
     store = SQLiteDatasetStore(sample / "agenda.sqlite")
-    status = store.source_status("uy_dance_agenda")[0]
+    status = store.source_status("event_agenda")[0]
     store.mark_source_unavailable("other", status.source_url, status.last_attempt, "unavailable")
     assert main(["dataset", "status", str(sample / "agenda.sqlite")]) == 2
     capsys.readouterr()
@@ -192,7 +192,7 @@ def sale_date_swap(sample):
 
     from rastro.mocklab.mutations import HtmlChangeLabel, MutationPlan
 
-    seller = sample / "tickantel-evento.html"
+    seller = sample / "tickets-event.html"
     body = seller.read_text(encoding="utf-8")
     changes = tuple(
         HtmlChangeLabel(
@@ -266,7 +266,7 @@ def test_held_source_reported_stale_with_consistency_failed_and_exit_3(sample, c
 
 @pytest.fixture
 def price_job(tmp_path):
-    """Synthetic numeric history for QUAL-005 and DRIFT-002 regression proofs."""
+    """Synthetic numeric history for regression proofs."""
     path = tmp_path / "job.json"
     config = {
         "format_version": 1,
@@ -352,7 +352,7 @@ def test_held_load_cannot_become_drift_baseline(price_job, capsys):
 
 
 def test_partial_load_reports_rejected_candidates(sample):
-    """QUAL-006: three valid candidates and one rejection give validity 0.75."""
+    """Three valid candidates and one rejection give validity 0.75."""
     job = load_job(sample / "job.toml")
     report = run_job(job, base_dir=sample)
     source = report.results[0]
@@ -375,16 +375,16 @@ def test_partial_load_reports_rejected_candidates(sample):
     assert loaded.sources[0].consistency.structural_validity == 0.75
 
 
-def test_sodre_title_trap_extracts_venue_and_is_held(tmp_path, capsys):
-    from benchmarks.repair_suite.mutations import SODRE, VENUE
+def test_venue_title_trap_extracts_venue_and_is_held(tmp_path, capsys):
+    from benchmarks.repair_suite.mutations import VENUE, VENUE_CARDS
 
-    shutil.copytree(Path("benchmarks/repair_suite/cases/sodre"), tmp_path / "sodre")
-    folder = tmp_path / "sodre"
+    shutil.copytree(Path("benchmarks/repair_suite/cases/venue-cards"), tmp_path / "venue-cards")
+    folder = tmp_path / "venue-cards"
     path = folder / "job.toml"
     assert main(["job", "load", str(path)]) == 0
     capsys.readouterr()
     page = folder / "page.html"
-    trap = next(c for c in SODRE if c.name == "title_selector_hits_venue")
+    trap = next(c for c in VENUE_CARDS if c.name == "title_selector_hits_venue")
     page.write_text(trap.transform(page.read_text(encoding="utf-8")), encoding="utf-8")
     report = run_job(load_job(path), base_dir=folder)
     assert {r.data.title for r in report.results[0].records} == {VENUE}
@@ -394,7 +394,7 @@ def test_sodre_title_trap_extracts_venue_and_is_held(tmp_path, capsys):
 
 
 def test_repair_suite_readme_matches_measured_counts():
-    """DIFF-002: published claims must match the measured artifact."""
+    """Published claims must match the measured artifact."""
     folder = Path("benchmarks/repair_suite")
     counts = json.loads((folder / "results.json").read_text())["counts"]
     readme = (folder / "README.md").read_text()
@@ -405,7 +405,7 @@ def test_repair_suite_readme_matches_measured_counts():
 def test_html_export_escapes_script_in_values(sample, capsys, monkeypatch):
     assert main(["job", "load", str(sample / "job.toml")]) == 0
     capsys.readouterr()
-    records = SQLiteDatasetStore(sample / "agenda.sqlite").records("uy_dance_agenda")
+    records = SQLiteDatasetStore(sample / "agenda.sqlite").records("event_agenda")
     record = records[0].model_copy(
         update={"fields": {**records[0].fields, "title": "<script>alert(1)</script>"}}
     )
@@ -419,7 +419,7 @@ def test_html_export_escapes_script_in_values(sample, capsys, monkeypatch):
 def test_html_export_links_only_http_urls(sample, capsys, monkeypatch):
     assert main(["job", "load", str(sample / "job.toml")]) == 0
     capsys.readouterr()
-    records = SQLiteDatasetStore(sample / "agenda.sqlite").records("uy_dance_agenda")
+    records = SQLiteDatasetStore(sample / "agenda.sqlite").records("event_agenda")
     fields = {
         **records[0].fields,
         "title": "javascript:alert(1)",
@@ -440,7 +440,7 @@ def test_html_export_links_only_http_urls(sample, capsys, monkeypatch):
 def test_upcoming_filter_and_sort_with_missing_values_last(sample, capsys, monkeypatch):
     assert main(["job", "load", str(sample / "job.toml")]) == 0
     capsys.readouterr()
-    record = SQLiteDatasetStore(sample / "agenda.sqlite").records("uy_dance_agenda")[0]
+    record = SQLiteDatasetStore(sample / "agenda.sqlite").records("event_agenda")[0]
     values = ["2099-01-02T00:00:00Z", None, "2000-01-01T00:00:00Z", "2099-01-01T00:00:00Z"]
     records = tuple(
         record.model_copy(update={"fields": {**record.fields, "starts_at": v}}) for v in values
@@ -459,9 +459,9 @@ def test_html_marks_stale_source_rows(sample, capsys):
     assert main(["job", "load", str(sample / "job.toml")]) == 0
     capsys.readouterr()
     store = SQLiteDatasetStore(sample / "agenda.sqlite")
-    status = store.source_status("uy_dance_agenda")[0]
+    status = store.source_status("event_agenda")[0]
     store.mark_source_unavailable(
-        "uy_dance_agenda",
+        "event_agenda",
         status.source_url,
         status.last_attempt + timedelta(seconds=1),
         "unavailable",
@@ -479,9 +479,9 @@ def test_json_export_unchanged_without_new_flags(sample, capsys):
     assert payload == {
         "schema_version": 1,
         "data_trust": "untrusted_source_data",
-        "dataset": "uy_dance_agenda",
+        "dataset": "event_agenda",
         "records": [
-            r.model_dump(mode="json") for r in SQLiteDatasetStore(path).records("uy_dance_agenda")
+            r.model_dump(mode="json") for r in SQLiteDatasetStore(path).records("event_agenda")
         ],
     }
 
@@ -489,7 +489,7 @@ def test_json_export_unchanged_without_new_flags(sample, capsys):
 def test_html_empty_result_retains_columns(sample, capsys, monkeypatch):
     assert main(["job", "load", str(sample / "job.toml")]) == 0
     capsys.readouterr()
-    record = SQLiteDatasetStore(sample / "agenda.sqlite").records("uy_dance_agenda")[0]
+    record = SQLiteDatasetStore(sample / "agenda.sqlite").records("event_agenda")[0]
     record = record.model_copy(update={"fields": {**record.fields, "starts_at": "2000-01-01"}})
     monkeypatch.setattr(SQLiteDatasetStore, "records", lambda self, dataset: (record,))
     assert (

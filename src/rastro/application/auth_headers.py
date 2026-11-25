@@ -1,4 +1,4 @@
-"""Environment-sourced request headers declared in ``[[acquisition.auth]]`` (SEC-004, SEC-011).
+"""Environment-sourced request headers declared in ``[[acquisition.auth]]``.
 
 The job file names a host, a header and an environment variable; the variable name must
 pass the same rule as every other secret reference. The value is read when a request is

@@ -1,7 +1,4 @@
-"""Offline sitemap seed for the bounded spider (N16, N3).
-
-Requirements: N16, N3, SEC-001 (hosts), SEC-003 (robots), SEC-008 (budget, byte caps).
-"""
+"""Offline sitemap seed for the bounded spider."""
 
 import gzip
 import json
@@ -313,7 +310,7 @@ def test_lone_surrogate_in_jsonld_is_replaced_and_both_records_are_stored(tmp_pa
 
 
 def test_seed_order_reverse_fetches_tail_locs_before_max_pages():
-    """N16, N3: sitemap of 150 ascending locs e-1..e-150 with max_pages=10."""
+    """Sitemap of 150 ascending locs e-1..e-150 with max_pages=10."""
     locs = [f"/evento/e-{n}" for n in range(1, 151)]
     pages = {"/sitemap.xml": (200, XML, urlset(*locs))} | {
         loc: event(loc.rsplit("/", 1)[-1]) for loc in locs
@@ -331,7 +328,7 @@ def test_seed_order_reverse_fetches_tail_locs_before_max_pages():
 
 
 def test_seed_order_lastmod_fetches_newest_first_then_undated_in_document_order():
-    """N16, N3: lastmod orders newest UTC first; undated locs trail in document order."""
+    """Lastmod orders newest UTC first; undated locs trail in document order."""
     entries = [
         (f"/evento/e-{n}", None if n in (3, 7) else f"2026-01-{(n % 28) + 1:02d}")
         for n in range(1, 151)
@@ -367,7 +364,7 @@ def test_seed_order_lastmod_fetches_newest_first_then_undated_in_document_order(
 
 
 def test_allow_pattern_filters_locs_before_max_pages_and_combines_with_seed_order_and_deny():
-    """N16, N3: allow_pattern filters sitemap locs before max_pages; deny still wins."""
+    """Allow_pattern filters sitemap locs before max_pages; deny still wins."""
     locs = [f"/evento/e-{n}" for n in range(1, 151)]
     pages = {"/sitemap.xml": (200, XML, urlset(*locs))} | {
         loc: event(loc.rsplit("/", 1)[-1]) for loc in locs
@@ -407,7 +404,7 @@ def test_allow_pattern_filters_locs_before_max_pages_and_combines_with_seed_orde
 
 
 def test_sitemap_index_applies_seed_order_to_children_and_entries():
-    """N16: reverse and lastmod work across a sitemapindex without double-reversing."""
+    """Reverse and lastmod work across a sitemapindex without double-reversing."""
     pages = {
         "/sitemap.xml": (
             200,

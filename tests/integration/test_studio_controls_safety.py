@@ -1,4 +1,4 @@
-"""N4/N5/N12: settings safety and readable alerts use offline, synthetic jobs."""
+"""Settings safety and readable alerts use offline, synthetic jobs."""
 
 from pathlib import Path
 
@@ -16,15 +16,14 @@ pytestmark = pytest.mark.usefixtures("offline_cli_loop")
 def test_controls_start_off_and_external_stealth_grant_is_reported(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """N12: HTML defaults off; explicit environment and constructor grants are visible."""
+    """HTML defaults off; explicit environment and constructor grants are visible."""
     for granted in (False, True):
         app, token = create_app(tmp_path, allow_stealth=granted)
         with serving(app, "http://127.0.0.1:8765") as client:
             client.headers["X-Studio-Token"] = token
             page = client.get("/").text
-            for control in ("auto-promote", "allow-stealth"):
-                line = next(line for line in page.splitlines() if f'id="{control}"' in line)
-                assert "checked" not in line
+            line = next(line for line in page.splitlines() if 'id="auto-promote"' in line)
+            assert "checked" not in line and 'id="allow-stealth"' not in page
             assert client.get("/api/session").json()["allow_stealth"] is granted
     monkeypatch.setenv("RASTRO_ALLOW_STEALTH", "1")
     app, token = create_app(tmp_path)
@@ -34,7 +33,7 @@ def test_controls_start_off_and_external_stealth_grant_is_reported(
 
 
 def test_failed_load_and_health_explain_staleness(tmp_path: Path) -> None:
-    """N5: a failure alerts immediately, preserves last success and shows the hook command."""
+    """A failure alerts immediately, preserves last success and shows the hook command."""
     (tmp_path / "job.toml").write_text(JOB)
     page = tmp_path / "board.html"
     page.write_text(board())
@@ -59,7 +58,7 @@ def test_failed_load_and_health_explain_staleness(tmp_path: Path) -> None:
 def test_settings_refuse_concurrent_write_at_atomic_boundary(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """N4: a concurrent edit after validation survives unchanged and returns conflict."""
+    """A concurrent edit after validation survives unchanged and returns conflict."""
     from rastro.studio import files
 
     path = tmp_path / "job.toml"
@@ -104,7 +103,7 @@ def test_settings_refuse_concurrent_write_at_atomic_boundary(
     ],
 )
 def test_alerts_translate_real_outcome_fields(payload, fragment) -> None:
-    """N5: drift, quarantine, refusal and pagination/scroll caps get human-readable copy."""
+    """Drift, quarantine, refusal and pagination/scroll caps get human-readable copy."""
     from rastro.studio.operations import alerts
 
     assert any(fragment in message for message in alerts(payload))

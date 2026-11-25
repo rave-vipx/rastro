@@ -1,4 +1,4 @@
-"""SCHED-005, SEC-005: cookies are bounded, host-only and run-local."""
+"""Cookies are bounded, host-only and run-local."""
 
 import pytest
 

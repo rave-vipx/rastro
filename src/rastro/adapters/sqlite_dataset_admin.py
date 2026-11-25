@@ -5,10 +5,16 @@ from collections.abc import Collection
 from pathlib import Path
 
 from rastro.adapters import sqlite_drift_open as drift_open
-from rastro.adapters.sqlite_dataset_schema import connection, safe
+from rastro.adapters.sqlite_dataset_schema import (
+    KNOWN_VERSIONS,
+    SCHEMA_VERSION,
+    connection,
+    migrate,
+    safe,
+)
 from rastro.adapters.sqlite_drift import _migrate, _version
 from rastro.adapters.structured import load_json
-from rastro.domain.dataset import DatasetRecordKey
+from rastro.domain.dataset import DatasetNotFoundError, DatasetRecordKey, DatasetStorageError
 from rastro.domain.drift import StructuralSnapshot
 from rastro.domain.job_sources import validate_job_path_syntax
 from rastro.domain.models import Limits
@@ -18,6 +24,29 @@ _REMOVED = ("dataset_sources", "drift_runs", "open_drift", "relocation_samples")
 
 def _path(path: str | Path) -> Path:
     return Path(validate_job_path_syntax(str(path))).absolute()
+
+
+@safe
+def migrate_dataset(
+    path: str | Path, *, to: int = SCHEMA_VERSION, limits: Limits | None = None
+) -> dict[str, int | bool]:
+    """Migrate an existing dataset SQLite file forward to schema version ``to``."""
+    if isinstance(to, bool) or not isinstance(to, int) or to not in KNOWN_VERSIONS:
+        raise DatasetStorageError("Unknown dataset schema version; dataset migration refused")
+    file = _path(path)
+    if not file.exists() and not any(p.is_symlink() for p in (file, *file.parents)):
+        raise DatasetNotFoundError("Dataset file does not exist")
+    with connection(file, limits or Limits(), write=True, auto_migrate=False) as db:
+        before, after = migrate(db, to=to)
+        if _version(db) == 1 and to == SCHEMA_VERSION:
+            _migrate(db)
+    return {
+        "schema_version": 1,
+        "from_version": before,
+        "to_version": after,
+        "version": after,
+        "migrated": before != after,
+    }
 
 
 @safe

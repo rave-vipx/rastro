@@ -55,3 +55,7 @@ id_ed25519*
 # Local planning, design and evidence (CONTRIBUTING.md: what never goes in the repository).
 /local/
 .pr-*-body.md
+
+# Agent context files are local to each contributor; project rules live in CONTRIBUTING.md.
+/AGENTS.md
+/CLAUDE.md

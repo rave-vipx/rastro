@@ -1,8 +1,42 @@
 # Stability policy
 
-From 0.6.0, Rastro follows [Semantic Versioning](https://semver.org/). While the major version
-is 0, a minor release (0.7.0) may change the public surface below, but only through the
-deprecation policy; a patch release (0.6.1) only fixes bugs and never breaks it.
+Rastro follows [Semantic Versioning](https://semver.org/). Releases before 0.6.0 were never
+published. From 1.0.0 the public surface below is stable: a minor release (1.1.0) adds
+features compatibly and may remove public names only after the deprecation policy has run; a
+patch release (1.0.1) only fixes bugs and never breaks it. Breaking changes need a new major
+version, except for security fixes (see the deprecation policy).
+
+## The 1.0.0 freeze
+
+1.0.0 is the first release under this policy, so it fixes the list that the whole 1.x series
+builds on. A change to anything below follows the deprecation policy; the list is re-checked
+at every release, together with the generated schemas, so the code, the documentation and the
+published contracts agree.
+
+- **Distribution**: the `rastro-engine` project on PyPI, the `rastro` executable, and the
+  `rastro` import package with its optional extras (`browser`, `http`, `ollama`, `openai`,
+  `mcp`, `postgres`, `studio`).
+- **Python names**: every name in `rastro.__all__`, with the signatures and result fields
+  documented in [API](api.md), plus `rastro.OllamaModel` and `rastro.OpenAICompatibleModel`,
+  which are public although they stay out of `__all__`.
+- **Job files**: `format_version = 1`, the job schema ([`job.schema.json`](schemas/job.schema.json),
+  also printed by `rastro job schema`) and the documented job keys.
+- **Run results**: `JobRunResult` and `JobSummary` with `schema_version = 1`
+  ([`job-run.schema.json`](schemas/job-run.schema.json), also `rastro job schema --target run`).
+- **The run report**: `RunReport` and `SourceReport` with `schema_version = 1`, published as
+  [`run-report.schema.json`](schemas/run-report.schema.json) with the schema id
+  `https://rave-vipx.github.io/rastro/schemas/run-report.schema.json`.
+- **Recipes and stores**: recipe bundles with `format_version = 1`, and the recipe-memory and
+  dataset SQLite schemas, which migrate forward as described below.
+- **CLI**: command names, flags, exit codes `0`–`5` and the documented error codes.
+- **MCP**: tool names and arguments served by `rastro mcp`, with the JSON results listed above.
+- **Configuration**: the environment variables and operator flags documented in
+  [configuration](configuration.md), such as `RASTRO_MODEL`, `RASTRO_ALLOW_*` and
+  `RASTRO_IGNORE_ROBOTS`.
+- **Python versions**: CPython 3.12, 3.13 and 3.14.
+
+Anything not in this list is outside the policy; the next section says which of those may change
+without notice.
 
 ## What is public
 
@@ -25,7 +59,8 @@ across patch releases, and get at least one minor release of warnings before a c
   leniently and ignore unknown keys. The error object on stderr keeps the keys `error`,
   `message` and `location`, and documented `error` codes keep their meaning.
 - **Published JSON Schemas** in [`docs/schemas/`](https://github.com/rave-vipx/rastro/tree/main/docs/schemas)
-  for jobs, run results and previews (also printed by `rastro job schema`).
+  for jobs, run results, run reports, loads, health and previews (all but the run report also
+  printed by `rastro job schema`). Each keeps its `$id`.
 - **Job files** with `format_version = 1`. A job that validates today keeps validating with the
   same meaning; a breaking change introduces `format_version = 2` and keeps reading version 1
   for at least one minor release.

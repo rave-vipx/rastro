@@ -1,4 +1,4 @@
-"""Synthetic container repairs retain history and ambiguity gates (REPAIR-001, SCR-002)."""
+"""Synthetic container repairs retain history and ambiguity gates."""
 
 from datetime import UTC, datetime
 

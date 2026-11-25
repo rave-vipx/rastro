@@ -1,4 +1,4 @@
-"""One browser context per source per run, closed when the source finishes (N2, ADR 0034).
+"""One browser context per source per run, closed when the source finishes (ADR 0034).
 
 ``source_session()`` opens a scope. The first rendered page of each renderer opens its
 session; later pages and scroll steps of that source reuse it. Nothing is shared across
@@ -87,6 +87,11 @@ class SourceSessions:
         if entry is None or entry.host != host or entry.rendered != url:
             return None
         return entry.session
+
+    def last_rendered(self, renderer: object) -> BrowserSession | None:
+        """The renderer's session when its last render succeeded on the bound host."""
+        entry = self._open.get(id(renderer))
+        return entry.session if entry is not None and entry.rendered is not None else None
 
     async def close(self) -> None:
         entries, self._open = list(self._open.values()), {}

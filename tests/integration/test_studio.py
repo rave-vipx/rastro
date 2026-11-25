@@ -1,4 +1,4 @@
-"""Local Studio (P-008): endpoints, confinement, Origin/token rejection, atomic accept."""
+"""Local Studio: endpoints, confinement, Origin/token rejection, atomic accept."""
 
 import json
 import os
@@ -67,6 +67,10 @@ def test_page_lists_validates_previews_and_connects(client: TestClient) -> None:
     assert "__STUDIO_TOKEN__" not in page.text
     assert client.get("/static/studio.js").status_code == 200
     assert client.get("/static/other.js").status_code == 404
+    copy = client.get("/static/i18n/core.json")
+    assert copy.status_code == 200 and copy.headers["content-type"].startswith("application/json")
+    assert client.get("/static/i18n/other.json").status_code == 404
+    assert client.get("/static/i18n/%2e%2e%2fstudio.js").status_code == 404
     assert client.get("/api/jobs").json()["files"] == ["job.toml"]
     checked = post(client, "/api/validate", {"file": "job.toml"}).json()
     assert checked["ok"] and checked["has_dataset"]
@@ -286,7 +290,7 @@ def test_cli_serves_loopback_only(
 def test_listing_skips_hidden_and_vendor_dirs_and_reports_truncation(
     client: TestClient, root: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """P-008: only TOML job files are listed; reports and other TOML files are not."""
+    """Only TOML job files are listed; reports and other TOML files are not."""
     for name in (".git", "node_modules", "__pycache__", ".venv", "venv", "dist", "build", "site"):
         (root / name).mkdir()
         (root / name / "x.json").write_text("{}")
@@ -310,7 +314,7 @@ def test_script_reads_token_from_fragment_only() -> None:
 
 
 def test_preview_of_a_memory_job_writes_nothing(client: TestClient, root: Path) -> None:
-    """DATA-002, P-008: Studio previews recipe_memory jobs without creating the store."""
+    """Studio previews recipe_memory jobs without creating the store."""
     job = root / "job.toml"
     memory = 'format_version = 1\nrecipe_memory = "r.sqlite"'
     job.write_text(job.read_text().replace("format_version = 1", memory))
@@ -322,7 +326,7 @@ def test_preview_of_a_memory_job_writes_nothing(client: TestClient, root: Path) 
 def test_listing_includes_json_jobs_only_with_format_version(
     client: TestClient, root: Path
 ) -> None:
-    """P-008: JSON job files are listed like TOML ones; other JSON files are not."""
+    """JSON job files are listed like TOML ones; other JSON files are not."""
     (root / "job2.json").write_text('{"format_version": 1, "sources": []}')
     (root / "data.json").write_text('{"records": []}')
     (root / "list.json").write_text("[1, 2]")
@@ -332,7 +336,7 @@ def test_listing_includes_json_jobs_only_with_format_version(
 
 
 def test_lists_and_validates_job_with_spider_and_scroll(client: TestClient, root: Path) -> None:
-    """N3, N9, P-008: engine policies load without a separate Studio editor."""
+    """Engine policies load without a separate Studio editor."""
     path = root / "job.toml"
     original = path.read_text().replace('path = "page.html"', 'render = "browser"')
     original += '\n[acquisition]\nallowed_hosts = ["agenda.example.com"]\n'

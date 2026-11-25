@@ -1,5 +1,5 @@
 // Provenance panel: for the chosen record, where each value came from, when it was observed and
-// with which extraction (N5, DATA-004). Flags and imports are explained; values stay plain text.
+// with which extraction. Flags and imports are explained; values stay plain text.
 import { $, el } from "./dom.js";
 import { onLangChange, t, when } from "./i18n.js";
 import { renderCell, tierText, tiers } from "./cells.js";

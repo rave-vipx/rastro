@@ -1,5 +1,5 @@
 """The configuration reference lists every option, with a description, and its generated
-outputs stay current (N18, AGENT-001)."""
+outputs stay current."""
 
 import argparse
 import inspect
@@ -38,7 +38,7 @@ def _models(model: type[BaseModel], seen: set[type[BaseModel]]) -> set[type[Base
 
 
 def test_every_job_field_is_listed_with_a_description() -> None:
-    """N18: each field of the job models appears in the reference; every entry says what
+    """Each field of the job models appears in the reference; every entry says what
     it does, gives a docs page and a type."""
     job_names = {entry.path.rsplit(".", 1)[-1] for entry in ENTRIES if entry.kind == "job"}
     for model in _models(Job, set()):
@@ -48,10 +48,13 @@ def test_every_job_field_is_listed_with_a_description() -> None:
 
 
 def test_spider_keys_have_types_defaults_and_bounds() -> None:
-    """N18: entries carry the model's type, default and bounds."""
+    """Entries carry the model's type, default and bounds."""
     by_path = {entry.path: entry for entry in ENTRIES}
     pages = by_path["spider.max_pages"]
-    assert (pages.type, pages.default, pages.bounds) == ("integer", "25", ">= 1, <= 100")
+    assert (pages.type, pages.default) == ("integer or string", "25")
+    assert pages.bounds.startswith(">= 1, <= 100") and '"unbounded"' in pages.bounds
+    budget = by_path["spider.time_budget_seconds"]
+    assert (budget.type, budget.default, budget.bounds) == ("integer", "1800", ">= 60, <= 86400")
     assert by_path["spider.seed"].bounds == "one of page, sitemap"
     assert (
         by_path["spider.seed_order"].default,
@@ -76,7 +79,7 @@ def _commands(
 
 
 def test_every_cli_flag_has_help_and_is_listed() -> None:
-    """N18: every command and flag of the real parser has help and appears in the reference;
+    """Every command and flag of the real parser has help and appears in the reference;
     grant copies on subcommands are listed once, as global flags."""
     for command, parser in _commands(_build_parser()):
         assert command == "rastro" or command in PATHS
@@ -94,13 +97,13 @@ def test_every_cli_flag_has_help_and_is_listed() -> None:
 
 
 def test_every_python_keyword_is_described() -> None:
-    """N18: every parameter of the listed public functions has a description, none stale."""
+    """Every parameter of the listed public functions has a description, none stale."""
     for name, (_, described) in PYTHON_PARAMS.items():
         assert set(inspect.signature(getattr(rastro, name)).parameters) == set(described), name
 
 
 def test_every_environment_variable_and_grant_is_listed() -> None:
-    """N18: each RASTRO_* name in the code and each operator grant flag has an entry."""
+    """Each RASTRO_* name in the code and each operator grant flag has an entry."""
     names: set[str] = set()
     for path in (ROOT / "src" / "rastro").rglob("*.py"):
         names |= set(re.findall(r"\"(RASTRO_[A-Z][A-Z0-9_]+)\"", path.read_text("utf-8")))
@@ -126,7 +129,7 @@ def _slug(heading: str) -> str:
 
 
 def test_docs_anchors_exist() -> None:
-    """N18: every entry links to an existing page and heading."""
+    """Every entry links to an existing page and heading."""
     for docs in {entry.docs for entry in ENTRIES}:
         page, _, anchor = docs.partition("#")
         text = (ROOT / page).read_text(encoding="utf-8")
@@ -136,7 +139,7 @@ def test_docs_anchors_exist() -> None:
 
 
 def test_generated_page_is_current() -> None:
-    """N18: docs/configuration.md equals a fresh render byte for byte."""
+    """Docs/configuration.md equals a fresh render byte for byte."""
     assert (ROOT / "docs/configuration.md").read_text(encoding="utf-8") == render_markdown(), (
         "docs/configuration.md is stale: run "
         "`uv run rastro config --output markdown > docs/configuration.md`"
@@ -145,13 +148,13 @@ def test_generated_page_is_current() -> None:
 
 @pytest.mark.parametrize("all_variants", [False, True])
 def test_template_validates_as_printed(all_variants: bool) -> None:
-    """N18: the uncommented lines of the template are a valid job."""
+    """The uncommented lines of the template are a valid job."""
     job = parse_job(render_template("test", all_variants=all_variants), format="toml")
     assert job.acquisition is not None and job.acquisition.allowed_hosts == ("example.com",)
 
 
 def test_template_lines_uncomment_to_valid_toml() -> None:
-    """N18: every commented key with a default parses; uncommenting a section still
+    """Every commented key with a default parses; uncommenting a section still
     validates."""
     text = render_template("test", all_variants=True)
     for line in text.splitlines():
@@ -167,7 +170,7 @@ def test_template_lines_uncomment_to_valid_toml() -> None:
 def test_template_command_output_passes_job_validate(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """N18: `rastro job template` output passes `rastro job validate`."""
+    """`rastro job template` output passes `rastro job validate`."""
     assert main(["job", "template"]) == 0
     path = tmp_path / "job.toml"
     path.write_text(capsys.readouterr().out, encoding="utf-8")
@@ -177,7 +180,7 @@ def test_template_command_output_passes_job_validate(
 
 @pytest.mark.parametrize("flag", ["json", "markdown"])
 def test_config_command_prints_each_format(flag: str, capsys: pytest.CaptureFixture[str]) -> None:
-    """N18: `rastro config` prints JSON or the docs page."""
+    """`rastro config` prints JSON or the docs page."""
     assert main(["config", "--output", flag]) == 0
     out = capsys.readouterr().out
     if flag == "json":
@@ -190,7 +193,7 @@ def test_config_command_prints_each_format(flag: str, capsys: pytest.CaptureFixt
 
 @pytest.mark.asyncio
 async def test_mcp_resource_serves_the_reference() -> None:
-    """N18, AGENT-002: rastro://configuration is registered next to rastro://capabilities."""
+    """Rastro://configuration is registered next to rastro://capabilities."""
     pytest.importorskip("mcp")
     from rastro.adapters.mcp_server import INSTRUCTIONS, build_server
 
@@ -203,7 +206,7 @@ async def test_mcp_resource_serves_the_reference() -> None:
 
 
 def test_snippet_has_the_configuration_map() -> None:
-    """N18: the agent snippet maps every job section and states the no-invention rule."""
+    """The agent snippet maps every job section and states the no-invention rule."""
     snippet = render_snippet("test")
     assert "check `rastro config`" in snippet and "unknown keys" in snippet
     jobs = [e.path for e in ENTRIES if e.kind == "job" and "." in e.path]
@@ -222,7 +225,7 @@ def _validate_error(tmp_path: Path, extra: str, capsys: pytest.CaptureFixture[st
 def test_unknown_key_suggests_the_closest(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """N18, AGENT-001: an unknown key names the closest valid key and its section."""
+    """An unknown key names the closest valid key and its section."""
     error = _validate_error(tmp_path, 'renderr = "browser"', capsys)
     assert error["hint"] == 'Unknown key "renderr" in [acquisition]; did you mean "render"?'
     error = _validate_error(tmp_path, "zzzz = 1", capsys)
@@ -233,7 +236,7 @@ def test_unknown_key_suggests_the_closest(
 def test_spider_seed_order_unknown_value_and_key_suggest_closest(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """N16, N18, AGENT-001: unknown seed_order value and typo key suggest the closest valid one."""
+    """Unknown seed_order value and typo key suggest the closest valid one."""
     base = render_template("test")
     bad_value = tmp_path / "bad-val.toml"
     bad_value.write_text(
@@ -258,7 +261,7 @@ def test_spider_seed_order_unknown_value_and_key_suggest_closest(
 def test_unknown_key_in_nested_and_variant_tables(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """N18: union tags and list indexes in the location are skipped."""
+    """Union tags and list indexes in the location are skipped."""
     job = render_template("test").replace('record_selector = "article"', "record_selectr = 1")
     path = tmp_path / "job.toml"
     path.write_text(job, encoding="utf-8")
@@ -270,7 +273,7 @@ def test_unknown_key_in_nested_and_variant_tables(
 def test_unknown_key_hint_never_echoes_unsafe_names(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """AGENT-003: a key outside [A-Za-z0-9_-]{1,64} is not repeated in the hint."""
+    """A key outside [A-Za-z0-9_-]{1,64} is not repeated in the hint."""
     for key in ('"rend er"', "k" * 65, '"ign\\u202eore"'):
         error = _validate_error(tmp_path, f"{key} = 1", capsys)
         assert error["hint"] == (

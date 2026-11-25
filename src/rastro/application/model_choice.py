@@ -1,4 +1,4 @@
-"""Resolve the ``model=`` argument of the everyday flows into a ``ModelPort`` (AI-001, P-001).
+"""Resolve the ``model=`` argument of the everyday flows into a ``ModelPort``.
 
 Any object with an async ``generate(request, policy)`` method is accepted as is: Rastro
 never special-cases a provider. A string is a provider spec resolved by ``rastro.model``;
@@ -27,7 +27,7 @@ def resolve_model(
 ) -> ModelPort | None:
     """``None`` stays ``None``; a port or a spec becomes a model under the cost limit.
 
-    The result is wrapped by ``budget_operator_model`` (COST-002): the remote notice and
+    The result is wrapped by ``budget_operator_model``: the remote notice and
     ``--max-model-cost`` apply to every operator model. ``job_model`` supplies the price
     when the job file declares one.
     """

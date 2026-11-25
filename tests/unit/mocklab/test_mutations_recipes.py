@@ -1,4 +1,4 @@
-"""Mutations against the shipped example recipes: some break extraction, some do not (MOCK-002).
+"""Mutations against the shipped example recipes: some break extraction, some do not.
 
 Outcomes are observed, not tuned: each case states what the engine actually returns.
 """

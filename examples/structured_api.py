@@ -66,6 +66,8 @@ async def acquire_over_http(source: Source, recipe: Recipe) -> dict[str, object]
             timeout: float,
             max_bytes: int,
             proxy: ProxyRoute | None = None,
+            impersonate: str | None = None,
+            http_version: str | None = None,
         ) -> HttpResponse:
             if target.url.endswith("/robots.txt"):
                 return HttpResponse(404, {"content-type": "text/plain"}, b"", 0)

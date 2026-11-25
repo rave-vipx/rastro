@@ -2,9 +2,10 @@
 
 ## Report a vulnerability
 
-Please use [GitHub private vulnerability reporting](https://github.com/rave-vipx/rastro/security/advisories/new), or email **admin@rave-app.com** if that channel is unavailable. Include the affected commit or version, a minimal synthetic reproduction, and the impact. Avoid posting credentials or sensitive page contents in a public issue.
+<!-- contact: pending maintainer decision -->
+Please use [GitHub private vulnerability reporting](https://github.com/rave-vipx/rastro/security/advisories/new). Include the affected commit or version, a minimal synthetic reproduction, and the impact. Avoid posting credentials or sensitive page contents in a public issue.
 
-Rastro is in beta (0.7.0). Security fixes target `main` and the latest released minor version; no support SLA is offered.
+Rastro 1.0 is in development. Security fixes target `main` and the latest released minor version; no support SLA is offered.
 
 ## Current boundary
 
@@ -13,16 +14,25 @@ adds opt-in HTTP acquisition with an exact source allowlist, public-IP checks,
 validated DNS pinning, per-hop redirect checks, verified TLS, robots rules, host
 pacing, and request/body/deadline budgets. Standard HTTP(S) ports only unless the operator grants more (see the trust model below); HTTP requires
 explicit opt-in and HTTPS never redirects to HTTP. Cookies are disabled by default; opt-in sessions keep bounded, exact-host cookies
-in memory for one run, while ambient proxies, netrc, browser impersonation and
-transport-level redirects/retries remain disabled.
+in memory for one run, while ambient proxies, netrc and transport-level redirects/retries
+remain disabled. Browser impersonation (`[acquisition.http] impersonate`) and HTTP/3
+(`http_version = "3"`) change only the TLS/header fingerprint and the protocol: DNS pinning,
+the destination check, per-hop redirect checks, the body cap, robots and host limits apply
+unchanged, and the job's credentials and cookies are never replaced. Both are capabilities
+(`impersonation`, `http3`), granted to operator jobs and to other input only with a grant.
 
 401/403/451 stop further requests to that host in the client. 429 and Retry-After
-produce explicit restrictions/deferred results and host cooldowns. Browser stealth mode is an operator opt-in using Scrapling/Patchright browser
-fingerprints; Cloudflare solving additionally requires `solve_challenges = true`.
-Automatic proxy or identity rotation, third-party CAPTCHA services and credentials
-in job files remain forbidden. Robots checks and exact host/public-IP restrictions
-remain mandatory; browser modes refuse egress profiles. Source allowlisting
-is the caller's permission assertion; it does not confer permission to access a site.
+produce explicit restrictions/deferred results and host cooldowns. Browser stealth mode uses Scrapling/Patchright browser
+fingerprints; Cloudflare solving additionally requires `solve_challenges = true`. Both
+are capabilities: the operator's own jobs use them, other input only with a grant (see
+the trust model below). Third-party CAPTCHA services and credentials in job files remain
+forbidden. Robots checks apply unless the operator turns them off for a host or a job;
+exact host/public-IP restrictions remain mandatory. Browser and stealth modes use the same
+egress profiles and rotation as HTTP, under the same target checks: the destination is
+pinned and checked locally before the browser starts, and a source's browser context keeps
+the proxy it opened with.
+Source allowlisting is the caller's permission assertion; it does not confer permission
+to access a site.
 A `Source` URL by itself never authorizes network access.
 
 HTTP mode executes no JavaScript. Opt-in browser modes execute page JavaScript;
@@ -36,22 +46,78 @@ Recipes accept CSS selectors or JSON pointers. They cannot contain executable co
 
 Input size, candidate count, and JSON-LD block count have configurable limits. These limits are not a CPU-time or process-memory sandbox. Host untrusted workloads in an appropriately isolated process with external resource limits.
 
-Evidence stores locators, not source excerpts. Query strings, fragments, and URL credentials are excluded or rejected. Validation diagnostics omit input values and custom validator messages; completion logs omit URLs and records. Extracted records and URL paths may still contain personal or sensitive data: the caller is responsible for storage, access, retention, and redaction.
+Evidence stores locators, not source excerpts. URL credentials and fragments are always rejected or dropped. A stored record's canonical `page_url` keeps its query string minus secret-like keys (such as `token`, `key`, `signature`, `session`) and tracking keys (such as `utm_*`, `gclid`); the in-memory page identity used during one run keeps the secret-like keys so distinct pages stay distinct, and never leaves the process. Logs, failure hooks, error messages and the run report carry hosts and paths only, never a query. Validation diagnostics omit input values and custom validator messages; completion logs omit URLs and records. Extracted records and URL paths may still contain personal or sensitive data: the caller is responsible for storage, access, retention, and redaction.
 
 Persistence is opt-in. SQLite memory retains declarative recipe definitions, successful-run metadata and context fingerprints. It does not retain raw URLs, HTML, extracted records, or JSON Schema documents/defaults. Keep the database in a trusted private directory; recipe selectors and context identifiers must not contain credentials. Unknown database versions and corruption fail without reset. `delete` and `prune` provide retention controls with SQLite secure deletion, but do not erase external backups or filesystem snapshots. Stop writers before deletion if concurrent operations must not recreate entries. See the [memory guide](docs/memory.md). CLI output is data and should be handled accordingly.
 
-On POSIX systems dataset and recipe-memory files, and their SQLite `-journal`, `-wal` and `-shm` files, are created readable and writable by the owner only (0600), and existing files the user owns are tightened to 0600 when opened. Dataset files hold sanitized page samples for repair (`relocation_samples`), so keep them in a private directory. On Windows the folder's access rules apply. `rastro job forget-source` deletes a removed source's status, drift history and repair samples (SEC-009).
+On POSIX systems dataset and recipe-memory files, and their SQLite `-journal`, `-wal` and `-shm` files, are created readable and writable by the owner only (0600), and existing files the user owns are tightened to 0600 when opened. Dataset files hold sanitized page samples for repair (`relocation_samples`), so keep them in a private directory. On Windows the folder's access rules apply. `rastro job forget-source` deletes a removed source's status, drift history and repair samples.
 
 ## Trust model for jobs, bundles and agents
 
-A job file is configuration, and it may come from someone else: a shared repository, an
-agent using the MCP server, a Studio workspace. It cannot make trust decisions on its own:
+Rastro is capability first ([ADR 0036](docs/decisions/0036-scrapling-access-and-unbounded-crawl.md),
+[ADR 0037](docs/decisions/0037-input-origin-and-capabilities.md)): protections that only
+limit what an operator can scrape are operator settings, and what stays is what keeps input
+from somewhere else from acting for the operator.
+
+**Origin is decided by the entry point, never by the job.** `rastro job run|load|preview`,
+Studio and the Python API run the operator's own jobs (origin `operator`). `rastro mcp`
+tools run as `mcp`, a registry install as `registry`, a bundle import as `bundle`, and
+recipes proposed by a model as `model`. A job, recipe, bundle, MCP argument or page cannot
+declare or change its origin, and inside an untrusted origin nothing switches back to
+`operator`.
+
+**Capabilities are granted per origin.** A job requests capabilities through the settings
+it uses (`render = "stealth"` requests `stealth`, `solve_challenges = true` requests
+`solve_challenges`, `[acquisition] robots = "ignore"` requests `robots_ignore`, page steps
+request `page_actions`; the vocabulary also covers `proxy_rotation`, `impersonation`,
+`http3`, `unbounded_crawl`, `network_capture` and `screenshots`).
+
+- Operator jobs get every capability except `persistent_session`, `real_chrome`, `cdp` and
+  `solver_plugins`, which touch the operator's own browser profile, browser installation or
+  installed code: even the operator grants them with `--allow-capability NAME` or
+  `RASTRO_ALLOW_CAPABILITIES`.
+- `mcp`, `bundle`, `registry` and `model` get nothing until the operator grants one
+  capability to one origin with `--allow-untrusted ORIGIN:NAME` or `RASTRO_ALLOW_UNTRUSTED`
+  (for example `mcp:stealth`). A grant never names the operator origin.
+- The check runs before any renderer, client or request exists. A refusal is the error
+  `capability_refused`; it names the origin, the refused capabilities and the flag, never a
+  job value, and unknown names are counted, not echoed. A bundle or registry recipe that
+  requests an ungranted capability is not imported; a model proposal that does is rejected
+  as an invalid model response.
+- `robots = "ignore"` is honored only for operator jobs (or with an explicit
+  `ORIGIN:robots_ignore` grant), logged once per run as `robots_ignored`, and checked again
+  at each request so a policy built outside a job cannot bypass it.
+- `--allow-stealth` (`RASTRO_ALLOW_STEALTH`, `allow_stealth=True`) is deprecated: it
+  changes nothing for operator jobs and grants `stealth` and `solve_challenges` to every
+  untrusted origin. The CLI prints a `deprecated_flag` warning.
+- **Acquisition ladder.** A refused source is fetched again one level up (impersonation,
+  browser, stealth, challenge solving, proxy rotation, solver plugins) until a level returns
+  it ([ADR 0039](docs/decisions/0039-acquisition-ladder.md)). Each level passes this same
+  check for the job's origin first; a level that is not granted is skipped and reported as
+  `not_granted`, so the ladder never gives untrusted input a capability it was not granted.
+  A robots.txt refusal never climbs. Proxy rotation is tried only with declared egress
+  profiles and `--allow-egress`. Recipe memory keeps only the level name that last worked.
+- **Solver plugins** are Python entry points in the `rastro.solvers` group of a package the
+  operator installed. No job, recipe, bundle, registry entry, agent argument or model output
+  can name, load or configure one. The ladder imports plugins only when it reaches that level
+  and `solver_plugins` is granted (grant-only, even for the operator). A plugin is the
+  operator's own code and makes its own requests, outside Rastro's DNS pinning and
+  private-network guard: Rastro never passes it a source outside the job's allowed hosts,
+  discards a result that ends outside them, uses plain HTTP without `allow_http` or exceeds
+  the byte limit, and treats a plugin that raises as unsolved. Install a plugin only from a
+  source you would trust with the operator's network and credentials.
+
+**Operator grants that no capability widens.** A job file is configuration and may come
+from someone else: a shared repository, an agent using the MCP server, a Studio workspace.
+These stay the operator's alone, whatever the origin:
 
 - **Egress proxies.** A proxy declared in `[acquisition.egress_profiles]` sees every
   request and receives the proxy credentials. Rastro uses it only with operator opt-in:
   `--allow-egress` on `rastro job run|preview|load`, `rastro recipe repair|promote`,
   `rastro mcp` and `rastro studio`; `allow_egress=True` in Python; or
-  `RASTRO_ALLOW_EGRESS=1`. Without it the run fails closed before any request. Every
+  `RASTRO_ALLOW_EGRESS=1`. Without it the run fails closed before any request. Rotating
+  over the declared profiles needs nothing more for operator jobs (`proxy_rotation` is an
+  operator capability); proxy credentials come only from allowed environment names. Every
   boolean opt-in in the environment (`RASTRO_ALLOW_REMOTE`, `RASTRO_ALLOW_EGRESS`) accepts
   `1`, `true` or `yes`; anything else is off.
 - **Secret environment names.** A job may make Rastro read only environment variables
@@ -59,7 +125,7 @@ agent using the MCP server, a Studio workspace. It cannot make trust decisions o
   or with `--allow-env NAME` (`allow_env=` in Python). Otherwise a hostile job could name
   `GITHUB_TOKEN` as a proxy password and send it to its own proxy.
 - **Network permissions.** Four widenings of the acquisition policy are the operator's alone
-  (SEC-001, SEC-002, SEC-003, SEC-004, SEC-011), through a root flag, an SDK keyword or a
+, through a root flag, an SDK keyword or a
   `RASTRO_*` variable; a job file, bundle, MCP argument or model output cannot grant them.
   `--allow-private-network` (`RASTRO_ALLOW_PRIVATE_NETWORK`) permits RFC 1918, ULA, loopback
   and CGNAT destinations of allowed hosts; link-local and cloud metadata addresses,
@@ -108,8 +174,29 @@ Recipes in job files, Hub bundles, MCP tool arguments (`scrape_file`, `recipe_pr
 escalation) are checked before evaluation against a CSS selector cost policy (no `:has()`, no sibling combinators, bounded compounds,
 alternatives and nesting), because lxml evaluates those shapes in quadratic or worse time
 and the evaluation cannot be interrupted. A bundle's hashes give integrity, not
-authenticity; see the [Hub guide](docs/hub.md#import). The MCP `job_preview` tool writes
+authenticity; see the [Hub guide](docs/hub.md#import). A registry's `card.json` (field
+descriptions, engine needs) and `health.json` (last verification) are untrusted too: they
+are size-bounded, validated like the index, shown as data and never grant a capability or
+change a gate. Regular expressions from recipes and jobs (`capture`, `capture_network`,
+`allow_pattern`, `deny_pattern`) compile and match on a linear-time engine, so a shared
+pattern cannot backtrack catastrophically. The MCP `job_preview` tool writes
 nothing but is not advertised as read-only, because a job can fetch URLs or call a model.
+
+The MCP browser tools run as untrusted `mcp` input: each call opens one fresh guarded page
+under the job's allowed hosts, pinned DNS, robots and budget and closes it; page steps from
+the closed vocabulary need `--allow-untrusted mcp:page_actions`, screenshots
+`--allow-untrusted mcp:screenshots` and the network list `--allow-untrusted
+mcp:network_capture`; there is no tool that evaluates JavaScript.
+
+Unbounded crawl checkpoints (`.rastro/crawl/` next to the job) keep the full URLs of the
+frontier, queries included, so a resumed crawl fetches the same pages; the pages already seen
+are stored only as 32-character digests, never as URLs. The
+files are written atomically with mode `0600` in an owner-only folder, never followed through
+a symlink, and validated when read; treat them like the dataset file. Studio's guided flow
+(`/api/wizard/lookup`, `/page`, `/pick`) sits behind the Studio token and local-host checks;
+the page render and its highlight boxes are fetched under the URL's own single-host policy
+with the same destination checks, robots and budget as a job, and page text reaches a model
+only when the person asks to name a field with it.
 
 ## Acquisition limitations
 

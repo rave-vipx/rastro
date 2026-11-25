@@ -1,11 +1,13 @@
-"""REPAIR-002/004/005: measured CI gates, with no serving side effects."""
+"""Measured CI gates, with no serving side effects."""
 
 from datetime import UTC, datetime
+from unittest.mock import patch
 
 from pydantic import BaseModel
 
 from rastro.adapters.scrapling import ScraplingParser
 from rastro.application.recipe_ci import evaluate_candidate
+from rastro.domain.consistency import AfterObservation, RuleStatus
 from rastro.domain.models import CssRecipe, Limits, Source
 from rastro.domain.recipe_compare import RecipeComparison, RepairPolicy
 from rastro.domain.repair import RepairCandidate, RepairEvidence
@@ -38,6 +40,33 @@ def test_missing_history_quarantines_even_valid_current_evidence():
     assert evaluation.historical_fixtures == 0
 
 
+def test_observation_time_defaults_to_the_extraction_clock():
+    class Event(BaseModel):
+        starts_at: datetime
+
+    candidate = RepairCandidate(
+        recipe=CssRecipe(
+            record_selector="article", require_evidence=True, fields={"starts_at": "time::text"}
+        ),
+        origin="discovery",
+        rationale="Observed mapping",
+    )
+    observed = datetime(2026, 11, 7, 12, tzinfo=UTC)
+    with patch("rastro.application.extraction.datetime", wraps=datetime) as clock:
+        clock.now.side_effect = (observed, observed)
+        evaluation = evaluate_candidate(
+            candidate,
+            "<article><time>2026-11-10T10:00:00Z</time></article>",
+            source=Source(url="https://example.com/"),
+            schema=Event,
+            parser=ScraplingParser(),
+            limits=Limits(),
+            rules=(AfterObservation(kind="after_observation", field="starts_at"),),
+        )
+    result = next(r for r in evaluation.indicators.results if r.kind == "after_observation")
+    assert result.status is RuleStatus.PASSED
+
+
 def test_ambiguous_evaluation_is_quarantined():
     candidate = RepairCandidate(
         recipe=CssRecipe(
@@ -56,7 +85,7 @@ def test_ambiguous_evaluation_is_quarantined():
         limits=Limits(),
         observed_at=datetime(2026, 11, 7, tzinfo=UTC),
     )
-    # REPAIR-005: ambiguity never hides a hard failure; the evaluator rejects first.
+    # Ambiguity never hides a hard failure; the evaluator rejects first.
     assert evaluation.decision == "reject"
 
 

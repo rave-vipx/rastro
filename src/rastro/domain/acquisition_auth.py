@@ -1,4 +1,4 @@
-"""Operator grants and the job-declared auth header of an acquisition policy (SEC-001..004)."""
+"""Operator grants and the job-declared auth header of an acquisition policy."""
 
 from __future__ import annotations
 
@@ -35,7 +35,7 @@ _RESERVED_HEADERS = frozenset(
 
 @dataclass(frozen=True)
 class NetworkGrants:
-    """Operator-only widenings of the policy (SEC-001/002/003). Never read from a job file."""
+    """Operator-only widenings of the policy. Never read from a job file."""
 
     private_network: bool = False
     ports: frozenset[int] = frozenset()

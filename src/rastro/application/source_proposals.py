@@ -1,4 +1,4 @@
-"""Goal-driven candidate source proposals and approved-host acquisition (DISC-001..002)."""
+"""Goal-driven candidate source proposals and approved-host acquisition."""
 
 from __future__ import annotations
 

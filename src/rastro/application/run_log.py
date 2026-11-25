@@ -1,4 +1,4 @@
-"""WARNING log line per failed job source: index, host and outcome codes only (OBS, QUAL-005).
+"""WARNING log line per failed job source: index, host and outcome codes only (OBS.
 
 Python's last-resort handler prints WARNING records to stderr even without ``--verbose``.
 Paths, queries, page content and records are never logged.
@@ -10,6 +10,7 @@ from urllib.parse import urlsplit
 
 import structlog
 
+from rastro.application.self_repair import repair_note
 from rastro.domain.failure_reason import failure_detail
 from rastro.domain.job_results import JobRunResult
 from rastro.domain.models import Outcome
@@ -30,8 +31,10 @@ def log_failures(report: JobRunResult[Any]) -> None:
     for index, result in enumerate(report.results, start=1):
         if result.status in (Outcome.SUCCESS, Outcome.UNCHANGED):
             continue
+        extra = {"repair": repair_note(result.repair).decision} if result.repair else {}
         _LOG.warning(
             "source_failed",
+            **extra,
             source_index=index,
             host=host(result.source_url),
             status=result.status.value,

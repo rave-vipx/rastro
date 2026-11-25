@@ -1,7 +1,6 @@
 # ADR 0013: declarative jobs and machine-readable CLI contracts
 
-- **Status:** accepted for pre-v0.2; JOB-001, JOB-002 and AGENT-001 pulled forward by ADR 0012.
-- **Requirements:** JOB-001, JOB-002, AGENT-001, AGENT-003, INT-001, P-008, SEC-001–011, QUAL-001–004.
+- **Status:** accepted for pre-v0.2; job files and the agent interface pulled forward by ADR 0012.
 
 ## Context
 
@@ -9,8 +8,8 @@ Until now, running Rastro required writing Python to declare a Pydantic `BaseMod
 `Source` and `AcquisitionPolicy`, wire SQLite memory or a model provider, and call `Rastro`.
 ADR 0012 established that non-programmers, AI agents and a future Studio GUI (v0.4) must share a
 single validated job contract rather than inventing separate CLI flags, agent payloads and UI
-files (P-008). Agents also need deterministic JSON input/output schemas, distinct exit codes and
-explicit untrusted-data framing before an MCP adapter is added in v0.2 (AGENT-001, AGENT-003).
+files. Agents also need deterministic JSON input/output schemas, distinct exit codes and
+explicit untrusted-data framing before an MCP adapter is added in v0.2.
 
 ## Decision
 
@@ -51,17 +50,17 @@ orders, keeping SQLite recipe memory keys stable.
 - **No policy widening.** Any HTTP(S) `UrlJobSource` requires an explicit `acquisition` policy
   whose `allowed_hosts` already contain the source host, whose `allow_http` permits `http://`
   when used, and whose `max_sources` covers the HTTP batch. Running a job never adds hosts or
-  relaxes transport rules (SEC-001, AGENT-003).
+  relaxes transport rules.
 - **Secrets by environment name only.** Proxy credentials (`AcquisitionPolicy.egress_profiles`)
   and model keys/endpoints (`api_key_env`, `base_url_env`) accept `[A-Z_][A-Z0-9_]{0,127}` variable
   names only. Validation uses `RedactedContract` (`hide_input_in_errors=True`) so accidental
-  inline secrets are never echoed in Pydantic errors, stdout, stderr or logs (SEC-004, SEC-011).
+  inline secrets are never echoed in Pydantic errors, stdout, stderr or logs.
 
 ### Shared SDK execution path
 
 `rastro.application.jobs` executes `Job` exclusively through the public `Rastro` / `Rastro.web`
 SDK (`extract_html`, `extract_json`, `extract_html_async`, `extract_json_async`, `extract`,
-`extract_many`) without changing engine or service internals (P-008). Offline model-free file
+`extract_many`) without changing engine or service internals. Offline model-free file
 jobs run synchronously without opening sockets or event loops; discovery, model providers and
 HTTP batches run asynchronously, using `extract_many` when all sources share an HTTP
 representation and recipe configuration.

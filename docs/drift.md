@@ -3,10 +3,10 @@
 `rastro job load job.toml --drift` measures structural evidence, compares it with
 the last successful comparable run, and adds `drift` to the JSON load report.
 Without `--drift`, the output and extraction behavior remain unchanged. This
-implements DRIFT-001–006; it does not repair or activate recipes.
+implements drift detection; it does not repair or activate recipes.
 
 ```sh
-cp -R examples/uy-dance-agenda/sample /tmp/rastro-drift-sample
+cp -R examples/event-agenda/sample /tmp/rastro-drift-sample
 uv run rastro job load /tmp/rastro-drift-sample/job.toml --drift
 uv run rastro job load /tmp/rastro-drift-sample/job.toml --drift
 ```
@@ -22,7 +22,7 @@ outcomes or authorize repairs.
 ## Open drift
 
 An `elevated` or `high` assessment of a **successful** run opens a drift alert for that
-source (DRIFT-004). The load report then has `status = "degraded"`, lists the alert in
+source. The load report then has `status = "degraded"`, lists the alert in
 `open_drift` and exits **4** (`JobExitCode.NEEDS_ATTENTION`). While the alert is open:
 
 - the baseline stays at the last run before the drift, so every later run keeps
@@ -64,6 +64,10 @@ schema, locale, timezone and egress. Each `FieldStructure` records:
   count for the selected attempt (zero when no candidates exist).
 - `validation_failure_rate`: distinct candidate indexes with a validation issue
   naming this field divided by that attempt's candidate count (zero if none).
+
+List and object fields add one `field.member` entry per member with that member's coverage,
+so a member that disappears is drift even when the item count holds. Member entries always
+report a `validation_failure_rate` of 0: validation issues name the field, not the member.
 
 Counts and fingerprints come from an offline parser adapter. A scoped capture
 hook runs after extraction validation and never stores the input document, field
@@ -156,4 +160,4 @@ Dataset writes and drift writes use separate transactions. If drift storage
 fails after loading records, the command fails explicitly but already validated
 dataset updates remain committed. A retry is safe; monitoring never deletes
 records. Per-snapshot limits are enforced; drift run history grows with runs and
-has no automatic retention policy in this slice.
+currently has no automatic retention policy.

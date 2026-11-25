@@ -1,4 +1,4 @@
-"""MutationPlan serialization, composition, labels and reproducibility (MOCK-002, MOCK-006)."""
+"""MutationPlan serialization, composition, labels and reproducibility."""
 
 import hashlib
 import json

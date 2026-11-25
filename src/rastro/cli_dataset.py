@@ -6,11 +6,19 @@ import sys
 from pathlib import Path
 
 from rastro.adapters.sqlite_dataset import SQLiteDatasetStore
+from rastro.adapters.sqlite_dataset_admin import migrate_dataset
+from rastro.adapters.sqlite_dataset_schema import SCHEMA_VERSION
 from rastro.adapters.sqlite_drift import SQLiteDriftMonitor
 from rastro.application.dataset_load import stale_sources
 from rastro.application.errors import RunInProgressError
 from rastro.application.job_dataset import load_job_file
-from rastro.cli_dataset_export import html_export, select_records
+from rastro.cli_dataset_export import (
+    changes_report,
+    csv_export,
+    html_export,
+    select_records,
+    write_xlsx,
+)
 from rastro.cli_errors import classify
 from rastro.cli_hook import add_hook_argument, hook_argv, load_summary, notify
 from rastro.cli_trust import add_trust_arguments, trust_options
@@ -18,8 +26,10 @@ from rastro.domain.job_results import JobExitCode
 from rastro.domain.models import ConfigurationError
 
 _DATASET_HELP = {
-    "export": "Print a dataset's records as JSON, JSONL or an HTML table",
+    "export": "Print a dataset's records as JSON, JSONL, CSV, XLSX or an HTML table",
+    "changes": "List new, removed and changed records since a time or an earlier copy",
     "status": "Show each source's freshness and last load",
+    "migrate": "Migrate a dataset SQLite file forward to a schema version",
 }
 
 
@@ -37,7 +47,7 @@ def add_commands(subcommands: argparse._SubParsersAction, jobs: argparse._SubPar
     add_hook_argument(load)
     dataset = subcommands.add_parser("dataset", help="Read dataset records and freshness")
     commands = dataset.add_subparsers(dest="dataset_command", required=True)
-    for command in ("export", "status"):
+    for command in ("export", "status", "changes"):
         parser = commands.add_parser(command, help=_DATASET_HELP[command])
         parser.add_argument("path", type=Path, help="Dataset SQLite file")
         parser.add_argument(
@@ -45,11 +55,19 @@ def add_commands(subcommands: argparse._SubParsersAction, jobs: argparse._SubPar
         )
         parser.add_argument(
             "--format",
-            choices=("json", "jsonl", "html") if command == "export" else ("json", "jsonl"),
+            choices=("json", "jsonl", "html", "csv", "xlsx")
+            if command == "export"
+            else ("json", "jsonl"),
             default="json",
             help="Output format",
         )
+        if command == "changes":
+            parser.add_argument("--since", help="ISO time; list records first seen after it")
+            parser.add_argument(
+                "--against", type=Path, help="Earlier copy of the dataset file to compare with"
+            )
         if command == "export":
+            parser.add_argument("--output", type=Path, help="File to write (needed for xlsx)")
             parser.add_argument(
                 "--sort-field", help="Field to sort records by (ISO date for --upcoming)"
             )
@@ -59,6 +77,14 @@ def add_commands(subcommands: argparse._SubParsersAction, jobs: argparse._SubPar
             parser.add_argument(
                 "--timezone", default="UTC", help="IANA timezone that decides today"
             )
+    migrate = commands.add_parser("migrate", help=_DATASET_HELP["migrate"])
+    migrate.add_argument("path", type=Path, help="Dataset SQLite file")
+    migrate.add_argument(
+        "--to",
+        type=int,
+        default=SCHEMA_VERSION,
+        help="Target dataset schema version",
+    )
 
 
 def load_job_command(args: argparse.Namespace) -> int:
@@ -85,6 +111,9 @@ def dataset_command(args: argparse.Namespace) -> int:
             location="path",
             hint="Create it with `rastro job load <job file>` or check the path",
         )
+    if args.dataset_command == "migrate":
+        print(json.dumps(migrate_dataset(args.path, to=args.to), indent=2, ensure_ascii=True))
+        return 0
     store = SQLiteDatasetStore(args.path)
     names = store.dataset_names()
     if args.dataset is None:
@@ -105,7 +134,21 @@ def dataset_command(args: argparse.Namespace) -> int:
             fields = list(dict.fromkeys(name for record in all_records for name in record.fields))
             print(html_export(records, stale, fields))
             return 0
+        if args.format == "xlsx":
+            write_xlsx(records, args.output)
+            return 0
+        if args.format == "csv":
+            print(csv_export(records), end="")
+            return 0
         items = [r.model_dump(mode="json") for r in records]
+    elif args.dataset_command == "changes":
+        report = changes_report(store, args.dataset, since=args.since, against=args.against)
+        print(
+            json.dumps(
+                {"schema_version": 1, "data_trust": "untrusted_source_data", **report}, indent=2
+            )
+        )
+        return 0
     else:
         return _status(store, args)
     label = {"schema_version": 1, "data_trust": "untrusted_source_data"}
@@ -119,7 +162,7 @@ def dataset_command(args: argparse.Namespace) -> int:
 
 
 def _status(store: SQLiteDatasetStore, args: argparse.Namespace) -> int:
-    """Exit 4 (needs attention) when a source is stale or has open drift (DATA-004)."""
+    """Exit 4 (needs attention) when a source is stale or has open drift."""
     label = {"schema_version": 1, "data_trust": "untrusted_source_data"}
     statuses = store.source_status(args.dataset)
     stale = stale_sources(store, args.dataset)

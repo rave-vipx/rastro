@@ -1,4 +1,4 @@
-"""The job's `[scroll]` table: a bounded scroll for browser sources (N9, ADR 0033)."""
+"""The job's `[scroll]` table: a bounded scroll for browser sources (ADR 0033)."""
 
 from __future__ import annotations
 

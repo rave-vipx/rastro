@@ -1,8 +1,12 @@
 // Sources: one row per source with its status in words, last fetch, counts, warnings and one
-// next action (N5). Reads POST /api/sources; a missing route or an error is said, never hidden.
+// next action. Reads POST /api/sources; a missing route or an error is said, never hidden.
 import { $, api, el, request, requireFile, show, switchView } from "./dom.js";
 import { issueText, onLangChange, t, when } from "./i18n.js";
 import { actionButton, chip, emptyState } from "./ui.js";
+import { lightTone, lightWord, sayText } from "./alerts.js";
+import { live, renderRun } from "./run_view.js";
+
+export { clock, live, renderRun, runView } from "./run_view.js";
 
 const TONE = { ok: "ok", warning: "warn", capped: "warn", stale: "warn", failed: "fail", never: "none" };
 // Failure codes grouped into the plain words the brief asks for; others say "Failed".
@@ -80,14 +84,21 @@ function actions(source, index, more) {
   return row;
 }
 
+// The traffic light and its plain sentence when the server sent one; the status word otherwise.
+export function lightOf(source) {
+  if (!source.light) return { ...sourceStatus(source), say: "" };
+  return { tone: lightTone(source.light), word: lightWord(source.light), say: sayText(source.say) };
+}
+
 function sourceRow(source, index) {
   const { host, path } = place(source.url);
-  const item = el("li", undefined, `source-row tone-${TONE[source.status] || "none"}`);
+  const status = lightOf(source);
+  const item = el("li", undefined, `source-row tone-${status.tone}`);
   const name = el("div", undefined, "source-name");
   name.append(el("strong", host), el("span", path, "muted block"));
-  const status = sourceStatus(source);
   const state = el("div");
   state.append(chip(status.tone, status.word));
+  if (status.say) state.append(el("p", status.say, "small-text"));
   for (const code of source.warnings || []) state.append(el("p", issueText(code), "warn small-text"));
   const fetched = el("div", undefined, "source-meta");
   fetched.append(el("span", t("source.lastFetch", { at: when(source.last_fetch) })), el("span", counts(source), "muted block"));
@@ -139,5 +150,11 @@ export function resetSources() {
 
 export function initSources() {
   $("sources-refresh").addEventListener("click", () => loadSources());
-  onLangChange(renderSources);
+  const panel = el("div", undefined, "run-live");
+  live.panel = panel;
+  panel.setAttribute("aria-live", "polite");
+  const host = $("sources-list");
+  host.parentNode?.insertBefore(panel, host);
+  renderRun();
+  onLangChange(() => { renderSources(); renderRun(); });
 }

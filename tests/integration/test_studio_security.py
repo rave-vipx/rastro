@@ -1,4 +1,4 @@
-"""Studio hardening: token on every API route, write-time digest, capped values (P-008)."""
+"""Studio hardening: token on every API route, write-time digest, capped values."""
 
 import json
 from collections.abc import Iterator
@@ -39,7 +39,7 @@ def client(root: Path) -> Iterator[TestClient]:
 
 @pytest.mark.parametrize("path", GETS)
 def test_api_gets_require_the_token(root: Path, path: str) -> None:
-    """P-008: every /api route needs the token, GETs included; page and assets stay public."""
+    """Every /api route needs the token, GETs included; page and assets stay public."""
     app, token = create_app(root)
     with serving(app, "http://127.0.0.1:8765") as http:
         assert http.get(path).status_code == 403
@@ -58,7 +58,7 @@ def edit_elsewhere(path: Path) -> None:
 def test_accept_refuses_a_change_made_after_the_check(
     client: TestClient, root: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """P-008: the digest is compared with the bytes being replaced, inside the write step."""
+    """The digest is compared with the bytes being replaced, inside the write step."""
     sha = post(client, "/api/validate", {"file": "job.toml"}).json()["sha256"]
     real = editing.edited_job
 
@@ -79,7 +79,7 @@ def test_accept_refuses_a_change_made_after_the_check(
 def test_apply_refuses_a_change_made_after_the_check(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """REC-006: apply compares the expected digest with the bytes it replaces."""
+    """Apply compares the expected digest with the bytes it replaces."""
     (tmp_path / "board.html").write_text(board(), encoding="utf-8")
     (tmp_path / "job.toml").write_text(API_JOB, encoding="utf-8")
     app, token = create_app(tmp_path)
@@ -107,7 +107,7 @@ def test_apply_refuses_a_change_made_after_the_check(
 def test_dataset_values_are_capped_in_pages_and_exports(
     client: TestClient, root: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """DATA-004: long field values are cut with a truncated flag in views and downloads."""
+    """Long field values are cut with a truncated flag in views and downloads."""
     long_title = "T" * 50
     (root / "page.html").write_text(PAGE.replace("Tango", long_title))
     monkeypatch.setattr(routes_dataset, "MAX_CHARS", 10)

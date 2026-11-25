@@ -1,4 +1,4 @@
-"""The `[spider]` job table and the pure link rules (N3; SEC-001, SEC-003)."""
+"""The `[spider]` job table and the pure link rules."""
 
 import pytest
 from pydantic import ValidationError
@@ -131,7 +131,7 @@ def test_prefixes_match_whole_segments(path, prefix, expected):
     ],
 )
 def test_allow_pattern_matches_normalized_path(path, pattern, expected):
-    """N16, N3: allow_pattern matches the tidied, percent-decoded path."""
+    """Allow_pattern matches the tidied, percent-decoded path."""
     assert pattern_matches(path, pattern) is expected
 
 

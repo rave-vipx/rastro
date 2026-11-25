@@ -1,4 +1,4 @@
-"""Independent, transactional drift migration and history (DRIFT-001, ADR 0018)."""
+"""Independent, transactional drift migration and history (ADR 0018)."""
 
 import sqlite3
 from contextlib import closing
@@ -141,7 +141,7 @@ def test_aborted_migration_preserves_existing_dataset(tmp_path, monkeypatch):
 
 
 def test_clock_going_backwards_is_clamped_not_refused(tmp_path):
-    """DRIFT-001, QUAL-005: an earlier observation time is clamped to the last recorded one."""
+    """An earlier observation time is clamped to the last recorded one."""
     monitor = SQLiteDriftMonitor(tmp_path / "data.sqlite")
     first = snapshot()
     monitor.assess("events", first)
@@ -167,7 +167,7 @@ def drifted(run_id="drifted", minutes=1, count=3):
 
 
 def test_elevated_drift_stays_open_and_pins_the_baseline(tmp_path):
-    """DRIFT-003/005: a successful drifted run never becomes the baseline until acknowledged."""
+    """A successful drifted run never becomes the baseline until acknowledged."""
     from rastro.adapters.sqlite_dataset_admin import acknowledge_drift
 
     path = tmp_path / "data.sqlite"
@@ -230,7 +230,7 @@ def test_open_drift_read_on_missing_file_creates_nothing(tmp_path):
 
 
 def test_recipe_change_rebaselines_without_opening_drift(tmp_path):
-    """REPAIR-005: after promotion or rollback the next success is the new baseline."""
+    """After promotion or rollback the next success is the new baseline."""
     from rastro.adapters.sqlite_dataset_admin import rebaseline_drift
 
     path = tmp_path / "data.sqlite"

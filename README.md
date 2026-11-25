@@ -1,12 +1,12 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/rave-vipx/rastro/main/docs/assets/rastro-banner.svg" alt="Rastro — The open source web data engine. Web data, with evidence." width="100%">
+  <img src="https://raw.githubusercontent.com/rave-vipx/rastro/main/docs/assets/rastro-banner.svg" alt="Rastro: AI writes the scraper once, recipes keep it running." width="100%">
 </p>
 
 <p align="center">
   <a href="https://github.com/rave-vipx/rastro/actions/workflows/ci.yml"><img src="https://github.com/rave-vipx/rastro/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.12%2B-3776ab" alt="Python 3.12+"></a>
   <a href="https://github.com/rave-vipx/rastro/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-orange" alt="Apache 2.0 license"></a>
-  <img src="https://img.shields.io/badge/status-beta-536d60" alt="Beta">
+  <a href="https://pypi.org/project/rastro-engine/"><img src="https://img.shields.io/pypi/v/rastro-engine" alt="PyPI version"></a>
 </p>
 
 <p align="center">
@@ -18,55 +18,73 @@
   <a href="https://github.com/rave-vipx/rastro/issues">Issues</a>
 </p>
 
-**Rastro is an open-source web data engine. Paste a URL, name the fields, and it keeps a
-dataset up to date with a verified recipe.**
+Rastro is a Python scraping library where AI does the hard part once and a stored recipe
+does the rest.
 
-- **Scrape once, reuse the recipe.** A run scrapes the URL. The next run fetches that URL
-  again and reuses the recipe. It does not call a model unless the site changed.
-- **Studio, on your machine.** A local loopback page: paste the URL, name the fields,
-  preview, create the job. Uploading HTML is not required.
-- **Gated repair.** When the site changes, Rastro says so and proposes a repair.
-  A repair becomes active only after the existing gates. Auto-promote is off until you
-  turn it on.
-- **Opt-in reach.** JavaScript, next-page pagination, bounded scroll and a bounded
-  same-host spider are opt-in. Stealth is a separate operator grant and is never implied
-  by browser or scroll.
+**AI writes the scraper once, recipes keep it running.**
 
-## Five minutes with Studio
+## The recipe loop
+
+1. **AI studies the site once.** A local or connected model looks at the page and proposes
+   a recipe: selectors, field mappings and, when needed, page steps. Rastro keeps it only if
+   it extracts valid records from the real page.
+2. **Recipes run without AI.** Later runs on that site use the stored recipe: no model call,
+   and the same validation and field provenance every time.
+3. **Rastro notices when the site changes.** Drift and failed runs show up in Studio and can
+   notify you by email, Slack, Telegram or a webhook.
+4. **AI repairs it through gates.** Rastro proposes a repair, with or without a model, and a
+   candidate replaces the recipe only after it passes gates that refuse silent wrong data.
+
+Rastro also works with no model at all: give one example value per field and it builds the
+recipe deterministically. See [Bring your own AI](https://rave-vipx.github.io/rastro/ai/),
+[drift](https://rave-vipx.github.io/rastro/drift/) and
+[recipe repair](https://rave-vipx.github.io/rastro/repair/).
+
+## Five minutes
 
 ```sh
 pip install "rastro-engine[studio,http]"
 mkdir my-scrapers && rastro studio --root my-scrapers
 ```
 
-1. Open the loopback URL printed in the terminal and choose **New scraper**.
-2. Paste a page URL you have permission to scrape.
-3. Name the fields you want (for example `title` and `price`) and copy one example value
-   for each from the page; with a configured model, names alone are enough. Preview the
-   records.
-4. Give the job a dataset file and a record key, press **Create job**, then **Load into
-   dataset**. Load again later to update the same records.
+Open the loopback URL printed in the terminal, choose **Start from a URL**, paste a page you
+have permission to scrape, name the fields you want and give one example value for each (with
+a model, names alone are enough). Studio shows the records it found, and where on the page each field was read, before anything is saved:
 
-<!-- TODO(owner): add a Studio screenshot here (absolute https:// URL; PyPI renders this file). -->
+<p align="center">
+  <img src="https://raw.githubusercontent.com/rave-vipx/rastro/main/docs/assets/studio-review.png" alt="Studio's guided create, review step: six records found on a synthetic catalogue page, and the page snapshot with each field outlined where it was read." width="100%">
+</p>
 
-Two switches, both off by default: **auto-promote** writes only `[repair] auto_promote` on
-the job, and the **stealth** switch grants the running process, never the job. See the
-[Studio guide](https://rave-vipx.github.io/rastro/studio/).
+Name the project, save it, and press **Load into dataset**. Load again later to update the
+same records, and export them as CSV, Excel, JSON or HTML from the same page:
 
-## Install
+<p align="center">
+  <img src="https://raw.githubusercontent.com/rave-vipx/rastro/main/docs/assets/studio-results.png" alt="Studio's results view for a synthetic price list: run buttons, export buttons and a table of records with their source site." width="100%">
+</p>
 
-```sh
-pip install rastro-engine                    # core: parse supplied HTML, no network
-pip install "rastro-engine[http]"            # fetch permitted URLs
-pip install "rastro-engine[studio]"          # local web UI
-pip install "rastro-engine[browser]"         # render JavaScript pages (opt-in)
-pip install "rastro-engine[postgres]"        # PostgreSQL datasets
+Every site in a project has its health in plain words, with **Retry** and **Fix this site**
+when it stops working:
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/rave-vipx/rastro/main/docs/assets/studio-sites.png" alt="Studio's sites view for a synthetic agenda: five sources, two up to date, two needing a look, one not working with Retry and Fix this site buttons." width="100%">
+</p>
+
+See the [Studio guide](https://rave-vipx.github.io/rastro/studio/). The screenshots use
+synthetic `.example` sites.
+
+### The same from Python
+
+Run a saved project and read what it stored, with provenance, from your own code:
+
+```python
+import rastro
+
+rastro.load_job_file("shop.toml")  # fetch the sites, extract, update the dataset
+for record in rastro.read_records("shop.toml").records:
+    print(record.key, record.fields, record.origins)
 ```
 
-The package is `rastro-engine`; the import is `rastro`. Python 3.12 or newer. The core needs
-no account, model, browser or external service.
-
-## Python quickstart
+Or extract typed records from one page with a Pydantic model:
 
 ```python
 from typing import Annotated, ClassVar
@@ -87,121 +105,147 @@ for offer in result.items:  # validated Offer instances
 print(result.status, result.issues)
 ```
 
-The target may be an HTML string, a `pathlib.Path`, or an `https://` URL (needs the `http` extra).
-Every record carries field-level evidence: source URL, observation time, selector, method and
-recipe version. Missing, invalid and ambiguous data are explicit outcomes, never a silent
-empty list. Use `rastro.scrape_async` inside an event loop. See the
-[quickstart](https://rave-vipx.github.io/rastro/quickstart/) and the [API reference](https://rave-vipx.github.io/rastro/api/).
+The target may be an HTML string, a `pathlib.Path`, or an `https://` URL (needs the `http`
+extra). Every value carries its source URL, observation time, selector, method and recipe
+version. Missing, invalid and ambiguous data are explicit outcomes, never a silent empty list.
+See the [quickstart](https://rave-vipx.github.io/rastro/quickstart/),
+[reading results](https://rave-vipx.github.io/rastro/reading-results/) and the
+[API reference](https://rave-vipx.github.io/rastro/api/).
 
-## Why not a Scrapling + Pydantic script?
+## Use it from your AI agent
 
-- **Recipe memory:** the recipe that worked is stored and reused on the next run.
-- **Explicit outcomes:** missing, invalid and ambiguous data are reported, never an empty list.
-- **Field provenance:** every value keeps its source URL, selector, time and recipe version.
-- **Dataset identity:** loads update the same records and mark stale sources.
-- **Gated repair:** a repair that would save bad data cannot pass the gates silently.
+Made for building with a coding agent: the agent adds Rastro to the project, and you
+configure it and watch the results in Studio.
 
-On the synthetic benchmark Rastro did not show better raw accuracy than a competent
-Scrapling + Pydantic baseline, and it is slower because it validates and keeps evidence.
-See the [comparison](https://rave-vipx.github.io/rastro/comparison/).
+```sh
+rastro init --agent claude     # or codex, generic: tells the agent what Rastro already does
+pip install "rastro-engine[mcp]"
+claude mcp add rastro -- rastro mcp --root .
+```
+
+`rastro init` writes Rastro's capability list into the project's agent instructions, so the
+agent calls the public API, the JSON command line or the MCP tools instead of rebuilding
+pagination, crawling or repair. Over MCP the agent can be the model: it proposes recipes and
+Rastro verifies them. See [Rastro for AI agents](https://rave-vipx.github.io/rastro/ai-agents/),
+the [MCP server](https://rave-vipx.github.io/rastro/mcp/) and
+[`llms.txt`](https://github.com/rave-vipx/rastro/blob/main/llms.txt).
+
+## What it handles
+
+- **Blocked pages.** A refused source climbs an automatic ladder (browser impersonation, a
+  browser, a stealth browser, challenge solving) as far as your grants allow, and the recipe
+  remembers the lowest level that worked. Robots refusals and rate limits never climb.
+  [The acquisition ladder](https://rave-vipx.github.io/rastro/egress/#the-acquisition-ladder).
+- **JavaScript and clicks.** Render pages in a browser, and reach records behind a "load
+  more" button, a tab or a form with page steps: a model finds them once, they are stored as
+  declarative steps, and later runs replay them without a model.
+  [JavaScript pages](https://rave-vipx.github.io/rastro/acquisition/#javascript-pages),
+  [page steps](https://rave-vipx.github.io/rastro/page-steps/).
+- **APIs behind pages.** Read the JSON a page loads instead of its markup, while robots,
+  pacing and provenance stay the page's.
+  [Recipes from the site's own data](https://rave-vipx.github.io/rastro/network-recipes/).
+- **Nested records.** Lists and objects as typed fields.
+  [Field contracts](https://rave-vipx.github.io/rastro/fields/#lists-and-objects).
+- **Whole-site crawls.** Follow listing-to-detail links or a sitemap, or crawl a site with a
+  time budget instead of a page cap and resume where it stopped.
+  [Crawling](https://rave-vipx.github.io/rastro/crawling/#unbounded-crawls),
+  [spider](https://rave-vipx.github.io/rastro/jobs/#spider).
+- **Proxies.** Your own proxies and rotation over them, opt-in, with every target still
+  checked against the allowed hosts.
+  [Proxies, rotation and blocked sources](https://rave-vipx.github.io/rastro/egress/).
+- **Schedules and notifications.** A `[schedule]` block on the same job file, and email,
+  Slack, Telegram or webhook alerts when a job needs attention.
+  [Monitoring and alerts](https://rave-vipx.github.io/rastro/operations/).
+- **Excel, CSV and JSON.** `rastro dataset export data.sqlite --format json|jsonl|csv|xlsx|html`,
+  or the export buttons in Studio; SQLite by default, PostgreSQL optional.
+  [Capabilities](https://rave-vipx.github.io/rastro/capabilities/),
+  [datasets](https://rave-vipx.github.io/rastro/dataset/).
+
+Fetching is opt-in and limited to hosts you allow; Rastro honours robots rules, paces
+requests, and needs your explicit grant for stealth and proxies. It promises no invisibility.
+See [HTTP acquisition](https://rave-vipx.github.io/rastro/acquisition/) and
+[SECURITY.md](https://github.com/rave-vipx/rastro/blob/main/SECURITY.md).
+
+## Models
+
+Any model works through one interface, and none is required:
+
+| You have | Spec | Page content leaves the machine? |
+| --- | --- | --- |
+| A local runtime (Ollama, LM Studio, llama.cpp, vLLM) | `ollama:<model>` or `http:<model>@http://127.0.0.1:<port>/v1` | No |
+| An API key for a Chat Completions-compatible service | `http:<model>@<https url>` with `--allow-remote` | Yes, opt-in |
+| A subscription's command-line tool | `command:<program>` with `--allow-remote` | Yes, opt-in |
+| An agent driving Rastro over MCP | No model inside Rastro; the agent proposes | Under the agent's terms |
+| Nothing | Example values per field; repair without a model | No |
+
+`rastro model detect` lists local Ollama, LM Studio and llama.cpp servers. A model never
+writes your data: it proposes, and Rastro runs the proposal on the real page, validates it
+and gates it like any other candidate. The measured results, including where small local
+models fall short, are in [Bring your own AI](https://rave-vipx.github.io/rastro/ai/#measured-results).
+
+## Recipe hub
+
+Start from someone else's recipe. Studio asks the shared hub when you enter a URL, and the
+command line does the same:
+
+```sh
+rastro hub search https://shop.example/catalogue
+rastro hub install ID --store recipes.sqlite
+```
+
+An installed recipe is only a candidate: it passes digest, selector-policy and offline-replay
+checks, and serves only after it passes the promotion gate on your own page. Recipes are data
+and cannot run code. The hub is a static Git repository; there are no accounts and no
+Rastro-operated server, and you can host your own. See the
+[recipe hub](https://rave-vipx.github.io/rastro/hub/).
 
 ## How it compares
 
 | | Rastro | Scrapling + Pydantic by hand | Scrapy | BeautifulSoup |
 | --- | --- | --- | --- | --- |
-| Crawling / discovered links | Bounded, opt-in | You write it | Yes, its core strength | No |
-| Next-link pagination | Bounded, opt-in | You write it | You write it | No |
-| Browser scroll | Bounded, opt-in; no implied stealth | You write it | You wire a browser | No |
-| Scheduling | Job schedule / watch | You write it | External scheduler | No |
-| Typed, validated records | Yes, from your model | You wire it | Via items/pipelines | No |
+| Recipe proposed by a model, then run without one | Built in, verified | You write it | No | No |
+| Typed, validated records | From your model or job | You wire it | Via items/pipelines | No |
 | Field provenance (URL, selector, time, recipe version) | Built in | You write it | No | No |
 | Explicit failure outcomes | Built in | You write it | Partly (errors, stats) | No |
-| Recipe memory and verified self-repair | Built in, offline | Scrapling's adaptive relocation, ungated | No | No |
-| SQLite dataset with identity and stale tracking | Built in | You write it | Via pipelines | No |
+| Repair when the site changes | Gated, with or without a model | Scrapling's adaptive relocation, ungated | No | No |
+| Crawling | Bounded, or time-budgeted with resume | You write it | Yes, its core strength | No |
+| Dataset with identity and stale tracking | Built in | You write it | Via pipelines | No |
 | Speed on a single page | Slower (validation and evidence) | Faster | Fast | Varies by parser |
 
-## Share a recipe
+On the synthetic benchmark Rastro did not show better raw extraction accuracy than a
+competent Scrapling + Pydantic baseline, and it was slower on every page because it validates
+and keeps evidence. See the [comparison](https://rave-vipx.github.io/rastro/comparison/) and
+the [AI repair evidence](https://rave-vipx.github.io/rastro/ai-evidence/).
 
-The published object is the recipe; a live job still scrapes its own URL. Install verifies
-digests, selector policy and offline replay, and the recipe stays a candidate until you
-promote it. Shared recipes cannot run code, and there is no Rastro-operated registry or
-account server: a registry is a folder or a static HTTPS site you host. See
-[the registry examples](https://github.com/rave-vipx/rastro/tree/main/examples/registry) and [sharing](https://rave-vipx.github.io/rastro/hub/).
+Rastro fetches, renders and parses through engines behind strategy interfaces; Scrapling is
+the engine today. See [engines](https://rave-vipx.github.io/rastro/engines/).
 
-```sh
-rastro recipe search listing --registry examples/registry
-rastro recipe search listing --registry-url https://recipes.example.org/registry
-```
-
-### Try the synthetic registry
-
-From a checkout, this offline walkthrough copies the synthetic registry to a scratch folder:
+## Install
 
 ```sh
-scratch=$(mktemp -d)
-cp -R examples/registry "$scratch/registry"
-rastro recipe search synthetic --registry "$scratch/registry"
-rastro recipe install synthetic-listing@1.0.0 --registry "$scratch/registry" \
-  --store "$scratch/registry/listing-recipes.sqlite"
-rastro recipe promote "$scratch/registry/listing.json" --source 1 --version 1 \
-  --reason "Reviewed synthetic listing replay"
-rastro job load "$scratch/registry/listing.json"
-rastro job load "$scratch/registry/listing.json"  # same two records, no duplicates
-rastro dataset export "$scratch/registry/listing-data.sqlite" --format jsonl
+pip install rastro-engine                    # core: parse supplied HTML, no network
+pip install "rastro-engine[http]"            # fetch permitted URLs
+pip install "rastro-engine[studio]"          # local web UI
+pip install "rastro-engine[browser]"         # JavaScript pages and page steps
+pip install "rastro-engine[mcp]"             # MCP server for AI agents
+pip install "rastro-engine[ollama]"          # local Ollama models
+pip install "rastro-engine[openai]"          # any Chat Completions-compatible endpoint
+pip install "rastro-engine[postgres]"        # PostgreSQL datasets
 ```
 
-The included file-source job is an offline demo; for a real site use your own URL job with
-the same recipe store. Promote re-checks your current source.
+The package is `rastro-engine`; the import is `rastro`. Python 3.12 or newer. The core needs
+no account, model, browser or external service.
 
-## Notify on failure
+## Links
 
-Copy this from the directory containing your job (POSIX shell, Python installed):
+- [Documentation](https://rave-vipx.github.io/rastro/) and the
+  [configuration reference](https://rave-vipx.github.io/rastro/configuration/)
+- [Stability policy](https://rave-vipx.github.io/rastro/stability/): Semantic Versioning for
+  `rastro.__all__`, the CLI and its JSON, the job format and the recipe bundle format
+- [Changelog](https://github.com/rave-vipx/rastro/blob/main/CHANGELOG.md)
+- [Security policy](https://github.com/rave-vipx/rastro/blob/main/SECURITY.md)
+- [Contributing](https://github.com/rave-vipx/rastro/blob/main/CONTRIBUTING.md): bug reports
+  with a small synthetic HTML fixture are especially useful; tests run offline
 
-```sh
-cat > notify.py <<'PYHOOK'
-import json
-import sys
-from pathlib import Path
-
-summary = json.load(sys.stdin)
-Path("last-rastro-alert.json").write_text(json.dumps(summary, indent=2) + "\n")
-PYHOOK
-rastro job load shop.toml --drift --on-failure "python notify.py"
-```
-
-The hook runs for nonzero run outcomes (including partial success and needs attention),
-receives a bounded JSON summary on stdin, and writes no records or page bodies.
-`--on-failure` and `RASTRO_ON_FAILURE` are operator-only; a job or bundle cannot set
-an executable hook. Commands run without a shell and have a timeout. See [jobs](https://rave-vipx.github.io/rastro/jobs/).
-
-## More
-
-- [Self-repair](https://rave-vipx.github.io/rastro/repair/): offline recipe repair with `repair="propose"` (default), `"auto"` or `"off"`.
-- [Bring your own AI](https://rave-vipx.github.io/rastro/ai/): any local or hosted model proposes; Rastro verifies. Page content leaves the machine only with `allow_remote`.
-- [Suggest selectors from examples](https://rave-vipx.github.io/rastro/suggest/): `rastro suggest` and `rastro new --from`.
-- [Jobs](https://rave-vipx.github.io/rastro/jobs/), [datasets](https://rave-vipx.github.io/rastro/dataset/) and [drift](https://rave-vipx.github.io/rastro/drift/): `rastro job validate | load | watch | stats`, `rastro recipe repair | promote | apply`.
-- [Rastro for AI agents](https://rave-vipx.github.io/rastro/ai-agents/): MCP server (`rastro mcp`), JSON CLI, exit codes and [`llms.txt`](https://github.com/rave-vipx/rastro/blob/main/llms.txt). Using an AI coding agent? Run `rastro init --agent claude|codex|generic` so it uses Rastro's [capabilities](https://rave-vipx.github.io/rastro/capabilities/) instead of rebuilding them.
-- [Adapters](https://rave-vipx.github.io/rastro/api/#adapters-fetch-and-load-your-own-records): `rastro.fetch` and `rastro.load_records` keep policy and provenance in your own code.
-
-## Responsible use
-
-URL acquisition is opt-in, limited to hosts you allow, honours robots rules, paces requests and
-stops on 401/403/451. Stealth is an explicit operator opt-in; challenge solving additionally needs a job
-request and the grant. There is no proxy rotation or external CAPTCHA service, and
-Rastro promises no invisibility or unrestricted access. See [HTTP acquisition](https://rave-vipx.github.io/rastro/acquisition/) and [SECURITY.md](https://github.com/rave-vipx/rastro/blob/main/SECURITY.md).
-
-## Stability
-
-From 0.6.0 Rastro follows Semantic Versioning for the names in `rastro.__all__`, the CLI and
-its JSON output, the job format and the recipe bundle format. Deprecated names keep working
-with a warning for one minor release. See the [stability policy](https://rave-vipx.github.io/rastro/stability/) and the
-[changelog](https://github.com/rave-vipx/rastro/blob/main/CHANGELOG.md).
-
-## Contribute
-
-Start with [CONTRIBUTING.md](https://github.com/rave-vipx/rastro/blob/main/CONTRIBUTING.md). Bug reports with a small **synthetic** HTML
-fixture are especially useful. Tests run offline.
-
-## License
-
-[Apache License 2.0](https://github.com/rave-vipx/rastro/blob/main/LICENSE). No affiliation with other similarly named projects is implied.
+Licensed under the [Apache License 2.0](https://github.com/rave-vipx/rastro/blob/main/LICENSE).
+No affiliation with other similarly named projects is implied.

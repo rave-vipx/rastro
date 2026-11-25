@@ -12,10 +12,11 @@ import structlog
 from pydantic import BaseModel
 
 from rastro.application.batch import run_batch
-from rastro.application.browser_sessions import source_session
 from rastro.application.intelligence import RecipeLearner
 from rastro.application.memory import PreparedRecipe, RecipeMemory
+from rastro.application.network_recipes import recipe_session
 from rastro.application.outcomes import failure_result, stamp_acquired, stamp_provided
+from rastro.application.page_steps import recipe_steps, stepped
 from rastro.application.pagination import extract_paginated
 from rastro.application.prepared_extraction import PreparedExtraction
 from rastro.application.scroll import scroll_scope, scrolled
@@ -139,7 +140,10 @@ class ExtractionService:
                 fetched, source, schema, prepared, representation, started_at
             )
 
-        extract_page: Callable[[AcquisitionResult], Awaitable[ExtractionResult[T]]] = extract_one
+        steps = recipe_steps(prepared.definition)  # run on the first page, before scroll
+        extract_page: Callable[[AcquisitionResult], Awaitable[ExtractionResult[T]]] = stepped(
+            extract_one, steps=steps, acquisition=self._acquisition, limits=self._limits
+        )
 
         paginated = prepared.definition is not None and prepared.definition.pagination is not None
         if self._scroll is not None:
@@ -150,7 +154,7 @@ class ExtractionService:
                 limits=self._limits,
                 owns_scope=not paginated,
             )
-        async with source_session():  # one browser context for this source, closed after it
+        async with recipe_session(prepared.definition):  # one browser context per source
             if paginated:
                 assert prepared.definition is not None
                 return await extract_paginated(
@@ -163,7 +167,7 @@ class ExtractionService:
                     policy=self._policy,
                     extract_page=extract_page,
                 )
-            with scroll_scope(source, self._policy) if self._scroll else nullcontext():
+            with scroll_scope(source, self._policy) if self._scroll or steps else nullcontext():
                 fetched = await self._acquisition.acquire(
                     source,
                     max_bytes=self._limits.max_input_bytes(representation),

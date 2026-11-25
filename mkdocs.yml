@@ -1,5 +1,5 @@
 site_name: Rastro
-site_description: Schema-first web data extraction with field-level provenance.
+site_description: "Rastro: AI writes the scraper once, recipes keep it running."
 site_url: https://rave-vipx.github.io/rastro/
 repo_url: https://github.com/rave-vipx/rastro
 repo_name: rave-vipx/rastro
@@ -24,47 +24,69 @@ theme:
     - content.code.copy
 nav:
   - Overview: index.md
-  - Quickstart: quickstart.md
-  - Getting started: getting-started.md
-  - For AI agents: ai-agents.md
-  - Capabilities: capabilities.md
-  - Configuration reference: configuration.md
-  - Stability policy: stability.md
-  - Declarative jobs: jobs.md
-  - Recipes from examples: suggest.md
-  - MCP server: mcp.md
-  - Dataset load and export: dataset.md
-  - Local Studio: studio.md
-  - HTTP acquisition: acquisition.md
-  - Recipe memory: memory.md
-  - Recipe lifecycle: recipe-lifecycle.md
-  - Recipe hub (bundles): hub.md
-  - Structural drift: drift.md
-  - Monitoring and alerts: operations.md
-  - Semantic consistency: consistency.md
-  - Recipe CI and repair: repair.md
-  - Instant Mock Lab: mock-lab.md
-  - Mock Lab mutations: mock-lab-mutations.md
-  - Bring your own AI: ai.md
-  - Optional intelligence: intelligence.md
-  - AI repair evidence: ai-evidence.md
-  - Extraction comparison: comparison.md
-  - Product-task comparison (v0.2): comparison-v02.md
-  - Recovery benchmark protocol: recovery-benchmark.md
-  - API and outcomes: api.md
-  - Issue codes: issues.md
-  - Architecture: architecture.md
-  - Release checklist: releasing.md
-  - Clean code and module size: development/clean-code.md
+  - Guides:
+      - Quickstart: quickstart.md
+      - Getting started: getting-started.md
+      - Local Studio: studio.md
+      - Declarative jobs: jobs.md
+      - Recipes from examples: suggest.md
+      - HTTP acquisition: acquisition.md
+      - Proxies and blocked sources: egress.md
+      - Browser controls: browser.md
+      - Page steps: page-steps.md
+      - Network recipes: network-recipes.md
+      - Reading results: reading-results.md
+      - Dataset load and export: dataset.md
+      - Run report: run-report.md
+      - Field contracts: fields.md
+      - Crawling linked pages: crawling.md
+      - Scheduling: scheduling.md
+      - Monitoring and alerts: operations.md
+      - Structural drift: drift.md
+      - Semantic consistency: consistency.md
+      - Recipe CI and repair: repair.md
+      - Recipe memory: memory.md
+      - Recipe lifecycle: recipe-lifecycle.md
+      - Recipe hub (bundles): hub.md
+      - Bring your own AI: ai.md
+      - Optional intelligence: intelligence.md
+      - For AI agents: ai-agents.md
+      - MCP server: mcp.md
+      - Instant Mock Lab: mock-lab.md
+      - Mock Lab mutations: mock-lab-mutations.md
+  - Reference:
+      - Capabilities: capabilities.md
+      - Configuration reference: configuration.md
+      - API and outcomes: api.md
+      - Engines: engines.md
+      - Issue codes: issues.md
+      - Stability policy: stability.md
+      - Architecture: architecture.md
+  - Benchmarks:
+      - Extraction comparison: comparison.md
+      - Product-task benchmark: comparison-v02.md
+      - AI repair evidence: ai-evidence.md
+      - Recovery benchmark protocol: recovery-benchmark.md
+  - Development:
+      - Release checklist: releasing.md
+      - Clean code and module size: development/clean-code.md
   - Engineering decisions:
-      - Prompt-injection defense: decisions/0035-prompt-injection-defense.md
+      - Overview: decisions/index.md
+      - Acquisition ladder and solver plugins: decisions/0039-acquisition-ladder.md
+      - Crawl checkpoints: decisions/0040-crawl-checkpoint.md
+      - HTTP transport and impersonation: decisions/0038-http-transport.md
+      - Input origin and capabilities: decisions/0037-input-origin-and-capabilities.md
       - Capability first: decisions/0036-scrapling-access-and-unbounded-crawl.md
+      - Prompt-injection defense: decisions/0035-prompt-injection-defense.md
+      - Opt-in promote and stealth: decisions/0034-opt-in-promote-and-stealth.md
+      - Scroll, registry URL and amendments: decisions/0033-scroll-registry-url-and-spec-amendments.md
+      - URL-first Studio and bounded spider: decisions/0032-vibe-coder-spider-and-studio.md
       - Operator network permissions: decisions/0031-operator-network-permissions.md
       - HTTP sessions and conditional loads: decisions/0030-http-sessions-and-conditional-loads.md
+      - Bounded recipe pagination: decisions/0026-bounded-recipe-pagination.md
+      - PostgreSQL datasets: decisions/0025-postgres-datasets.md
       - Browser rendering and stealth opt-in: decisions/0024-browser-rendering-and-stealth-opt-in.md
       - Open drift and attention exit codes: decisions/0023-open-drift-and-attention-exit-codes.md
-      - PostgreSQL datasets: decisions/0025-postgres-datasets.md
-      - Bounded recipe pagination: decisions/0026-bounded-recipe-pagination.md
       - Bring your own AI: decisions/0022-bring-your-own-ai.md
       - Newer serving recipe wins: decisions/0021-serving-recipe-over-job-file.md
       - Minimal Studio, MCP and Hub: decisions/0020-studio-mcp-hub-minimal.md
@@ -75,18 +97,18 @@ nav:
       - Recipe lifecycle: decisions/0015-recipe-lifecycle.md
       - Mock Lab fixtures, labels and sanitization: decisions/0014-mock-lab.md
       - Declarative jobs and CLI contracts: decisions/0013-declarative-jobs.md
+      - Product direction after 0.1.0: decisions/0012-product-direction.md
       - Recovery benchmark protocol: decisions/0011-recovery-benchmark.md
       - Model providers: decisions/0010-model-providers.md
       - Recipe model: decisions/0009-recipe-model.md
-      - Structured JSON responses: decisions/0007-structured-responses.md
       - Explicit proxy egress: decisions/0008-explicit-egress.md
-      - Product direction after 0.1.0: decisions/0012-product-direction.md
+      - Structured JSON responses: decisions/0007-structured-responses.md
       - Explicit regional context: decisions/0006-explicit-regional-context.md
       - Reproducible evidence: decisions/0005-reproducible-release-evidence.md
       - Bounded recipe learning: decisions/0004-bounded-recipe-learning.md
       - SQLite recipe memory: decisions/0003-sqlite-recipe-memory.md
       - HTTP transport boundary: decisions/0002-policy-aware-acquisition.md
-      - Offline first slice: decisions/0001-offline-vertical-slice.md
+      - Offline first release: decisions/0001-offline-vertical-slice.md
 markdown_extensions:
   - admonition
   - pymdownx.highlight

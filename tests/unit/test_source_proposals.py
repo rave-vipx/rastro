@@ -1,4 +1,4 @@
-"""Unit tests for goal-driven source proposals and SearXNG adapter (DISC-001..002, SEC-005)."""
+"""Unit tests for goal-driven source proposals and SearXNG adapter."""
 
 from __future__ import annotations
 
@@ -44,7 +44,7 @@ class FakeModel:
 
 
 def test_search_provider_protocol_and_proposals_from_search():
-    """DISC-001..002: SearchProvider returns proposals with origin='search' and 0 model calls."""
+    """SearchProvider returns proposals with origin='search' and 0 model calls."""
     provider = FakeSearchProvider(
         [
             SearchHit("https://agenda.example/events?utm=1#top", "Agenda\x1b[31m Events"),
@@ -54,7 +54,7 @@ def test_search_provider_protocol_and_proposals_from_search():
     )
     assert isinstance(provider, SearchProvider)
     model = FakeModel('{"sources": []}')
-    proposals = propose_sources("dance events in uruguay", search=provider, model=model)
+    proposals = propose_sources("dance events in valle-azul", search=provider, model=model)
     assert model.calls == 0
     assert proposals == (
         SourceProposal(
@@ -73,7 +73,7 @@ def test_search_provider_protocol_and_proposals_from_search():
 
 
 def test_model_proposed_junk_urls_are_filtered_and_capped():
-    """SEC-005, DISC-001: model output is untrusted; keep only valid public HTTP(S) URLs, cap 10."""
+    """Model output is untrusted; keep only valid public HTTP(S) URLs, cap 10."""
     raw_items = [
         {"url": "ftp://files.example/list", "title": "FTP"},
         {"url": "javascript:alert(1)", "title": "XSS"},
@@ -104,7 +104,7 @@ def test_model_proposed_junk_urls_are_filtered_and_capped():
 
 
 def test_model_errors_and_invalid_inputs_raise_configuration_error():
-    """SEC-005: invalid goal, missing model, or malformed model output raises ConfigurationError."""
+    """Invalid goal, missing model, or malformed model output raises ConfigurationError."""
     with pytest.raises(ConfigurationError, match="Goal text"):
         propose_sources("   ")
     with pytest.raises(ConfigurationError, match="--search model"):
@@ -125,7 +125,7 @@ def test_model_errors_and_invalid_inputs_raise_configuration_error():
 
 
 def test_no_provider_and_no_model_raises_configuration_error(monkeypatch):
-    """DISC-001, P-002: missing both search provider and model raises ConfigurationError."""
+    """Missing both search provider and model raises ConfigurationError."""
     monkeypatch.delenv("RASTRO_SEARXNG_URL", raising=False)
     monkeypatch.delenv("RASTRO_MODEL", raising=False)
     with pytest.raises(ConfigurationError, match="RASTRO_SEARXNG_URL") as exc_info:
@@ -138,7 +138,7 @@ def test_no_provider_and_no_model_raises_configuration_error(monkeypatch):
 
 
 def test_searxng_adapter_validation_and_error_handling(monkeypatch):
-    """DISC-001, SEC-004: SearXNG adapter validates URLs, sizes, status and JSON strictly."""
+    """SearXNG adapter validates URLs, sizes, status and JSON strictly."""
     monkeypatch.delenv("RASTRO_ALLOW_REMOTE", raising=False)
     monkeypatch.delenv("RASTRO_SEARXNG_URL", raising=False)
     with pytest.raises(ConfigurationError, match="RASTRO_SEARXNG_URL"):
@@ -202,7 +202,7 @@ def test_searxng_adapter_validation_and_error_handling(monkeypatch):
 
 
 def test_acquire_approved_pages_validation():
-    """DISC-002: acquire_approved_pages rejects invalid or empty host lists."""
+    """Acquire_approved_pages rejects invalid or empty host lists."""
     with pytest.raises(ConfigurationError, match="Approved hosts"):
         acquire_approved_pages(["https://a.example/1"], ["bad/host"])
     with pytest.raises(ConfigurationError, match="At least one approved host"):
@@ -215,7 +215,7 @@ def test_acquire_approved_pages_validation():
 
 
 def test_searxng_without_httpx_raises_a_configuration_error(monkeypatch: pytest.MonkeyPatch):
-    """DISC-001: httpx lives in optional extras; a missing one names the extra to install."""
+    """Httpx lives in optional extras; a missing one names the extra to install."""
     import importlib
     import sys
 
@@ -229,7 +229,7 @@ def test_searxng_without_httpx_raises_a_configuration_error(monkeypatch: pytest.
 
 
 def test_searxng_accepts_localhost_as_loopback(monkeypatch: pytest.MonkeyPatch):
-    """SEC-004: localhost is loopback like 127.0.0.1; remote names still need opt-in."""
+    """Localhost is loopback like 127.0.0.1; remote names still need opt-in."""
     monkeypatch.delenv("RASTRO_ALLOW_REMOTE", raising=False)
     assert "http://localhost:8080/search" in repr(SearXNGSearchProvider("http://localhost:8080"))
     assert "http://localhost/search" in repr(SearXNGSearchProvider("http://LOCALHOST"))
@@ -238,7 +238,7 @@ def test_searxng_accepts_localhost_as_loopback(monkeypatch: pytest.MonkeyPatch):
 
 
 def test_searxng_goal_does_not_resolve_the_model(monkeypatch: pytest.MonkeyPatch):
-    """DISC-001: choosing SearXNG never resolves RASTRO_MODEL; --search model says so."""
+    """Choosing SearXNG never resolves RASTRO_MODEL; --search model says so."""
     monkeypatch.setenv("RASTRO_MODEL", "not a valid model spec")
     monkeypatch.setenv("RASTRO_SEARXNG_URL", "http://127.0.0.1:8080")
 

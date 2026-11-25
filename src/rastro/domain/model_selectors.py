@@ -1,4 +1,4 @@
-"""CSS selectors declared on Pydantic model fields, turned into a recipe (INT-001, REC-003).
+"""CSS selectors declared on Pydantic model fields, turned into a recipe.
 
 ``Annotated[str, css("h3::text")]`` keeps the selector next to the field it fills.
 The marker never changes the JSON Schema; it strips text and resolves relative links.
@@ -109,7 +109,7 @@ def recipe_from_model(
     if not isinstance(record_selector, str):
         raise ConfigurationError("The record selector must be a CSS selector string")
     try:
-        return CssRecipe(record_selector=record_selector, fields=mapping)
+        return CssRecipe(record_selector=record_selector, fields=dict(mapping))
     except ValidationError:
         raise ConfigurationError(
             "Invalid model selectors: each must end in ::text or ::attr(name)"

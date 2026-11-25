@@ -1,4 +1,4 @@
-"""Recipe memory and offline self-repair through rastro.scrape (REC-001, REPAIR-001-005)."""
+"""Recipe memory and offline self-repair through rastro.scrape."""
 
 from typing import Annotated, ClassVar
 
@@ -17,7 +17,7 @@ pytestmark = pytest.mark.usefixtures("offline_cli_loop")
 
 URL = "https://acme.example/careers"
 V1 = """<main><ul>
-<li class="job"><h3 class="title">Engineer</h3><span class="city">Montevideo</span></li>
+<li class="job"><h3 class="title">Engineer</h3><span class="city">Puerto Claro</span></li>
 <li class="job"><h3 class="title">Designer</h3><span class="city">Salto</span></li>
 </ul></main>"""
 V2 = V1.replace('<h3 class="title">', '<h2 class="heading">').replace("</h3>", "</h2>")
@@ -95,9 +95,10 @@ def test_off_returns_the_failure_and_stores_nothing(tmp_path):
 def test_auto_never_promotes_when_a_gate_fails(tmp_path, monkeypatch, decision):
     real = scrape_memory.evaluate_candidate
 
-    def failing_gate(*args, **kwargs):
-        evaluation = real(*args, **kwargs)
-        assert evaluation.decision == "promote"  # the candidate itself would pass
+    def failing_gate(candidate, *args, **kwargs):
+        evaluation = real(candidate, *args, **kwargs)
+        if candidate.origin == "scrapling_relocation":
+            assert evaluation.decision == "promote"  # the candidate itself would pass
         return evaluation.model_copy(update={"decision": decision, "reasons": ("gate_failed",)})
 
     monkeypatch.setattr(scrape_memory, "evaluate_candidate", failing_gate)
@@ -236,7 +237,7 @@ def _shop(css_class, missing_stock=None):
 
 @pytest.mark.parametrize("missing", [0, 1])
 def test_auto_heals_when_one_record_lacks_an_optional_field(tmp_path, missing):
-    """REPAIR-001, SCR-002: an absent optional child does not block relocation."""
+    """An absent optional child does not block relocation."""
     memory = tmp_path / "recipes.db"
     assert _scrape(_shop("product"), memory, "auto", Item).status == Outcome.SUCCESS
     healed = _scrape(_shop("item-card", missing), memory, "auto", Item)
@@ -264,13 +265,14 @@ def _stocked(stock_class, missing=None, card="product"):
 
 @pytest.mark.parametrize("missing", [0, 2])
 def test_auto_never_gives_a_thinned_record_its_siblings_value(tmp_path, missing):
-    """REPAIR-002, SCR-002: a relocated optional field never reads the next sibling."""
+    """A relocated optional field never reads the next sibling."""
     memory = tmp_path / "recipes.db"
     _scrape(_stocked("stock"), memory, "auto", Stocked)
     result = _scrape(_stocked("qty", missing, "item-card"), memory, "auto", Stocked)
     assert result.repair is not None
     # With record 0 thinned, relocation has no matching text to support the field and
-    # refuses; either way no record may read its sibling.
-    assert result.repair.promoted is (missing != 0)
+    # refuses, and matching the retained values repairs it instead. Either way no record
+    # may read its sibling.
+    assert result.repair.promoted
     assert all(item.stock != item.price for item in result.items)
     assert all((item.stock is None) == (i == missing) for i, item in enumerate(result.items))

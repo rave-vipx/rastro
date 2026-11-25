@@ -1,4 +1,4 @@
-"""Why a discovered link is not fetched, decided before a page slot is spent (N3)."""
+"""Why a discovered link is not fetched, decided before a page slot is spent."""
 
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ def link_refusal(
     spider: SpiderPolicy,
     policy: AcquisitionPolicy | None,
     *,
-    paths: bool = True,  # False for a child sitemap: allow/deny are for pages (N16)
+    paths: bool = True,  # False for a child sitemap: allow/deny are for pages
 ) -> SpiderOutcome | None:
     boundary = pagination_boundary(link.url, scope.host, scope.secure, scope.hosts)
     if boundary:
@@ -39,6 +39,7 @@ def link_refusal(
         return refusal
     if paths and (
         path_matches(link.path, spider.deny)
+        or (spider.deny_pattern and pattern_matches(link.path, spider.deny_pattern))
         or (spider.allow and not path_matches(link.path, spider.allow))
         or (spider.allow_pattern and not pattern_matches(link.path, spider.allow_pattern))
     ):

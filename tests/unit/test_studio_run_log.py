@@ -1,4 +1,4 @@
-"""Studio run log and record extras (N5, N17, PROV-001): bounded, content-free, link-safe."""
+"""Studio run log and record extras: bounded, content-free, link-safe."""
 
 from __future__ import annotations
 

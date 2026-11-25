@@ -1,0 +1,76 @@
+/* Rastro Studio components added with the guided create, the running read, nested values,
+   the Hub and Advanced lists. Only the tokens defined in studio.css are used here. */
+
+/* Running read on the Sites view. */
+.run-live { border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface);
+  box-shadow: var(--shadow-1); padding: var(--s-3) var(--s-4); margin: var(--s-3) 0; }
+.run-live p { margin: var(--s-1) 0; font-variant-numeric: tabular-nums; }
+.run-live .chip { margin-bottom: var(--s-1); }
+progress { display: block; width: 100%; height: 8px; margin: var(--s-2) 0; border: 0; border-radius: var(--r-pill);
+  background: var(--surface-3); color: var(--accent); accent-color: var(--accent); overflow: hidden; appearance: none; }
+progress::-webkit-progress-bar { background: var(--surface-3); border-radius: var(--r-pill); }
+progress::-webkit-progress-value { background: var(--accent); border-radius: var(--r-pill); }
+progress::-moz-progress-bar { background: var(--accent); border-radius: var(--r-pill); }
+.live-sample { list-style: none; padding: 0; margin: var(--s-2) 0; display: grid; gap: var(--s-1); }
+.live-sample li { background: var(--surface-2); border-radius: var(--r-sm); padding: var(--s-1) var(--s-2);
+  font-size: 13px; overflow-wrap: anywhere; }
+
+/* Nested values in a results cell: a toggle, then a small filterable table. */
+.cell { min-width: 0; }
+.nested-box { display: grid; gap: var(--s-2); margin: var(--s-2) 0 0; padding: var(--s-2) 0 var(--s-2) var(--s-3);
+  border-left: 3px solid var(--accent-soft); max-width: 100%; overflow-x: auto; cursor: auto; }
+.nested-box .row { margin: 0; }
+table.nested { margin: 0; width: auto; min-width: 12rem; font-size: 13px; }
+table.nested th, table.nested td { padding: var(--s-1) var(--s-2); }
+
+/* What changed since the last load: chips that filter the table. */
+button.chip-button { min-height: 32px; padding: 0; border: 0; border-radius: var(--r-pill); background: transparent; }
+button.chip-button:hover { background: transparent; }
+button.chip-button:hover .chip { box-shadow: inset 0 0 0 1px currentColor; }
+button.chip-button[aria-pressed="true"] .chip { box-shadow: inset 0 0 0 2px currentColor; }
+button.chip-button:disabled { opacity: .5; cursor: default; }
+
+/* Hub cards: a responsive grid of what others built. */
+.hub-cards { display: grid; gap: var(--s-4); margin: var(--s-3) 0; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); }
+.hub-cards .card { margin: 0; display: grid; gap: var(--s-2); align-content: start; padding: var(--s-4); }
+.hub-cards h3 { margin: 0; font-size: 15px; overflow-wrap: anywhere; }
+.hub-cards details ul { margin: var(--s-1) 0 0; padding-left: var(--s-5); }
+
+/* Guided create: offers, the narration of the AI's look, recorded steps. */
+.hub-offer, .api-offer { border-color: var(--accent); background: var(--accent-soft); }
+.hub-offer h4, .api-offer h4 { margin: 0 0 var(--s-1); font-size: 14px; }
+.hub-offer p, .api-offer p { margin: var(--s-1) 0; }
+.explore-log, .steps-list { margin: var(--s-2) 0; padding-left: var(--s-5); display: grid; gap: var(--s-1); }
+.steps-list li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-2);
+  border-bottom: 1px solid var(--border); padding: var(--s-1) 0; overflow-wrap: anywhere; }
+.steps-list li > span { flex: 1 1 12rem; min-width: 0; }
+
+/* Page snapshot with field outlines and click targets (positions come from the page). */
+.snapshot { position: relative; max-width: 100%; line-height: 0; margin: var(--s-2) 0;
+  border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; }
+.snapshot canvas { display: block; width: 100%; height: auto; }
+.hl, .pick-spot { position: absolute; box-sizing: border-box; }
+.hl { pointer-events: none; }
+.hl[data-on="true"] { box-shadow: 0 0 0 3px var(--surface), 0 0 0 6px currentColor; }
+.hl1 { color: var(--hl-1); outline: 3px solid var(--hl-1); } .hl2 { color: var(--hl-2); outline: 3px dashed var(--hl-2); }
+.hl3 { color: var(--hl-3); outline: 4px double var(--hl-3); } .hl4 { color: var(--hl-4); outline: 3px dotted var(--hl-4); }
+.hl5 { color: var(--hl-5); outline: 5px solid var(--hl-5); }
+.hl-label { position: absolute; top: -1.4em; left: 0; padding: 0 var(--s-1); font: 600 12px/1.3 var(--font-sans);
+  white-space: nowrap; color: var(--hl-text); }
+.hl1 .hl-label { background: var(--hl-1); } .hl2 .hl-label { background: var(--hl-2); } .hl3 .hl-label { background: var(--hl-3); }
+.hl4 .hl-label { background: var(--hl-4); } .hl5 .hl-label { background: var(--hl-5); }
+button.pick-spot { min-height: 0; padding: 0; border: 0; border-radius: 0; background: transparent;
+  outline: 2px dashed var(--accent); cursor: pointer; }
+button.pick-spot:hover, button.pick-spot:focus-visible { background: var(--accent-soft); opacity: .6; outline: 3px solid var(--focus); }
+.pick-list { list-style: none; padding: 0; margin: var(--s-2) 0; display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.pick-list button { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Sites rows: name and meta never push the page wider than the screen. */
+.source-name, .source-meta { min-width: 0; overflow-wrap: anywhere; }
+.nav-main { flex: none; }
+
+@media (max-width: 40rem) {
+  .hub-cards { grid-template-columns: 1fr; }
+  button.chip-button { min-height: 44px; }
+  .steps-list li { align-items: flex-start; }
+}

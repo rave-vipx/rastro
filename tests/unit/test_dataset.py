@@ -1,4 +1,4 @@
-"""SYNC-003: canonical identity preserves declared ordering and rejects ambiguity."""
+"""Canonical identity preserves declared ordering and rejects ambiguity."""
 
 from datetime import UTC, datetime, timedelta, timezone
 

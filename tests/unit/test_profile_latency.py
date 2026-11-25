@@ -1,4 +1,4 @@
-"""Verify the latency profiler reports a stable structure (P-010 measurement harness)."""
+"""Verify the latency profiler reports a stable structure."""
 
 from benchmarks.profile_latency import EXECUTORS, run
 

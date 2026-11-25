@@ -5,10 +5,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from urllib.parse import urlsplit
 
-from rastro.application.stealth_grant import require_stealth_grant
-from rastro.domain.acquisition import AcquisitionResult
+from rastro.application.capability_gate import require_capabilities
+from rastro.domain.acquisition import AcquisitionPolicy, AcquisitionResult
 from rastro.domain.jobs import Job, UrlJobSource
 from rastro.domain.models import ConfigurationError, Representation, Source
+from rastro.domain.page_steps import PageStep
 from rastro.ports.acquisition import AcquisitionPort
 from rastro.ports.browser import BrowserRenderer, ScrollingAcquisition
 
@@ -17,6 +18,8 @@ if TYPE_CHECKING:
 
 
 def job_render_modes(job: Job) -> dict[str, str]:
+    """Each declared URL's render mode, after the job's capabilities pass for its origin."""
+    require_capabilities(job)  # first: no grant, no renderer or client
     modes: dict[str, str] = {}
     if job.acquisition is None:
         return modes
@@ -27,20 +30,11 @@ def job_render_modes(job: Job) -> dict[str, str]:
         if item.url in modes and modes[item.url] != mode:
             raise ConfigurationError("Identical source URLs have conflicting render modes")
         modes[item.url] = mode
-        if mode != "http" and (
-            item.representation != "html"
-            or (item.region or job.region).egress != "direct"
-            or job.acquisition.egress_profiles
-        ):
+        captures = bool(job.acquisition.browser.capture_network)
+        if mode != "http" and item.representation != "html" and not captures:
             raise ConfigurationError(
-                "Browser modes require HTML and direct egress without profiles"
+                "Browser JSON sources read captured responses: set capture_network"
             )
-    needed = set(modes.values())
-    if needed - {"http"}:
-        needed.add(job.acquisition.render)  # undeclared URLs, such as next pages, may use it
-    require_stealth_grant(
-        stealth="stealth" in needed, solve_challenges=job.acquisition.solve_challenges
-    )
     return modes
 
 
@@ -90,8 +84,25 @@ class _JobAcquisition:
             raise ConfigurationError("This source's acquisition cannot scroll")
         return await client.scroll(source, settle_ms=settle_ms, max_bytes=max_bytes)
 
+    def runs_steps(self, url: str) -> bool:
+        """Page steps need a browser page; plain HTTP sources report ``step_failed``."""
+        client = self.clients[self.mode(url)]
+        return self.mode(url) != "http" and bool(
+            getattr(client, "runs_steps", lambda _: False)(url)
+        )
 
-def _renderer(mode: str) -> BrowserRenderer:
+    async def run_steps(
+        self, source: Source, steps: tuple[PageStep, ...], *, max_bytes: int
+    ) -> AcquisitionResult:
+        client = self.clients[self.mode(source.url)]
+        run = getattr(client, "run_steps", None)
+        if run is None:
+            raise ConfigurationError("This source's acquisition cannot run page steps")
+        result: AcquisitionResult = await run(source, steps, max_bytes=max_bytes)
+        return result
+
+
+def renderer_for(mode: str) -> BrowserRenderer:
     """Import and build only the renderer this mode needs: stealth stays unbuilt unless asked."""
     if mode == "stealth":
         from rastro.adapters.scrapling_stealth import ScraplingStealth
@@ -100,6 +111,21 @@ def _renderer(mode: str) -> BrowserRenderer:
     from rastro.adapters.playwright_browser import PlaywrightBrowser
 
     return PlaywrightBrowser()
+
+
+def browser_acquirer(policy: AcquisitionPolicy) -> AcquisitionPort:
+    """A browser acquirer for ``policy.render``; needs the ``browser`` extra."""
+    try:
+        from rastro.adapters.dns import SystemResolver
+        from rastro.adapters.http import CurlTransport
+        from rastro.application.browser_acquisition import BrowserAcquirer
+
+        renderer = renderer_for(policy.render)
+    except ModuleNotFoundError:
+        raise ConfigurationError("This needs rastro-engine[browser]") from None
+    return BrowserAcquirer(
+        policy, renderer=renderer, transport=CurlTransport(), resolver=SystemResolver()
+    )
 
 
 def job_acquisition(
@@ -114,7 +140,7 @@ def job_acquisition(
         return supplied
     assert job.acquisition is not None
     renderers = {
-        mode: _renderer(mode) for mode in {*modes.values(), job.acquisition.render} - {"http"}
+        mode: renderer_for(mode) for mode in {*modes.values(), job.acquisition.render} - {"http"}
     }
     from rastro.adapters.dns import SystemResolver
     from rastro.adapters.http import CurlTransport
@@ -134,6 +160,7 @@ def job_acquisition(
             resolver=resolver,
         )
         client._hosts = client._http._hosts = http._hosts
+        client._rotation = http._rotation  # one cyclic order across render modes
         client._slots = http._slots
         clients[mode] = client
     return _JobAcquisition(modes, clients, job.acquisition.render)

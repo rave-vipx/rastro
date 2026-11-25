@@ -152,8 +152,8 @@ def test_localized_datetime_field_accepts_spanish_and_iso():
         [DateTimeField(name="starts_at", localized=True), DateField(name="day", localized=True)]
     )
     context = {
-        "timezone": "America/Montevideo",
-        "observed_at": datetime(2026, 11, 7, tzinfo=ZoneInfo("America/Montevideo")),
+        "timezone": "Etc/GMT+3",
+        "observed_at": datetime(2026, 11, 7, tzinfo=ZoneInfo("Etc/GMT+3")),
     }
     for value in ("22 NOV 2026 - 19 H", "2026-11-22T19:00:00-03:00"):
         record = schema.model_validate(
@@ -236,7 +236,7 @@ def test_localized_date_converts_space_separated_iso_datetime_to_region():
 
     schema = build_job_schema([DateField(name="day", localized=True)])
     record = schema.model_validate(
-        {"day": "2026-11-21 01:30:00Z"}, context={"timezone": "America/Montevideo"}
+        {"day": "2026-11-21 01:30:00Z"}, context={"timezone": "Etc/GMT+3"}
     )
     assert record.day == date(2026, 11, 20)
 

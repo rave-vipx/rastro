@@ -4,22 +4,27 @@ build-backend = "hatchling.build"
 
 [project]
 name = "rastro-engine"
-version = "0.9.0"
-description = "Typed, self-healing web scraping: Pydantic models in, validated records with field-level provenance out."
+version = "1.0.0"
+description = "Rastro: AI writes the scraper once, recipes keep it running."
 readme = "README.md"
 requires-python = ">=3.12"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 authors = [{name = "Rastro contributors"}]
-keywords = ["web-data", "extraction", "pydantic", "provenance", "scrapling"]
+keywords = ["web-scraping", "scraper", "ai", "llm", "data-extraction", "recipes", "self-healing", "pydantic", "provenance", "mcp", "scrapling", "crawler"]
 classifiers = [
-  "Development Status :: 4 - Beta",
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Console",
+  "Framework :: Pydantic",
   "Intended Audience :: Developers",
   "Intended Audience :: Science/Research",
+  "Operating System :: OS Independent",
   "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
+  "Topic :: Internet :: WWW/HTTP :: Indexing/Search",
+  "Topic :: Software Development :: Libraries :: Python Modules",
   "Typing :: Typed",
 ]
 dependencies = [
@@ -46,6 +51,7 @@ Documentation = "https://rave-vipx.github.io/rastro/"
 Repository = "https://github.com/rave-vipx/rastro"
 Issues = "https://github.com/rave-vipx/rastro/issues"
 Changelog = "https://github.com/rave-vipx/rastro/blob/main/CHANGELOG.md"
+"Security Policy" = "https://github.com/rave-vipx/rastro/security/policy"
 
 [project.scripts]
 rastro = "rastro.cli:main"

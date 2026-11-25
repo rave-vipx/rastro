@@ -1,4 +1,4 @@
-"""Foreground persistent scheduler (`rastro job watch`, SCHED-001..007, SYNC-001)."""
+"""Foreground persistent scheduler (`rastro job watch`."""
 
 from __future__ import annotations
 
@@ -16,6 +16,7 @@ from rastro.application.egress_trust import check_job_egress
 from rastro.application.errors import RunInProgressError
 from rastro.application.job_dataset import dataset_location, load_job_file, open_dataset
 from rastro.application.job_loader import load_job
+from rastro.application.operator_trust import stealth_notice_given
 from rastro.application.run_lock import (
     clear_checkpoint,
     dataset_lock,
@@ -181,7 +182,7 @@ def watch_job(
     timeout = job.acquisition.operation_timeout_seconds if job.acquisition is not None else 60.0
     attempted: dict[str, SourceStatus] = {}
     ticks = 0
-    with _signal_guard(stop.set):
+    with _signal_guard(stop.set), stealth_notice_given():  # the CLI reported the flag
         while not stop.is_set():
             now, skipped = clock_fn(), False
             try:

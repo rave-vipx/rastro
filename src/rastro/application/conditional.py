@@ -13,7 +13,7 @@ from rastro.ports.dataset import DatasetValidators
 
 class ConditionalRequests:
     def __init__(self, store: DatasetValidators, dataset: str, inputs: Mapping[str, str]) -> None:
-        """``inputs`` maps each source URL to its extraction-inputs digest (SYNC-004)."""
+        """``inputs`` maps each source URL to its extraction-inputs digest."""
         self._store, self._dataset, self._inputs = store, dataset, dict(inputs)
         self.failed = False
         self._pending: dict[str, dict[str, str]] = {}

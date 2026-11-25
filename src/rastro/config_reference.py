@@ -1,4 +1,4 @@
-"""Every configurable point of Rastro, generated from code (N18, AGENT-001).
+"""Every configurable point of Rastro, generated from code.
 
 Job keys come from the job models (``config_schema``), keyword arguments from the public
 function signatures, flags from the real argparse parser, and grants and environment
@@ -57,7 +57,8 @@ def python_entries() -> Iterator[ConfigEntry]:
 
 def grant_entries() -> Iterator[ConfigEntry]:
     for flag, (env, keyword, text, docs) in GRANTS.items():
-        also = ", ".join(item for item in (env and f"env {env}", f"Python {keyword}=") if item)
+        python = keyword and f"Python {keyword}="  # some grants have no SDK keyword
+        also = ", ".join(item for item in (env and f"env {env}", python) if item)
         yield ConfigEntry(flag, "grant", "operator grant", None, False, also, text, docs)
 
 
@@ -67,7 +68,7 @@ def env_entries() -> Iterator[ConfigEntry]:
 
 
 def cli_entries() -> Iterator[ConfigEntry]:
-    from rastro.cli import _build_parser
+    from rastro.cli_parser import build_parser as _build_parser
 
     yield from _parser_entries(_build_parser(), "rastro", "")
 

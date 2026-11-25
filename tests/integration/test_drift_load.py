@@ -1,4 +1,4 @@
-"""Drift reaches the dataset and preserves earlier observations (DRIFT-001-006)."""
+"""Drift reaches the dataset and preserves earlier observations."""
 
 import shutil
 from pathlib import Path
@@ -34,10 +34,10 @@ def load(sample):
 
 def test_renamed_class_yields_structural_drift_naming_field_and_table_effect(tmp_path):
     sample = tmp_path / "sample"
-    shutil.copytree(Path("examples/uy-dance-agenda/sample"), sample)
+    shutil.copytree(Path("examples/event-agenda/sample"), sample)
     first, store = load(sample)
     before = store.records(first.dataset)
-    path = sample / "sodre-cartelera.html"
+    path = sample / "teatro-central-cartelera.html"
     mutation = MutationPlan(
         seed=7,
         operators=(HtmlChangeClasses(selector=".cyg--dia", rename={"cyg--dia": "date-new"}),),
@@ -64,11 +64,11 @@ def test_renamed_class_yields_structural_drift_naming_field_and_table_effect(tmp
 
 
 def test_total_extraction_failure_after_success_is_high_risk(tmp_path):
-    """DRIFT-002/004: a record selector that stops matching is never low risk or 0.0."""
+    """A record selector that stops matching is never low risk or 0.0."""
     sample = tmp_path / "sample"
-    shutil.copytree(Path("examples/uy-dance-agenda/sample"), sample)
+    shutil.copytree(Path("examples/event-agenda/sample"), sample)
     load(sample)
-    path = sample / "sodre-cartelera.html"
+    path = sample / "teatro-central-cartelera.html"
     html = path.read_text(encoding="utf-8")
     assert "espectaculo" in html
     path.write_text(html.replace("espectaculo", "show-renamed"), encoding="utf-8")
@@ -82,16 +82,16 @@ def test_total_extraction_failure_after_success_is_high_risk(tmp_path):
 
 
 def test_total_failure_without_drift_baseline_uses_dataset_success_history(tmp_path, capsys):
-    """DRIFT-002/004: the earlier success came from a load without --drift; still high risk."""
+    """The earlier success came from a load without --drift; still high risk."""
     import json
 
     from rastro.cli import main
 
     sample = tmp_path / "sample"
-    shutil.copytree(Path("examples/uy-dance-agenda/sample"), sample)
+    shutil.copytree(Path("examples/event-agenda/sample"), sample)
     command = ["job", "load", str(sample / "job.toml")]
     assert main(command) == 0
-    path = sample / "sodre-cartelera.html"
+    path = sample / "teatro-central-cartelera.html"
     path.write_text(
         path.read_text(encoding="utf-8").replace("espectaculo", "show-renamed"), encoding="utf-8"
     )
@@ -136,7 +136,7 @@ def test_cli_drift_is_opt_in_and_persists_without_changing_default_report(tmp_pa
     from rastro.cli import main
 
     sample = tmp_path / "sample"
-    shutil.copytree(Path("examples/uy-dance-agenda/sample"), sample)
+    shutil.copytree(Path("examples/event-agenda/sample"), sample)
     command = ["job", "load", str(sample / "job.toml")]
     assert main(command) == 0
     assert "drift" not in json.loads(capsys.readouterr().out)
@@ -211,7 +211,7 @@ def test_capture_must_belong_to_the_extraction(tmp_path):
     from rastro.domain.models import ConfigurationError
 
     sample = tmp_path / "sample"
-    shutil.copytree(Path("examples/uy-dance-agenda/sample"), sample)
+    shutil.copytree(Path("examples/event-agenda/sample"), sample)
     job = load_job(sample / "job.toml")
     with collect_snapshots(ScraplingDriftProbe()) as snapshots:
         report = run_job(job, base_dir=sample)

@@ -1,9 +1,6 @@
 # ADR 0009: recipe strategy union and definition/metadata split
 
 - **Status:** accepted for pre-v0.2 hardening.
-- **Requirements:** REC-001–004, with REC-005 and REC-006 as v0.2 targets this
-  change prepares for but does not implement; INT-002–004, QUAL-001–004,
-  specification section 13 ("Recipe" data model) and the section 10 dependency rule.
 
 ## Context
 
@@ -19,8 +16,8 @@ combinations at runtime. That worked, but:
   rules (`_CssProposal`, `_JsonLdProposal`), which had already drifted once (the
   0.1.0 fix that made `record_selector` required for CSS proposals).
 - `StoredRecipe` mixed the definition with operational history (`selected_index`,
-  timestamps, run counts). REC-005 adds candidate/active/degraded/retired states, and
-  REC-006 needs failed repairs kept apart from a working version. Both are
+  timestamps, run counts). Lifecycle states add candidate/active/degraded/retired states, and
+  Keeping repairs apart needs failed repairs kept apart from a working version. Both are
   operational facts. They should not change the definition model or its
   immutability checks.
 

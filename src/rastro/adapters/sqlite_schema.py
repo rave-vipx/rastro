@@ -72,8 +72,27 @@ def _add_lifecycle(db: sqlite3.Connection) -> None:
     )
 
 
+def _add_start_level(db: sqlite3.Connection) -> None:
+    """Schema 3 (1.0): the lowest acquisition level that last worked for a version, and how
+    many runs have started there since. Existing versions have none and start at the floor.
+    """
+    # Released DDL is frozen: a later level needs its own migration step.
+    db.execute(
+        "ALTER TABLE recipes ADD COLUMN start_level TEXT CHECK (start_level IN ('http', "
+        "'impersonation', 'browser', 'stealth', 'challenge', 'proxy_rotation', 'solver_plugin'))"
+    )
+    db.execute(
+        "ALTER TABLE recipes ADD COLUMN level_runs INTEGER NOT NULL DEFAULT 0 "
+        "CHECK (level_runs >= 0)"
+    )
+
+
 # Index i migrates schema i to schema i + 1. Never edit or reorder released steps.
-_MIGRATIONS: tuple[Callable[[sqlite3.Connection], None], ...] = (_create_recipes, _add_lifecycle)
+_MIGRATIONS: tuple[Callable[[sqlite3.Connection], None], ...] = (
+    _create_recipes,
+    _add_lifecycle,
+    _add_start_level,
+)
 SCHEMA_VERSION = len(_MIGRATIONS)
 
 

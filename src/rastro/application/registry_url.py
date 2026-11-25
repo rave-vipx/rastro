@@ -1,4 +1,4 @@
-"""A hosted registry is an https URL that serves the Git-directory layout (N10, ADR 0033).
+"""A hosted registry is an https URL that serves the Git-directory layout (ADR 0033).
 
 The URL is operator input, never a grant: no userinfo, no query, no fragment, and a path of
 plain segments. A non-default port or a private address still needs the operator's flags.
@@ -13,6 +13,9 @@ from urllib.parse import urlsplit
 from rastro.domain.acquisition import AcquisitionPolicy
 from rastro.domain.acquisition_base import exact_host
 from rastro.domain.registry import RegistryError
+
+DEFAULT_HUB_URL = "https://raw.githubusercontent.com/rave-vipx/rastro/main/hub/"
+"""The public recipe hub: a static Git repository served raw, with the registry layout."""
 
 _SEGMENT = re.compile(r"[A-Za-z0-9._~-]{1,128}")
 _MESSAGE = "Registry URL must be https://HOST[:PORT][/PATH] without credentials, query or fragment"

@@ -1,4 +1,4 @@
-"""Build a verified job from a URL (N1, JOB-001).
+"""Build a verified job from a URL.
 
 Studio and callers fetch once through the acquisition port, suggest a recipe from
 examples, and write a ``kind = "url"`` source so later runs scrape that URL again.
@@ -21,8 +21,8 @@ from rastro.application.destinations import permitted_url, public_address
 from rastro.application.job_new import (
     _typed_fields,
     _validate_target,
-    _write_validated_job,
     render_job,
+    write_validated_job,
 )
 from rastro.application.model_choice import ModelChoice
 from rastro.application.operator_trust import current_trust
@@ -168,7 +168,7 @@ def new_job_from_url(
     written_policy = AcquisitionPolicy(
         allowed_hosts=page.policy.allowed_hosts, allow_http=page.policy.allow_http
     )
-    written = _write_validated_job(
+    written = write_validated_job(
         path, render_job(typed, found.recipe, (source,), policy=written_policy, **opts)
     )
     return written, page.allow_http

@@ -1,15 +1,14 @@
 # ADR 0014: Mock Lab fixture format, synthetic labels and fail-closed sanitization
 
-- **Status:** accepted for v0.2 (wave 1, Mock Lab core).
-- **Requirements:** MOCK-001, MOCK-004, MOCK-005, MOCK-006; SEC-004 and SEC-011 for diagnostics.
+- **Status:** accepted for 0.2 (Mock Lab core).
 
 ## Context
 
 v0.2 adds an Instant Mock Lab: test artifacts generated from real extraction sessions. That raises
 three questions. How can a fixture stay replayable as Rastro evolves? How can a generated artifact
 never be mistaken for observed source data? How can it be safe to commit a fixture derived from a
-page that may contain cookies, tokens, personal data or confidential text? Mutations (MOCK-002)
-and failure scenarios (MOCK-003) are built in parallel slices and need the same label.
+page that may contain cookies, tokens, personal data or confidential text? Mutations
+and failure scenarios are built separately and need the same label.
 
 ## Decision
 
@@ -34,7 +33,7 @@ Before `build_fixture` returns, it scans every rendered file and replays the lab
 reproduce, it raises `FixtureMismatchError` instead of returning a fixture that silently tests
 nothing.
 
-### `SyntheticLabel`: one small, stable label (MOCK-004)
+### `SyntheticLabel`: one small, stable label
 
 ```python
 class SyntheticLabel(Contract):
@@ -51,10 +50,10 @@ class SyntheticLabel(Contract):
   an object cannot carry a key, so it is refused rather than written unlabeled.
 - The manifest stores the same label, and loading requires every file's label to match it.
 
-Slices B (mutations) and C (failures) reuse this model with their own `kind`. Adding a field
+Mutations and failure scenarios reuse this model with their own `kind`. Adding a field
 requires a new `label_version`.
 
-### Fail-closed sanitization with no off switch (MOCK-005)
+### Fail-closed sanitization with no off switch
 
 The sanitizer keeps only what the recipe extracts, rather than trying to recognize every possible
 secret. A retention plan built from parser candidates for the recipe and its fallbacks records:
@@ -103,7 +102,7 @@ Placeholders come from a SHA-256 counter stream keyed by seed and namespace, nev
 content. They reveal length and whitespace layout, nothing else, and are not open to dictionary
 attacks.
 
-### Determinism (MOCK-006)
+### Determinism
 
 The seed is in the manifest and in every label. Output has no timestamps, keys are emitted in a
 stable order, and the random streams do not depend on Python's `random` implementation. Equal
@@ -132,7 +131,7 @@ explicitly.
   evidence URLs can be rewritten consistently.
 - Mock Lab composes adapters itself (`ScraplingParser`, `JsonParser`, `Rastro`) at the edge, as the
   public facade does. Domain code remains free of I/O and Scrapling.
-- Structural mutations (MOCK-002) edit HTML trees with lxml and cssselect directly, both declared
+- Structural mutations edit HTML trees with lxml and cssselect directly, both declared
   dependencies (they were already installed with Scrapling). Scrapling's parser port returns
   candidates, not editable trees, so routing edits through it would add indirection without
   removing lxml. This code stays in `rastro.mocklab.mutations`, outside domain code, and

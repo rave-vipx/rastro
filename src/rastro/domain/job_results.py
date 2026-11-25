@@ -9,6 +9,7 @@ from typing import Any, Literal, Self
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from rastro.domain.models import Contract, ExtractionResult, Outcome
+from rastro.domain.run_report import RunReport
 
 JOB_RUN_SCHEMA_ID = "https://rave-vipx.github.io/rastro/schemas/job-run.schema.json"
 type JobRunStatus = Literal["success", "partial_success", "failed"]
@@ -78,6 +79,8 @@ class JobRunResult[T: BaseModel](Contract):
     job: JobSummary
     results: tuple[ExtractionResult[T], ...] = Field(min_length=1)
     recipes: tuple[RecipeSelection, ...] = Field(default=(), exclude_if=lambda v: not v)
+    report: RunReport | None = Field(default=None, exclude_if=lambda v: v is None)
+    """A content-free summary of this run; see ``docs/run-report.md``."""
 
     @property
     def exit_code(self) -> JobExitCode:

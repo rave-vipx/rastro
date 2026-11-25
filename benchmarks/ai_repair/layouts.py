@@ -1,4 +1,4 @@
-"""Synthetic listing layouts rendered from records (QUAL-001, REPAIR-001).
+"""Synthetic listing layouts rendered from records.
 
 A layout is data: the wrappers around the listing, the record element and an ordered
 list of parts. Mutations replace parts of a layout, so the expected records of a

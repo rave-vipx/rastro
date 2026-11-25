@@ -1,9 +1,10 @@
-"""N12, ADR 0034, SEC-005: a stealth request without the operator grant never builds the browser."""
+"""ADR 0037: stealth from untrusted input without a grant never builds the browser;
+the operator's own jobs build it without any flag."""
 
 import pytest
 
 from rastro.application.jobs import run_job
-from rastro.application.operator_trust import operator_trust
+from rastro.application.operator_trust import input_origin, operator_trust
 from rastro.domain.acquisition import AcquisitionPolicy
 from rastro.domain.jobs import Job
 from rastro.domain.models import ConfigurationError
@@ -60,11 +61,14 @@ def constructed(monkeypatch):
 def test_no_grant_never_builds_the_stealth_browser(spec, constructed, tmp_path):
     from rastro.browser import job_acquisition
 
-    with pytest.raises(ConfigurationError, match="--allow-stealth"):
-        job_acquisition(spec, None)
-    with pytest.raises(ConfigurationError, match="--allow-stealth"):
-        run_job(spec, base_dir=tmp_path)
+    with input_origin("mcp"):
+        with pytest.raises(ConfigurationError, match="not granted for mcp input"):
+            job_acquisition(spec, None)
+        with pytest.raises(ConfigurationError, match="not granted for mcp input"):
+            run_job(spec, base_dir=tmp_path)
     assert constructed == []
+    assert job_acquisition(spec, None) is not None  # the operator's own job: no flag
+    assert constructed
 
 
 def test_load_job_file_refuses_before_building_the_stealth_browser(constructed, tmp_path):
@@ -81,15 +85,19 @@ def test_load_job_file_refuses_before_building_the_stealth_browser(constructed, 
         '[dataset]\nname = "t"\npath = "t.sqlite"\nidentity = ["title"]\n',
         encoding="utf-8",
     )
-    with pytest.raises(ConfigurationError, match="--allow-stealth"):
+    with (
+        input_origin("bundle"),
+        pytest.raises(ConfigurationError, match="for bundle input: stealth"),
+    ):
         module.load_job_file(path)
     assert constructed == []
 
 
-def test_the_grant_lets_it_build(constructed):
+@pytest.mark.filterwarnings("ignore:allow_stealth= is deprecated:DeprecationWarning")
+def test_the_deprecated_grant_lets_untrusted_input_build(constructed):
     from rastro.browser import job_acquisition
 
-    with operator_trust(allow_stealth=True):
+    with operator_trust(allow_stealth=True), input_origin("mcp"):
         client = job_acquisition(job(), None)
     assert client is not None
     assert constructed == ["stealth"]
@@ -111,7 +119,7 @@ def test_direct_construction_refuses_before_touching_the_renderer():
             raise AssertionError("the renderer was touched")
 
     policy = AcquisitionPolicy(allowed_hosts=("example.com",), render="stealth")
-    with pytest.raises(ConfigurationError, match="--allow-stealth"):
+    with input_origin("model"), pytest.raises(ConfigurationError, match="for model input: stealth"):
         BrowserAcquirer(
             policy,
             renderer=Untouchable(),
@@ -121,7 +129,10 @@ def test_direct_construction_refuses_before_touching_the_renderer():
     solving = AcquisitionPolicy(
         allowed_hosts=("example.com",), render="browser", solve_challenges=True
     )
-    with pytest.raises(ConfigurationError, match="--allow-stealth"):
+    with (
+        input_origin("model"),
+        pytest.raises(ConfigurationError, match="for model input: solve_challenges"),
+    ):
         BrowserAcquirer(
             solving,
             renderer=Untouchable(),

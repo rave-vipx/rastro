@@ -1,4 +1,4 @@
-"""COST-002, OBS-001: the model cost cap and remote notice cover operator-supplied models.
+"""The model cost cap and remote notice cover operator-supplied models.
 
 An operator model (SDK ``model=``, ``recipe repair --model``, ``RASTRO_MODEL``) is wrapped
 the same way as a job-declared one. The models are deterministic fakes.
@@ -13,7 +13,7 @@ from rastro.cli import main
 from rastro.domain.models import ConfigurationError
 from tests.integration.test_job_repair_model import PROPOSAL, make_job
 
-pytestmark = pytest.mark.usefixtures("offline_cli_loop")
+pytestmark = pytest.mark.usefixtures("offline_cli_loop", "model_path_only")
 
 
 class Fake:

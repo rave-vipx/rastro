@@ -1,6 +1,7 @@
 version: 2
 updates:
-  # Triage rules for these PRs live in the rastro-slice skill (references/dependabot.md).
+  # Review dependency PRs like any change: read the upstream changelog, run the full checks
+  # in CONTRIBUTING.md and merge patch and minor updates that pass; majors are planned work.
   - package-ecosystem: uv
     directory: /
     target-branch: dev

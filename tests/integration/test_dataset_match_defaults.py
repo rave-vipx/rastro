@@ -1,4 +1,4 @@
-"""DATA-004 / AGENT-001: domain-neutral match_fields default and located dataset errors."""
+"""Domain-neutral match_fields default and located dataset errors."""
 
 import json
 

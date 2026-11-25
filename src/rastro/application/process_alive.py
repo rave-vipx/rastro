@@ -1,4 +1,4 @@
-"""Is a process id alive? Never signals on Windows, where signal 0 is `CTRL_C_EVENT` (SCHED-003)."""
+"""Is a process id alive? Never signals on Windows, where signal 0 is `CTRL_C_EVENT`."""
 
 from __future__ import annotations
 

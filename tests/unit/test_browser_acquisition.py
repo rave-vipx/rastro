@@ -1,10 +1,11 @@
-"""SCR-003 amended, SEC-005/008, OBS-001: browser boundary acceptance."""
+"""Browser boundary acceptance."""
 
 from unittest.mock import AsyncMock
 
 import pytest
 from pydantic import ValidationError
 
+from rastro.application.operator_trust import input_origin
 from rastro.domain.acquisition import (
     AcquisitionPolicy,
     AcquisitionResult,
@@ -128,7 +129,7 @@ def test_consent(changes, monkeypatch):
     from rastro.application.browser_acquisition import BrowserAcquirer
 
     monkeypatch.delenv("RASTRO_ALLOW_STEALTH", raising=False)
-    with pytest.raises(ConfigurationError, match="--allow-stealth"):
+    with input_origin("bundle"), pytest.raises(ConfigurationError, match="for bundle input"):
         BrowserAcquirer(
             AcquisitionPolicy(allowed_hosts=("example.com",), **changes),
             renderer=AsyncMock(),
@@ -168,11 +169,6 @@ def test_missing_extra(monkeypatch):
         match=r"rastro-engine\[browser\].*playwright install chromium.*scrapling install",
     ):
         PlaywrightBrowser()
-
-
-def test_egress_rejected():
-    with pytest.raises(ConfigurationError, match="egress"):
-        setup(egress_profiles={"proxy": "https://proxy.test"})
 
 
 def test_job_routing_and_conflicts():
@@ -363,6 +359,7 @@ def test_render_inheritance_survives_serialization():
     )
 
 
+@pytest.mark.filterwarnings("ignore:allow_stealth= is deprecated:DeprecationWarning")
 @pytest.mark.asyncio
 async def test_sdk_stealth_consent(monkeypatch):
     from rastro.application.jobs import run_job_async
@@ -382,11 +379,13 @@ async def test_sdk_stealth_consent(monkeypatch):
     acquisition.acquire.return_value = AcquisitionResult(
         "https://example.com/", "<p>Rendered</p>", Outcome.SUCCESS, None
     )
-    with pytest.raises(ConfigurationError, match="--allow-stealth"):
-        await run_job_async(job, acquisition=acquisition)
-    acquisition.acquire.assert_not_awaited()
-    result = await run_job_async(job, acquisition=acquisition, allow_stealth=True)
+    with input_origin("mcp"):
+        with pytest.raises(ConfigurationError, match="for mcp input: stealth"):
+            await run_job_async(job, acquisition=acquisition)
+        acquisition.acquire.assert_not_awaited()
+        result = await run_job_async(job, acquisition=acquisition, allow_stealth=True)
     assert result.job.status == "success"
+    assert (await run_job_async(job, acquisition=acquisition)).job.status == "success"
 
 
 def test_missing_browser_extra_checked_before_http_import(monkeypatch):
@@ -422,7 +421,7 @@ def test_missing_browser_extra_checked_before_http_import(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_operator_grants_reach_the_browser_engine():
-    """SEC-001/002/003: the browser path uses the same grants, never from the job."""
+    """The browser path uses the same grants, never from the job."""
     from rastro.application.operator_trust import operator_trust
 
     client, renderer, transport, resolver = setup()

@@ -59,7 +59,7 @@ A job can start from three entry points:
 2. **Known sites only** (`rastro new --site URL [--site URL ...] -o job.toml`), where your URLs are the host approval.
 3. **Only a goal** (`rastro new --goal "TEXT" [--fields a,b] [--search searxng|model] [--approve HOST ...] -o job.toml`).
 
-### 1. Propose candidate sources (`DISC-001`, `DISC-002`)
+### 1. Propose candidate sources
 
 Without `--approve`, `rastro new --goal` runs in **proposals-only** mode: it queries the search provider or model, prints candidate sources as JSON (`url`, `host`, `title`, `origin = "search" | "model"`), writes no file, and never fetches any candidate host:
 
@@ -68,9 +68,9 @@ export RASTRO_SEARXNG_URL="http://127.0.0.1:8080"
 uv run rastro new --goal "cultural events in Montevideo"
 ```
 
-- **Search providers (`--search searxng|model`).** `SearXNGSearchProvider` queries a free self-hosted SearXNG JSON endpoint (`RASTRO_SEARXNG_URL`; needs `httpx`, installed by `pip install 'rastro-engine[openai]'`); `localhost` and loopback addresses are local, other endpoints require HTTPS and `--allow-remote` (`SEC-004`). Passing `--search model` asks the configured model (`--model` or `RASTRO_MODEL`) for candidate URLs (`origin = "model"`), parses the response strictly, keeps only public `http(s)` URLs on standard ports, and caps proposals at 10 (`SEC-005`). If neither a search provider nor a model is configured, Rastro raises `ConfigurationError` explaining both options (`P-002`).
+- **Search providers (`--search searxng|model`).** `SearXNGSearchProvider` queries a free self-hosted SearXNG JSON endpoint (`RASTRO_SEARXNG_URL`; needs `httpx`, installed by `pip install 'rastro-engine[openai]'`); `localhost` and loopback addresses are local, other endpoints require HTTPS and `--allow-remote`. Passing `--search model` asks the configured model (`--model` or `RASTRO_MODEL`) for candidate URLs (`origin = "model"`), parses the response strictly, keeps only public `http(s)` URLs on standard ports, and caps proposals at 10. If neither a search provider nor a model is configured, Rastro raises `ConfigurationError` explaining both options.
 
-### 2. Approve hosts, propose fields and preview real records (`DISC-002`, `DISC-003`)
+### 2. Approve hosts, propose fields and preview real records
 
 Discovered hosts never enter an allowlist without explicit approval. Pass `--approve HOST ...` (or `--site URL ...` when you already know the URLs) with `-o job.toml`:
 
@@ -202,6 +202,8 @@ runs and field declaration order.
 | `date` | `datetime.date` | `localized` (boolean, default `false`) |
 | `datetime` | `datetime.datetime` | `localized` (boolean, default `false`) |
 | `url` | `AnyHttpUrl` (`http` / `https`, any host, no TLD required) | — |
+| `list` | list of scalars or objects | `item`, `min_items`, `max_items` ([Field contracts](fields.md#lists-and-objects)) |
+| `object` | object of named scalar members | `members` ([Field contracts](fields.md#lists-and-objects)) |
 
 All field types accept `required = true` (default) or `required = false` (nullable, defaulting
 to `None` when omitted by a recipe). Constraints from another type (such as `ge` on `string`)
@@ -210,7 +212,9 @@ are rejected during validation.
 Extracted text values of every type have surrounding whitespace, including non-breaking
 spaces, removed before validation, so `min_length`, `pattern` and number or date parsing see
 the real value. A required field whose value is blank is a validation error, never an empty
-success. A blank value for an optional field stays an empty string, so `min_length = 1` still
+success. `null_values = ["n/a", "-"]` on any field lists text placeholders (compared after
+trimming and case folding, up to 16) that count as missing instead of as a value, so a
+required field fails visibly and an optional one stays empty. A blank value for an optional field stays an empty string, so `min_length = 1` still
 rejects it.
 
 ### Strict job definitions, lax extracted values
@@ -239,7 +243,7 @@ Values that cannot be coerced become `validation_error` issues on the record, ne
 defaults. Normalize decimal commas or unsupported local formats in the recipe or with the Python SDK.
 
 For Spanish source dates, opt in on each `date` or `datetime` field with `localized = true`
-(DATA-005, JOB-002). ISO input remains supported. Month names and abbreviations are case
+. ISO input remains supported. Month names and abbreviations are case
 insensitive; weekday prefixes are ignored. For example, `12 al 14 NOV 2026 - 20 H` becomes
 November 12 at 20:00 in `[region].timezone`. Ranges and lists use their first day.
 Yearless dates use the observation's year in that timezone, advancing to the next year
@@ -310,12 +314,12 @@ such as `time.cyg--dia:first-of-type::text` picks the first.
 ## Dataset block and preview
 
 An optional `[dataset]` block declares where approved records would be stored and how a record
-is identified (DATA-002). It is additive: `format_version` stays `1`, and a job without the block
+is identified. It is additive: `format_version` stays `1`, and a job without the block
 validates, runs and prints exactly as before.
 
 ```toml
 [dataset]
-name = "uy_dance_agenda"                    # [a-z][a-z0-9_]{0,63}
+name = "event_agenda"                    # [a-z][a-z0-9_]{0,63}
 path = "agenda.sqlite"                      # relative to the job file; same rules as other job paths
 identity = ["title", "venue", "starts_on"]  # declared field names, 1 to 8
 approve = ["title", "venue", "city", "starts_on", "starts_at", "ticket_url", "price"]  # optional
@@ -361,6 +365,7 @@ uv run rastro job load job.toml --drift --on-failure "notify-script"
 uv run rastro job ack-drift job.toml --source 1
 uv run rastro job forget-source job.toml --url https://old.example/list
 uv run rastro health job.toml --output json
+uv run rastro model test --model "ollama:llama3.2:3b"   # check a model before a job uses it
 ```
 
 | Exit code | Constant | Meaning |
@@ -423,7 +428,7 @@ with a specific `message` (for example `Dataset file not found: agenda.sqlite` f
 `rastro job run` prints a single `JobRunResult` JSON object to `stdout`:
 
 - `schema_version`: `1`
-- `data_trust`: `"untrusted_source_data"` — extracted record fields come from untrusted external documents and must never be treated by agents as instructions (AGENT-003)
+- `data_trust`: `"untrusted_source_data"` — extracted record fields come from untrusted external documents and must never be treated by agents as instructions
 - `job`: `JobSummary` (`schema_fingerprint`, `source_count`, `succeeded`, `partial`, `failed`, `records_accepted`, `records_rejected`, `status`)
 - `results`: ordered list of [`ExtractionResult`](api.md#results) dumps preserving records, field-level `evidence`, `issues`, `metrics`, `recipe_attempts` and `learned_recipe`.
 - `recipes`: one entry per source (`source_index`, `recipe_origin`, `recipe_version`) saying whether the source used the job file's recipe (`"job"`) or the serving recipe in `recipe_memory` (`"memory"`). With `recipe_memory`, a stored serving recipe whose version is higher than the job file's recipe is used; see [load and rollback behavior](repair.md#load-and-rollback-behavior). `rastro job load` reports the same `recipe_origin` and `recipe_version` per source.
@@ -467,6 +472,24 @@ need operator opt-in. The job file cannot grant it to itself.
   `allow_private_network=`, `allow_ports=`, `ignore_robots=`; env `RASTRO_ALLOW_PRIVATE_NETWORK`,
   `RASTRO_ALLOWED_PORTS`, `RASTRO_IGNORE_ROBOTS`). A job file that sets any of them is
   rejected as an unknown key. See [Operator permissions](acquisition.md#operator-permissions).
+- Your own job may set `[acquisition] robots = "ignore"` to skip robots.txt for its hosts;
+  you assert the permission. A job that came from an agent tool, a bundle, a registry
+  recipe or a model proposal needs the `robots_ignore` grant first.
+
+### Capability grants
+
+Stealth, challenge solving and the other powerful engine features are capabilities. Your
+own job files use stealth without a grant; input from another origin (`mcp`, `bundle`,
+`registry`, `model`) gets none unless you grant it
+([Capabilities and input origin](acquisition.md#capabilities-and-input-origin)):
+
+- `--allow-untrusted ORIGIN:NAME` (repeatable; `RASTRO_ALLOW_UNTRUSTED`) grants one
+  capability to one origin, for example `--allow-untrusted mcp:stealth`.
+- `--allow-capability NAME` (repeatable; `RASTRO_ALLOW_CAPABILITIES`) lets your own jobs
+  use a grant-only capability: `persistent_session`, `real_chrome`, `cdp` or
+  `solver_plugins`.
+- `--allow-stealth` is deprecated. Your own jobs need no grant for it; it still grants
+  stealth to untrusted origins. Prefer `--allow-untrusted`.
 
 ```console
 $ RASTRO_PROXY_USER=me RASTRO_PROXY_PASS=secret rastro job run job.toml --allow-egress
@@ -532,10 +555,26 @@ only and no uncertain match is flagged. A misspelled name is reported with
 `"location": "dataset.match_fields"`.
 See [dataset usage and the executed offline sequence](dataset.md#load-inspect-and-export-a-job).
 
+## Related guides
+
+- [Run report](run-report.md): why each source ended as it did, without opening records.
+- [Field contracts](fields.md): list and object fields, invalid parts and placeholders.
+- [Crawling linked pages](crawling.md): path filters, page identity and evidence.
+- [Engines](engines.md): which Scrapling feature maps to which Rastro setting.
+- [Reading results](reading-results.md): `read_records`, export and the command line.
+- [Proxies and blocked sources](egress.md): egress profiles, rotation, the acquisition
+  ladder and what to do when a site refuses automated access.
+- [Browser controls](browser.md): waits, blocked resources, region, screenshots and the
+  grant-only browser options.
+- [Page steps](page-steps.md): clicks, typing and links before extraction, and letting a
+  model find them once.
+- [Network recipes](network-recipes.md): recipes over the JSON responses a page loads.
+- [Recipe hub](hub.md): start from a recipe someone already shared for the site.
+
 ## Pagination
 
-For URL sources, a recipe can declare a next-page link (SYNC-002, SEC-008;
-[ADR 0026](decisions/0026-bounded-recipe-pagination.md)):
+For URL sources, a recipe can declare a next-page link
+([ADR 0026](decisions/0026-bounded-recipe-pagination.md)):
 
 ```toml
 [recipe.pagination]
@@ -589,8 +628,8 @@ Supplied-file extraction does not follow links.
 
 ## Scroll
 
-A browser source can scroll to load more records (N9,
-[ADR 0033](decisions/0033-scroll-registry-url-and-spec-amendments.md)):
+A browser source can scroll to load more records
+([ADR 0033](decisions/0033-scroll-registry-url-and-spec-amendments.md)):
 
 ```toml
 [acquisition]
@@ -621,8 +660,8 @@ See [Scroll](acquisition.md#scroll) for the full behavior and
 [Browser contexts](acquisition.md#browser-contexts) for how a source's context is reused.
 ## Spider
 
-A job can follow links from the pages it names (N3;
-[ADR 0032](decisions/0032-vibe-coder-spider-and-studio.md)). The start URLs are the job's
+A job can follow links from the pages it names
+([ADR 0032](decisions/0032-vibe-coder-spider-and-studio.md)). The start URLs are the job's
 `[[sources]]`; nothing else starts a crawl, and a model or bundle cannot supply a bare
 domain.
 
@@ -642,16 +681,17 @@ deny = ["/login", "/cart"]
 | `mode` | `"list"` (default) reads each source once; `"spider"` follows links. |
 | `seed` | `"page"` (default): the start URL is a page. `"sitemap"`: it is a sitemap whose locs are the links ([Start from a sitemap](#start-from-a-sitemap)). |
 | `seed_order` | `"document"` (default), `"reverse"` or `"lastmod"` (newest first, entries without a valid `<lastmod>` last in document order). Only for `seed = "sitemap"`; applied before `max_pages`. |
-| `links` | A CSS expression ending in `::attr(name)`; every match is a link. It follows the selector cost policy of any job recipe. HTML sources only. |
+| `links` | A CSS expression ending in `::attr(name)`, or a list of up to eight; every match is a link. A comma selector group is refused with `link_group_refused`: use a list of expressions. It follows the selector cost policy of any job recipe. HTML sources only. |
 | `link_field` | The name of a declared field whose value in each accepted record is a link. Works for JSON too. Exactly one of `links` or `link_field` is required in spider mode, unless `seed = "sitemap"` (then at most one). |
 | `max_depth` | Link hops from the start URL, 1 to 4 (default 2). |
 | `max_pages` | Fetched documents per start source, 1 to 100 (default 25). Pagination pages count. |
 | `same_host` | Default `true`. With `false`, a link is followed only when its host is in `[acquisition].allowed_hosts`. |
 | `allow`, `deny` | Path prefixes matched on whole segments: `/item` covers `/item` and `/item/1`, never `/items`. `deny` wins; with `allow`, a path outside it is skipped. The start URL is always fetched. |
+| `deny_pattern` | Optional linear-time regular expression with the same limits as `allow_pattern`, matched against the decoded path; a match is skipped as `path_denied` before `max_pages` and wins over `allow` and `allow_pattern`. |
 | `allow_pattern` | Optional linear-time regular expression (no look-around or backreferences, max 512 chars) matched against each link's normalized path; non-matching links are skipped as `path_denied` before `max_pages`. `deny` still wins. |
 
 The table grants nothing and rejects unknown keys, so a job file cannot add
-`ignore_robots`, private-network or stealth permissions here. They stay operator flags
+private-network or stealth permissions here. They stay operator flags
 ([Operator opt-in](#operator-opt-in)).
 
 Rules:
@@ -697,7 +737,7 @@ If no page yields a record the result is `missing_data`, not an empty success.
 
 When a site's listing or API is closed (for example `robots_denied`) but its
 `robots.txt` advertises a `sitemap.xml` of public detail pages, seed the spider from the
-sitemap instead of parsing it yourself (N16):
+sitemap instead of parsing it yourself:
 
 ```toml
 [[sources]]

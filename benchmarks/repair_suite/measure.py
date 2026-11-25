@@ -1,4 +1,4 @@
-"""Measure automatic repair on realistic breakage through the public CLI (REPAIR-001-005, DIFF-002).
+"""Measure automatic repair on realistic breakage through the public CLI.
 
 Usage: python benchmarks/repair_suite/measure.py [--case page:mutation ...] [--output results.json]
 """

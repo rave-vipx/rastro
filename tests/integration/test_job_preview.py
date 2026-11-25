@@ -1,4 +1,4 @@
-"""`rastro job preview` (DATA-002, JOB-002, AGENT-001): offline, read-only, provenance-complete."""
+"""`rastro job preview`: offline, read-only, provenance-complete."""
 
 import json
 from pathlib import Path
@@ -12,7 +12,7 @@ from rastro.domain.job_dataset import JobPreview, job_preview_json_schema
 SCHEMA_PATH = Path(__file__).parents[2] / "docs" / "schemas" / "job-preview.schema.json"
 PAGE = (
     "<ul>"
-    "<li><b>Tango</b><i>Sala Verdi</i><s>2026-12-01T20:00:00Z</s><u>10.5</u></li>"
+    "<li><b>Tango</b><i>Sala Alba</i><s>2026-12-01T20:00:00Z</s><u>10.5</u></li>"
     "<li><b>Candombe</b><i>Teatro Solis</i><s>2026-12-02T21:00:00Z</s><u>-3</u></li>"
     "<li><b>Milonga</b><i>Cabildo</i><s>2026-12-03T22:00:00Z</s><u>7</u></li>"
     "</ul>"
@@ -21,7 +21,7 @@ JOB = """
 format_version = 1
 
 [dataset]
-name = "uy_dance_agenda"
+name = "event_agenda"
 path = "agenda.sqlite"
 identity = ["title", "venue", "starts_at"]
 approve = ["title", "venue", "starts_at"]
@@ -70,8 +70,8 @@ def test_preview_table_shows_values_provenance_and_loaded_flags(job_dir: Path, c
     assert main(["job", "preview", str(job_dir / "job.toml")]) == JobExitCode.PARTIAL_SUCCESS
     out = capsys.readouterr().out
     assert "untrusted_source_data" in out
-    assert "uy_dance_agenda" in out
-    assert "Tango" in out and "Sala Verdi" in out
+    assert "event_agenda" in out
+    assert "Tango" in out and "Sala Alba" in out
     assert "css" in out and "li [match 0] >> b::text" in out
     row = next(line for line in out.splitlines() if "title" in line and "Tango" in line)
     assert row.split().count("yes") == 1

@@ -1,12 +1,12 @@
 # Recipe lifecycle and rollback
 
-Every stored recipe version has a lifecycle state (REC-005). Exactly one version per
+Every stored recipe version has a lifecycle state. Exactly one version per
 [recipe key](memory.md#identity-and-validation) serves reuse when no version is
 pinned. A candidate never replaces that version unless it is explicitly promoted
-(REC-006), and a version that has served before can be restored (REPAIR-006).
+, and a version that has served before can be restored.
 
 This page covers states, transitions, persistence and rollback. Repair candidates
-and drift detection build on these operations in later v0.2 work.
+and drift detection build on these operations.
 
 ## States
 
@@ -48,7 +48,7 @@ the SQLite adapter applies the planned changes in a single transaction.
 
 ## Storing versions
 
-`save_success` records a validated extraction, as in v0.1:
+`save_success` records a validated extraction, as before:
 
 - A **new** version becomes `active` and the previously serving version becomes
   `retired` with action `superseded`. An explicit recipe that passes validation is
@@ -136,7 +136,7 @@ keeps any stored version.
 
 ## Upgrading existing databases
 
-Opening a 0.1.0 or M3 database migrates it from schema 1 to schema 2 in one
+Opening a 0.1.0 or earlier database migrates it from schema 1 to schema 2 in one
 transaction. Payloads are not rewritten and keep loading as before. Schema 1 reused
 the highest version of each key, so that version becomes `active` and older versions
 `retired`. Every schema 1 row had passed validation, so all of them get

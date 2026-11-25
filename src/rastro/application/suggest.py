@@ -1,4 +1,4 @@
-"""Suggest a verified CSS recipe from a saved page and example values (INT-002, DISC-003).
+"""Suggest a verified CSS recipe from a saved page and example values.
 
 Candidates come from a ``RecipeSuggester`` port; each is run through the normal extraction
 pipeline with the caller's schema, and only a recipe that reproduces every example is
@@ -121,13 +121,27 @@ def suggest(
 
     if not checked:
         assert port is not None
-        return suggest_with_model(port, html, target, verify=verify, records_min=records_min)
+        return suggest_with_model(
+            port,
+            html,
+            target,
+            verify=verify,
+            records_min=records_min,
+            timezone=source.timezone,
+        )
     try:
         return _from_examples(html, target, checked, url, records_min, limits, _suggester, verify)
     except SuggestionError:
         if port is None:
             raise
-        return suggest_with_model(port, html, target, verify=verify, records_min=records_min)
+        return suggest_with_model(
+            port,
+            html,
+            target,
+            verify=verify,
+            records_min=records_min,
+            timezone=source.timezone,
+        )
 
 
 def _from_examples(

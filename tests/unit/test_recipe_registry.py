@@ -1,4 +1,4 @@
-"""HUB-002, HUB-003, HUB-004, HUB-005, HUB-006: Git directory recipe registry and trust."""
+"""Git directory recipe registry and trust."""
 
 import json
 from datetime import UTC, date, datetime
@@ -42,7 +42,7 @@ def _write_sample_bundle(
     directory: Path,
     tmp_path: Path,
     *,
-    bundle_id: str | None = "uy-sodre-agenda",
+    bundle_id: str | None = "teatro-central-agenda",
     version: str | None = "1.0.0",
     author: BundleAuthor | None = _DEFAULT_AUTHOR,
     spdx_license: str | None = "Apache-2.0",
@@ -59,7 +59,7 @@ def _write_sample_bundle(
     export_bundle(
         directory,
         recipe=recipe,
-        source=Source(url="https://sodre.gub.uy/espectaculos/"),
+        source=Source(url="https://agenda.example/espectaculos/"),
         context=RecipeContext(),
         fields=(StringField(name="title", min_length=1),),
         sample=sample,
@@ -76,7 +76,7 @@ def _write_sample_bundle(
 
 
 def test_compute_trust_indicators() -> None:
-    """HUB-006: trust indicators are computed from replay result and verification date."""
+    """Trust indicators are computed from replay result and verification date."""
     trust = compute_trust(
         replay_verified=True,
         last_verified=date(2026, 11, 10),
@@ -93,7 +93,7 @@ def test_compute_trust_indicators() -> None:
 
 
 def test_publish_refuses_private_bundle(tmp_path: Path) -> None:
-    """HUB-004: private bundles are never published; error hints to re-export with --public."""
+    """Private bundles are never published; error hints to re-export with --public."""
     bundle = _write_sample_bundle(tmp_path / "bundle", tmp_path, public=False)
     registry = tmp_path / "registry"
     with pytest.raises(RegistryError, match="--public"):
@@ -102,7 +102,7 @@ def test_publish_refuses_private_bundle(tmp_path: Path) -> None:
 
 
 def test_publish_refuses_tampered_or_replay_failing_bundle(tmp_path: Path) -> None:
-    """HUB-003, HUB-006: publish refuses a bundle whose digest or replay fails."""
+    """Publish refuses a bundle whose digest or replay fails."""
     bundle = _write_sample_bundle(tmp_path / "bundle", tmp_path, public=True)
     registry = tmp_path / "registry"
     expected = bundle / "expected.json"
@@ -117,7 +117,7 @@ def test_publish_refuses_tampered_or_replay_failing_bundle(tmp_path: Path) -> No
 
 
 def test_publish_refuses_secret_looking_values_without_echoing(tmp_path: Path) -> None:
-    """HUB-004: secret-looking values in any bundle file are refused without echoing the secret."""
+    """Secret-looking values in any bundle file are refused without echoing the secret."""
     secret_email = "leak.person@secret-domain.example.org"
     html = (
         f"<html><body><!-- {secret_email} -->"
@@ -133,7 +133,7 @@ def test_publish_refuses_secret_looking_values_without_echoing(tmp_path: Path) -
 
 
 def test_publish_refuses_duplicate_version_and_keeps_index_deterministic(tmp_path: Path) -> None:
-    """HUB-003: publishing an existing id+version is refused; index.json is deterministic."""
+    """Publishing an existing id+version is refused; index.json is deterministic."""
     b1 = _write_sample_bundle(tmp_path / "b1", tmp_path, version="1.0.0")
     b2 = _write_sample_bundle(tmp_path / "b2", tmp_path, version="1.2.0")
     registry = tmp_path / "registry"
@@ -152,7 +152,7 @@ def test_publish_refuses_duplicate_version_and_keeps_index_deterministic(tmp_pat
 
 
 def test_search_and_install_latest_and_pinned_recomputes_trust(tmp_path: Path) -> None:
-    """HUB-003, HUB-005, HUB-006: search and install select version and recompute trust."""
+    """Search and install select version and recompute trust."""
     b1 = _write_sample_bundle(
         tmp_path / "b1",
         tmp_path,
@@ -171,16 +171,16 @@ def test_search_and_install_latest_and_pinned_recomputes_trust(tmp_path: Path) -
     publish_to_registry(b1, registry, _parser_for, today=date(2026, 11, 12))
     publish_to_registry(b2, registry, _parser_for, today=date(2026, 11, 12))
 
-    hits_by_id = search_registry(registry, "sodre")
+    hits_by_id = search_registry(registry, "teatro")
     assert [h.version for h in hits_by_id] == ["1.0.0", "1.1.0"]
-    hits_by_pattern = search_registry(registry, "sodre.gub.uy/espectaculos")
+    hits_by_pattern = search_registry(registry, "agenda.example/espectaculos")
     assert len(hits_by_pattern) == 2
     assert search_registry(registry, "nonexistent") == ()
 
     repo = SQLiteRecipeRepository(tmp_path / "recipes.sqlite")
     latest = install_from_registry(
         registry,
-        "uy-sodre-agenda",
+        "teatro-central-agenda",
         repo,
         _parser_for,
         at=datetime(2026, 11, 20, tzinfo=UTC),
@@ -192,7 +192,7 @@ def test_search_and_install_latest_and_pinned_recomputes_trust(tmp_path: Path) -
 
     pinned = install_from_registry(
         registry,
-        "uy-sodre-agenda@1.0.0",
+        "teatro-central-agenda@1.0.0",
         repo,
         _parser_for,
         at=datetime(2026, 11, 20, tzinfo=UTC),
@@ -203,11 +203,11 @@ def test_search_and_install_latest_and_pinned_recomputes_trust(tmp_path: Path) -
 
 
 def test_path_traversal_and_symlinks_in_registry_are_refused(tmp_path: Path) -> None:
-    """HUB-003, HUB-005: path traversal in specs or index entries and symlinks are refused."""
+    """Path traversal in specs or index entries and symlinks are refused."""
     with pytest.raises(RegistryError):
         parse_package_spec("../evil")
     with pytest.raises(RegistryError):
-        parse_package_spec("uy-sodre-agenda@../1.0.0")
+        parse_package_spec("teatro-central-agenda@../1.0.0")
 
     registry = tmp_path / "registry"
     registry.mkdir()

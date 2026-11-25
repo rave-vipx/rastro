@@ -1,9 +1,12 @@
-"""Offline candidate CI, independent of persistence and activation (REPAIR-002/004/005).
+"""Offline candidate CI, independent of persistence and activation.
 
-Containment (N19): a candidate whose current values, or the success samples the semantic
+Containment: a candidate whose current values, or the success samples the semantic
 judge would read, look like instructions is never promoted automatically. It is held in
 quarantine with the reason ``instruction_like_content``; an operator can still promote it
 with a reason and ``--override-gates``.
+
+List and object members are typed too: a candidate that reads a member value its type
+rejects (the member is nulled or the list item dropped) fails ``valid_nested_members``.
 """
 
 from collections.abc import Sequence
@@ -39,7 +42,7 @@ def evaluate_candidate(
     schema: type[BaseModel],
     parser: DocumentParser,
     limits: Limits,
-    observed_at: datetime,
+    observed_at: datetime | None = None,
     fixtures: Sequence[FixtureBundle] = (),
     rules: Sequence[ConsistencyRule] = (),
     history: History | None = None,
@@ -53,6 +56,8 @@ def evaluate_candidate(
     Completeness counts required fields, plus optional fields as often as the stored
     success samples had a value for them.
     No declared consistency rules means the semantic gate is inapplicable, not passed.
+    An omitted ``observed_at`` uses the current extraction's own observation time, the
+    same clock the load path uses; callers may still supply one explicitly.
     ``allow_fallbacks`` admits a recipe with fallbacks: only for adopting a verified
     shared recipe on a store with nothing serving, where every gate still applies.
     """
@@ -69,7 +74,7 @@ def evaluate_candidate(
     indicators = evaluate_consistency(
         rules,
         rows,
-        observed_at,
+        observed_at or current.completed_at,
         declared_fields=tuple(schema.model_fields),
         history=history,
         rejected=current.metrics.rejected,
@@ -93,6 +98,11 @@ def evaluate_candidate(
             ),
         ),
         RegressionCheck(name="no_rejected_current_records", passed=current.metrics.rejected == 0),
+        # A list or object member of the wrong type is nulled or dropped, not rejected.
+        RegressionCheck(
+            name="valid_nested_members",
+            passed=not any(issue.code in _MEMBER_LOSS for issue in current.issues),
+        ),
     )
     decision, reasons = _decide(
         candidate, current.status, len(rows), indicators, historical, generated, bool(rules), policy
@@ -125,6 +135,7 @@ def _blocking(issues: Sequence[Issue]) -> tuple[Issue, ...]:
 
 
 _OPTIONAL_SHARE = 0.75
+_MEMBER_LOSS = frozenset({"member_nulled", "list_item_dropped"})
 
 
 def _sample_rates(schema: type[BaseModel], fixtures: Sequence[FixtureBundle]) -> dict[str, float]:
@@ -133,7 +144,7 @@ def _sample_rates(schema: type[BaseModel], fixtures: Sequence[FixtureBundle]) ->
     An optional value may thin out (one card in five without a stock label scores 0.8)
     but losing it in half the records stays below the completeness threshold.
     Required fields keep the strict default rate of 1.0. Without samples, optional fields
-    are not counted (QUAL-006).
+    are not counted.
     """
     rows = [r.data for fixture in fixtures for r in fixture.expected.records]
     return {

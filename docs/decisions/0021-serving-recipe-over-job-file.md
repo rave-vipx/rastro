@@ -1,7 +1,6 @@
 # ADR 0021: a newer serving recipe wins over the job file's recipe
 
 - **Status:** accepted for 0.6.0.
-- **Requirements:** REC-006, REPAIR-005, REPAIR-006, QUAL-006, DATA-001.
 
 ## Problem
 

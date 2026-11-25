@@ -2,8 +2,7 @@
 
 - Status: Accepted; implemented
 - Date: 2026-10-24
-- Release: v0.1, milestone M2
-- Requirements: INT-001/003/004, GEO-001/002, OBS-001/002, SEC-001–005/008
+- Release: 0.1
 
 ## Trust boundary and use cases
 
@@ -17,7 +16,7 @@ non-public, and connect to one validated address while preserving the hostname f
 TLS and HTTP. Each redirect and retry gets a new validation. Automatic redirects,
 proxies from the environment, cookies, browser impersonation, and transport retries
 are disabled. HTTPS is the default; cleartext HTTP requires explicit policy opt-in.
-Only standard HTTP(S) ports are supported in this milestone.
+Only standard HTTP(S) ports are supported in this release.
 
 ## Transport decision and reproducible evidence
 
@@ -54,7 +53,7 @@ these controls publicly.
 
 ## Scope and limitations
 
-This milestone handles public HTTP(S) HTML with explicit recipes. It does not
+This release handled public HTTP(S) HTML with explicit recipes. It does not
 render JavaScript, provide authenticated sessions or proxies, interpret prices by
 locale, persist recipes, crawl discovered links, or add checkpoint recovery.
 `Source.locale` supplies Accept-Language when valid; timezone remains metadata and

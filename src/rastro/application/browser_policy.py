@@ -2,11 +2,82 @@
 
 from __future__ import annotations
 
+import os
+from collections.abc import Mapping
+from contextvars import ContextVar
+from pathlib import Path
 from urllib.parse import urlsplit
 
 from rastro.application.destinations import permitted_url
 from rastro.domain.acquisition import AcquisitionError, AcquisitionPolicy, AcquisitionResult
-from rastro.domain.models import Outcome, Source
+from rastro.domain.browser_controls import BrowserControls
+from rastro.domain.models import ConfigurationError, Outcome, Source
+
+PROFILE_DIR_ENV = "RASTRO_PROFILE_DIR"
+BROWSER_REGION: ContextVar[tuple[str, str] | None] = ContextVar("browser_region", default=None)
+"""The (locale, timezone) of the source being rendered, set from the job's [region]."""
+
+_AD_HOSTS = (
+    "doubleclick.net",
+    "googlesyndication.com",
+    "googleadservices.com",
+    "adservice.google.com",
+    "adnxs.com",
+    "taboola.com",
+    "outbrain.com",
+)
+
+
+def host_matches(host: str, domains: tuple[str, ...]) -> bool:
+    """True when ``host`` is one of ``domains`` or a subdomain of one."""
+    host = host.lower().rstrip(".")
+    return any(host == domain or host.endswith("." + domain) for domain in domains)
+
+
+def blocked_by_controls(url: str, controls: BrowserControls) -> bool:
+    """Whether the controls' blocked domains (and the ad list, if asked) refuse this request."""
+    host = urlsplit(url).hostname or ""
+    blocked = (*controls.blocked_domains, *(_AD_HOSTS if controls.block_ads else ()))
+    return host_matches(host, blocked)
+
+
+def region_options() -> dict[str, str]:
+    """Browser context locale and timezone for the current source; unknown values are left out."""
+    locale, timezone = BROWSER_REGION.get() or ("und", "")
+    return {
+        **({"locale": locale} if locale and locale != "und" else {}),
+        **({"timezone_id": timezone} if timezone else {}),
+    }
+
+
+def cdp_endpoint(name: str, environ: Mapping[str, str] | None = None) -> str:
+    """The remote-browser endpoint held in the environment variable ``name``.
+
+    The value is a credential-bearing URL: errors name the variable, never the value.
+    """
+    value = (os.environ if environ is None else environ).get(name, "")
+    if not value:
+        raise ConfigurationError(
+            f"The remote browser endpoint variable {name} is not set",
+            hint="Export it as a ws(s):// or http(s):// DevTools URL before the run.",
+        )
+    if urlsplit(value).scheme not in {"ws", "wss", "http", "https"}:
+        raise ConfigurationError(f"{name} must hold a ws(s):// or http(s):// DevTools URL")
+    return value
+
+
+def profile_directory(name: str, environ: Mapping[str, str] | None = None) -> Path:
+    """The operator-mapped directory of the persistent profile ``name``."""
+    root = (os.environ if environ is None else environ).get(PROFILE_DIR_ENV, "")
+    if not root:
+        raise ConfigurationError(
+            f"Persistent browser profiles need {PROFILE_DIR_ENV} to name their parent directory"
+        )
+    base = Path(root).resolve()
+    path = (base / name).resolve()
+    if path.parent != base:
+        raise ConfigurationError("A session profile is a plain name inside the profile directory")
+    return path
 
 
 def page_policy(base: AcquisitionPolicy, url: str) -> AcquisitionPolicy:

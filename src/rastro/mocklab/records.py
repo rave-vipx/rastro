@@ -1,4 +1,4 @@
-"""Schema-valid synthetic records derived only from the model and a seed (MOCK-001).
+"""Schema-valid synthetic records derived only from the model and a seed.
 
 Values are generated from field types and declared bounds. A field the generator
 cannot satisfy (for example a ``pattern``) is resampled from values the fixture

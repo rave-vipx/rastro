@@ -1,4 +1,4 @@
-"""N5: plain-language alerts and one observed operation snapshot for the Studio page.
+"""Plain-language alerts and one observed operation snapshot for the Studio page.
 
 There is no engine progress port yet, so the snapshot records only what Studio observes:
 which operation started for which job file, and how it ended. It never invents a page or

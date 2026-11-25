@@ -1,4 +1,4 @@
-"""Example-driven CSS recipe candidates through Scrapling (INT-002, DISC-003).
+"""Example-driven CSS recipe candidates through Scrapling.
 
 Every example value is located in the page, the matches of one example record are
 generalized to a repeating record container, and each field gets the shortest selector,
@@ -153,7 +153,7 @@ def _build(
     if not mapping:
         return None
     try:
-        recipe = CssRecipe(record_selector=records.selector, fields=mapping)
+        recipe = CssRecipe(record_selector=records.selector, fields=dict(mapping))
     except ValidationError:
         return None
     return RecipeCandidate(recipe, confidence)

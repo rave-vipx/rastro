@@ -1,4 +1,4 @@
-"""Bounded, DTD-free sitemap parsing and entry ordering (N16; SEC-001, SEC-008).
+"""Bounded, DTD-free sitemap parsing and entry ordering.
 
 A sitemap is untrusted XML. Any DOCTYPE is refused before an entity can be declared, so
 there is no entity expansion and no external resource; expat never touches the network.
@@ -16,6 +16,7 @@ from datetime import UTC, datetime
 from typing import NoReturn
 from xml.parsers import expat
 
+from rastro.domain.source_notes import DiscoveryNote
 from rastro.domain.spider import SeedOrder
 
 MAX_SITEMAP_URLS = 50_000  # the sitemap protocol's own per-file limit
@@ -86,6 +87,23 @@ def order_entries(entries: Sequence[SitemapEntry], order: SeedOrder) -> list[Sit
             undated.append(entry)
     dated.sort(key=lambda item: item[0], reverse=True)
     return [entry for _, entry in dated] + undated
+
+
+def sitemap_discovery_note(
+    order: SeedOrder,
+    *,
+    found: int,
+    filtered: int,
+    admitted: int,
+) -> DiscoveryNote:
+    """Summarize sitemap seed discovery counts for the source report."""
+    return DiscoveryNote(
+        seed="sitemap",
+        order=order,
+        locs_found=max(0, found),
+        locs_filtered=max(0, filtered),
+        locs_admitted=max(0, admitted),
+    )
 
 
 def inflate(data: bytes, max_bytes: int) -> bytes:

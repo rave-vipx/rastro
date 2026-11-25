@@ -1,5 +1,5 @@
 """`rastro health`: stale sources, open drift, quarantined candidates and last success per
-current source of a job (DATA-004, DRIFT-005, REPAIR-005, OPS). Reads only; creates nothing.
+current source of a job (OPS). Reads only; creates nothing.
 """
 
 from __future__ import annotations

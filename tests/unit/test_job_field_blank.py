@@ -1,4 +1,4 @@
-"""QUAL-002 / QUAL-004 / JOB-001: blank job values are missing, never successful empty output."""
+"""Blank job values are missing, never successful empty output."""
 
 from datetime import date
 from decimal import Decimal

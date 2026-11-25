@@ -1,10 +1,11 @@
-"""Scheduler CLI (`rastro job watch`, SCHED-002)."""
+"""Scheduler CLI (`rastro job watch`."""
 
 from __future__ import annotations
 
 import argparse
 import json
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 
 from rastro.application.errors import RunInProgressError
@@ -14,9 +15,13 @@ from rastro.cli_hook import add_hook_argument, hook_argv, load_summary, notify
 from rastro.cli_trust import add_trust_arguments, trust_options
 from rastro.domain.job_load import JobLoadResult
 from rastro.domain.job_results import JobExitCode
+from rastro.domain.schedule_words import describe_schedule, next_runs, parse_schedule_words
 
 
 def add_schedule_command(jobs: argparse._SubParsersAction) -> None:  # type: ignore[type-arg]
+    words = jobs.add_parser("schedule", help="Read a schedule in words and show its next runs")
+    words.add_argument("words", help='For example "every day at 8:00" or "cada 6 horas"')
+    words.add_argument("--timezone", default="UTC", help="IANA timezone for the time of day")
     watch = jobs.add_parser("watch", help="Run due job sources on their [schedule]")
     watch.add_argument("file", type=Path, help="Job file (.toml or .json)")
     watch.add_argument(
@@ -52,3 +57,15 @@ def watch_job_command(args: argparse.Namespace) -> int:
     except RunInProgressError as error:
         print(json.dumps(classify(error)), file=sys.stderr)
         return int(JobExitCode.NEEDS_ATTENTION)
+
+
+def schedule_words_command(args: argparse.Namespace) -> int:
+    spec = parse_schedule_words(args.words)
+    runs = next_runs(spec, datetime.now(UTC), timezone=args.timezone)
+    payload = {
+        "schedule": spec.model_dump(mode="json"),
+        "in_words": {code: describe_schedule(spec, code) for code in ("en", "es")},
+        "next_runs": [moment.isoformat() for moment in runs],
+    }
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    return int(JobExitCode.SUCCESS)

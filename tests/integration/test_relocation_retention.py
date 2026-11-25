@@ -1,4 +1,4 @@
-"""REPAIR-002, SCR-002: additive retention, last success survives failed loads."""
+"""Additive retention, last success survives failed loads."""
 
 import json
 import shutil
@@ -8,7 +8,7 @@ from pathlib import Path
 
 from rastro.cli import main
 
-SAMPLE = Path(__file__).parents[2] / "examples/uy-dance-agenda/sample"
+SAMPLE = Path(__file__).parents[2] / "examples/event-agenda/sample"
 
 
 def test_job_load_retains_last_success_and_does_not_change_memory_schema(tmp_path, capsys):
@@ -20,7 +20,7 @@ def test_job_load_retains_last_success_and_does_not_change_memory_schema(tmp_pat
         baseline = db.execute("SELECT snapshot, fixture FROM relocation_samples").fetchall()
         assert len(baseline) == 2
         assert json.loads(baseline[0][1])["expected"]["accepted"] > 0
-        (path.parent / "sodre-cartelera.html").write_text(
+        (path.parent / "teatro-central-cartelera.html").write_text(
             "<html>Unavailable</html>", encoding="utf-8"
         )
         assert main(["job", "load", str(path)]) == 3

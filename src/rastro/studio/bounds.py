@@ -1,4 +1,4 @@
-"""N3/N4/N9: domain-validated bounded acquisition settings for Studio."""
+"""Domain-validated bounded acquisition settings for Studio."""
 
 import json
 from pathlib import Path
@@ -16,17 +16,23 @@ from rastro.studio.settings import _commit, _format, _read
 
 
 def numeric_limits(model: type[BaseModel]) -> dict[str, Any]:
-    """Expose integer controls directly from the domain's JSON Schema."""
-    return {
-        name: {
-            "min": field.get("minimum"),
-            "max": field.get("maximum"),
-            "step": field.get("multipleOf", 1),
-            "default": field.get("default"),
-        }
-        for name, field in model.model_json_schema()["properties"].items()
-        if field.get("type") == "integer"
-    }
+    """Expose integer controls directly from the domain's JSON Schema.
+
+    A field that also takes a word (``max_pages = "unbounded"``) keeps its integer bounds.
+    """
+    limits: dict[str, Any] = {}
+    for name, field in model.model_json_schema()["properties"].items():
+        number = next(
+            (f for f in [field, *field.get("anyOf", [])] if f.get("type") == "integer"), None
+        )
+        if number is not None:
+            limits[name] = {
+                "min": number.get("minimum"),
+                "max": number.get("maximum"),
+                "step": number.get("multipleOf", 1),
+                "default": field.get("default"),
+            }
+    return limits
 
 
 def controls(job: Job) -> dict[str, Any]:

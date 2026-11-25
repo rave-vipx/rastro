@@ -59,8 +59,8 @@
   "sources": [
     {
       "kind": "file",
-      "path": "sodre-cartelera.html",
-      "url": "https://sodre.gub.uy/espectaculos/",
+      "path": "teatro-central-cartelera.html",
+      "url": "https://agenda.example/espectaculos/",
       "recipe": {
         "strategy": "css",
         "fields": {
@@ -80,8 +80,8 @@
     },
     {
       "kind": "file",
-      "path": "tickantel-evento.html",
-      "url": "https://tickantel.com.uy/ng/espectaculo/9900102/gala-anual-2026-area-tango-y-milonga",
+      "path": "tickets-event.html",
+      "url": "https://tickets.example/ng/espectaculo/9900102/gala-anual-2026-area-tango-y-milonga",
       "recipe": {
         "strategy": "jsonld",
         "fields": {

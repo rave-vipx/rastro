@@ -1,24 +1,26 @@
-"""Load validated job results through the dataset port (DATA-001, SYNC-002/006/008)."""
+"""Load validated job results through the dataset port."""
 
-from collections.abc import Callable, Collection, Iterable, Iterator, Mapping, Sequence
-from contextlib import contextmanager
-from typing import Any, Literal
+from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
+from typing import Any
 
-from rastro.application.consistency import History, evaluate_consistency, history_from_store
+from rastro.application.consistency import History, history_from_store
+from rastro.application.dataset_source import (
+    StorageFailed,
+    load_source,
+    unloaded,
+)
 from rastro.application.drift import snapshot_result
-from rastro.application.pagination_records import is_complete_snapshot
 from rastro.application.run_metrics import record_run_metrics
 from rastro.domain.consistency import ConsistencyRule
-from rastro.domain.dataset import ChangeKind, DatasetRecordKey, DatasetStorageError, ObservedRecord
+from rastro.domain.dataset import DatasetStorageError
 from rastro.domain.drift import StructuralSnapshot
-from rastro.domain.failure_reason import failure_detail
 from rastro.domain.health import OpenDrift
 from rastro.domain.job_dataset import DatasetSpec
 from rastro.domain.job_load import JobLoadResult, LoadedSource, StaleSource
 from rastro.domain.job_results import JobRunResult, JobSummary
 from rastro.domain.jobs import Job
 from rastro.domain.models import ExtractionResult, Issue, Outcome
-from rastro.ports.dataset import DatasetStore, DatasetValidators, SourceFailureRecorder
+from rastro.ports.dataset import DatasetStore
 from rastro.ports.drift import DriftMonitor, OpenDriftReader
 
 SourceHook = Callable[[int, ExtractionResult[Any], LoadedSource], None]
@@ -42,7 +44,7 @@ def load_results(
     Stale sources and open drift cover only this job's sources. A dataset storage failure
     stops further writes: committed sources keep their counts, the rest report
     ``storage_error`` and the result's ``status`` is ``storage_error`` (exit code 5).
-    One ``run_metrics`` row per source is recorded when the store supports it (OBS-003);
+    One ``run_metrics`` row per source is recorded when the store supports it;
     ``required`` names the job's required fields for the coverage count.
     ``on_source(index, result, loaded)`` runs after each source whose load, and drift
     assessment when ``monitor`` is set, completed without a storage failure.
@@ -82,7 +84,7 @@ def load_stream(
 
     ``summary`` is called once ``results`` is exhausted; ``current`` names the origins of the
     whole job (default: those of the results seen) for stale sources and open drift.
-    ``job`` gives the run metrics of a reached cap its configured value (N5).
+    ``job`` gives the run metrics of a reached cap its configured value.
     """
     sources: list[LoadedSource] = []
     assessments = []
@@ -99,13 +101,13 @@ def load_stream(
         seen.add(result.source_url)
         observed.append(result)
         if failed:
-            sources.append(_unloaded(result))
+            sources.append(unloaded(result))
             continue
         try:
-            source = _load_source(spec, approved, result, store, rules, history)
-        except _StorageFailed:
+            source = load_source(spec, approved, result, store, rules, history)
+        except StorageFailed:
             failed = True
-            sources.append(_unloaded(result))
+            sources.append(unloaded(result))
             continue
         sources.append(source)
         if monitor is not None and result.status != Outcome.UNCHANGED:
@@ -156,121 +158,6 @@ def _snapshot(
     if source.inconsistent:
         result = result.model_copy(update={"status": Outcome.INSUFFICIENT_EVIDENCE, "records": ()})
     return snapshot_result(result, approved, captured=(snapshots or {}).get(result.job_id))
-
-
-def _unloaded(result: ExtractionResult[Any]) -> LoadedSource:
-    """Nothing of this source was written because dataset storage failed."""
-    return LoadedSource(
-        source_url=result.source_url,
-        status=result.status,
-        counts=dict.fromkeys(ChangeKind, 0),
-        issues=(Issue(code="storage_error"),),
-    )
-
-
-def _load_source(
-    spec: DatasetSpec,
-    approved: tuple[str, ...],
-    result: ExtractionResult[Any],
-    store: DatasetStore,
-    rules: Sequence[ConsistencyRule],
-    history: History,
-) -> LoadedSource:
-    counts = dict.fromkeys(ChangeKind, 0)
-    consistency = None
-    reason = None
-    next_action: Literal["rastro recipe repair"] | None = None
-    if result.status == Outcome.UNCHANGED:
-        with _storage():
-            if not isinstance(store, DatasetValidators):
-                raise DatasetStorageError("Dataset does not support conditional requests")
-            store.mark_source_unchanged(spec.name, result.source_url, result.completed_at)
-            counts[ChangeKind.UNCHANGED] = sum(
-                result.source_url in row.origins for row in store.records(spec.name)
-            )
-    elif result.status in (Outcome.SUCCESS, Outcome.PARTIAL_SUCCESS):
-        observations = _observations(spec, approved, result)
-        if rules:
-            consistency = evaluate_consistency(
-                rules,
-                [o.fields for o in observations],
-                result.completed_at,
-                declared_fields=approved,
-                history=history,
-                rejected=result.metrics.rejected,
-            )
-        with _storage():
-            if consistency is not None and consistency.verdict == "inconsistent":
-                store.mark_source_unavailable(
-                    spec.name, result.source_url, result.completed_at, "consistency_failed"
-                )
-                next_action = "rastro recipe repair"
-            else:
-                counts = store.apply_snapshot(
-                    spec.name,
-                    result.source_url,
-                    observations,
-                    complete=is_complete_snapshot(result),
-                    observed_at=result.completed_at,
-                ).counts
-    else:
-        reason = failure_detail(result)
-        with _storage():
-            _record_failure(store, spec.name, result, reason)
-        if result.status == Outcome.MISSING_DATA:
-            next_action = "rastro recipe repair"
-    return LoadedSource(
-        source_url=result.source_url,
-        status=result.status,
-        counts=counts,
-        consistency=consistency,
-        next_action=next_action,
-        reason=reason,
-    )
-
-
-class _StorageFailed(Exception):
-    """A dataset write failed; earlier sources stay committed and are still reported."""
-
-
-@contextmanager
-def _storage() -> Iterator[None]:
-    try:
-        yield
-    except DatasetStorageError as error:
-        raise _StorageFailed from error
-
-
-def _record_failure(
-    store: DatasetStore, dataset: str, result: ExtractionResult[Any], detail: str | None
-) -> None:
-    if isinstance(store, SourceFailureRecorder):
-        store.record_source_failure(
-            dataset, result.source_url, result.completed_at, result.status.value, detail
-        )
-    else:
-        store.mark_source_unavailable(
-            dataset, result.source_url, result.completed_at, result.status.value
-        )
-
-
-def _observations(
-    spec: DatasetSpec, approved: tuple[str, ...], result: ExtractionResult[Any]
-) -> list[ObservedRecord]:
-    observations = []
-    for record in result.records:
-        values = record.data.model_dump(mode="json")
-        fields = {name: values[name] for name in approved if name in record.evidence}
-        observations.append(
-            ObservedRecord(
-                key=DatasetRecordKey.from_fields(spec.name, fields, spec.identity),
-                source_url=result.source_url,
-                observed_at=result.completed_at,
-                fields=fields,
-                provenance={name: record.evidence[name] for name in fields},
-            )
-        )
-    return observations
 
 
 def stale_sources(

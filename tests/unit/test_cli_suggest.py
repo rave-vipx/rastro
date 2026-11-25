@@ -1,4 +1,4 @@
-"""`rastro suggest` and `rastro new` (INT-002, JOB-001, DISC-003)."""
+"""`rastro suggest` and `rastro new`."""
 
 from __future__ import annotations
 
@@ -101,7 +101,7 @@ def test_new_keeps_string_when_page_values_do_not_fit_the_inferred_type(tmp_path
 
 
 def test_new_can_enable_recipe_memory(page, tmp_path, capsys):
-    """REC-006, JOB-001: --recipe-memory writes a top-level recipe_memory the job can repair."""
+    """--recipe-memory writes a top-level recipe_memory the job can repair."""
     job = tmp_path / "job.toml"
     args = ["new", str(job), "--from", str(page), "--url", URL, *EXAMPLES]
     args += ["--recipe-memory", "recipes.sqlite"]
@@ -119,7 +119,7 @@ def test_new_refuses_a_bad_recipe_memory_path(page, tmp_path, capsys, memory):
     assert not job.exists()
 
 
-# (dataset, recipe_memory) pairs that name the job file, the page or each other (JOB-001).
+# (dataset, recipe_memory) pairs that name the job file, the page or each other.
 CLASHES = [
     (None, "job.toml"),
     (None, "./job.toml"),
@@ -133,7 +133,7 @@ CLASHES = [
 
 @pytest.mark.parametrize(("dataset", "memory"), CLASHES)
 def test_new_refuses_paths_that_name_the_same_file(page, tmp_path, capsys, dataset, memory):
-    """JOB-001, REC-006: paths are compared after resolving them against the job folder."""
+    """Paths are compared after resolving them against the job folder."""
     job = tmp_path / "job.toml"
     args = ["new", str(job), "--from", str(page), "--url", URL, *EXAMPLES]
     if dataset is not None:
@@ -176,7 +176,7 @@ def test_new_rejects_unsafe_field_names(page, tmp_path, capsys):
 
 
 def test_new_refuses_a_partial_preview_unless_allowed(tmp_path, capsys):
-    """JOB-001: `rastro new` writes a job only when its recipe preview fully succeeds."""
+    """`rastro new` writes a job only when its recipe preview fully succeeds."""
     page = tmp_path / "page.html"
     page.write_text(
         "<li class='o'><b>A</b><i>12</i></li><li class='o'><b>B</b><i>7</i></li>"
@@ -194,7 +194,7 @@ def test_new_refuses_a_partial_preview_unless_allowed(tmp_path, capsys):
 
 
 def test_suggestion_status_reports_the_preview_outcome():
-    """INT-002: suggest returns a partial preview with an explicit status."""
+    """Suggest returns a partial preview with an explicit status."""
     from rastro import suggest
     from rastro.domain.job_fields import StringField
 

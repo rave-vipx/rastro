@@ -1,4 +1,4 @@
-"""Studio web app: a thin Starlette layer over the public job services (P-008).
+"""Studio web app: a thin Starlette layer over the public job services.
 
 Routers live in ``routes_*`` modules; ``web`` holds the shared guard (loopback Host, exact
 Origin, per-run token on every POST), bounded bodies and the Content-Security-Policy.
@@ -26,6 +26,7 @@ from rastro.studio import (
     routes_repair,
     routes_run,
     routes_settings,
+    routes_steps,
     routes_wizard,
 )
 from rastro.studio.web import MAX_BODY, Studio
@@ -52,8 +53,8 @@ def create_app(
     ``model_remote`` (``--allow-remote``) is used only for a ``ModelPort`` that does not say.
     ``allow_egress`` and ``allow_env`` are the operator opt-ins for job-declared proxies.
     ``allow_stealth`` (``--allow-stealth``) grants stealth to this process only; the page's
-    session switch can change it later, and neither writes the grant into a job (N12).
-    ``acquisition`` replaces the default HTTP acquirer (tests inject a fake; N1 URL create).
+    session switch can change it later, and neither writes the grant into a job.
+    ``acquisition`` replaces the default HTTP acquirer (tests inject a fake).
     """
     folder = Path(root)
     if not folder.is_dir():
@@ -71,6 +72,7 @@ def create_app(
     routes = [
         *routes_jobs.routes(studio),
         *routes_settings.routes(studio),
+        *routes_steps.routes(studio),
         *routes_registry.routes(studio),
         *routes_wizard.routes(studio),
         *routes_run.routes(studio),

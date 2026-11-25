@@ -2,8 +2,7 @@
 
 This page records what connecting a model changes in Rastro's job repair, measured on the
 offline AI repair benchmark (`benchmarks/ai_repair/`). It is evidence, not a model ranking
-and not a release gate. Requirements: **QUAL-001, REPAIR-001–005, AI-001–004, DIFF-002**.
-It does not use `benchmarks/recovery/`.
+and not a release gate. It does not use `benchmarks/recovery/`.
 
 ## Method
 
@@ -31,7 +30,7 @@ are judged. Otherwise `repair_job_source` runs with `[repair] auto_promote = tru
 judged. The job declares no `[[consistency]]` rules. Job `[[fields]]` carry no
 descriptions, so prompts get field names and types only.
 
-With a model configured, Rastro itself decides when to call it (since the AI wave):
+With a model configured, Rastro itself decides when to call it (since 0.7.0):
 proposals only when no deterministic candidate would pass, joined with the serving
 selectors (`old, new`) and held to the deterministic value checks (since `2ba6bae`), and
 the semantic judge before every automatic promotion, deterministic ones included.
@@ -62,8 +61,7 @@ Wilson score intervals over 28 cases.
 
 ## Results
 
-Offline rows recorded on 2026-11-14 at `c60b9e3` (`ai/flows2`); live rows on 2026-11-13
-from `cut/ai-wave`. The offline rows are reproducible with
+Offline rows recorded on 2026-11-14 during 0.7.0 development; live rows on 2026-11-13. The offline rows are reproducible with
 `python -m benchmarks.ai_repair.run`. Python 3.12.16.
 
 | Executor | Correct | Wrong (silent) | Refused | Model calls |
@@ -89,7 +87,7 @@ Q4_K_M); `llama3.2:3b` digest
 Raw results are in `benchmarks/ai_repair/results*.json`: verdict, detail, model calls
 and seconds per case. Prompts and model output are not stored.
 
-The previous measurement on 0.6.0 before the AI wave (model consulted on every repair,
+The previous measurement on 0.6.0 before AI-assisted repair shipped (model consulted on every repair,
 no serving recipe in the prompt, no judge) was: deterministic 12, scripted correct oracle
 11, `qwen3:4b` 11, `llama3.2:3b` 10, all with 0 wrong.
 
@@ -98,7 +96,7 @@ no serving recipe in the prompt, no judge) was: deterministic 12, scripted corre
 1. **Escalation plus the `old, new` union makes a good proposer useful.** With correct
    answers, Rastro recovers 23/28, up from 12/28. That adds three restructured
    containers, all four semantic swaps and all four decoy cases, loses no deterministic
-   win and serves 0 wrong records. Before the AI wave, the same oracle reached 11/28.
+   win and serves 0 wrong records. Before 0.7.0, the same oracle reached 11/28.
 2. **Deterministic value checks, not the judge, stop a meaning swap.** Because the union
    keeps the old selector first, the last good sample replays through it and passes, so a
    swapped new alternative is not caught by replay. At `a3ba147` the judge was the only
@@ -124,18 +122,18 @@ no serving recipe in the prompt, no judge) was: deterministic 12, scripted corre
 
 | Defect | Status |
 | --- | --- |
-| 0.6.0: a model candidate competing with a passing relocation quarantined both | Fixed in the AI wave (escalation) |
+| 0.6.0: a model candidate competing with a passing relocation quarantined both | Fixed in 0.7.0 (escalation) |
 | 0.6.0: the repair prompt lacked the serving recipe, so history replay rejected every model proposal | Fixed (serving recipe in the prompt, `old, new` union) |
 | 0.6.0: an invalid model CSS selector aborted `recipe repair` with exit 2 | Fixed (`invalid_model_candidate`) |
-| AI wave: the judge's response schema nested `$defs`, so Ollama rejected every judge call (HTTP 400) and every promotion was quarantined (`semantic_judge_failed`); live runs scored 0/28 | Fixed in `a3ba147`, with a regression test |
-| AI wave: with the `old, new` union, history replay passes through the old alternative, so a meaning swap in the new one is caught only by the judge (6/28 wrong with a lying judge) | Fixed in `2ba6bae`: model and agent candidates meet the relocation value checks before the judge; 0/28 wrong |
+| 0.7.0 development: the judge's response schema nested `$defs`, so Ollama rejected every judge call (HTTP 400) and every promotion was quarantined (`semantic_judge_failed`); live runs scored 0/28 | Fixed in `a3ba147`, with a regression test |
+| 0.7.0 development: with the `old, new` union, history replay passes through the old alternative, so a meaning swap in the new one is caught only by the judge (6/28 wrong with a lying judge) | Fixed in `2ba6bae`: model and agent candidates meet the relocation value checks before the judge; 0/28 wrong |
 
 ## Run it yourself
 
 Offline (CI-safe, no network, no model):
 
 ```sh
-UV_PYTHON=/opt/homebrew/bin/python3.12 uv run python -m benchmarks.ai_repair.run
+uv run python -m benchmarks.ai_repair.run
 ```
 
 Local Ollama models (never in CI):
@@ -145,7 +143,7 @@ uv run --extra ollama python -m benchmarks.ai_repair.run \
   --executor ollama:YOUR_MODEL --output benchmarks/ai_repair/results-live-YOUR_MODEL.json
 ```
 
-### Strong-model run (owner-run, not recorded here)
+### Strong-model run
 
 Any provider goes through the generic factory with `--executor "spec:<spec>"` and
 `--model-options '<JSON of rastro.model keywords>'`. These runs send all 28 synthetic
@@ -167,13 +165,8 @@ uv run python -m benchmarks.ai_repair.run \
   --output benchmarks/ai_repair/results-live-codex.json
 ```
 
-| Executor | Correct | Wrong (silent) | Refused | Model calls |
-| --- | ---: | ---: | ---: | ---: |
-| Claude Code (owner run) | _pending_ | _pending_ | _pending_ | _pending_ |
-| Codex CLI (owner run) | _pending_ | _pending_ | _pending_ | _pending_ |
-
 `--tools=` (one argument) disables Claude Code's tools. An empty separate argument
 (`--tools ""`) is refused by the command transport. Check `claude --help` and
 `codex exec --help` for your installed versions before running. Record the CLI version,
 model and date with the result file. No subscription or hosted
-model was run for this page.
+model results are published on this page.

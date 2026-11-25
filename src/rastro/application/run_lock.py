@@ -1,4 +1,4 @@
-"""Dataset overlap lock (`.lock`) and run recovery (`.run.json`) (SCHED-003, SCHED-004)."""
+"""Dataset overlap lock (`.lock`) and run recovery (`.run.json`)."""
 
 from __future__ import annotations
 

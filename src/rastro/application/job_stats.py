@@ -1,4 +1,4 @@
-"""`rastro job stats`: aggregate a job dataset's per-source run metrics (OBS-003..006)."""
+"""`rastro job stats`: aggregate a job dataset's per-source run metrics."""
 
 from __future__ import annotations
 
@@ -42,7 +42,9 @@ def job_stats(
         try:
             cutoff = parse_since(since, now)
         except ValueError:
-            raise ConfigurationError("--since must look like 7d or 12h", location="since") from None
+            raise ConfigurationError(
+                "--since must look like 7d, 12h or 30m", location="since"
+            ) from None
     location = dataset_location(file, job, allow_absolute_paths=allow_absolute_paths)
     rows = (
         SQLiteDatasetStore(location, limits=job.limits).run_metrics(job.dataset.name, cutoff)

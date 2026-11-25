@@ -1,4 +1,4 @@
-"""N17 / REPAIR-002: a refused evidence sample names its field and category, never the value."""
+"""A refused evidence sample names its field and category, never the value."""
 
 import json
 from typing import Annotated, ClassVar

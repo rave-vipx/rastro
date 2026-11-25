@@ -1,31 +1,59 @@
-# Web data, with evidence
+# Rastro
 
-![Rastro — the open source web data engine](assets/rastro-banner.svg)
+![Rastro: AI writes the scraper once, recipes keep it running](assets/rastro-banner.svg)
 
-Rastro converts supplied HTML or permitted web sources into validated Python records and explains where each observed field came from. Its long-term goal is reliable, continuously updated web datasets.
+Rastro is a Python scraping library where AI does the hard part once and a stored recipe
+does the rest. **AI writes the scraper once, recipes keep it running.**
 
-**Status: Beta — 0.6.0.** Typed, self-healing web scraping: declare a Pydantic model, get validated records with provenance; when the site changes Rastro detects it and proposes or applies a verified repair. A local Studio, an MCP server and shareable recipe bundles are included; see the [README](https://github.com/rave-vipx/rastro#readme) for results and limits.
+1. **AI studies the site once.** A local or connected model proposes a recipe; Rastro keeps
+   it only if it extracts valid records from the real page.
+2. **Recipes run without AI.** Later runs use the stored recipe, with the same validation and
+   field provenance every time.
+3. **Rastro notices when the site changes**, in Studio and through notifications.
+4. **AI repairs it through gates** that refuse silent wrong data.
+
+No model is required: example values build a recipe deterministically, and repair also runs
+without one.
+
+![Studio's guided create, review step: records found on a synthetic catalogue page, with each field outlined on the page snapshot](assets/studio-review.png)
 
 ## Start here
 
-- [Run the offline example](getting-started.md).
-- [Acquire permitted URLs](acquisition.md).
-- [Remember validated recipes across restarts](memory.md).
-- [Bring your own AI](ai.md): fully offline by default. Connect a local model, any API, a subscription CLI or your MCP agent. The model proposes and Rastro verifies.
-- [Discover recipes with optional model assistance](intelligence.md).
-- [Understand results, evidence, and limits](api.md).
-- [See the architecture and tradeoffs](architecture.md).
-- [Use Rastro from an AI agent](ai-agents.md).
-- [Know what is stable across releases](stability.md).
+- [Five minutes with Studio](studio.md): paste a URL, review the records, load a dataset.
+- [Run the offline example](getting-started.md) and the [quickstart](quickstart.md).
+- [Use Rastro from an AI agent](ai-agents.md): `rastro init --agent`, the [MCP server](mcp.md) and the JSON command line.
+- [Bring your own AI](ai.md): local Ollama or LM Studio, any API, a subscription CLI, or your MCP agent.
+- [Read results with provenance](reading-results.md), and the [run report](run-report.md).
 
-## What makes the foundation useful?
+## What it handles
 
-A Pydantic schema defines what the caller accepts. A recipe records where fields should be found. Rastro validates each candidate separately, preserves accepted records, and reports missing, ambiguous, and invalid inputs without disguising them as successful empty data.
+- [Blocked pages and the acquisition ladder](egress.md#the-acquisition-ladder), [proxies and rotation](egress.md).
+- [JavaScript pages](acquisition.md#javascript-pages) and [page steps](page-steps.md) for clicks, tabs and forms.
+- [Recipes from the site's own JSON](network-recipes.md).
+- [Lists and nested objects](fields.md#lists-and-objects).
+- [Crawling linked pages](crawling.md), including time-budgeted crawls that resume.
+- [Schedules, notifications and monitoring](operations.md).
+- [Datasets](dataset.md) and exports to CSV, Excel, JSON and HTML.
+- [Recipe hub](hub.md): start from someone else's recipe.
 
-Evidence records a source URL, observation time, locator, method, and recipe version. It describes the origin of a value; it does not independently establish that the source is truthful or that the entire dataset is complete.
+## Reference
+
+- [Capabilities](capabilities.md) and the [configuration reference](configuration.md).
+- [API reference](api.md), [jobs](jobs.md), [drift](drift.md) and [recipe repair](repair.md).
+- [Engines](engines.md) and the [architecture](architecture.md).
+- [Comparison](comparison.md) and [AI repair evidence](ai-evidence.md).
+- [Stability policy](stability.md).
+
+## What the records mean
+
+A schema defines what you accept. A recipe records where fields are found. Rastro validates
+each candidate separately, keeps accepted records, and reports missing, ambiguous and invalid
+inputs instead of disguising them as successful empty data. Evidence records the source URL,
+observation time, locator, method and recipe version: it describes where a value came from,
+not whether the source is truthful.
 
 ## Project resources
 
 [Source code](https://github.com/rave-vipx/rastro) · [Contributing](https://github.com/rave-vipx/rastro/blob/main/CONTRIBUTING.md) · [Security policy](https://github.com/rave-vipx/rastro/blob/main/SECURITY.md)
 
-Rastro is licensed under Apache 2.0 and builds on Scrapling and Pydantic. Performance and accuracy comparisons will be published only when a reproducible benchmark exists.
+Rastro is licensed under Apache 2.0 and builds on Scrapling and Pydantic.

@@ -1,4 +1,4 @@
-"""Validation messages that never echo source values (P-005, SEC-005).
+"""Validation messages that never echo source values.
 
 Only Pydantic's built-in error types qualify, and only those whose message
 template is fixed or interpolates schema constraints (a pattern, a bound, the

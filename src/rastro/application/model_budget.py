@@ -1,4 +1,4 @@
-"""Enforced model cost limit and the remote-model cost notice (COST-002).
+"""Enforced model cost limit and the remote-model cost notice.
 
 ``BudgetedModel`` wraps any ``ModelPort``: it states the operation, model, call and cost
 ceiling once before the first call to a remote model, and stops calling the model once the
@@ -42,6 +42,12 @@ def model_cost_override(
     finally:
         for var, token in reversed(tokens):
             var.reset(token)
+
+
+def price_per_call(job_model: JobModelProvider | None = None) -> float | None:
+    """USD one model call costs: the operator's override, else the job file's, else unknown."""
+    operator = _PRICE.get()
+    return operator if operator is not None else (job_model.cost_per_call if job_model else None)
 
 
 def _budget(price: float | None, limit: float | None) -> ModelBudget:

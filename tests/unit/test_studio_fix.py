@@ -1,4 +1,4 @@
-"""Studio "Fix a site": before/after, apply with a reason, discard, auto-apply off (N7, N12)."""
+"""Studio "Fix a site": before/after, apply with a reason, discard, auto-apply off."""
 
 from __future__ import annotations
 
@@ -39,7 +39,7 @@ document.getElementById("fix-source").value = "2";
 
 
 def test_proposal_shows_before_after_and_checks() -> None:
-    """N7: each field's current and proposed reading, what changed, and every check."""
+    """each field's current and proposed reading, what changed, and every check."""
     run_node(
         SETUP
         + """
@@ -53,15 +53,15 @@ assert.ok(text.includes("version 5 replaces version 4"));
 assert.ok(text.includes("Needs your review") && text.includes("18 records read now"));
 assert.ok(text.includes("3 of 3 past samples pass") && text.includes("historical_replay: pass"));
 assert.ok(text.includes(".meta .venue::text") && text.includes("Changed") && text.includes("Same"));
-assert.ok(buttons(out).some((b) => b.textContent === "Apply fix"));
+assert.ok(buttons(out).some((b) => b.textContent === "Approve this fix"));
 assert.ok(buttons(out).some((b) => b.textContent === "Discard"));
 """,
         REPORT=REPORT,
     )
 
 
-def test_apply_needs_a_reason_and_discard_writes_nothing() -> None:
-    """N7/N12: no reason, no request; with a reason, /api/promote; discard sends nothing."""
+def test_one_approve_click_sends_a_fixed_reason_and_discard_writes_nothing() -> None:
+    """no reason field in plain mode; one click promotes; discard sends nothing."""
     run_node(
         SETUP
         + """
@@ -69,8 +69,33 @@ reply({"/api/repair": [200, {ok: true, report: REPORT, alerts: []}],
        "/api/promote": [200, {ok: true, report: PROMOTED, alerts: []}]});
 await document.getElementById("fix-find").listeners.click();
 await new Promise((r) => setTimeout(r, 400));
+const out0 = document.getElementById("fix-result");
+assert.equal(walk(out0).filter((n) => n.tagName === "INPUT").length, 0);
+await buttons(out0).find((b) => b.textContent === "Approve this fix").click();
+const one = calls.find((c) => c.path === "/api/promote").body;
+assert.deepEqual([one.source, one.version], [2, 5]);
+assert.match(one.reason, /Approved in Studio/);
+assert.ok(!("override_gates" in one));
+""",
+        REPORT=REPORT,
+        PROMOTED=PROMOTED,
+    )
+
+
+def test_advanced_apply_needs_a_reason_and_discard_writes_nothing() -> None:
+    """with Advanced on, an empty reason sends nothing; discard sends nothing."""
+    run_node(
+        SETUP
+        + """
+(await import("STATIC/i18n.js")).setAdvanced(true);
+reply({"/api/repair": [200, {ok: true, report: REPORT, alerts: []}],
+       "/api/promote": [200, {ok: true, report: PROMOTED, alerts: []}]});
+await document.getElementById("fix-find").listeners.click();
+await new Promise((r) => setTimeout(r, 400));
 const out = document.getElementById("fix-result");
 const apply = buttons(out).find((b) => b.textContent === "Apply fix");
+const field = walk(out).find((n) => n.tagName === "INPUT");
+field.value = "";
 await apply.click();
 assert.ok(!calls.some((c) => c.path === "/api/promote"));
 assert.ok(document.getElementById("fix-status").textContent.includes("write a reason"));
@@ -98,7 +123,7 @@ assert.ok(document.getElementById("fix-status").textContent.includes("Nothing wa
 
 
 def test_missing_repair_route_is_an_error_not_a_result() -> None:
-    """N7: a failed request says so; no proposal and no "now serves" message appear."""
+    """a failed request says so; no proposal and no "now serves" message appear."""
     run_node(
         SETUP
         + """
@@ -114,11 +139,10 @@ assert.equal(document.getElementById("fix-result").children.length, 0);
 
 
 def test_auto_apply_switch_starts_off_in_the_fix_view() -> None:
-    """N12: the automatic switch lives in Fix, is unchecked in the page and explains itself."""
+    """the automatic switch lives in Fix, is unchecked in the page and explains itself."""
     page = html.fromstring((STATIC / "index.html").read_text(encoding="utf-8"))
     switch = page.get_element_by_id("auto-promote")
     assert switch.get("checked") is None
     assert switch.xpath("ancestor::div[@id='view-repair']")
     assert page.get_element_by_id("auto-promote-status").get("role") == "status"
-    stealth = page.get_element_by_id("allow-stealth")
-    assert stealth.get("checked") is None
+    assert not page.xpath("//*[@id='allow-stealth']")  # per-origin switches replaced it

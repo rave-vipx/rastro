@@ -2,62 +2,34 @@
 
 from __future__ import annotations
 
-import asyncio
 from collections.abc import Iterable
+from contextlib import AbstractContextManager
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from rastro.application.active_recipes import active_job
 from rastro.application.auth_headers import check_job_auth
+from rastro.application.crawl_checkpoint import crawl_key, crawl_state
 from rastro.application.egress_trust import check_job_egress
+from rastro.application.job_execution import run_active, run_active_async
+from rastro.application.job_ladder_run import laddered_run, uses_ladder
 from rastro.application.job_loader import (
-    PreparedJob,
+    build_job_model,
     load_job,
-    prepare_job,
     resolve_job_path,
     validate_job_paths,
 )
-from rastro.application.model_budget import model_cost_override
+from rastro.application.model_budget import model_cost_override, price_per_call
 from rastro.application.operator_trust import operator_trust
-from rastro.application.pagination_records import deduplicate_pages
 from rastro.application.robots_cache import robots_cache
 from rastro.application.run_log import log_failures
+from rastro.application.run_report import named, with_report
 from rastro.domain.job_results import JobRunResult
-from rastro.domain.jobs import FileJobSource, Job, UrlJobSource
-from rastro.domain.models import ExtractionResult
+from rastro.domain.jobs import Job
 
 if TYPE_CHECKING:
     from rastro.ports.acquisition import AcquisitionPort
     from rastro.ports.model import ModelPort
-
-
-async def _extract_one_async(
-    job: Job, prepared: PreparedJob, index: int, item: FileJobSource | UrlJobSource
-) -> ExtractionResult[Any]:
-    recipe = item.recipe or job.recipe
-    if isinstance(item, FileJobSource):
-        src = (item.region or job.region).to_source(item.resolved_source_url())
-        extractor = (
-            prepared.client.extract_json_async
-            if item.representation == "json"
-            else prepared.client.extract_html_async
-        )
-        return await extractor(
-            prepared.bodies[index],
-            source=src,
-            schema=prepared.schema,
-            recipe=recipe,
-            context=job.context,
-            recipe_version=job.recipe_version,
-        )
-    return await prepared.client.extract(
-        source=(item.region or job.region).to_source(item.url),
-        schema=prepared.schema,
-        recipe=recipe,
-        context=job.context,
-        recipe_version=job.recipe_version,
-        representation=item.representation,
-    )
 
 
 async def run_job_async(
@@ -100,13 +72,14 @@ async def run_job_async(
         ),
         model_cost_override(max_model_cost, model_cost_per_call),
         robots_cache(),
+        crawl_state(base_dir, crawl_key(job)),
     ):
         check_job_egress(job, allow_egress=allow_egress, allow_env=allow_env)
         check_job_auth(job, allow_env=allow_env)
         active, selections = active_job(
             job, base_dir=base_dir, allow_absolute_paths=allow_absolute_paths
         )
-        report = await _run_active_async(
+        report = await run_active_async(
             active,
             base_dir=base_dir,
             allow_absolute_paths=allow_absolute_paths,
@@ -114,52 +87,8 @@ async def run_job_async(
             model=model,
         )
         log_failures(report)
-    return report.model_copy(update={"recipes": selections})
-
-
-async def _run_active_async(
-    job: Job,
-    *,
-    base_dir: Path | None,
-    allow_absolute_paths: bool,
-    acquisition: AcquisitionPort | None,
-    model: ModelPort | None,
-) -> JobRunResult[Any]:
-    prepared = prepare_job(
-        job,
-        base_dir=base_dir,
-        allow_absolute_paths=allow_absolute_paths,
-        acquisition=acquisition,
-        model=model,
-    )
-    if (
-        all(isinstance(item, UrlJobSource) and item.recipe is None for item in job.sources)
-        and len({item.representation for item in job.sources}) == 1
-    ):
-        batch = [
-            (item.region or job.region).to_source(item.url)
-            for item in job.sources
-            if isinstance(item, UrlJobSource)
-        ]
-        results = await prepared.client.extract_many(
-            batch,
-            schema=prepared.schema,
-            recipe=job.recipe,
-            context=job.context,
-            recipe_version=job.recipe_version,
-            representation=job.sources[0].representation,
-        )
-        return JobRunResult.from_results(
-            schema_fingerprint=prepared.fingerprint,
-            results=[deduplicate_pages(result, job.dataset) for result in results],
-        )
-    collected = [
-        await _extract_one_async(job, prepared, idx, item) for idx, item in enumerate(job.sources)
-    ]
-    return JobRunResult.from_results(
-        schema_fingerprint=prepared.fingerprint,
-        results=[deduplicate_pages(result, job.dataset) for result in collected],
-    )
+        price = price_per_call(job.model)
+    return with_report(report, selections, price)
 
 
 def run_job(
@@ -202,13 +131,14 @@ def run_job(
         ),
         model_cost_override(max_model_cost, model_cost_per_call),
         robots_cache(),
+        crawl_state(base_dir, crawl_key(job)),
     ):
         check_job_egress(job, allow_egress=allow_egress, allow_env=allow_env)
         check_job_auth(job, allow_env=allow_env)
         active, selections = active_job(
             job, base_dir=base_dir, allow_absolute_paths=allow_absolute_paths
         )
-        report = _run_active(
+        report = run_active(
             active,
             base_dir=base_dir,
             allow_absolute_paths=allow_absolute_paths,
@@ -216,62 +146,8 @@ def run_job(
             model=model,
         )
         log_failures(report)
-    return report.model_copy(update={"recipes": selections})
-
-
-def _run_active(
-    job: Job,
-    *,
-    base_dir: Path | None,
-    allow_absolute_paths: bool,
-    acquisition: AcquisitionPort | None,
-    model: ModelPort | None,
-) -> JobRunResult[Any]:
-    if (
-        any(isinstance(item, UrlJobSource) for item in job.sources)
-        or job.discover_recipes
-        or job.model is not None
-        or model is not None
-    ):
-        with asyncio.Runner(loop_factory=asyncio.SelectorEventLoop) as runner:
-            return runner.run(
-                _run_active_async(
-                    job,
-                    base_dir=base_dir,
-                    allow_absolute_paths=allow_absolute_paths,
-                    acquisition=acquisition,
-                    model=model,
-                )
-            )
-    prepared = prepare_job(
-        job,
-        base_dir=base_dir,
-        allow_absolute_paths=allow_absolute_paths,
-        acquisition=None,
-        model=None,
-    )
-    collected: list[ExtractionResult[Any]] = []
-    for idx, item in enumerate(job.sources):
-        assert isinstance(item, FileJobSource)
-        extractor = (
-            prepared.client.extract_json
-            if item.representation == "json"
-            else prepared.client.extract_html
-        )
-        collected.append(
-            extractor(
-                prepared.bodies[idx],
-                source=(item.region or job.region).to_source(item.resolved_source_url()),
-                schema=prepared.schema,
-                recipe=item.recipe or job.recipe,
-                context=job.context,
-                recipe_version=job.recipe_version,
-            )
-        )
-    return JobRunResult.from_results(
-        schema_fingerprint=prepared.fingerprint,
-        results=[deduplicate_pages(result, job.dataset) for result in collected],
-    )
+        price = price_per_call(job.model)
+    return with_report(report, selections, price)
 
 
 def run_job_file(
@@ -293,22 +169,40 @@ def run_job_file(
     """Load and execute a declarative job file; see ``run_job`` for the ``allow_*`` options."""
     file_path = Path(path)
     job = load_job(file_path, allow_absolute_paths=allow_absolute_paths)
-    return run_job(
+    allow_env = tuple(allow_env)
+    options: dict[str, Any] = {
+        "base_dir": file_path.parent,
+        "allow_absolute_paths": allow_absolute_paths,
+        "allow_remote": allow_remote,
+        "allow_egress": allow_egress,
+        "allow_stealth": allow_stealth,
+        "allow_env": allow_env,
+        "allow_private_network": allow_private_network,
+        "allow_ports": allow_ports,
+        "ignore_robots": ignore_robots,
+        "max_model_cost": max_model_cost,
+        "model_cost_per_call": model_cost_per_call,
+    }
+    if acquisition is not None or not uses_ladder(job):
+        result = run_job(job, acquisition=acquisition, model=model, **options)
+        return named(result, file_path.name)
+
+    def scope() -> AbstractContextManager[object]:
+        return operator_trust(
+            allow_remote=allow_remote, allow_stealth=allow_stealth, allow_env=allow_env
+        )
+
+    with scope(), model_cost_override(max_model_cost, model_cost_per_call):
+        model = model or build_job_model(job)  # one budget and one notice for every source
+    result = laddered_run(
         job,
+        lambda sub_job, port: run_job(sub_job, acquisition=port, model=model, **options),
         base_dir=file_path.parent,
         allow_absolute_paths=allow_absolute_paths,
-        acquisition=acquisition,
-        model=model,
-        allow_remote=allow_remote,
-        allow_egress=allow_egress,
-        allow_stealth=allow_stealth,
-        allow_env=allow_env,
-        allow_private_network=allow_private_network,
-        allow_ports=allow_ports,
-        ignore_robots=ignore_robots,
-        max_model_cost=max_model_cost,
-        model_cost_per_call=model_cost_per_call,
+        scope=scope,
+        rotate=allow_egress,
     )
+    return named(result, file_path.name)
 
 
 __all__ = [

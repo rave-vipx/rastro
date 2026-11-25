@@ -1,5 +1,4 @@
-"""``rastro job template``: an annotated job file with every option commented (N18,
-AGENT-001).
+"""``rastro job template``: an annotated job file with every option commented.
 
 Uncommented lines form a minimal valid job (one URL source, one field, a CSS recipe);
 every other key is a comment that shows its default (or a ``<type>`` placeholder), its
@@ -97,6 +96,8 @@ class _Writer:
             self.lines.append(f"# {name} = {_toml(json.loads(entry.default or 'null'))}")
 
     def _is_section(self, entry: ConfigEntry) -> bool:
+        if entry.path in MINIMAL:  # an inline value; nested member keys live in the reference
+            return False
         return bool(entry.same_as) or any(
             p.startswith((entry.path + ".", entry.path + "[].")) for p in self.paths
         )

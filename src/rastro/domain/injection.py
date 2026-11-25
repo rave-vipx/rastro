@@ -1,4 +1,4 @@
-"""Flag instruction-like text in untrusted source values (N19, SEC-008, AI-001, REPAIR-002).
+"""Flag instruction-like text in untrusted source values.
 
 Page content may address the model or agent that later reads it ("ignore previous
 instructions", a fake ``<|im_start|>system`` turn, a call to ``recipe_promote``). Rastro
@@ -21,6 +21,10 @@ CODE = "instruction_like_content"
 MAX_SCAN_CHARS = 64 * 1024
 # Every Rastro MCP tool name, plus the gate-override flag; kept in sync by a test.
 TOOL_NAMES = (
+    "browser_extract",
+    "browser_network",
+    "browser_screenshot",
+    "browser_snapshot",
     "dataset_records",
     "drift_status",
     "job_extract",

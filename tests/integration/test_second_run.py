@@ -1,4 +1,4 @@
-"""Offline first-cut proof: DATA-001/003, SYNC-002/006/008, COST-001."""
+"""Offline first-cut proof."""
 
 import json
 import shutil
@@ -12,7 +12,7 @@ import pytest
 from rastro.adapters.sqlite_dataset import SQLiteDatasetStore
 from rastro.cli import main
 
-SAMPLE = Path("examples/uy-dance-agenda/sample")
+SAMPLE = Path("examples/event-agenda/sample")
 
 
 @pytest.fixture
@@ -29,11 +29,11 @@ def load(sample, capsys):
 
 
 def records(sample):
-    return SQLiteDatasetStore(sample / "agenda.sqlite").records("uy_dance_agenda")
+    return SQLiteDatasetStore(sample / "agenda.sqlite").records("event_agenda")
 
 
 def update(sample):
-    for name in ("sodre-cartelera.html", "tickantel-evento.html"):
+    for name in ("teatro-central-cartelera.html", "tickets-event.html"):
         shutil.copyfile(sample / "v2" / name, sample / name)
 
 
@@ -54,7 +54,7 @@ def test_rescheduled_performance_updates_correct_record(sample, capsys):
     report = load(sample, capsys)
     after = {r.key: r for r in records(sample)}
     assert before.keys() == after.keys()
-    suites = [r for r in after.values() if r.fields["title"] == "Suite del Río de la Plata"]
+    suites = [r for r in after.values() if r.fields["title"] == "Suite del Valle Azul"]
     assert len(suites) == 2
     assert all("21:00:00" in r.fields["starts_at"] for r in suites)
     assert sum(s["counts"]["updated"] for s in report["sources"]) == 2
@@ -71,7 +71,7 @@ def test_two_performances_keep_distinct_identities(sample, capsys):
 def test_source_down_keeps_previous_records_with_last_observation(sample, capsys):
     load(sample, capsys)
     before = records(sample)
-    (sample / "tickantel-evento.html").write_text("<html>Source unavailable</html>")
+    (sample / "tickets-event.html").write_text("<html>Source unavailable</html>")
     report = load(sample, capsys)
     after = records(sample)
     assert len(before) == len(after)
@@ -81,8 +81,8 @@ def test_source_down_keeps_previous_records_with_last_observation(sample, capsys
     old = {r.key: r.origins[source] for r in before if source in r.origins}
     assert {tuple(k["identity"]) for k in stale[0]["affected_keys"]} == {
         ("candombe-1",),
-        ("gala-tickantel",),
-        ("suite-tickantel",),
+        ("gala-tickets",),
+        ("suite-tickets",),
     }
     assert datetime.fromisoformat(stale[0]["last_success"]) == max(
         origin.last_observed_at for origin in old.values()
@@ -95,7 +95,7 @@ def test_source_down_keeps_previous_records_with_last_observation(sample, capsys
 
 def test_uncertain_cross_source_match_keeps_both_origins_flagged(sample, capsys):
     load(sample, capsys)
-    suites = [r for r in records(sample) if r.fields["title"] == "Suite del Río de la Plata"]
+    suites = [r for r in records(sample) if r.fields["title"] == "Suite del Valle Azul"]
     assert len(suites) == 2
     assert all(r.uncertain_match for r in suites)
     assert len(set(suites[0].uncertain_match[0].origins)) == 2
@@ -107,13 +107,13 @@ def test_sale_date_not_loaded_as_event_date(sample, capsys):
         assert r.fields["starts_at"].startswith("2026-11-")
         assert not r.fields["starts_at"].startswith("2026-11-01")
         for origin in r.origins.values():
-            if "tickantel" in origin.source_url:
+            if "tickets" in origin.source_url:
                 assert origin.provenance["starts_at"].locator.endswith("/startDate")
 
 
 def test_upcoming_query_returns_future_events_in_order(sample, capsys):
     load(sample, capsys)
-    sql = Path("examples/uy-dance-agenda/queries/upcoming.sql").read_text()
+    sql = Path("examples/event-agenda/queries/upcoming.sql").read_text()
     with closing(sqlite3.connect(sample / "agenda.sqlite")) as db:
         rows = db.execute(sql.replace("'now'", "'2026-11-07T00:00:00Z'")).fetchall()
     assert len(rows) == 6
@@ -126,6 +126,6 @@ def test_job_load_honors_nondefault_match_tolerance(sample, capsys):
         path.read_text().replace("match_tolerance_minutes = 90", "match_tolerance_minutes = 15")
     )
     load(sample, capsys)
-    suites = [r for r in records(sample) if r.fields["title"] == "Suite del Río de la Plata"]
+    suites = [r for r in records(sample) if r.fields["title"] == "Suite del Valle Azul"]
     assert len(suites) == 2
     assert all(not r.uncertain_match for r in suites)

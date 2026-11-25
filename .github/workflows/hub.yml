@@ -1,0 +1,61 @@
+name: Hub
+
+on:
+  pull_request:
+    branches: [main]
+    paths: ['hub/**']
+  push:
+    branches: [main]
+    paths: ['hub/**']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hub-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify the hub
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: A hub pull request touches only hub/
+        # Promotion from this repository's dev branch carries library and hub changes together.
+        if: >-
+          github.event_name == 'pull_request' &&
+          !(github.event.pull_request.head.repo.full_name == github.repository &&
+            github.event.pull_request.head.ref == 'dev')
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          changed=$(git diff --name-only "$BASE_SHA...$HEAD_SHA")
+          outside=$(printf '%s\n' "$changed" | grep -v '^hub/' || true)
+          if [ -n "$outside" ]; then
+            echo "A pull request that changes hub/ must change nothing else:" >&2
+            echo "$outside" >&2
+            exit 1
+          fi
+          # The hub's own checks change only through dev, with code review.
+          tooling=$(printf '%s\n' "$changed" | grep -E '^hub/[^/]+\.py$' || true)
+          if [ -n "$tooling" ]; then
+            echo "Hub tooling changes go through dev, not a hub-only pull request:" >&2
+            echo "$tooling" >&2
+            exit 1
+          fi
+      - name: Layout, executables and links
+        run: python3 hub/check_layout.py
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: '0.13.1'
+          python-version: '3.12'
+          enable-cache: true
+      - run: uv sync --locked
+      - name: Replay every package offline and check index.json and health.json
+        run: uv run --locked python hub/build.py --check

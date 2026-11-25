@@ -68,22 +68,28 @@ with problems, and **View results**. **Projects** in the header always comes bac
 
 Four steps, one decision each:
 
-1. **URL.** Paste a page URL you have permission to scrape. Studio fetches the page
-   through the acquisition boundary; public-address checks, robots and the source
-   request budget apply. Saving HTML by hand is not required. A URL job fetches its URL on
-   every later run. If the page builds its list with JavaScript, see the
-   [browser extra and runtime](acquisition.md#javascript-pages).
-2. **Fields.** Name each field (letters, digits and `_`, starting with a letter) and copy an
-   example value exactly as the page shows it. Tick **Record key** on a field that identifies a
-   record (needed to store records). With a configured model, **Ask AI** can propose selectors
-   from names alone; proposals must extract valid records, the model does not supply them.
-3. **Preview.** **Preview records** shows up to 50 records found on the page; how each field is
-   read is folded under a technical detail. If a field comes out wrong, **Correct a field** goes
-   back to paste another example.
-4. **Name and save.** Give the project a name; the job, dataset and recipe-memory file names are
-   filled from it (`agenda-de-fiestas.toml`, `agenda-de-fiestas.sqlite`,
-   `agenda-de-fiestas-recipes.sqlite`) and can be changed under **File names (advanced)**. Studio
-   never overwrites a file. **Save and open** opens the new project on Results.
+1. **Address.** Paste a page address you have permission to read. Studio checks it as you type
+   ("Looks good: shop.example"). **Next** first asks the hub whether someone already built a
+   scraper for that site, before anything is fetched. If so, a card says what it brings and
+   offers **Try this one** (the Hub view opens on that site) or **I'd rather build it myself**.
+2. **What you want.** Name each field and copy one example value exactly as the page shows it;
+   tick **Record key** on a field that identifies a record. Before anything large is read,
+   Studio asks whether there are more pages or a "Load more" button (Yes, Not sure, No) and answers with an estimate in requests and minutes.
+   With a configured model, **Ask AI** can propose how to read fields from their names alone.
+3. **Review.** Up to 50 records found on the page, and, when a browser is installed, a picture
+   of the page with each field's matches outlined in its own style (solid, dashed, double,
+   dotted, thick), so the outline is readable without colour. If a field is wrong, **Fix a
+   field** lets you click the right element on the picture, or choose it from a list with the
+   keyboard. When the page loads its records from the site's own data (an API), a card says
+   so, how many records it holds and which of your fields it brings; **Use this data instead**
+   saves a project that opens the page in a browser and reads that data, and opens its results.
+4. **Name and save.** The job, dataset and recipe-memory file names are filled from the project
+   name and folded under **File names (advanced)**; Studio never overwrites a file. When the page
+   may hide records behind a click ("Load more"), the AI may look once: its steps are narrated
+   when the look ends, and nothing is saved until you choose **Use what the AI learned**.
+
+A project the Hub just installed opens on step 3 with its records, so you can check it before
+using it.
 
 ### Details that apply to every project
 
@@ -142,26 +148,33 @@ Four steps, one decision each:
 
 ## Layout, language and theme
 
-Studio opens on **Projects**. The header holds **Projects** with the open project's name, the
-language and theme choices, and, once a project is open, its views: **Results** (run and records),
-**Sources**, **Alerts**, **Fix** (repair, the automatic switch, correcting a field by hand),
-**Settings** (next page, link following, scroll, stealth, connecting your app, the recipe registry)
-and **New scraper**.
+Studio opens on **Projects**. The header holds the main navigation (**Projects** and **Hub**,
+the community hub search), the open project's name, the **Advanced** switch and the language and
+theme choices. Once a project is open, its views follow: **Results** (run and records), **Sites**,
+**Alerts**, **Settings** (next page, link following, scroll, stealth, connecting your app),
+**Fix** (repair, the automatic switch, correcting a field by hand) and **New scraper**.
 
+- **Advanced:** off by default. Normal mode speaks in plain words ("how the page is read",
+  "project", "databases saved by Rastro"); turning Advanced on shows the technical terms (recipe,
+  selector, job file, SQLite) and the sections that need them, such as opening a job file by name,
+  the stored recipe versions and the operator flags. Turning it off loses nothing. The choice is
+  stored in this browser only.
 - **Language:** English by default; Spanish (Rioplatense voseo) from the header. Every label and
-  message Studio writes comes from one dictionary (`static/i18n.js`, tests keep both languages
-  complete); lists, cards and panels redraw when the language changes. Sentences the server writes
-  (run alerts above a result) and issue codes stay as the server sends them.
+  message Studio writes comes from one JSON file per view under `static/i18n/` (`core`, `wizard`,
+  `results`, `health`, `settings`, `hub`, `run`), each with `en`, `es` and an `advanced` overlay for
+  the technical wording; tests keep both languages complete and normal mode free of jargon. Lists,
+  cards and panels redraw when the language changes. Sentences the server writes (run alerts above
+  a result) and issue codes stay as the server sends them.
 - **Narrow screens:** from 360 px. At 40rem and below the results and before/after tables become
   cards with a label per value, the provenance panel opens as a bottom sheet, and controls are 44 px.
 - **Settings** are folded groups: next page, follow links, scroll, browser and stealth, network
-  permissions, connect your app, and **Registry (URL)**.
+  permissions and connect your app. The registry search and publish live in **Hub**.
 - **Theme:** System (default), Light or Dark. Both choices are stored in this browser only; with
   storage blocked they last until reload.
 - **Accessibility:** controls are at least 36 px (44 px on narrow screens), focus is a 3 px accent
   outline, and every text/background token pair meets WCAG AA (a test computes the ratios).
 
-### Results (N5)
+### Results
 
 Opening a project loads its stored records into a table, 25, 50 or 100 per page ("Records 1–25 of
 74"). Search matches any value; filters narrow by source (when there are several), status (upcoming,
@@ -184,16 +197,22 @@ is shown as data and never executed. Records written with `rastro.load_records` 
 snapshot* with the import time and the original observation time, so they are not mistaken for a
 recent web check. **Close** or Esc returns focus to the record.
 
-### Sources and Alerts (N5)
+### Sources and Alerts
 
-**Sources** lists every site of the project with its status in words (*Up to date*, *Up to date,
-with a warning*, *Cap reached*, *Access denied by the site (robots.txt)*, *The site returned
-something that can't be read*, *The site's structure changed*, *Last load failed; earlier records
-kept*, *Not read yet*), the last fetch, records read and rejected ("Read 20 records; cap 20. There
-may be more."), warnings that did not stop the save, and one next step: **Retry** (runs Load into
-dataset), **Fix this site**, **Raise the cap** (opens Settings) or **Run a load**. **Details**
-shows the address and each issue code with its plain explanation. The previous health table
-(serving recipe, stored versions, the `--on-failure` command) is folded below as *Technical detail*.
+**Sites** lists every site of the project with a traffic light in words (*All good*, *Needs a
+look*, *Not working*, *Not read yet*) and, when something stands out, one sentence saying why, for
+example that the site blocked the read and how Studio got past it. Below it come the last fetch,
+records read and rejected ("Read 20 records; cap 20. There may be more."), warnings that did not
+stop the save, and one next step: **Retry** (runs Load into dataset), **Fix this site**, **Raise
+the cap** (opens Settings) or **Run a load**. **Details** shows the address and each issue code
+with its plain explanation. The previous health table (serving recipe, stored versions, the
+`--on-failure` command) is folded below as *Technical detail*.
+
+**Long reads.** Above the list, **Read now** runs the project without saving anything and shows
+progress while it runs: pages and records so far, sites done, time used (and the time budget of
+an unbounded crawl, with a bar), and the first few records. **Stop** ends it; a crawl that ran out
+of time says the next read continues where it stopped. Pages read here are kept in a development
+cache under `.rastro-studio/cache`, so a second read of the same pages does not fetch them again.
 
 **Alerts** lists what happened in the runs, newest first and grouped by day: failures, site
 changes, caps, warnings, quarantined fixes and refused fixes. Each one has a sentence written from
@@ -201,7 +220,32 @@ its kind and issue code in the chosen language, and one action. Both views read 
 endpoints (`/api/sources`, `/api/alerts`); when the endpoint is missing or fails, the view says so
 instead of showing an empty list.
 
-### Fix a site (N7, N12)
+### Settings
+
+Settings are folded groups: next page, follow links, scroll, browser, network permissions and
+connecting your app. With **Advanced** on, **Browser** lists the steps the browser takes on the
+page before it reads it (often found by the AI's look), each in plain words with **Delete**;
+deleting one rewrites only that recipe, checked against the file you opened. **Let the AI look
+again** runs the same look as the guided create. What shared or AI-written input (agent tools,
+bundles, hub recipes, model output) may switch on is a set of per-origin switches under
+**Connections**, for this Studio session only; your own projects need no switch.
+
+### Hub
+
+**Hub** is outside any project. Type a site and Studio lists what other people built for it, as
+cards with the fields each brings, its health, when it was last verified and whether it needs a
+browser or extra permissions. **Try** installs it into a project as a candidate and opens the
+guided create's review on it; **Install** only installs. Nothing installed serves until you
+promote it. When a recipe asks for extra permissions (a stealth browser, page actions,
+proxies), Studio stops at a plain-language prompt first: **Allow only for this site** lets that
+recipe use those permissions for jobs whose every address is on that site, while Studio installs
+and runs them; other sites, jobs that also read another site, and other kinds of input get
+nothing. The choice is kept in memory for this Studio run only and is never written to a job or
+a file. **Publish** prepares a proposal for the `hub/` folder of the repository from your project, with a
+description per field and a synthetic sample; it says what is uploaded (never your data or
+credentials) and pushes nothing.
+
+### Fix a site
 
 Pick a site and press **Find a fix** (this runs `rastro recipe repair` for that source; the job needs
 `recipe_memory`). Each proposal shows its checks in one row (the decision in words, records read
@@ -219,36 +263,6 @@ how it is read now, how the proposal reads it, and whether that changed. Then de
 **Apply fixes automatically** is a separate switch in the same view, off by default; it writes only
 `[repair] auto_promote` for this job. **Correct a field by hand** (folded below) keeps the
 preview-and-save-a-selector flow.
-
-### Design adaptations
-
-The redesign follows the maintainer's design implementation notes. Where the design and the
-product differ, the interface adapts:
-
-| Design | Studio | Why |
-| --- | --- | --- |
-| Separate "Jobs" page with every card | Cards moved into Results, Sources, Fix and Settings; element ids unchanged | Stage 1 is layout only; behaviour stays the same |
-| Project title such as "Agenda de fiestas · Uruguay" | The dataset name made readable (`agenda_fiestas` shows as "Agenda fiestas"; the raw value is `dataset`), or the job file name without a dataset | A job has no display name |
-| "Imported snapshot" with import time and original observation | One `imported_at`: the observation time the adapter gave `rastro.load_records` | The engine does not record a separate import time |
-| Drift and quarantine alerts in the demo | The demo folder has no open drift or waiting candidate | Making them needs a real drifted run; the endpoint reports both when they exist |
-| "Buscar por palabra clave" start option (Main, Nuevo step 1) | Removed | No product need covers it and it would need a search provider |
-| Step 1 checks the page and offers a browser | Step 1 takes the URL; the page is read on **Preview records**, with a pointer to the browser docs | Studio has no fetch-only route, and the render mode is a job setting |
-| Block-style field builder with a "Código" toggle (Nuevo step 2) | A table of field name, example and record key | Same job fields, no new engine concept; the job file stays viewable outside Studio |
-| Project name saved as a title | The name becomes the file names (`agenda-de-fiestas.toml`); the card shows the dataset name or file stem | Jobs have no display-name field |
-| "Hub on GitHub" and "Open pull request" (Recetas) | **Registry (URL)**: search and install from a local registry folder or an HTTPS URL; publish writes into a local folder and never runs Git or pushes | N10: no accounts and no Rastro-operated server; a GitHub repository can still serve as the HTTPS URL |
-| Recipe "collections" | Not offered | Not a defined concept |
-| Illustrative commands in Ajustes (`rastro export`, `rastro serve`, `rastro recipes …`) | Only real commands: the ones `/api/connect` generates for the project, and the real `rastro studio --allow-egress`, `--allow-env NAME`, `--allow-stealth` flags | A test checks every shown flag exists in the CLI |
-| Stealth as a mode choice in Ajustes | A switch for this Studio session only, off by default; the render mode stays a job setting | N12: a recipe or bundle can never set stealth |
-| "Permisos de red por host" editor | An explanation of `allowed_hosts` and the operator flags | Network grants belong to the operator, not to a page |
-| Mobile bottom sheet with its own layout (Movil) | The same views; at 40rem and below tables become labelled cards and the provenance panel a bottom sheet | One page, CSS only |
-| "Conectar una exportación" as an import flow | An explanation with the real `rastro.load_records` call and the SQLite option | Studio has no import route; the adapter API is the supported path |
-| "Avisarme por notificación del sistema" in Alerts | Not offered; the Technical detail keeps the `--on-failure` command for the README hook | Studio has no notification permission and adds no background process |
-| "Agregar sitio" / "Quitar del proyecto" in Sources | Not offered | Sources are job data; Studio edits only bounded settings of a job |
-| "Ver apartados" for quarantined records | **See details** opens Sources | Records are rejected, not stored apart; quarantine applies to fixes |
-| Before/after of field *values* in Fix | Before/after of how each field is *read* (locator), with Changed/Same and the checks row | The repair report carries selectors and check results, not sample values; the checks (records read, past samples, gates) say whether values still validate |
-| "Ayer se rechazó otra propuesta" note | Not shown | The repair report has no history of earlier refusals; Alerts lists refused fixes |
-| Image placeholder with **Load** | **Open image** opens the address in a new tab, without a referrer | Studio's Content-Security-Policy blocks every third-party image inside the page; it stays that way |
-| Search and filters over the whole dataset | Over the first 2,000 records, with a note when a dataset is larger | `/api/records` is paged; export covers everything |
 
 ### API for the views
 
@@ -285,12 +299,10 @@ A demo folder with three jobs in these states is built by
 `python -m tests.fixtures.studio_demo.build DIR` from a source checkout; then run
 `rastro studio --root DIR`.
 
-## Collection, alerts and sharing (N4, N5, N7, N10, N12)
+## Collection, alerts and sharing
 
-These controls sit in the Jobs view and call the existing services. URL-first job
-creation (N1) and the acquisition schema for spider and scroll (N2, N3, N9) are
-integrated. Jobs with `[spider]` and `[scroll]` can be edited through the bounded
-controls below. A visible control is not a grant.
+These controls sit in the Jobs view and call the existing services. Jobs with
+`[spider]` and `[scroll]` can be edited through the bounded controls below. A visible control is not a grant.
 
 - **Next page and repair settings.** Pick the job recipe or a source's recipe, type
   the next-link selector (for example `a.next::attr(href)`) and a page cap from 1 to 50,
@@ -307,12 +319,14 @@ controls below. A visible control is not a grant.
   Without one, **Fix this site** stores the candidate, keeps the current recipe serving
   and says why, so you promote with a reason. Off, you always promote with a reason.
   Installing a registry package never changes it.
-- **Allow stealth for this Studio session** (a switch, off by default) grants the running
-  Studio process, like `--allow-stealth` or `RASTRO_ALLOW_STEALTH=1`, and applies to
-  preview, extract, load, repair and promote. It is never written to a job or a bundle.
-  When the process was started with that grant the switch shows on and is locked. A job
-  asking for `render = "stealth"` without the grant fails with a refusal; Studio does not
-  fall back to a plain browser. Browser rendering and scroll do not enable stealth.
+- **Allow stealth for this Studio session** (a switch, off by default) is the deprecated
+  stealth grant, like `--allow-stealth` or `RASTRO_ALLOW_STEALTH=1`. Studio runs your own
+  jobs, so a job asking for `render = "stealth"` renders in the stealth browser without it;
+  the switch only widens untrusted input (see
+  [Capabilities and input origin](acquisition.md#capabilities-and-input-origin)). It is
+  never written to a job or a bundle. When the process was started with that grant the
+  switch shows on and is locked. Studio never falls back to a plain browser, and browser
+  rendering and scroll do not enable stealth.
 - **Progress.** While an extract, load, repair or promote runs, the Run card shows which
   operation is running for which job file, then its real outcome. The engine does not
   report source, page or scroll steps yet, so Studio shows none and does not estimate
@@ -372,8 +386,14 @@ several `--example` records when one is not enough. Repair needs `recipe_memory`
 running operation and its outcome, not a page count or an estimate of completion time. It is single-user and has no authentication beyond the
 per-run token.
 
+The "changed" chips in Results count records added, changed and removed between the last two
+loads; previous values are not stored, so a changed record shows its new value only. Changes
+need two loads that Studio recorded (loads from the command line are not in Studio's run log).
+The AI's narration arrives when its look ends, not step by step. Hub permission choices,
+notification toggles and the model and channel picked in Connections last for the Studio
+session only.
 
-### Bounded links and scrolling (N3, N9)
+### Bounded links and scrolling
 
 After creating a scraper, open its job and use **Follow links** to enable a
 bounded spider. Set link depth (1–4), page cap (1–100), a link selector,

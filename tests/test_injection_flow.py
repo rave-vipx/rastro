@@ -1,5 +1,5 @@
-"""Containment of instruction-like page content in repair and MCP payloads (N19, SEC-008,
-REPAIR-002, REPAIR-005, AGENT-002, AI-001). Models are deterministic offline fakes."""
+"""Containment of instruction-like page content in repair and MCP payloads. Models are
+deterministic offline fakes."""
 
 import json
 from datetime import UTC, datetime
@@ -180,7 +180,9 @@ def test_an_obedient_model_cannot_produce_a_promotion(tmp_path):
     reasons = {r for c in source.comparisons for r in c.evaluation.reasons}
     assert CODE in reasons
     proposal = json.loads(model.requests[0].content)
-    assert [f["field"] for f in proposal["content_flags"]] == ["descripcion"]
+    # The page text and the earlier sample both carry the visible instruction.
+    fields = [f["field"] for f in proposal["content_flags"]]
+    assert fields == ["untrusted_page_text", "descripcion"]
     served = rastro.mcp_tools.recipe_list(tmp_path, "job.toml")["sources"][0]
     assert served["serving_version"] == 1
 
