@@ -222,9 +222,7 @@ def test_the_workflow_accepts_and_extracts_bracketed_changelog_sections(tmp_path
     )
     assert extraction.returncode == 0, extraction.stdout + extraction.stderr
     assert (runner_temp / "notes.md").read_text(encoding="utf-8") == (
-        "\nFirst stable release.\n\n"
-        "### Added\n\n"
-        "- A stable public API.\n\n"
+        "\nFirst stable release.\n\n### Added\n\n- A stable public API.\n\n"
     )
 
     (tmp_path / "CHANGELOG.md").write_text(
