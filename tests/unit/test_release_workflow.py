@@ -189,6 +189,56 @@ def test_the_workflow_keeps_the_tag_trigger_and_the_publishing_contract() -> Non
     assert "id-token: write" in text
 
 
+def test_the_workflow_accepts_and_extracts_bracketed_changelog_sections(tmp_path: Path) -> None:
+    scripts = _run_scripts(WORKFLOW.read_text(encoding="utf-8"))
+    validation_script = scripts["Require a dated changelog section for this version"]
+    (tmp_path / "CHANGELOG.md").write_text(
+        "## [Unreleased]\n\n"
+        "## [1.0.0] - 2026-11-24\n\n"
+        "First stable release.\n\n"
+        "### Added\n\n"
+        "- A stable public API.\n\n"
+        "## [0.9.0] - 2026-11-17\n",
+        encoding="utf-8",
+    )
+
+    validation = subprocess.run(
+        ["bash", "-e", "-o", "pipefail", "-c", validation_script],
+        cwd=tmp_path,
+        env={**os.environ, "VERSION": "1.0.0"},
+        capture_output=True,
+        text=True,
+    )
+    assert validation.returncode == 0, validation.stdout + validation.stderr
+
+    runner_temp = tmp_path / "runner"
+    runner_temp.mkdir()
+    extraction = subprocess.run(
+        ["bash", "-e", "-o", "pipefail", "-c", scripts["Extract this version's changelog section"]],
+        cwd=tmp_path,
+        env={**os.environ, "TAG": "v1.0.0", "RUNNER_TEMP": str(runner_temp)},
+        capture_output=True,
+        text=True,
+    )
+    assert extraction.returncode == 0, extraction.stdout + extraction.stderr
+    assert (runner_temp / "notes.md").read_text(encoding="utf-8") == (
+        "\nFirst stable release.\n\n### Added\n\n- A stable public API.\n\n"
+    )
+
+    (tmp_path / "CHANGELOG.md").write_text(
+        "## [1.0.0]\n\nNot dated.\n",
+        encoding="utf-8",
+    )
+    undated = subprocess.run(
+        ["bash", "-e", "-o", "pipefail", "-c", validation_script],
+        cwd=tmp_path,
+        env={**os.environ, "VERSION": "1.0.0"},
+        capture_output=True,
+        text=True,
+    )
+    assert undated.returncode != 0
+
+
 def test_the_releasing_guide_documents_the_patch_path() -> None:
     text = RELEASING.read_text(encoding="utf-8")
     assert "release/1.0" in text

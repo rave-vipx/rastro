@@ -74,7 +74,8 @@ jobs:
           echo "VERSION=$version" >> "$GITHUB_ENV"
       - name: Require a dated changelog section for this version
         run: |
-          heading=$(grep -E "^## ${VERSION//./\\.}( |$)" CHANGELOG.md | head -n 1)
+          escaped="${VERSION//./\\.}"
+          heading=$(grep -E "^## (\[${escaped}\]|${escaped})[[:space:]]+[-—][[:space:]]+[0-9]{4}-[0-9]{2}-[0-9]{2}$" CHANGELOG.md | head -n 1)
           if [ -z "$heading" ]; then
             echo "::error::CHANGELOG.md has no section for $VERSION"
             exit 1
@@ -173,6 +174,7 @@ jobs:
         run: |
           version="${TAG#v}"
           awk -v v="$version" '
+            index($0, "## [" v "] ") == 1 || $0 == "## [" v "]" ||
             index($0, "## " v " ") == 1 || $0 == "## " v { found = 1; next }
             found && /^## / { exit }
             found { print }

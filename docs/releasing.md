@@ -67,8 +67,8 @@ A major or minor release is cut from `main`. A patch release follows the path in
 1. Merge the release changes into `main` through a reviewed pull request, with CI green
    (including the `package` job, which installs the wheel with and without extras).
 2. In that pull request, `pyproject.toml` carries the version, `uv.lock` is regenerated
-   (`uv lock`), and `CHANGELOG.md` has the final section: fold the `## Unreleased` entries into
-   `## X.Y.Z — YYYY-MM-DD` and remove any "unreleased" wording. The workflow publishes that
+   (`uv lock`), and `CHANGELOG.md` has the final section: fold the `## [Unreleased]` entries into
+   `## [X.Y.Z] - YYYY-MM-DD` and remove any "unreleased" wording. The workflow publishes that
    section as the release notes. SDK and CLI read the package metadata; there is no separate
    version constant.
 3. Tag the exact merged commit on `main` and push the tag:
