@@ -6,14 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
-- The public recipe hub now lives in this repository under `hub/` (three starter recipes, `health.json`, a CC0 license for recipes and `hub/build.py` to replay every package offline). `rastro hub` reads `https://raw.githubusercontent.com/rave-vipx/rastro/main/hub/` by default, and a `Hub` workflow verifies hub-only pull requests.
-
 ## [1.0.0] - 2026-11-24
 
 First stable release. The public Python names, the job file format, the run report schema and the CLI exit codes are frozen under the policy in `docs/stability.md`.
 
 ### Added
 
+- The public recipe hub now lives in this repository under `hub/` (three starter recipes, `health.json`, a CC0 license for recipes and `hub/build.py` to replay every package offline). `rastro hub` reads `https://raw.githubusercontent.com/rave-vipx/rastro/main/hub/` by default, and a `Hub` workflow verifies hub-only pull requests.
 - Run report: every `rastro job run` and `rastro job load` result carries a content-free `report` (`rastro.RunReport`, `rastro.SourceReport`) saying per source why it ended as it did: outcome, reason, pages, accepted and rejected counts by code, fields nulled, what was stored, acquisition, crawl, repair and timings. It also reaches the failure hook payload and Studio, and its JSON Schema is `docs/schemas/run-report.schema.json`. See `docs/run-report.md`.
 - List and object fields (`type = "list"` and `"object"`, `rastro.ListField`, `rastro.ObjectField`, `rastro.ScalarField`), `null_values` placeholders for missing values, and regional datetimes (`localized = true`) in job files. See `docs/fields.md`.
 - Nested recipes and pointers: a recipe field can be a `NestedMapping` (repeated child elements or a JSON array with one wildcard) and JSON pointers can be relative. CSS, JSON-LD, JSON and embedded JSON recipes extract nested lists and objects with bounded depth and item counts.

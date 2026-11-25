@@ -35,10 +35,18 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          outside=$(git diff --name-only "$BASE_SHA...$HEAD_SHA" | grep -v '^hub/' || true)
+          changed=$(git diff --name-only "$BASE_SHA...$HEAD_SHA")
+          outside=$(printf '%s\n' "$changed" | grep -v '^hub/' || true)
           if [ -n "$outside" ]; then
             echo "A pull request that changes hub/ must change nothing else:" >&2
             echo "$outside" >&2
+            exit 1
+          fi
+          # The hub's own checks change only through dev, with code review.
+          tooling=$(printf '%s\n' "$changed" | grep -E '^hub/[^/]+\.py$' || true)
+          if [ -n "$tooling" ]; then
+            echo "Hub tooling changes go through dev, not a hub-only pull request:" >&2
+            echo "$tooling" >&2
             exit 1
           fi
       - name: Layout, executables and links
