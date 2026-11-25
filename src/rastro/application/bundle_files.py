@@ -1,4 +1,4 @@
-"""Bounded, symlink-refusing bundle file I/O shared by export, import and the registry (HUB-001).
+"""Bounded, symlink-refusing bundle file I/O shared by export, import and the registry.
 
 Bundles are untrusted input: every file is size-bounded and hashed before it is trusted.
 """

@@ -60,6 +60,64 @@ export function cellModel(value, reason) {
   return { kind: "text", text };
 }
 
+const plain = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
+
+// A list of objects (several tiers, sessions, variants) as sub-rows, or null for anything else.
+export function nestedModel(value) {
+  if (!Array.isArray(value) || value.length < 1 || !value.every(plain)) return null;
+  const members = [...new Set(value.flatMap((item) => Object.keys(item)))];
+  return { members, rows: value };
+}
+
+// Keep sub-rows whose member (or any member when none is chosen) contains the text.
+export function filterMembers(rows, member, query) {
+  const wanted = String(query || "").trim().toLowerCase();
+  if (!wanted) return rows;
+  const names = member ? [member] : [...new Set(rows.flatMap((row) => Object.keys(row)))];
+  return rows.filter((row) => names.some((n) => row[n] !== null && row[n] !== undefined
+    && String(typeof row[n] === "object" ? JSON.stringify(row[n]) : row[n]).toLowerCase().includes(wanted)));
+}
+
+function subTable(model, member, query) {
+  const table = el("table", undefined, "nested");
+  const head = el("tr");
+  for (const name of model.members) head.append(Object.assign(el("th", name), { scope: "col" }));
+  table.append(el("thead"), el("tbody"));
+  table.tHead.append(head);
+  for (const row of filterMembers(model.rows, member, query)) {
+    const line = el("tr");
+    for (const name of model.members) {
+      const value = row[name];
+      const cell = el("td");
+      cell.dataset.label = name;
+      cell.append(blank(value) ? emptyCell(null) : String(typeof value === "object" ? JSON.stringify(value) : value));
+      line.append(cell);
+    }
+    table.tBodies[0].append(line);
+  }
+  return table;
+}
+
+// The expandable sub-rows of a nested value, with a filter on one member field.
+export function nestedPanel(model) {
+  const box = el("div", undefined, "nested-box");
+  box.hidden = true;
+  const pick = el("select");
+  pick.setAttribute("aria-label", t("nested.member"));
+  pick.append(new Option(t("nested.any"), ""), ...model.members.map((m) => new Option(m, m)));
+  const input = el("input");
+  Object.assign(input, { type: "search", maxLength: 100 });
+  input.setAttribute("aria-label", t("nested.filter"));
+  const body = el("div", undefined, "scroll");
+  const redraw = () => body.replaceChildren(subTable(model, pick.value, input.value));
+  pick.addEventListener("change", redraw);
+  input.addEventListener("input", redraw);
+  redraw();
+  box.append(el("div", undefined, "row"), body);
+  box.children[0].append(pick, input);
+  return box;
+}
+
 export function isLive(record) {
   return Object.values(record.fields || {}).some((v) => typeof v === "string" && LIVE.has(v));
 }
@@ -98,6 +156,21 @@ export function renderCell(record, field) {
   } else if (model.kind === "free") box.append(el("strong", model.text));
   else if (model.kind === "tiers") {
     box.append(document.createTextNode(model.text), " ", el("span", t("cell.tiers", { n: model.n }), "tag"));
+    const nested = nestedModel(value);
+    if (nested) {
+      const panel = nestedPanel(nested);
+      const toggle = el("button", t("nested.show", { n: model.n }), "small");
+      toggle.type = "button";
+      toggle.setAttribute("aria-expanded", "false");
+      toggle.addEventListener("click", (event) => {
+        event.stopPropagation();
+        panel.hidden = !panel.hidden;
+        toggle.setAttribute("aria-expanded", String(!panel.hidden));
+        toggle.textContent = t(panel.hidden ? "nested.show" : "nested.hide", { n: model.n });
+      });
+      panel.addEventListener("click", (event) => event.stopPropagation());
+      box.append(" ", toggle, panel);
+    }
   } else if (model.kind === "url") box.append(blockedUrl(model.text));
   else box.append(emptyCell(model.kind === "empty" ? null : model.kind));
   if (flagged(record, field)) box.append(" ", trustMarker());

@@ -1,12 +1,12 @@
 # Contributing to Rastro
 
-Thanks for helping make web data more reliable. Rastro is in beta. The public surface and its deprecation policy are defined in the [stability policy](docs/stability.md).
+Thanks for helping make web data more reliable. The public surface and its deprecation policy are defined in the [stability policy](docs/stability.md).
 
 ## Find a useful change
 
-Read the [roadmap](docs/roadmap.md) and [open issues](https://github.com/rave-vipx/rastro/issues). For a substantial feature, describe the problem and proposed API in an issue before investing in implementation. Small fixes and documentation improvements can go straight to a pull request.
+Read the [open issues](https://github.com/rave-vipx/rastro/issues). For a substantial feature, describe the problem and proposed API in an issue before investing in implementation. Small fixes and documentation improvements can go straight to a pull request.
 
-The [master specification](RASTRO_MASTER_SPEC.md) defines scope. Keep examples and public documentation in English. Use synthetic fixtures that you have permission to distribute.
+The README, `SECURITY.md` and the ADRs in `docs/decisions/` define scope. Keep examples and public documentation in English. Use synthetic fixtures that you have permission to distribute.
 
 ## Set up
 
@@ -22,10 +22,13 @@ uv run rastro demo
 Create a short-lived branch from `dev` and target `dev` in your pull request.
 `dev` is the integration branch: CI runs on every push and PR, and passing checks
 are required before merging. Promote reviewed changes to `main` through a separate
-PR; documentation deploys only from `main`. CI continues to run on pushes to
-`staging` during the branch transition.
+PR; documentation deploys only from `main`.
 
 Keep each commit focused, with a descriptive `feat:`, `fix:`, `test:`, or `docs:` message. Commit `uv.lock` whenever dependency resolution changes.
+
+## Publishing a recipe to the hub
+
+The public recipe hub is the `hub/` folder. Publish with `rastro hub publish ... --registry <checkout>/hub`, run `uv run python hub/build.py`, and open a pull request that only touches `hub/`. Hub-only pull requests may target `main` directly; the Hub workflow replays every package offline and rejects anything else. Library changes still go through `dev`. See `hub/README.md` for the rules (synthetic sample, every field described, no credentials or personal data).
 
 ## Verify
 
@@ -37,6 +40,7 @@ uv run pytest
 uv run python examples/offline.py
 uv run python examples/adapter.py
 uv run python examples/intelligence.py
+uv run python examples/event-agenda/read_agenda.py
 uv run python -m benchmarks.run --repetitions 2 --warmup 1 --output /tmp/rastro-benchmark.json
 uv run --group docs mkdocs build --strict
 uv build
@@ -59,11 +63,34 @@ For comparison changes, regenerate the full report using the [benchmark methodol
 - Ambiguous and invalid records need explicit outcomes. Default values are not source evidence.
 - Logs and validation diagnostics must not contain raw input, credential-bearing URLs, or user-defined validator messages.
 - New acquisition must include destination validation, redirect/DNS tests, timeouts, and source-policy enforcement before being exposed publicly.
+- Layers: `domain/` (Pydantic and the standard library only) ← `application/` → `ports/` ← `adapters/`; `cli`, `mcp`, `studio` and the Python API call `application`. Engine types stay in `adapters/`.
+- All network access goes through the acquisition boundary; never add a second fetch path. `import rastro` stays light: optional extras load lazily.
+- Write the failing test first; every bug gets a regression test. Tests are offline with synthetic fixtures on `.example` domains.
+- Modules stay under 250 lines (hard limit 400) and functions around 40 lines; split instead of growing.
+- Public names, flags and persisted formats change only through the [stability policy](docs/stability.md).
+- A new capability is registered in `src/rastro/capabilities_*.py`, new issue codes are documented in `docs/issues.md`, and the generated files are refreshed: `rastro capabilities --output llms > llms.txt`, `rastro capabilities --output markdown > docs/capabilities.md`, `rastro config --output markdown > docs/configuration.md`.
+- Never open or edit `benchmarks/recovery/` (frozen corpus, ADR 0011).
 
 ## Submit a pull request
 
-Explain the user-visible change, reference requirement IDs, and report the exact checks you ran. Include security and performance implications and any limitations. Update API docs and `CHANGELOG.md` in the same change. The PR template provides these prompts.
+Explain the user-visible change, link the issue or ADR, and report the exact checks you ran. Include security and performance implications and any limitations. Update API docs and `CHANGELOG.md` in the same change. The PR template provides these prompts.
 
 Maintainers review scope, API clarity, correctness, and evidence. Required CI checks must pass before merging. No reviewer response-time guarantee is offered at this stage.
 
 By contributing, you agree that your contributions are licensed under Apache 2.0. Participation follows the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+## What never goes in the repository
+
+Rastro is a public repository. Keep these out of commits, pull requests and issues; the
+maintainers keep them locally under `local/` (ignored by Git):
+
+- Planning documents: roadmaps, requirement lists, action plans, design briefs, mockups and their sample data (tests use synthetic fixtures under `tests/`).
+- Process records: agent work logs, review transcripts, release evidence registers, PR body
+  drafts (`.pr-*-body.md`) and local run outputs.
+- Anything about private projects that use Rastro: names, sites, customers, findings. Describe
+  a problem in general terms with a synthetic reproduction instead.
+- Credentials, tokens, `.env` files, cookies, captured pages and personal data.
+
+Published documentation explains how to use and operate Rastro (guides, reference, ADRs,
+benchmarks with reproducible commands). If a change needs planning context, summarize the
+decision in an ADR; do not link to local files.

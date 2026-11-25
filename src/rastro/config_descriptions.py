@@ -1,4 +1,4 @@
-"""Plain descriptions of every job-file key, keyed ``Model.field`` (AGENT-001, N18).
+"""Plain descriptions of every job-file key, keyed ``Model.field``.
 
 The models stay the source of names, types, defaults and bounds; ``config_reference``
 reads those from the job JSON Schema and takes the text from here when a field has no
@@ -162,11 +162,15 @@ _DATASET = {
     "ScrollSpec.stop_when": "When scrolling ends; the only value is no_new_records.",
     "SpiderPolicy.mode": "list reads only the sources; spider follows links from them.",
     "SpiderPolicy.seed": "page starts from each source; sitemap reads a sitemap source.",
+    "SpiderPolicy.seed_order": (
+        "Order sitemap locs before max_pages: document, reverse or lastmod (newest first)."
+    ),
     "SpiderPolicy.max_depth": "Link levels followed from a start page.",
     "SpiderPolicy.max_pages": "Most pages fetched per start URL.",
     "SpiderPolicy.same_host": "Stay on the start page's host.",
     "SpiderPolicy.allow": "Path prefixes (whole segments); only matching links are followed.",
     "SpiderPolicy.deny": "Path prefixes (whole segments) that are never followed; deny wins.",
+    "SpiderPolicy.allow_pattern": "Regular expression a link's path must match; deny still wins.",
     "SpiderPolicy.links": "CSS expression ending in ::attr(name); every match is a link.",
     "SpiderPolicy.link_field": "Declared field whose value in each record is a link.",
 }

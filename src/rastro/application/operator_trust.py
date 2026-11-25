@@ -1,4 +1,4 @@
-"""Where operator trust comes from: environment, CLI flags, or an SDK call (SEC-004/005).
+"""Where operator trust comes from: environment, CLI flags, or an SDK call.
 
 Sources combine: ``RASTRO_ALLOW_REMOTE=1`` (``1``, ``true`` or ``yes``, as every
 ``RASTRO_ALLOW_*`` flag; see :func:`env_flag`) and ``RASTRO_ALLOWED_ENV="A,B"`` in the
@@ -6,7 +6,11 @@ environment; a process-wide value set by the CLI (``--allow-remote``, ``--allow-
 a scoped value set by SDK keywords such as ``run_job_file(..., allow_remote=True)``.
 The network widenings (``--allow-private-network``, ``--allow-port``, ``--ignore-robots`` and
 ``RASTRO_ALLOW_PRIVATE_NETWORK``, ``RASTRO_ALLOWED_PORTS``, ``RASTRO_IGNORE_ROBOTS``) come the
-same three ways and can never be set from a job file (SEC-001/002/003).
+same three ways and can never be set from a job file.
+Capability grants (``--allow-capability``, ``--allow-untrusted ORIGIN:NAME`` and
+``RASTRO_ALLOW_CAPABILITIES``, ``RASTRO_ALLOW_UNTRUSTED``) come from the CLI or the
+environment. The input origin of the job being run is set by its entry point with
+:func:`input_origin` (ADR 0037); it defaults to the operator.
 Nothing here lets a job file start a command (see ``rastro.domain.model_trust``).
 """
 
@@ -14,20 +18,33 @@ from __future__ import annotations
 
 import os
 import re
+import warnings
 from collections.abc import Iterable, Iterator, Mapping
 from contextlib import contextmanager
 from contextvars import ContextVar
+from typing import cast
 
 from rastro.domain.acquisition_base import exact_host
+from rastro.domain.capability_grants import (
+    CAPABILITIES,
+    INPUT_ORIGINS,
+    Capability,
+    CapabilityGrants,
+    InputOrigin,
+)
 from rastro.domain.model_trust import OperatorTrust
 from rastro.domain.models import ConfigurationError
 
 REMOTE_ENV = "RASTRO_ALLOW_REMOTE"
 EGRESS_ENV = "RASTRO_ALLOW_EGRESS"
 PRIVATE_NETWORK_ENV = "RASTRO_ALLOW_PRIVATE_NETWORK"
+STEALTH_ENV = "RASTRO_ALLOW_STEALTH"
+CAPABILITIES_ENV = "RASTRO_ALLOW_CAPABILITIES"
+UNTRUSTED_ENV = "RASTRO_ALLOW_UNTRUSTED"
 _TRUE = frozenset({"1", "true", "yes"})
 _ENV_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]{0,127}")
 _SCOPED: ContextVar[OperatorTrust | None] = ContextVar("operator_trust", default=None)
+INPUT_ORIGIN: ContextVar[InputOrigin] = ContextVar("input_origin", default="operator")
 _process = OperatorTrust()
 
 
@@ -69,6 +86,39 @@ def env_hosts(values: Iterable[str]) -> frozenset[str]:
         raise ConfigurationError("Robots overrides must be exact hostnames, not patterns") from None
 
 
+def capability_names(values: Iterable[str]) -> frozenset[Capability]:
+    """Capability names the operator grants; an unknown name is a ``ConfigurationError``."""
+    if isinstance(values, str):
+        raise ConfigurationError("Pass capability names as a list")
+    names = {value.strip() for value in values if value.strip()}
+    if not names <= set(CAPABILITIES):
+        raise ConfigurationError(
+            "Unknown capability name",
+            location="capabilities",
+            hint=f"Use one of: {', '.join(CAPABILITIES)}.",
+        )
+    return frozenset(cast(set[Capability], names))
+
+
+def untrusted_grants(values: Iterable[str]) -> dict[InputOrigin, frozenset[Capability]]:
+    """``ORIGIN:NAME`` pairs, such as ``mcp:stealth``, grouped by untrusted origin."""
+    if isinstance(values, str):
+        raise ConfigurationError("Pass untrusted grants as a list")
+    grouped: dict[InputOrigin, set[str]] = {}
+    for value in values:
+        if not value.strip():
+            continue
+        origin, separator, name = value.strip().partition(":")
+        if not separator or origin not in INPUT_ORIGINS[1:]:
+            raise ConfigurationError(
+                "Untrusted grants must look like ORIGIN:CAPABILITY",
+                location="capabilities",
+                hint=f"Use one of these origins: {', '.join(INPUT_ORIGINS[1:])}.",
+            )
+        grouped.setdefault(origin, set()).add(name)
+    return {origin: capability_names(names) for origin, names in grouped.items()}
+
+
 def env_flag(name: str, environ: Mapping[str, str] | None = None) -> bool:
     """One reading for every boolean opt-in such as ``RASTRO_ALLOW_REMOTE``: 1, true or yes
     (any case, surrounding spaces ignored); anything else is off."""
@@ -79,13 +129,55 @@ def env_flag(name: str, environ: Mapping[str, str] | None = None) -> bool:
 def current_trust() -> OperatorTrust:
     from_env = OperatorTrust(
         allow_remote=env_flag(REMOTE_ENV),
-        allow_stealth=env_flag("RASTRO_ALLOW_STEALTH"),
+        allow_stealth=env_flag(STEALTH_ENV),
         allowed_env=env_names(os.environ.get("RASTRO_ALLOWED_ENV", "").split(",")),
         allow_private_network=env_flag(PRIVATE_NETWORK_ENV),
         allowed_ports=env_ports(os.environ.get("RASTRO_ALLOWED_PORTS", "").split(",")),
         ignore_robots=env_hosts(os.environ.get("RASTRO_IGNORE_ROBOTS", "").split(",")),
+        operator_grants=capability_names(os.environ.get(CAPABILITIES_ENV, "").split(",")),
+        untrusted_capabilities=untrusted_grants(os.environ.get(UNTRUSTED_ENV, "").split(",")),
     )
     return from_env.merged(_process).merged(_SCOPED.get() or OperatorTrust())
+
+
+def current_grants() -> CapabilityGrants:
+    """The capabilities each input origin may use under the current operator trust."""
+    return current_trust().capability_grants()
+
+
+def current_origin() -> InputOrigin:
+    """Where the job being run came from; the operator unless an entry point said otherwise."""
+    return INPUT_ORIGIN.get()
+
+
+@contextmanager
+def input_origin(origin: InputOrigin) -> Iterator[None]:
+    """Mark everything run inside this block as input from ``origin``.
+
+    An entry point sets this where input enters (an agent tool, a registry install, a bundle
+    import). Inside an untrusted block, nothing can switch back to the operator origin.
+    """
+    if origin not in INPUT_ORIGINS:
+        raise ConfigurationError(
+            "Unknown input origin", hint="Use one of: " + ", ".join(INPUT_ORIGINS)
+        )
+    if origin == "operator" and INPUT_ORIGIN.get() != "operator":
+        raise ConfigurationError("Untrusted input cannot be run as the operator's own job")
+    token = INPUT_ORIGIN.set(origin)
+    try:
+        yield
+    finally:
+        INPUT_ORIGIN.reset(token)
+
+
+@contextmanager
+def entered_from(origin: InputOrigin) -> Iterator[None]:
+    """Input entering from an untrusted ``origin``; an untrusted origin already set is kept.
+
+    A registry install imports a bundle: it stays ``registry``, it never becomes ``bundle``.
+    """
+    with input_origin(origin if INPUT_ORIGIN.get() == "operator" else INPUT_ORIGIN.get()):
+        yield
 
 
 def granted_env() -> frozenset[str]:
@@ -100,6 +192,24 @@ def set_process_trust(trust: OperatorTrust) -> OperatorTrust:
     return previous
 
 
+_STEALTH_NOTICE_GIVEN: ContextVar[bool] = ContextVar("stealth_notice_given", default=False)
+STEALTH_DEPRECATION = (
+    "allow_stealth= is deprecated: your own jobs need no grant; grant untrusted input with "
+    "an untrusted capability grant (ORIGIN:stealth) instead"
+)
+
+
+@contextmanager
+def stealth_notice_given() -> Iterator[None]:
+    """Mark calls whose stealth grant is Rastro's own switch (Studio) or was already reported
+    (the command line prints its own notice for ``--allow-stealth``)."""
+    token = _STEALTH_NOTICE_GIVEN.set(True)
+    try:
+        yield
+    finally:
+        _STEALTH_NOTICE_GIVEN.reset(token)
+
+
 @contextmanager
 def operator_trust(
     *,
@@ -109,8 +219,18 @@ def operator_trust(
     allow_private_network: bool = False,
     allow_ports: Iterable[int] = (),
     ignore_robots: Iterable[str] = (),
+    untrusted: Mapping[InputOrigin, frozenset[Capability]] | None = None,
 ) -> Iterator[None]:
-    """Scope an SDK caller's opt-in to the job functions called inside this block."""
+    """Scope an SDK caller's opt-in to the job functions called inside this block.
+
+    ``untrusted`` grants capabilities to untrusted origins, such as Studio's per-site choice.
+
+    ``allow_stealth`` is the deprecated stealth switch: operator jobs need no grant, and it
+    grants stealth and challenge solving to untrusted origins only, and emits a
+    ``DeprecationWarning``.
+    """
+    if allow_stealth is True and not _STEALTH_NOTICE_GIVEN.get():
+        warnings.warn(STEALTH_DEPRECATION, DeprecationWarning, stacklevel=4)
     added = OperatorTrust(
         allow_remote=allow_remote is True,
         allow_stealth=allow_stealth is True,
@@ -118,6 +238,7 @@ def operator_trust(
         allow_private_network=allow_private_network is True,
         allowed_ports=env_ports(allow_ports),
         ignore_robots=env_hosts(ignore_robots),
+        untrusted_capabilities=dict(untrusted or {}),
     )
     token = _SCOPED.set((_SCOPED.get() or OperatorTrust()).merged(added))
     try:

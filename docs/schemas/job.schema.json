@@ -74,6 +74,10 @@
           "title": "Backoff Seconds",
           "type": "number"
         },
+        "browser": {
+          "$ref": "#/$defs/BrowserControls",
+          "description": "How browser sources load and observe a page: wait selector, resource and ad blocking, screenshot, and the operator-granted real Chrome, remote browser and persistent session."
+        },
         "egress_profiles": {
           "additionalProperties": {
             "$ref": "#/$defs/EgressProfile"
@@ -81,6 +85,19 @@
           "maxProperties": 16,
           "title": "Egress Profiles",
           "type": "object"
+        },
+        "hosts": {
+          "additionalProperties": {
+            "$ref": "#/$defs/HostLimits"
+          },
+          "description": "Pacing and concurrency for one allowed host, overriding the job-wide min_interval_seconds and max_concurrency for it.",
+          "maxProperties": 64,
+          "title": "Hosts",
+          "type": "object"
+        },
+        "http": {
+          "$ref": "#/$defs/HttpOptions",
+          "description": "HTTP transport settings: which browser to impersonate and which protocol version to ask for."
         },
         "max_concurrency": {
           "default": 4,
@@ -155,6 +172,26 @@
           "title": "Request Timeout Seconds",
           "type": "number"
         },
+        "robots": {
+          "default": "obey",
+          "description": "\"ignore\" neither fetches nor enforces robots.txt for this job: the operator asserts permission. Jobs from agent tools, bundles, registry recipes and model output need the robots_ignore grant.",
+          "enum": [
+            "obey",
+            "ignore"
+          ],
+          "title": "Robots",
+          "type": "string"
+        },
+        "rotate_egress": {
+          "default": [],
+          "description": "Egress profile names to rotate over, in order: each transfer of a source whose egress is \"direct\" uses the next one, and a proxy failure retries on the next.",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 16,
+          "title": "Rotate Egress",
+          "type": "array"
+        },
         "session": {
           "default": false,
           "title": "Session",
@@ -226,6 +263,18 @@
           "title": "Name",
           "type": "string"
         },
+        "null_values": {
+          "default": [],
+          "description": "Text placeholders rejected after stripping whitespace and case folding.",
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 16,
+          "title": "Null Values",
+          "type": "array"
+        },
         "required": {
           "default": true,
           "title": "Required",
@@ -242,6 +291,169 @@
         "name"
       ],
       "title": "BooleanField",
+      "type": "object"
+    },
+    "BrowserControls": {
+      "additionalProperties": false,
+      "description": "How a browser source loads and observes its page.",
+      "properties": {
+        "block_ads": {
+          "default": false,
+          "description": "Refuse requests to a built-in list of ad-serving domains.",
+          "title": "Block Ads",
+          "type": "boolean"
+        },
+        "blocked_domains": {
+          "default": [],
+          "description": "Hosts (and their subdomains) the page may not request.",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 64,
+          "title": "Blocked Domains",
+          "type": "array"
+        },
+        "capture_network": {
+          "default": [],
+          "description": "Path regular expressions; matching responses are captured.",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 8,
+          "title": "Capture Network",
+          "type": "array"
+        },
+        "cdp_url_env": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Z_][A-Z0-9_]{0,127}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Environment variable holding a remote browser DevTools URL; grant-only.",
+          "title": "Cdp Url Env"
+        },
+        "disable_resources": {
+          "default": true,
+          "description": "Skip images, media and fonts; false loads them.",
+          "title": "Disable Resources",
+          "type": "boolean"
+        },
+        "network_idle": {
+          "default": false,
+          "description": "Also wait for network quiet when a wait_selector is set.",
+          "title": "Network Idle",
+          "type": "boolean"
+        },
+        "pierce_shadow": {
+          "default": false,
+          "description": "Let selectors reach into closed shadow roots (stealth only).",
+          "title": "Pierce Shadow",
+          "type": "boolean"
+        },
+        "real_chrome": {
+          "default": false,
+          "description": "Drive the installed Chrome instead of bundled Chromium; grant-only.",
+          "title": "Real Chrome",
+          "type": "boolean"
+        },
+        "screenshot": {
+          "default": false,
+          "description": "Keep one PNG of the rendered page as evidence; needs the screenshots grant.",
+          "title": "Screenshot",
+          "type": "boolean"
+        },
+        "session_profile": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Name of a persistent browser profile under RASTRO_PROFILE_DIR; grant-only.",
+          "title": "Session Profile"
+        },
+        "wait_selector": {
+          "anyOf": [
+            {
+              "maxLength": 1024,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "CSS selector to wait for before the page is read, instead of network quiet.",
+          "title": "Wait Selector"
+        },
+        "wait_state": {
+          "$ref": "#/$defs/WaitState",
+          "default": "attached",
+          "description": "State the wait_selector element must reach."
+        }
+      },
+      "title": "BrowserControls",
+      "type": "object"
+    },
+    "BrowserFamily": {
+      "enum": [
+        "chrome",
+        "firefox",
+        "safari",
+        "edge"
+      ],
+      "type": "string"
+    },
+    "CapturePattern": {
+      "maxLength": 256,
+      "minLength": 1,
+      "type": "string"
+    },
+    "ClickStep": {
+      "additionalProperties": false,
+      "description": "Click the first element matching ``selector``, then optionally wait for ``wait_for``.",
+      "properties": {
+        "action": {
+          "const": "click",
+          "title": "Action",
+          "type": "string"
+        },
+        "selector": {
+          "maxLength": 1024,
+          "minLength": 1,
+          "title": "Selector",
+          "type": "string"
+        },
+        "wait_for": {
+          "anyOf": [
+            {
+              "maxLength": 1024,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Wait For"
+        }
+      },
+      "required": [
+        "action",
+        "selector"
+      ],
+      "title": "ClickStep",
       "type": "object"
     },
     "CommandProvider": {
@@ -378,7 +590,7 @@
     },
     "CssRecipe": {
       "additionalProperties": false,
-      "description": "Select HTML records with ``record_selector``; fields end in ::text or ::attr(name).",
+      "description": "Records at ``record_selector``; fields end in ::text or ::attr(name); steps run first.",
       "properties": {
         "fallbacks": {
           "default": [],
@@ -391,7 +603,7 @@
         },
         "fields": {
           "additionalProperties": {
-            "type": "string"
+            "$ref": "#/$defs/FieldMapping"
           },
           "maxProperties": 100,
           "minProperties": 1,
@@ -419,6 +631,11 @@
           "default": false,
           "title": "Require Evidence",
           "type": "boolean"
+        },
+        "steps": {
+          "$ref": "#/$defs/PageSteps",
+          "default": [],
+          "description": "Browser actions (click, type, select, scroll, wait, follow) run before extraction; data only, never code."
         },
         "strategy": {
           "const": "css",
@@ -573,6 +790,18 @@
           "title": "Name",
           "type": "string"
         },
+        "null_values": {
+          "default": [],
+          "description": "Text placeholders rejected after stripping whitespace and case folding.",
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 16,
+          "title": "Null Values",
+          "type": "array"
+        },
         "required": {
           "default": true,
           "title": "Required",
@@ -605,6 +834,18 @@
           "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$",
           "title": "Name",
           "type": "string"
+        },
+        "null_values": {
+          "default": [],
+          "description": "Text placeholders rejected after stripping whitespace and case folding.",
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 16,
+          "title": "Null Values",
+          "type": "array"
         },
         "required": {
           "default": true,
@@ -663,6 +904,18 @@
           "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$",
           "title": "Name",
           "type": "string"
+        },
+        "null_values": {
+          "default": [],
+          "description": "Text placeholders rejected after stripping whitespace and case folding.",
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 16,
+          "title": "Null Values",
+          "type": "array"
         },
         "required": {
           "default": true,
@@ -784,7 +1037,7 @@
         },
         "fields": {
           "additionalProperties": {
-            "type": "string"
+            "$ref": "#/$defs/FieldMapping"
           },
           "maxProperties": 100,
           "minProperties": 1,
@@ -839,6 +1092,24 @@
       ],
       "title": "EmbeddedJsonRecipe",
       "type": "object"
+    },
+    "FieldMapping": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 4,
+          "minItems": 1,
+          "type": "array"
+        },
+        {
+          "$ref": "#/$defs/NestedMapping"
+        }
+      ]
     },
     "FileJobSource": {
       "additionalProperties": false,
@@ -940,6 +1211,29 @@
       "title": "FileJobSource",
       "type": "object"
     },
+    "FollowStep": {
+      "additionalProperties": false,
+      "description": "Open the link read by ``selector``, which must end with ``::attr(href)``.",
+      "properties": {
+        "action": {
+          "const": "follow",
+          "title": "Action",
+          "type": "string"
+        },
+        "selector": {
+          "maxLength": 1024,
+          "minLength": 1,
+          "title": "Selector",
+          "type": "string"
+        }
+      },
+      "required": [
+        "action",
+        "selector"
+      ],
+      "title": "FollowStep",
+      "type": "object"
+    },
     "HistoricalShift": {
       "additionalProperties": false,
       "description": "Median of ``field`` must not shift more than ``max_shift`` versus dataset history.\n\n``unit = \"days\"`` compares datetimes; ``unit = \"ratio\"`` compares numbers as\n``|current - history| / |history|``.",
@@ -993,6 +1287,57 @@
       "title": "HistoricalShift",
       "type": "object"
     },
+    "HostLimits": {
+      "additionalProperties": false,
+      "description": "Politeness for one host: spacing, concurrency and adaptive throttling.",
+      "properties": {
+        "autothrottle": {
+          "default": false,
+          "description": "Widen the spacing when the host slows down or answers 429.",
+          "title": "Autothrottle",
+          "type": "boolean"
+        },
+        "max_concurrency": {
+          "anyOf": [
+            {
+              "maximum": 32,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Transfers in flight to this host at once; unset keeps the job-wide value.",
+          "title": "Max Concurrency"
+        },
+        "min_interval_seconds": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "ge": 0,
+              "le": 60
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Seconds between requests to this host; unset keeps the job-wide value.",
+          "title": "Min Interval Seconds"
+        }
+      },
+      "title": "HostLimits",
+      "type": "object"
+    },
     "HtmlRecipe": {
       "discriminator": {
         "mapping": {
@@ -1013,6 +1358,41 @@
           "$ref": "#/$defs/EmbeddedJsonRecipe"
         }
       ]
+    },
+    "HttpOptions": {
+      "additionalProperties": false,
+      "description": "How the HTTP transport presents itself: browser impersonation and protocol version.",
+      "properties": {
+        "http_version": {
+          "$ref": "#/$defs/HttpVersion",
+          "default": "1.1",
+          "description": "HTTP protocol version the transport asks for."
+        },
+        "impersonate": {
+          "anyOf": [
+            {
+              "const": "off",
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/BrowserFamily"
+            }
+          ],
+          "default": "off",
+          "description": "Browser whose TLS and header fingerprint the HTTP client copies.",
+          "title": "Impersonate"
+        }
+      },
+      "title": "HttpOptions",
+      "type": "object"
+    },
+    "HttpVersion": {
+      "enum": [
+        "1.1",
+        "2",
+        "3"
+      ],
+      "type": "string"
     },
     "InferencePolicy": {
       "additionalProperties": false,
@@ -1119,6 +1499,18 @@
           "title": "Name",
           "type": "string"
         },
+        "null_values": {
+          "default": [],
+          "description": "Text placeholders rejected after stripping whitespace and case folding.",
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 16,
+          "title": "Null Values",
+          "type": "array"
+        },
         "required": {
           "default": true,
           "title": "Required",
@@ -1145,7 +1537,9 @@
           "datetime": "#/$defs/DateTimeField",
           "decimal": "#/$defs/DecimalField",
           "integer": "#/$defs/IntegerField",
+          "list": "#/$defs/ListField",
           "number": "#/$defs/NumberField",
+          "object": "#/$defs/ObjectField",
           "string": "#/$defs/StringField",
           "url": "#/$defs/UrlField"
         },
@@ -1175,6 +1569,12 @@
         },
         {
           "$ref": "#/$defs/UrlField"
+        },
+        {
+          "$ref": "#/$defs/ListField"
+        },
+        {
+          "$ref": "#/$defs/ObjectField"
         }
       ]
     },
@@ -1228,19 +1628,7 @@
         },
         "fields": {
           "additionalProperties": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "items": {
-                  "type": "string"
-                },
-                "maxItems": 4,
-                "minItems": 1,
-                "type": "array"
-              }
-            ]
+            "$ref": "#/$defs/FieldMapping"
           },
           "maxProperties": 100,
           "minProperties": 1,
@@ -1309,8 +1697,20 @@
     },
     "JsonRecipe": {
       "additionalProperties": false,
-      "description": "Select JSON records at ``record_path``; fields are pointers relative to each record.",
+      "description": "Select JSON records at ``record_path``; fields are pointers relative to each record.\n\n``capture`` reads the first JSON response the page loaded whose path matches it.",
       "properties": {
+        "capture": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CapturePattern"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Path regular expression choosing a captured network response to read."
+        },
         "fallbacks": {
           "default": [],
           "items": {
@@ -1322,7 +1722,7 @@
         },
         "fields": {
           "additionalProperties": {
-            "type": "string"
+            "$ref": "#/$defs/FieldMapping"
           },
           "maxProperties": 100,
           "minProperties": 1,
@@ -1420,6 +1820,157 @@
       "title": "Limits",
       "type": "object"
     },
+    "LinkExpression": {
+      "maxLength": 1024,
+      "minLength": 1,
+      "type": "string"
+    },
+    "ListField": {
+      "additionalProperties": false,
+      "properties": {
+        "item": {
+          "description": "Scalar or object item contract; its name is ignored.",
+          "discriminator": {
+            "mapping": {
+              "boolean": "#/$defs/BooleanField",
+              "date": "#/$defs/DateField",
+              "datetime": "#/$defs/DateTimeField",
+              "decimal": "#/$defs/DecimalField",
+              "integer": "#/$defs/IntegerField",
+              "number": "#/$defs/NumberField",
+              "object": "#/$defs/ObjectField",
+              "string": "#/$defs/StringField",
+              "url": "#/$defs/UrlField"
+            },
+            "propertyName": "type"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/StringField"
+            },
+            {
+              "$ref": "#/$defs/IntegerField"
+            },
+            {
+              "$ref": "#/$defs/NumberField"
+            },
+            {
+              "$ref": "#/$defs/BooleanField"
+            },
+            {
+              "$ref": "#/$defs/DecimalField"
+            },
+            {
+              "$ref": "#/$defs/DateField"
+            },
+            {
+              "$ref": "#/$defs/DateTimeField"
+            },
+            {
+              "$ref": "#/$defs/UrlField"
+            },
+            {
+              "$ref": "#/$defs/ObjectField"
+            }
+          ],
+          "title": "Item"
+        },
+        "max_items": {
+          "default": 100,
+          "description": "Maximum input items.",
+          "maximum": 1000,
+          "minimum": 1,
+          "title": "Max Items",
+          "type": "integer"
+        },
+        "min_items": {
+          "default": 0,
+          "description": "Minimum valid items.",
+          "maximum": 1000,
+          "minimum": 0,
+          "title": "Min Items",
+          "type": "integer"
+        },
+        "name": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "null_values": {
+          "default": [],
+          "description": "Text placeholders rejected after stripping whitespace and case folding.",
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 16,
+          "title": "Null Values",
+          "type": "array"
+        },
+        "required": {
+          "default": true,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "type": {
+          "const": "list",
+          "default": "list",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "item"
+      ],
+      "title": "ListField",
+      "type": "object"
+    },
+    "NestedMapping": {
+      "additionalProperties": false,
+      "description": "Select items, then read either scalar values or named scalar members.",
+      "properties": {
+        "each": {
+          "description": "Relative CSS scope selector or absolute JSON pointer with one wildcard segment.",
+          "maxLength": 1024,
+          "minLength": 1,
+          "title": "Each",
+          "type": "string"
+        },
+        "members": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Named scalar expressions relative to each item; excludes value.",
+          "maxProperties": 32,
+          "title": "Members",
+          "type": "object"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "maxLength": 1024,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "One scalar expression relative to each item; excludes members.",
+          "title": "Value"
+        }
+      },
+      "required": [
+        "each"
+      ],
+      "title": "NestedMapping",
+      "type": "object"
+    },
     "NumberField": {
       "additionalProperties": false,
       "properties": {
@@ -1454,6 +2005,18 @@
           "title": "Name",
           "type": "string"
         },
+        "null_values": {
+          "default": [],
+          "description": "Text placeholders rejected after stripping whitespace and case folding.",
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 16,
+          "title": "Null Values",
+          "type": "array"
+        },
         "required": {
           "default": true,
           "title": "Required",
@@ -1470,6 +2033,95 @@
         "name"
       ],
       "title": "NumberField",
+      "type": "object"
+    },
+    "ObjectField": {
+      "additionalProperties": false,
+      "properties": {
+        "members": {
+          "description": "Uniquely named scalar members of an object.",
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "boolean": "#/$defs/BooleanField",
+                "date": "#/$defs/DateField",
+                "datetime": "#/$defs/DateTimeField",
+                "decimal": "#/$defs/DecimalField",
+                "integer": "#/$defs/IntegerField",
+                "number": "#/$defs/NumberField",
+                "string": "#/$defs/StringField",
+                "url": "#/$defs/UrlField"
+              },
+              "propertyName": "type"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/StringField"
+              },
+              {
+                "$ref": "#/$defs/IntegerField"
+              },
+              {
+                "$ref": "#/$defs/NumberField"
+              },
+              {
+                "$ref": "#/$defs/BooleanField"
+              },
+              {
+                "$ref": "#/$defs/DecimalField"
+              },
+              {
+                "$ref": "#/$defs/DateField"
+              },
+              {
+                "$ref": "#/$defs/DateTimeField"
+              },
+              {
+                "$ref": "#/$defs/UrlField"
+              }
+            ]
+          },
+          "maxItems": 32,
+          "minItems": 1,
+          "title": "Members",
+          "type": "array"
+        },
+        "name": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "null_values": {
+          "default": [],
+          "description": "Text placeholders rejected after stripping whitespace and case folding.",
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 16,
+          "title": "Null Values",
+          "type": "array"
+        },
+        "required": {
+          "default": true,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "type": {
+          "const": "object",
+          "default": "object",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "members"
+      ],
+      "title": "ObjectField",
       "type": "object"
     },
     "OllamaProvider": {
@@ -1665,6 +2317,46 @@
       "title": "OpenAICompatibleProvider",
       "type": "object"
     },
+    "PageStep": {
+      "discriminator": {
+        "mapping": {
+          "click": "#/$defs/ClickStep",
+          "follow": "#/$defs/FollowStep",
+          "scroll": "#/$defs/ScrollStep",
+          "select": "#/$defs/SelectStep",
+          "type": "#/$defs/TypeStep",
+          "wait": "#/$defs/WaitStep"
+        },
+        "propertyName": "action"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/ClickStep"
+        },
+        {
+          "$ref": "#/$defs/TypeStep"
+        },
+        {
+          "$ref": "#/$defs/SelectStep"
+        },
+        {
+          "$ref": "#/$defs/ScrollStep"
+        },
+        {
+          "$ref": "#/$defs/WaitStep"
+        },
+        {
+          "$ref": "#/$defs/FollowStep"
+        }
+      ]
+    },
+    "PageSteps": {
+      "items": {
+        "$ref": "#/$defs/PageStep"
+      },
+      "maxItems": 20,
+      "type": "array"
+    },
     "Pagination": {
       "additionalProperties": false,
       "description": "A bounded next-page expression, interpreted by the recipe strategy.",
@@ -1836,8 +2528,21 @@
     },
     "ScheduleSpec": {
       "additionalProperties": false,
-      "description": "Optional `[schedule]` block in a job file (`every` and bounded `jitter`).",
+      "description": "Optional `[schedule]` block: `every`, an optional `at` time of day, bounded `jitter`.",
       "properties": {
+        "at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Time of day as \"HH:MM\" in the job timezone; needs every in whole days.",
+          "title": "At"
+        },
         "every": {
           "title": "Every",
           "type": "string"
@@ -1889,6 +2594,73 @@
       "title": "ScrollSpec",
       "type": "object"
     },
+    "ScrollStep": {
+      "additionalProperties": false,
+      "description": "Scroll to the bottom ``times`` times, waiting ``settle_ms`` after each.",
+      "properties": {
+        "action": {
+          "const": "scroll",
+          "title": "Action",
+          "type": "string"
+        },
+        "settle_ms": {
+          "default": 500,
+          "maximum": 5000,
+          "minimum": 0,
+          "title": "Settle Ms",
+          "type": "integer"
+        },
+        "times": {
+          "default": 1,
+          "maximum": 20,
+          "minimum": 1,
+          "title": "Times",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "action"
+      ],
+      "title": "ScrollStep",
+      "type": "object"
+    },
+    "SeedOrder": {
+      "enum": [
+        "document",
+        "reverse",
+        "lastmod"
+      ],
+      "type": "string"
+    },
+    "SelectStep": {
+      "additionalProperties": false,
+      "description": "Choose the option whose value is ``value`` in the ``<select>`` at ``selector``.",
+      "properties": {
+        "action": {
+          "const": "select",
+          "title": "Action",
+          "type": "string"
+        },
+        "selector": {
+          "maxLength": 1024,
+          "minLength": 1,
+          "title": "Selector",
+          "type": "string"
+        },
+        "value": {
+          "maxLength": 256,
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "action",
+        "selector",
+        "value"
+      ],
+      "title": "SelectStep",
+      "type": "object"
+    },
     "SpiderPolicy": {
       "additionalProperties": false,
       "description": "The job's ``[spider]`` table. ``mode = \"list\"`` (the default) is today's behaviour.",
@@ -1902,6 +2674,20 @@
           "title": "Allow",
           "type": "array"
         },
+        "allow_pattern": {
+          "anyOf": [
+            {
+              "maxLength": 512,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Allow Pattern"
+        },
         "deny": {
           "default": [],
           "items": {
@@ -1910,6 +2696,21 @@
           "maxItems": 32,
           "title": "Deny",
           "type": "array"
+        },
+        "deny_pattern": {
+          "anyOf": [
+            {
+              "maxLength": 512,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Reject matching decoded paths before the page cap (linear-time regex).",
+          "title": "Deny Pattern"
         },
         "link_field": {
           "anyOf": [
@@ -1928,15 +2729,22 @@
         "links": {
           "anyOf": [
             {
-              "maxLength": 1024,
-              "minLength": 1,
-              "type": "string"
+              "$ref": "#/$defs/LinkExpression"
+            },
+            {
+              "items": {
+                "$ref": "#/$defs/LinkExpression"
+              },
+              "maxItems": 8,
+              "minItems": 1,
+              "type": "array"
             },
             {
               "type": "null"
             }
           ],
           "default": null,
+          "description": "One CSS attribute expression or a list (up to eight); no comma groups.",
           "title": "Links"
         },
         "max_depth": {
@@ -1947,11 +2755,20 @@
           "type": "integer"
         },
         "max_pages": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "const": "unbounded",
+              "type": "string"
+            }
+          ],
           "default": 25,
-          "maximum": 100,
-          "minimum": 1,
-          "title": "Max Pages",
-          "type": "integer"
+          "description": "Most pages fetched per start URL (1-100), or \"unbounded\" to crawl until the time budget runs out and resume from a checkpoint on the next run.",
+          "title": "Max Pages"
         },
         "mode": {
           "default": "list",
@@ -1975,6 +2792,18 @@
           ],
           "title": "Seed",
           "type": "string"
+        },
+        "seed_order": {
+          "$ref": "#/$defs/SeedOrder",
+          "default": "document"
+        },
+        "time_budget_seconds": {
+          "default": 1800,
+          "description": "Seconds a crawl may run per start URL; an unbounded crawl saves its checkpoint when the budget runs out.",
+          "maximum": 86400,
+          "minimum": 60,
+          "title": "Time Budget Seconds",
+          "type": "integer"
         }
       },
       "title": "SpiderPolicy",
@@ -2018,6 +2847,18 @@
           "title": "Name",
           "type": "string"
         },
+        "null_values": {
+          "default": [],
+          "description": "Text placeholders rejected after stripping whitespace and case folding.",
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 16,
+          "title": "Null Values",
+          "type": "array"
+        },
         "pattern": {
           "anyOf": [
             {
@@ -2050,6 +2891,35 @@
       "title": "StringField",
       "type": "object"
     },
+    "TypeStep": {
+      "additionalProperties": false,
+      "description": "Type literal ``text`` into ``selector``. The text is never read from the environment.",
+      "properties": {
+        "action": {
+          "const": "type",
+          "title": "Action",
+          "type": "string"
+        },
+        "selector": {
+          "maxLength": 1024,
+          "minLength": 1,
+          "title": "Selector",
+          "type": "string"
+        },
+        "text": {
+          "maxLength": 256,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "action",
+        "selector",
+        "text"
+      ],
+      "title": "TypeStep",
+      "type": "object"
+    },
     "UrlField": {
       "additionalProperties": false,
       "properties": {
@@ -2059,6 +2929,18 @@
           "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$",
           "title": "Name",
           "type": "string"
+        },
+        "null_values": {
+          "default": [],
+          "description": "Text placeholders rejected after stripping whitespace and case folding.",
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 16,
+          "title": "Null Values",
+          "type": "array"
         },
         "required": {
           "default": true,
@@ -2172,6 +3054,56 @@
         "url"
       ],
       "title": "UrlJobSource",
+      "type": "object"
+    },
+    "WaitState": {
+      "enum": [
+        "attached",
+        "visible",
+        "hidden",
+        "detached"
+      ],
+      "type": "string"
+    },
+    "WaitStep": {
+      "additionalProperties": false,
+      "description": "Wait until ``selector`` reaches ``state``, or for ``timeout_ms`` without a selector.",
+      "properties": {
+        "action": {
+          "const": "wait",
+          "title": "Action",
+          "type": "string"
+        },
+        "selector": {
+          "anyOf": [
+            {
+              "maxLength": 1024,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Selector"
+        },
+        "state": {
+          "$ref": "#/$defs/WaitState",
+          "default": "visible"
+        },
+        "timeout_ms": {
+          "default": 5000,
+          "maximum": 15000,
+          "minimum": 0,
+          "title": "Timeout Ms",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "action"
+      ],
+      "title": "WaitStep",
       "type": "object"
     }
   },

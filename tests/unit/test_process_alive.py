@@ -1,4 +1,4 @@
-"""PID liveness never signals a process on Windows (SCHED-003)."""
+"""PID liveness never signals a process on Windows."""
 
 from __future__ import annotations
 

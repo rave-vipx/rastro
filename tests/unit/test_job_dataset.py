@@ -1,4 +1,4 @@
-"""`[dataset]` job block contract (DATA-002, JOB-002)."""
+"""`[dataset]` job block contract."""
 
 import json
 from typing import Any
@@ -19,7 +19,7 @@ BASE: dict[str, Any] = {
     ],
 }
 DATASET: dict[str, Any] = {
-    "name": "uy_dance_agenda",
+    "name": "event_agenda",
     "path": "agenda.sqlite",
     "identity": ["title", "venue"],
 }
@@ -80,3 +80,28 @@ def test_job_without_dataset_block_is_unchanged():
     schema = job_json_schema()
     assert "dataset" not in schema["required"]
     assert json.loads(json.dumps(schema)) == schema
+
+
+def test_dataset_path_default():
+    job = Job.model_validate(
+        {
+            **BASE,
+            "dataset": {
+                "name": "event_agenda",
+                "identity": ["title", "venue"],
+            },
+        }
+    )
+    assert job.dataset is not None
+    assert job.dataset.path == "rastro-state.sqlite"
+    with pytest.raises(ValidationError, match="PostgreSQL settings"):
+        Job.model_validate(
+            {
+                **BASE,
+                "dataset": {
+                    "name": "event_agenda",
+                    "identity": ["title"],
+                    "dsn_env": "RASTRO_PG_DSN",
+                },
+            }
+        )

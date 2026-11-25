@@ -10,9 +10,7 @@ talks to all of them through one interface, `ModelPort`, and builds one with
 recipe (selectors and field mappings) or a judgement about one, never the records. Every
 proposal is untrusted. Rastro parses it strictly, runs it on the real page, validates the
 results against your schema and puts it through the same gates as a deterministic
-candidate. Requirements: **AI-001–005, INT-002, REPAIR-001–005, QUAL-005/006, AGENT-002,
-QUAL-001, P-001**.
-
+candidate. 
 What to expect, measured on the benchmark below:
 
 - With a model that proposes the right recipe and judges honestly, Rastro repaired
@@ -53,13 +51,28 @@ job file. Exact
 options and presets for specific products are listed in
 [optional intelligence](intelligence.md). Model names here are placeholders.
 
+### Find a local model and test it
+
+```sh
+rastro model detect                       # lists Ollama, LM Studio and llama.cpp servers
+rastro model test --model "ollama:llama3.2:3b" --model-cost-per-call 0.002
+```
+
+`detect` asks only the loopback ports 11434, 1234, 8000 and 8080 for their model list, with a
+short timeout; it sends no prompt and no page data, and prints a spec you can pass to
+`--model`. `test` makes one small call and prints whether it worked, whether the model is
+remote, and the cost per call. A hosted model still needs `--allow-remote`. A run report
+shows `totals.model_calls`, `totals.model_cost_per_call` and `totals.model_cost` when a price
+is known (`--model-cost-per-call` or the job's `[model] cost_per_call`). Without a model
+configured, runs work as before.
+
 ## What the model does in each flow
 
 | Flow | Without a model | With a model |
 | --- | --- | --- |
 | `scrape` with no selectors | JSON-LD and microdata discovery | The model proposes a recipe from field names, types and descriptions. It is kept only if it extracts valid records |
 | `suggest` | Selectors that reproduce your examples | Examples become optional. A model recipe must still reproduce every given example |
-| Repair (`scrape(..., memory=)`, `recipe repair`) | Relocation, declared fallbacks, discovery | Consulted **only when no deterministic candidate would pass**. Its recipe is joined with the serving selectors (`old, new`), gated like any other and then held to the deterministic value checks: values of the field's type and shape, never taken from another field's earlier values. A failure rejects it |
+| Repair (`scrape(..., memory=)`, `recipe repair`) | Relocation, declared fallbacks, discovery, then adaptive candidates (elements similar to the remembered records) | Consulted **only when no deterministic candidate would pass**. Its recipe is joined with the serving selectors (`old, new`), gated like any other and then held to the deterministic value checks: values of the field's type and shape, never taken from another field's earlier values. A failure rejects it |
 | Semantic gate | `[[consistency]]` rules and replay of the last good sample | Before any automatic promotion, relocated or proposed, the model judges whether each changed field still means the same. `mismatch` or a failed answer quarantines; it can block a promotion, never force one |
 | MCP agent in the loop | `recipe_repair`, `recipe_promote` (a reason is required) | The agent's own model proposes and judges through the tools. The same recipe CI decides |
 

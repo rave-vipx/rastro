@@ -1,4 +1,4 @@
-"""Studio lists only single-selector fields as editable (P-008, SCR-*)."""
+"""Studio lists only single-selector fields as editable (SCR-*)."""
 
 from types import SimpleNamespace
 

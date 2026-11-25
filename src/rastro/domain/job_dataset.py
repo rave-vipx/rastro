@@ -1,4 +1,4 @@
-"""Job `[dataset]` block and the read-only preview contract (DATA-002, JOB-002, AGENT-001).
+"""Job `[dataset]` block and the read-only preview contract.
 
 The block only *declares* where approved records would be stored and how they are identified.
 Nothing here opens, creates or writes a dataset file; storage belongs to the dataset store.
@@ -46,12 +46,8 @@ class DatasetSpec(RedactedContract):
         if self.backend == "postgres":
             if self.dsn_env is None or "path" in self.model_fields_set:
                 raise ValueError("PostgreSQL requires dsn_env and does not accept path")
-        elif (
-            "path" not in self.model_fields_set
-            or self.dsn_env is not None
-            or "db_schema" in self.model_fields_set
-        ):
-            raise ValueError("SQLite requires path and does not accept PostgreSQL settings")
+        elif self.dsn_env is not None or "db_schema" in self.model_fields_set:
+            raise ValueError("SQLite does not accept PostgreSQL settings")
         return self
 
     @model_serializer(mode="wrap")

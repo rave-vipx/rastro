@@ -1,8 +1,9 @@
-"""Versioned declarative job contract (JOB-001, JOB-002, AGENT-001)."""
+"""Versioned declarative job contract."""
 
 from __future__ import annotations
 
 import ipaddress
+import json
 import re
 import tomllib
 from typing import Any, Literal, Self
@@ -34,7 +35,7 @@ from rastro.domain.job_sources import (
 )
 from rastro.domain.json import strict_json
 from rastro.domain.memory import RecipeContext
-from rastro.domain.models import Limits, Recipe, ResourceLimitError
+from rastro.domain.models import ConfigurationError, Limits, Recipe, ResourceLimitError
 from rastro.domain.recipe_compare import RepairPolicy
 from rastro.domain.schedule import ScheduleSpec
 from rastro.domain.scroll import ScrollSpec
@@ -192,6 +193,12 @@ def _redact_env(value: Any) -> Any:
     return value
 
 
+class JobSyntaxError(ConfigurationError):
+    """A job file is not syntactically valid; the message names the line and column only."""
+
+    error_code = "syntax_error"
+
+
 def parse_job(raw: str | bytes, *, format: Literal["toml", "json"]) -> Job:
     """Parse and validate a TOML or JSON job definition without touching the filesystem."""
     encoded = raw.encode("utf-8") if isinstance(raw, str) else raw
@@ -201,7 +208,12 @@ def parse_job(raw: str | bytes, *, format: Literal["toml", "json"]) -> Job:
     if text.startswith("\ufeff"):
         raise ValueError("UTF-8 byte-order mark is not allowed")
     if format == "json":
-        parsed = strict_json(text)
+        try:
+            parsed = strict_json(text)
+        except json.JSONDecodeError as error:
+            raise JobSyntaxError(
+                f"Job file is not valid JSON (line {error.lineno}, column {error.colno})"
+            ) from None
     elif format == "toml":
         parsed = tomllib.loads(text)
         check_toml_scalars(parsed)

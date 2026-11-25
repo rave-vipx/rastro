@@ -1,7 +1,7 @@
-"""Per-source run metrics and their aggregates (OBS-003..007, SYNC-007 report only).
+"""Per-source run metrics and their aggregates (report only).
 
 A row holds counts and timings only: no query strings, no record content. Remote latency
-(``network_seconds``) and local work (``processing_seconds``) are kept apart (OBS-005).
+(``network_seconds``) and local work (``processing_seconds``) are kept apart.
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ from rastro.domain.results import ExtractionResult, Outcome
 from rastro.domain.sources import Contract
 
 RETENTION_ROWS = 10_000
-# The issue codes of a reached collection cap: pagination, spider and scroll (N5, SYNC-002).
+# The issue codes of a reached collection cap: pagination, spider and scroll.
 CAP_CODES = frozenset(
     {
         "pagination_max_pages",
@@ -28,6 +28,7 @@ CAP_CODES = frozenset(
         "spider_page_limit",
         "spider_depth_limit",
         "spider_budget",
+        "crawl_time_budget",
         "scroll_max_steps",
         "scroll_budget",
         "scroll_record_limit",
@@ -156,13 +157,16 @@ def percentile(values: Sequence[float], q: float) -> float:
     return ordered[low] + (ordered[high] - ordered[low]) * (position - low)
 
 
+_SINCE_UNITS = {"d": "days", "h": "hours", "m": "minutes"}
+
+
 def parse_since(text: str, now: datetime) -> datetime:
-    """``7d`` or ``12h`` back from ``now``; anything else is rejected by the caller."""
+    """``7d``, ``12h`` or ``30m`` back from ``now``; anything else is rejected by the caller."""
     unit = text[-1:]
     amount = text[:-1]
-    if unit not in {"d", "h"} or not amount.isascii() or not amount.isdigit() or int(amount) < 1:
+    if unit not in _SINCE_UNITS or not amount.isascii() or not amount.isdigit() or int(amount) < 1:
         raise ValueError(text)
-    return now - timedelta(**{"days" if unit == "d" else "hours": min(int(amount), 36_500)})
+    return now - timedelta(**{_SINCE_UNITS[unit]: min(int(amount), 36_500)})
 
 
 _KEYS: dict[str, Callable[[RunMetric], str]] = {
@@ -207,7 +211,7 @@ def _group(key: str, rows: list[RunMetric], now: datetime) -> dict[str, Any]:
         "capped_runs": sum(r.cap is not None for r in rows),
         "freshness_seconds": (now - wins[-1]).total_seconds() if wins else None,
         "coverage": sum(r.required_fields_ok for r in rows) / records if records else None,
-        # SYNC-007, report only: how often successful runs actually happened.
+        # Report only: how often successful runs actually happened.
         "observed_interval_seconds": (
             percentile([(b - a).total_seconds() for a, b in pairwise(wins)], 50)
             if len(wins) > 1

@@ -1,4 +1,4 @@
-"""Per-field selectors relative to a record container (INT-002, DISC-003)."""
+"""Per-field selectors relative to a record container."""
 
 from __future__ import annotations
 

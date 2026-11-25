@@ -1,4 +1,4 @@
-"""N2, N3, N9, SEC-001, SEC-008: a spider runs inside one browser context per start source.
+"""A spider runs inside one browser context per start source.
 
 The renderer is a fake: no real browser, no network.
 """

@@ -1,63 +1,47 @@
-"""Run a job and load its approved fields into the dataset (DATA-001/003, SYNC-008)."""
+"""Run a job and load its approved fields into the dataset."""
 
 from __future__ import annotations
 
-import os
-from collections.abc import Callable, Iterable, Iterator, Sequence
-from contextlib import AbstractContextManager, contextmanager, nullcontext
-from datetime import timedelta
+from collections.abc import Callable, Iterable, Sequence
+from contextlib import AbstractContextManager, nullcontext
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from rastro.adapters.sqlite_dataset import SQLiteDatasetStore
 from rastro.adapters.sqlite_drift import SQLiteDriftMonitor
 from rastro.application.auth_headers import check_job_auth
 from rastro.application.checkpointed_load import run_checkpointed_load
 from rastro.application.conditional import ConditionalRequests
 from rastro.application.conditional_inputs import extraction_inputs
+from rastro.application.dataset_open import dataset_location, open_dataset
 from rastro.application.drift import collect_snapshots
-from rastro.application.egress_trust import allowed_env_names, check_job_egress
-from rastro.application.job_loader import build_job_model, load_job, resolve_job_path
+from rastro.application.egress_trust import check_job_egress
+from rastro.application.job_ladder import JobLadder
+from rastro.application.job_ladder_run import job_memory, job_web_acquirer
+from rastro.application.job_loader import (
+    build_job_model,
+    load_job,
+)
 from rastro.application.jobs import run_job
 from rastro.application.model_budget import model_cost_override
-from rastro.application.operator_trust import current_trust, operator_trust
+from rastro.application.operator_trust import operator_trust
 from rastro.application.run_lock import dataset_lock
+from rastro.application.run_report import report_for_load
 from rastro.application.success_samples import collect_successes
 from rastro.domain.dataset import DatasetStorageError
 from rastro.domain.job_load import JobLoadResult
 from rastro.domain.job_results import JobRunResult
 from rastro.domain.jobs import UrlJobSource
 from rastro.domain.models import ConfigurationError, Outcome
-from rastro.domain.secret_env import check_secret_env_name
-from rastro.ports.dataset import DatasetStore, DatasetValidators
+from rastro.ports.dataset import DatasetValidators
+
+# The dataset helpers moved to ``dataset_open``; this module keeps exporting them.
+__all__ = ["dataset_location", "load_job_file", "open_dataset"]
 
 if TYPE_CHECKING:
     from rastro.domain.drift import StructuralSnapshot
     from rastro.domain.job_sources import JobSource
     from rastro.domain.jobs import Job
     from rastro.ports.acquisition import AcquisitionPort
-
-
-def dataset_location(file: Path, job: Job, *, allow_absolute_paths: bool) -> Path:
-    """The job's dataset path, contained like every job path; symlinks are left for the adapter.
-
-    Raises ``ConfigurationError`` without a ``[dataset]`` block or a dataset folder.
-    """
-    spec = job.dataset
-    if spec is None:
-        raise ConfigurationError("This command requires a [dataset] block in the job file")
-    resolved = resolve_job_path(
-        spec.path, base_dir=file.parent, allow_absolute_paths=allow_absolute_paths
-    )
-    if resolved == file.resolve():
-        raise ConfigurationError("The dataset must be separate from the job file")
-    if not resolved.parent.is_dir():
-        raise ConfigurationError(
-            f"Dataset folder does not exist: {spec.path} (paths are relative to the job file)",
-            location="dataset.path",
-        )
-    # Preserve symlink components for the adapter's refusal, after containment validation.
-    return Path(spec.path) if Path(spec.path).is_absolute() else file.parent.resolve() / spec.path
 
 
 def _positions(job: Job, sources: Sequence[JobSource]) -> tuple[int, ...]:
@@ -93,7 +77,7 @@ def load_job_file(
     reports whether its recipe came from the job file or from ``recipe_memory``.
     ``allow_*`` and ``ignore_robots`` are the operator's opt-ins, as for ``run_job``.
     ``max_model_cost`` and ``model_cost_per_call`` limit the job's model for the whole load,
-    not per source (COST-002).
+    not per source.
     """
     file = Path(path)
     job = load_job(file, allow_absolute_paths=allow_absolute_paths)
@@ -143,26 +127,39 @@ def load_job_file(
         ):  # the render-mode consent check runs here, before any source is run
             acquisition = _load_acquirer(job, conditional)
             model = build_job_model(job)  # one budget and one notice for every source
+        ladder = JobLadder(
+            job,
+            acquisition,
+            build=lambda rung_job: job_web_acquirer(rung_job, conditional),
+            scope=lambda: operator_trust(
+                allow_remote=allow_remote, allow_stealth=allow_stealth, allow_env=allow_env
+            ),
+            rotate=allow_egress,
+            memory=job_memory(job, file.parent, allow_absolute_paths),
+        )
         with capture as snapshots, collect_successes() as successes:
             report, loaded, ran = run_checkpointed_load(
                 raw_path,
                 job,
                 store,
-                extract_fn=lambda sub_job: run_job(
+                extract_fn=lambda sub_job: ladder.run(
                     sub_job,
-                    base_dir=file.parent,
-                    allow_absolute_paths=allow_absolute_paths,
-                    allow_remote=allow_remote,
-                    allow_egress=allow_egress,
-                    allow_stealth=allow_stealth,
-                    allow_env=allow_env,
-                    allow_private_network=allow_private_network,
-                    allow_ports=allow_ports,
-                    ignore_robots=ignore_robots,
-                    acquisition=acquisition,
-                    model=model,
-                    max_model_cost=max_model_cost,
-                    model_cost_per_call=model_cost_per_call,
+                    lambda rung_job, port: run_job(
+                        rung_job,
+                        base_dir=file.parent,
+                        allow_absolute_paths=allow_absolute_paths,
+                        allow_remote=allow_remote,
+                        allow_egress=allow_egress,
+                        allow_stealth=allow_stealth,
+                        allow_env=allow_env,
+                        allow_private_network=allow_private_network,
+                        allow_ports=allow_ports,
+                        ignore_robots=ignore_robots,
+                        acquisition=port,
+                        model=model,
+                        max_model_cost=max_model_cost,
+                        model_cost_per_call=model_cost_per_call,
+                    ),
                 ),
                 positions=positions,
                 monitor=monitor,
@@ -184,7 +181,7 @@ def load_job_file(
             successes.pop(result.job_id, None)
     issues = retain_successes(raw_path, spec.name, job.build_schema(), report, successes)
     origins = {s.source_index: s for s in report.recipes}
-    return loaded.model_copy(
+    loaded = loaded.model_copy(
         update={
             "sources": tuple(
                 source.model_copy(
@@ -198,6 +195,8 @@ def load_job_file(
             )
         }
     )
+    price = report.report.totals.model_cost_per_call if report.report else None
+    return loaded.model_copy(update={"report": report_for_load(file.name, report, loaded, price)})
 
 
 def _load_acquirer(job: Job, conditional: ConditionalRequests | None) -> AcquisitionPort | None:
@@ -207,28 +206,7 @@ def _load_acquirer(job: Job, conditional: ConditionalRequests | None) -> Acquisi
     """
     if job.acquisition is None or not any(isinstance(s, UrlJobSource) for s in job.sources):
         return None
-    return _web_acquirer(job, conditional)
-
-
-def _web_acquirer(job: Job, conditional: ConditionalRequests | None) -> AcquisitionPort:
-    """HTTP acquisition, or the browser composition when a source renders (SCR-003)."""
-    try:
-        from rastro.adapters.dns import SystemResolver
-        from rastro.adapters.http import CurlTransport
-        from rastro.application.acquisition import WebAcquirer
-        from rastro.browser import job_acquisition
-
-        assert job.acquisition is not None
-        return job_acquisition(job, None, conditional=conditional) or WebAcquirer(
-            job.acquisition,
-            transport=CurlTransport(),
-            resolver=SystemResolver(),
-            conditional=conditional,
-        )
-    except ModuleNotFoundError as error:
-        if error.name not in {"curl_cffi", "protego"}:
-            raise
-        raise ConfigurationError("Install rastro-engine[http] for HTTP acquisition") from None
+    return job_web_acquirer(job, conditional)
 
 
 def _commit_validators(
@@ -253,41 +231,3 @@ def _commit_validators(
     if conditional.failed:
         return loaded.model_copy(update={"status": "storage_error"})
     return loaded
-
-
-@contextmanager
-def open_dataset(
-    job: Job, local_path: Path, *, allow_remote: bool = False, allow_env: Iterable[str] = ()
-) -> Iterator[DatasetStore]:
-    """Open the configured dataset; operational state always uses local_path."""
-    spec = job.dataset
-    if spec is None:
-        raise ConfigurationError("This command requires a [dataset] block")
-    tolerance = timedelta(minutes=spec.match_tolerance_minutes or 30)
-    if spec.backend == "sqlite":
-        yield SQLiteDatasetStore(
-            local_path,
-            limits=job.limits,
-            near_match_fields=spec.match_fields,
-            near_match_tolerance=tolerance,
-        )
-        return
-    from rastro.adapters.postgres_dataset import PostgresDatasetStore
-
-    assert spec.dsn_env is not None
-    name = check_secret_env_name(spec.dsn_env, allowed_env_names(allow_env))
-    dsn = os.environ.get(name)
-    if not dsn:
-        raise ConfigurationError("PostgreSQL connection environment variable is missing or empty")
-    store = PostgresDatasetStore(
-        dsn,
-        schema=spec.db_schema,
-        allow_remote=allow_remote or current_trust().allow_remote,
-        limits=job.limits,
-        near_match_fields=spec.match_fields,
-        near_match_tolerance=tolerance,
-    )
-    try:
-        yield store
-    finally:
-        store.close()

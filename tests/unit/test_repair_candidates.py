@@ -1,4 +1,4 @@
-"""Candidate generation never promotes or weakens validation (REPAIR-001, REC-006)."""
+"""Candidate generation never promotes or weakens validation."""
 
 import pytest
 from pydantic import BaseModel

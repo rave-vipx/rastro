@@ -1,13 +1,12 @@
 # ADR 0023: open drift, and exit codes for attention and storage errors
 
 - **Status:** accepted for the next release after 0.6.0.
-- **Requirements:** DRIFT-003, DRIFT-004, DRIFT-006, REPAIR-005, OBS-007, DATA-001, SEC-009.
 
 ## Problem
 
 An elevated or high structural drift on an otherwise successful `rastro job load --drift`
 exited 0, and the drifted run immediately became the baseline. The next run reported
-`low`, so a scheduler that alerts on exit codes never saw the early warning DRIFT-004
+`low`, so a scheduler that alerts on exit codes never saw the early warning the drift signal
 asks for. A storage failure after the first source was committed exited 2 with
 `configuration_error` and printed no report, although rows were saved.
 

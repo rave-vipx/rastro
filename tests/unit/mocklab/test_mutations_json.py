@@ -1,4 +1,4 @@
-"""JSON mutation operators on synthetic API responses (MOCK-002)."""
+"""JSON mutation operators on synthetic API responses."""
 
 import json
 

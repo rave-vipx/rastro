@@ -9,8 +9,10 @@ from typing import Literal
 from uuid import uuid4
 
 from pydantic import BaseModel, ValidationError
+from pydantic_core import PydanticSerializationError
 
 from rastro.application.drift import capture_snapshot
+from rastro.application.field_isolation import validate_isolated
 from rastro.application.success_samples import capture_success
 from rastro.domain.models import (
     ConfigurationError,
@@ -27,7 +29,6 @@ from rastro.domain.models import (
     Source,
     schema_fingerprint,
 )
-from rastro.domain.safe_messages import safe_message
 from rastro.ports.parser import DocumentParser
 
 _INVALID = {
@@ -36,6 +37,7 @@ _INVALID = {
     "invalid_json",
     "invalid_record",
     "invalid_record_path",
+    "invalid_text",
 }
 
 
@@ -95,41 +97,41 @@ def extract_document[T: BaseModel](
             )
             rejected += 1
             continue
-        try:
-            data = schema.model_validate(
-                dict(candidate.values),
-                by_name=True,
-                context={
-                    "locale": source.locale,
-                    "languages": source.languages,
-                    "timezone": source.timezone,
-                    "observed_at": started_at,
-                    "source_url": evidence_url,
-                    "currency": source.currency,
-                    "egress": source.egress,
-                },
-            )
-        except ValidationError as error:
-            for detail in error.errors(
-                include_url=False, include_context=False, include_input=False
-            ):
-                # Validator messages can contain secrets; only expose a stable category.
-                field = str(detail["loc"][0]) if detail["loc"] else None
-                issues.append(
-                    Issue(
-                        code="validation_error",
-                        record_index=index,
-                        field=field,
-                        message=safe_message(detail["type"], detail["msg"]),
-                    )
-                )
+        isolated = validate_isolated(
+            schema,
+            candidate.values,
+            context={
+                "locale": source.locale,
+                "languages": source.languages,
+                "timezone": source.timezone,
+                "observed_at": started_at,
+                "source_url": evidence_url,
+                "currency": source.currency,
+                "egress": source.egress,
+            },
+            record_index=index,
+        )
+        issues.extend(isolated.issues)
+        if isolated.data is None:
             rejected += 1
             continue
-        evidence = {
-            name: build_evidence(locator)
-            for name, locator in candidate.locators.items()
-            if name in candidate.values
-        }
+        data = isolated.data
+        try:
+            data.model_dump_json()  # e.g. a lone surrogate cannot be stored as UTF-8
+        except PydanticSerializationError:
+            issues.append(Issue(code="invalid_text", record_index=index))
+            rejected += 1
+            continue
+        try:
+            evidence = {
+                name: build_evidence(locator)
+                for name, locator in candidate.locators.items()
+                if name in candidate.values and name not in isolated.nulled
+            }
+        except (ValidationError, TypeError, ValueError):
+            issues.append(Issue(code="invalid_record", record_index=index))
+            rejected += 1
+            continue
         records.append(ExtractionRecord(data=data, evidence=evidence))
     validation_seconds = perf_counter() - validation_start
     if records:

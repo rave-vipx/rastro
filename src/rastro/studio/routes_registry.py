@@ -1,7 +1,9 @@
-"""N10, N12: root-confined registry sharing; imported recipes never gain operator trust."""
+"""Root-confined registry sharing; imported recipes never gain operator trust."""
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import UTC, datetime
 from importlib import import_module
 from pathlib import Path
@@ -14,6 +16,7 @@ from starlette.responses import Response
 from starlette.routing import Route
 
 from rastro.adapters.sqlite import SQLiteRecipeRepository
+from rastro.application.hub_search import hub_candidates
 from rastro.application.operator_trust import operator_trust
 from rastro.application.recipe_registry import (
     install_from_registry,
@@ -23,7 +26,14 @@ from rastro.application.recipe_registry import (
 from rastro.cli_hub import _parser_for
 from rastro.domain.models import ConfigurationError
 from rastro.studio import files
-from rastro.studio.web import Refused, Studio, body, plain, reply, text
+from rastro.studio.hub_actions import (
+    decision_from,
+    publish_job,
+    record_decision,
+    site_grants,
+    site_scope,
+)
+from rastro.studio.web import Refused, Studio, body, optional_text, plain, reply, text
 
 
 def _path(root: Path, raw: str) -> Path:
@@ -67,22 +77,30 @@ def _registry(studio: Studio, data: dict[str, Any], *, publish: bool = False) ->
     return path
 
 
-def _url_call(studio: Studio, operation: str, *args: Any, **kwargs: Any) -> Any:
+@contextmanager
+def _network(studio: Studio) -> Iterator[None]:
     # The acquisition owner supplies all fetching and SSRF checks (ADR 0033).
     try:
-        module = import_module("rastro.application.registry_fetch")
         with operator_trust(
             allow_private_network=studio.trust.get("allow_private_network", False),
             allow_ports=studio.trust.get("allow_ports", ()),
             ignore_robots=studio.trust.get("ignore_robots", ()),
         ):
-            return getattr(module, operation)(*args, **kwargs)
+            yield
     except ImportError:
         raise Refused(503, "registry_url_unavailable_install_http_extra") from None
 
 
+def _url_call(studio: Studio, operation: str, *args: Any, **kwargs: Any) -> Any:
+    with _network(studio):
+        return getattr(import_module("rastro.application.registry_fetch"), operation)(
+            *args, **kwargs
+        )
+
+
 def _install(studio: Studio, data: dict[str, Any]) -> dict[str, Any]:
     registry = _registry(studio, data)
+    decision = decision_from(data)
     spec = text(data, "spec")
     job_path, _, job = studio.load(text(data, "file"))
     if job.recipe_memory is None:
@@ -95,14 +113,22 @@ def _install(studio: Studio, data: dict[str, Any]) -> dict[str, Any]:
         _path(studio.root, relative.as_posix() + suffix)
     repository = SQLiteRecipeRepository(memory)
     options: dict[str, Any] = {"at": datetime.now(UTC), "limits": job.limits}
-    installed = (
-        install_from_registry(registry, spec, repository, _parser_for, **options)
-        if isinstance(registry, Path)
-        else _url_call(
-            studio, "install_from_registry_url", registry, spec, repository, _parser_for, **options
+    with site_scope(studio, job, decision):  # only this job's sites, only registry input
+        installed = (
+            install_from_registry(registry, spec, repository, _parser_for, **options)
+            if isinstance(registry, Path)
+            else _url_call(
+                studio,
+                "install_from_registry_url",
+                registry,
+                spec,
+                repository,
+                _parser_for,
+                **options,
+            )
         )
-    )
     stored = installed.imported.stored
+    record_decision(studio, decision)
     return {
         "ok": True,
         "id": installed.id,
@@ -113,7 +139,13 @@ def _install(studio: Studio, data: dict[str, Any]) -> dict[str, Any]:
         "promoted": False,
         "trust": plain(installed.trust),
         "published_trust": plain(installed.published_trust),
+        "allowed_for_site": sorted(decision[1]) if decision else [],
     }
+
+
+def _shown(candidate: Any, given: str | None) -> dict[str, str]:
+    # Echo the registry as the page named it, never an absolute local path.
+    return {"registry": given} if given else {"registry": candidate.registry}
 
 
 def routes(studio: Studio) -> list[Route]:
@@ -146,8 +178,39 @@ def routes(studio: Studio) -> list[Route]:
         )
         return reply({"ok": True, "entry": plain(published.entry), "pushed": False})
 
+    async def offers(request: Request) -> Response:
+        data = await body(request)
+        url, given = text(data, "url"), optional_text(data, "registry")
+        registry = None if given is None else _registry(studio, {"registry": given})
+
+        def run() -> dict[str, Any]:
+            try:
+                with _network(studio):
+                    found = hub_candidates(url, registry=registry)
+            except ImportError:
+                raise Refused(503, "registry_url_unavailable_install_http_extra") from None
+            return {"ok": True, "offers": [{**c.to_json(), **_shown(c, given)} for c in found]}
+
+        return reply(await run_in_threadpool(run))
+
+    async def fields(request: Request) -> Response:
+        _, _, job = studio.load(text(await body(request), "file"))
+        return reply({"ok": True, "fields": [field.name for field in job.fields]})
+
+    async def publish_one(request: Request) -> Response:
+        data = await body(request)
+        registry = _registry(studio, data, publish=True)
+        assert isinstance(registry, Path)
+        return reply(await run_in_threadpool(publish_job, studio, registry, _path, data))
+
     return [
+        studio.route("/api/registry/offers", offers, post=True),
+        studio.route("/api/registry/fields", fields, post=True),
+        studio.route("/api/registry/publish-job", publish_one, post=True),
         studio.route("/api/registry/search", search, post=True),
         studio.route("/api/registry/install", install, post=True),
         studio.route("/api/registry/publish", publish, post=True),
     ]
+
+
+__all__ = ["routes", "site_grants"]

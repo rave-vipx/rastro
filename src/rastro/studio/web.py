@@ -1,4 +1,4 @@
-"""Shared HTTP plumbing for Studio routers: guard, bodies, typed inputs, JSON replies (P-008).
+"""Shared HTTP plumbing for Studio routers: guard, bodies, typed inputs, JSON replies.
 
 Security posture: loopback only, Host and Origin checks, a per-run token on every API call,
 paths confined to one root, bounded bodies, a strict Content-Security-Policy.
@@ -23,6 +23,7 @@ from starlette.routing import Route
 from rastro.application.atomic_files import FileChangedError
 from rastro.application.job_from_url import FetchedUrl
 from rastro.application.job_loader import load_job
+from rastro.application.operator_trust import stealth_notice_given
 from rastro.cli_errors import classify
 from rastro.domain.jobs import Job
 from rastro.domain.models import RastroError
@@ -142,13 +143,13 @@ class Studio:
         # ``model_remote`` (--allow-remote) only speaks for a ModelPort that does not say.
         self.model_remote = model is not None and is_remote(model, model_remote)
         # Operator opt-ins from `rastro studio`, passed to every job run (audit H1). The
-        # stealth switch changes this process grant only, never a job file (N12, ADR 0034).
+        # stealth switch changes this process grant only, never a job file (ADR 0034).
         self.trust: dict[str, Any] = {
             "allow_egress": allow_egress,
             "allow_env": tuple(allow_env),
             "allow_stealth": allow_stealth is True,
         }
-        # N5: the last observed operation and the alerts of the last run, per job file.
+        # The last observed operation and the alerts of the last run, per job file.
         self.progress: dict[str, Any] = {"state": "idle"}
         self.attention: tuple[Path, list[str]] | None = None
         # Tests inject a fake acquirer; production uses the default HTTP acquirer.
@@ -186,7 +187,8 @@ class Studio:
         async def endpoint(request: Request) -> Response:
             try:
                 self.guard(request, api=path.startswith("/api/"))
-                return await handler(request)
+                with stealth_notice_given():  # the page's own switch, not the deprecated keyword
+                    return await handler(request)
             except FileChangedError:
                 return reply({"ok": False, "error": "file_changed"}, 409)
             except Refused as refused:
@@ -195,3 +197,16 @@ class Studio:
                 return reply({"ok": False, **classify(error)}, 400)
 
         return Route(path, endpoint, methods=["POST"] if post else ["GET"])
+
+
+def beside(target: Path, name: str | None, key: str) -> str | None:
+    """Job paths are relative to the job file: the file lives in the job's folder or below
+    it, in a folder that already exists."""
+    if name is None:
+        return None
+    wanted = (target.parent / name).resolve()
+    if not wanted.is_relative_to(target.parent.resolve()):
+        raise Refused(400, f"{key}_outside_job_folder")
+    if not wanted.parent.is_dir():
+        raise Refused(400, f"{key}_folder_missing")
+    return name

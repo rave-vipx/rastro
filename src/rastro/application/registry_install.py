@@ -1,4 +1,4 @@
-"""Install gates shared by the local and the URL registry (HUB-003, HUB-005, HUB-006, N10).
+"""Install gates shared by the local and the URL registry.
 
 A package directory is untrusted bytes until every gate passes; the result is a candidate.
 """
@@ -10,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 
 from rastro.application.engine_version import running_version
+from rastro.application.operator_trust import entered_from
 from rastro.application.recipe_hub import ImportedRecipe, ParserFor, import_bundle, verify_bundle
 from rastro.domain.models import Limits
 from rastro.domain.recipe_bundle import SAMPLE_FILES, BundleIntegrityError
@@ -44,7 +45,21 @@ def install_package_dir(
     engine_version: str | None = None,
 ) -> InstalledPackage:
     """Digests, selector policy, offline replay, index match and compatibility, then store a
-    candidate. Nothing is promoted and no job setting is read or written."""
+    candidate. Nothing is promoted and no job setting is read or written. The package is
+    registry input: its recipe gets only the capabilities granted to that origin."""
+    with entered_from("registry"):
+        return _install(package_dir, selected, repository, parser_for, at, limits, engine_version)
+
+
+def _install(
+    package_dir: Path,
+    selected: RegistryEntry,
+    repository: RecipeRepository,
+    parser_for: ParserFor,
+    at: datetime,
+    limits: Limits | None,
+    engine_version: str | None,
+) -> InstalledPackage:
     manifest, files, _, _ = verify_bundle(package_dir, parser_for, limits)
     if manifest.id != selected.id or manifest.version != selected.version:
         raise BundleIntegrityError("Package manifest does not match its registry index entry")

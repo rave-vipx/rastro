@@ -105,7 +105,7 @@ def test_incompatible_context_never_reuses(tmp_path, source, schema, recipe, htm
         "locale": {"locale": "pt-BR"},
         "languages": {"languages": ("pt-BR",)},
         "language_order": {"languages": ("en", "es-UY")},
-        "timezone": {"timezone": "America/Montevideo"},
+        "timezone": {"timezone": "Etc/GMT+3"},
         "currency": {"currency": "UYU"},
     }
     if dimension in updates:

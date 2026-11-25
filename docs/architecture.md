@@ -53,7 +53,7 @@ The SDK and CLI call the same service. Public imports live in `rastro.__init__`;
 
 ## Decisions and references
 
-The [offline first-slice ADR](decisions/0001-offline-vertical-slice.md) explains why the first usable milestone stops before network acquisition.
+The [offline first release ADR](decisions/0001-offline-vertical-slice.md) explains why the first usable milestone stops before network acquisition.
 
 The [HTTP transport ADR](decisions/0002-policy-aware-acquisition.md) records the Scrapling API limitation that requires using its underlying HTTP engine through the transport port.
 
@@ -70,4 +70,4 @@ Implementation references:
 - [uv's GitHub Actions integration](https://docs.astral.sh/uv/guides/integration/github/).
 - [RFC 6901: JSON Pointer](https://www.rfc-editor.org/rfc/rfc6901).
 
-These references guide adapter behavior and build tooling; the master specification remains the project's scope authority.
+These references guide adapter behavior and build tooling.

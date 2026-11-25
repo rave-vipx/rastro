@@ -1,33 +1,38 @@
-"""Bounded breadth-first spider over one start source (N3; SEC-001, SEC-003, SEC-008).
+"""Breadth-first spider over one start source.
 
 One request budget and one document budget live in ``PAGINATION_SCOPE``, so pagination
 inside a spider page spends the same numbers. Pages are fetched through ``fetch_page``.
+An unbounded crawl replaces both budgets with its time budget (``spider_unbounded``).
 """
 
 from __future__ import annotations
 
-import asyncio
+from collections import deque
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from functools import partial
 
 from pydantic import BaseModel
 
-from rastro.application.acquisition_state import (
-    PAGINATION_SCOPE,
-    PaginationScope,
-)
+from rastro.application.acquisition_state import PAGINATION_SCOPE, PaginationScope
+from rastro.application.crawl_checkpoint import checkpoint_store, seen_key
 from rastro.application.outcomes import failure_result
+from rastro.application.pagination_records import with_page_provenance
 from rastro.application.scroll import PAGE_COUNTER, PageCounter, pages_left, spend_page
-from rastro.application.spider_filter import link_refusal
-from rastro.application.spider_links import (
-    Link,
-    LinkHarvest,
-    classify_link,
-    describe_url,
-    report_path,
-)
+from rastro.application.sitemap import SitemapEntry, order_entries
+from rastro.application.spider_frontier import CrawlRows, Frontier, Queued, in_order
+from rastro.application.spider_links import Link, LinkHarvest, describe_url
 from rastro.application.spider_outcome import PAGE_FAILURES, finish_crawl, page_outcome
+from rastro.application.spider_unbounded import (
+    CHUNK_PER_WORKER,
+    UNBOUNDED,
+    CrawlCheckpointing,
+    CrawlRuntime,
+    Stop,
+    rebase_on_start,
+    records_full,
+    with_crawl_note,
+)
 from rastro.domain.acquisition import AcquisitionPolicy
 from rastro.domain.models import (
     ConfigurationError,
@@ -38,12 +43,10 @@ from rastro.domain.models import (
     Source,
 )
 from rastro.domain.spider import SpiderPolicy
-from rastro.domain.spider_report import SpiderOutcome, SpiderPage, SpiderReport
 from rastro.ports.parser import DocumentParser
 
-_NOTE_CAP = 500  # discovered-but-not-fetched rows; fetched pages (max 100) always have a row
 type FetchPage[T: BaseModel] = Callable[[Source, LinkHarvest], Awaitable[ExtractionResult[T]]]
-# A sitemap seed (N16): the bool says whether this is the start sitemap (an index may nest once).
+# A sitemap seed: the bool says whether this is the start sitemap (an index may nest once).
 type FetchSeed[T: BaseModel] = Callable[[bool, Source, LinkHarvest], Awaitable[ExtractionResult[T]]]
 
 
@@ -58,6 +61,7 @@ async def extract_spider[T: BaseModel](
     sequential: bool,
     fetch_page: FetchPage[T],
     fetch_seed: FetchSeed[T] | None = None,
+    runtime: CrawlRuntime | None = None,
 ) -> ExtractionResult[T]:
     """Crawl from ``source`` and combine every page's records like pagination does.
 
@@ -67,19 +71,22 @@ async def extract_spider[T: BaseModel](
     start = describe_url(source.url)
     if start.refusal:
         raise ConfigurationError("Spider start URL must be a plain http(s) URL")
+    budget = UNBOUNDED if spider.unbounded else (policy.max_requests if policy else 30)
     scope = PaginationScope(
         host=start.host,
         secure=source.url.lower().startswith("https:"),
-        remaining=policy.max_requests if policy else 30,
+        remaining=budget,
         hosts=frozenset()
         if spider.same_host
         else frozenset(policy.allowed_hosts if policy else ()),
-        total=policy.max_requests if policy else 30,
+        total=budget,
     )
+    cap = spider.max_pages if isinstance(spider.max_pages, int) else UNBOUNDED
     token = PAGINATION_SCOPE.set(scope)
-    pages = PAGE_COUNTER.set(PageCounter(spider.max_pages))  # scroll steps spend it too
+    pages = PAGE_COUNTER.set(PageCounter(cap))  # scroll steps spend it too
     try:
         crawl = _Crawl(source, schema, spider, parser, limits, fetch_page, scope, policy)
+        crawl.runtime = runtime or CrawlRuntime()
         workers = 1 if sequential or policy is None else policy.max_concurrency
         return await crawl.run(start, workers, fetch_seed)
     finally:
@@ -102,73 +109,80 @@ class _Crawl[T: BaseModel]:
         self.policy = policy
         self.source, self.schema, self.spider = source, schema, spider
         self.parser, self.limits, self.fetch_page, self.scope = parser, limits, fetch_page, scope
-        self.rows: dict[int, SpiderPage] = {}
+        self.rows = CrawlRows()
+        self.frontier = Frontier(source.url, spider, scope, policy, self.rows)
         self.pages: list[ExtractionResult[T]] = []
-        self.seen: set[str] = set()
-        self.hit: set[str] = set()
-        self.ordinal = 1
-        self.unreported = 0
+        self.links: list[tuple[int, Link]] = []  # depth and link of each page in ``pages``
         self.links_failed = False
         self.started_at = datetime.now(UTC)
+        self.runtime = CrawlRuntime()
+        self.stopped: Stop | None = None
+        self.checkpointing = CrawlCheckpointing(checkpoint_store(source.url, spider))
 
     async def run(
         self, start: Link, workers: int, fetch_seed: FetchSeed[T] | None
     ) -> ExtractionResult[T]:
-        self.seen.add(start.url)
-        frontier, first = [(1, start)], 0
-        if fetch_seed is not None:
-            frontier, first = await self._seed(start, fetch_seed), 1
-        for depth in range(first, self.spider.max_depth + 1):
-            batch = self._admit(frontier, depth)
-            fetched = await self._fetch_all(batch, workers)
-            frontier = []
-            for (ordinal, link), (result, harvest) in zip(batch, fetched, strict=True):
-                self._record(ordinal, depth, link, result, harvest)
-                self._discover(harvest.hrefs, depth + 1, frontier)
-            if not frontier:
+        deadline = self.runtime.clock() + self.spider.time_budget_seconds
+        self.frontier.seen.add(seen_key(start.url))
+        queue = self._resume()
+        if not queue:
+            queue = deque([(1, 0, start)])
+            if fetch_seed is not None:
+                queue = deque(await self._seed(start, fetch_seed))
+        size = workers * CHUNK_PER_WORKER if self.spider.unbounded else 0
+        chunks = 0
+        while queue:
+            if chunks and self.runtime.clock() >= deadline:
+                self.stopped = "time_budget"
                 break
-        return self._finish()
+            chunk = [queue.popleft() for _ in range(min(size or len(queue), len(queue)))]
+            batch = self._admit(chunk)
+            fetched = await in_order([(o, link) for o, _, link in batch], workers, self._fetch)
+            for (ordinal, depth, link), (result, harvest) in zip(batch, fetched, strict=True):
+                self._record(ordinal, depth, link, result, harvest)
+                self.frontier.discover(harvest.hrefs, depth + 1, queue)
+            chunks += 1
+            if self.spider.unbounded and records_full(self.pages, self.links, self.limits, queue):
+                self.stopped = "record_limit"
+                break
+            self.checkpointing.progress(self.runtime.clock(), self.links, queue, self.frontier.seen)
+        return self._finish(list(queue))
 
-    def _admit(self, frontier: list[tuple[int, Link]], depth: int) -> list[tuple[int, Link]]:
-        batch: list[tuple[int, Link]] = []
-        for ordinal, link in frontier:
+    def _resume(self) -> deque[Queued]:
+        checkpoint = self.checkpointing.load()
+        queue = self.frontier.resume(checkpoint) if checkpoint is not None else deque()
+        self.checkpointing.resumed = bool(queue)
+        return queue
+
+    def _admit(self, queued: list[Queued]) -> list[Queued]:
+        batch: list[Queued] = []
+        for ordinal, depth, link in queued:
             if self.scope.remaining <= 0:
-                self._note(ordinal, depth, link, "budget")
+                self.rows.note(ordinal, depth, link, "budget")
             elif not spend_page():
-                self._note(ordinal, depth, link, "page_limit")
+                self.rows.note(ordinal, depth, link, "page_limit")
             else:
-                batch.append((ordinal, link))
+                batch.append((ordinal, depth, link))
         return batch
 
-    async def _fetch_all(
-        self, batch: list[tuple[int, Link]], workers: int
-    ) -> list[tuple[ExtractionResult[T], LinkHarvest]]:
-        results: list[tuple[ExtractionResult[T], LinkHarvest] | None] = [None] * len(batch)
-        pending = iter(enumerate(batch))
-
-        async def worker() -> None:
-            for index, (ordinal, link) in pending:
-                results[index] = await self._fetch(ordinal, link)
-
-        if workers == 1 or len(batch) <= 1:
-            await worker()
-        else:
-            async with asyncio.TaskGroup() as group:
-                for _ in range(min(len(batch), workers)):
-                    group.create_task(worker())
-        return [item for item in results if item is not None]
-
-    async def _seed(self, start: Link, fetch_seed: FetchSeed[T]) -> list[tuple[int, Link]]:
+    async def _seed(self, start: Link, fetch_seed: FetchSeed[T]) -> list[Queued]:
         """Fetch the start sitemap and, for an index, its children; return the depth-1 links."""
-        frontier: list[tuple[int, Link]] = []
-        sitemaps = [(1, start)]
-        for ordinal, link in sitemaps:  # children are appended while the start is read
-            if not self._admit([(ordinal, link)], 0):
+        frontier: list[Queued] = []
+        sitemaps: list[Queued] = [(1, 0, start)]
+        entries: list[SitemapEntry] = []
+        order = self.spider.seed_order
+        for ordinal, _, link in sitemaps:  # children are appended while the start is read
+            if not self._admit([(ordinal, 0, link)]):
                 continue
             result, harvest = await self._fetch(ordinal, link, partial(fetch_seed, ordinal == 1))
             self._record(ordinal, 0, link, result, harvest, seed=True)
-            self._discover(harvest.sitemaps, 0, sitemaps, paths=False)  # host rules only
-            self._discover(harvest.hrefs, 1, frontier)
+            children = order_entries(harvest.sitemaps, order)
+            self.frontier.discover([item.loc for item in children], 0, sitemaps, paths=False)
+            entries.extend(
+                reversed(harvest.seed_entries) if order == "reverse" else harvest.seed_entries
+            )
+        ordered = order_entries(entries, "lastmod") if order == "lastmod" else entries
+        self.frontier.discover([item.loc for item in ordered], 1, frontier)
         return frontier
 
     async def _fetch(
@@ -176,8 +190,10 @@ class _Crawl[T: BaseModel]:
     ) -> tuple[ExtractionResult[T], LinkHarvest]:
         harvest = LinkHarvest(self.spider, self.parser, self.limits)
         page_source = Source.model_validate({**self.source.model_dump(), "url": link.url})
+        floor = self.policy.min_interval_seconds if self.policy else 0.0
         try:
-            return await (fetch or self.fetch_page)(page_source, harvest), harvest
+            call = partial(fetch or self.fetch_page, page_source, harvest)
+            return await self.runtime.paced(link.host, floor, call), harvest
         except (ConfigurationError, ResourceLimitError):
             if ordinal == 1:
                 raise  # the start page fails exactly as it would without a spider
@@ -203,59 +219,31 @@ class _Crawl[T: BaseModel]:
         outcome = page_outcome(result)
         if outcome == "no_records" and not seed:  # a seed keeps ``sitemap_empty``
             result = result.model_copy(update={"issues": ()})
+        hit = self.rows.hit
         if outcome == "budget" or result.pagination_stop == "budget":
-            self.hit.add("budget")
+            hit.add("budget")
         if result.pagination_stop == "max_pages" and not pages_left():
-            self.hit.add("page_limit")  # pagination ran into the spider's page cap
+            hit.add("page_limit")  # pagination ran into the spider's page cap
         if outcome in PAGE_FAILURES or harvest.failed:
-            self.hit.add("page_failed")
+            hit.add("page_failed")
         self.links_failed |= harvest.failed
-        self.rows[ordinal] = SpiderPage(
-            ordinal=ordinal,
-            depth=depth,
-            host=link.host,
-            path=report_path(link),
-            outcome=outcome,
-            records=len(result.records),
-        )
-        self.pages.append(result)
+        self.rows.fetched(ordinal, depth, link, outcome, len(result.records))
+        self.pages.append(with_page_provenance(result, harvest.page_url or link.url))
+        self.links.append((depth, link))
 
-    def _discover(
-        self, hrefs: list[str], depth: int, frontier: list[tuple[int, Link]], *, paths: bool = True
-    ) -> None:
-        """Queue each new link found for ``depth``, or note why it is not fetched."""
-        for href in hrefs:
-            link = classify_link(self.source.url, href)
-            if not link.refusal and link.url in self.seen:
-                continue
-            self.ordinal += 1
-            refusal: SpiderOutcome | None = link.refusal or link_refusal(
-                link, self.scope, self.spider, self.policy, paths=paths
-            )
-            if refusal is None and depth > self.spider.max_depth:
-                refusal = "depth_limit"
-                self.hit.add("depth_limit")
-            if refusal is not None:
-                self._note(self.ordinal, depth, link, refusal)
-            else:
-                frontier.append((self.ordinal, link))
-            if not link.refusal:
-                self.seen.add(link.url)
-
-    def _note(self, ordinal: int, depth: int, link: Link, outcome: SpiderOutcome) -> None:
-        if outcome in ("budget", "page_limit"):
-            self.hit.add(outcome)
-        if len(self.rows) >= _NOTE_CAP:
-            self.unreported += 1
-            return
-        self.rows[ordinal] = SpiderPage(
-            ordinal=ordinal, depth=depth, host=link.host, path=report_path(link), outcome=outcome
+    def _finish(self, queue: list[Queued]) -> ExtractionResult[T]:
+        report = self.rows.report(self.frontier.ordinal)
+        result = finish_crawl(
+            self.pages, self.rows.hit, self.limits, report, self.links_failed, self.stopped
         )
-
-    def _finish(self) -> ExtractionResult[T]:
-        report = SpiderReport(
-            pages=tuple(self.rows[key] for key in sorted(self.rows)),
-            discovered=self.ordinal,
-            unreported=self.unreported,
+        if self.checkpointing.resumed:  # records belong to the start URL, as in the first run
+            result = rebase_on_start(result, self.source)
+        remaining = [(depth, link.url) for _, depth, link in queue]
+        return with_crawl_note(
+            result,
+            unbounded=self.spider.unbounded,
+            pages=len(self.pages),
+            frontier=len(remaining),
+            checkpointing=self.checkpointing,
+            checkpoint=self.checkpointing.close(remaining, self.frontier.seen),
         )
-        return finish_crawl(self.pages, self.hit, self.limits, report, self.links_failed)

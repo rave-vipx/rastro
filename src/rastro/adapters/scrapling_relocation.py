@@ -1,4 +1,4 @@
-"""Offline adaptive relocation at the parser boundary (SCR-002, REPAIR-001).
+"""Offline adaptive relocation at the parser boundary.
 
 Container and field fingerprints from the first success propose a template; CI must validate
 all records, history and semantics. No fetcher, adaptive storage or activation is involved.
@@ -8,19 +8,17 @@ from __future__ import annotations
 
 import re
 from copy import deepcopy
-from typing import Any
 
 from cssselect import SelectorError
-from lxml.etree import LxmlError  # type: ignore[import-untyped]
 from pydantic import BaseModel, ValidationError
 from scrapling.core.utils._utils import _StorageTools
 from scrapling.parser import Selector
 
+from rastro.adapters.scrapling_adaptive import bounded_page, element_names, relative_path
 from rastro.adapters.scrapling_container import (
     container_evidence,
     container_selector,
     field_supported,
-    identifier,
     relocate_matches,
     template_record,
 )
@@ -33,7 +31,7 @@ from rastro.domain.models import (
     ResourceLimitError,
     Source,
 )
-from rastro.domain.recipes import DOCUMENT_PREFIX, EXPAND_PREFIX
+from rastro.domain.recipes import DOCUMENT_PREFIX, EXPAND_PREFIX, scalar_expression
 from rastro.domain.repair import (
     ElementFingerprint,
     RelocationSnapshot,
@@ -70,7 +68,7 @@ class ScraplingRelocation:
             raise ConfigurationError("Successful result does not match the snapshot records")
         nodes: dict[str, Selector] = {}
         for field, expression in recipe.fields.items():
-            selector, _ = _expression(expression)
+            selector, _ = _expression(scalar_expression(expression))
             if field not in result.records[0].evidence:
                 continue
             matches = _css(records[0], selector)
@@ -121,17 +119,15 @@ class ScraplingRelocation:
         # One template record: the most common shape, so a row missing an optional child
         record = template_record(records)  # does not become the template.
         selected = {
-            field: _css(record, _expression(expr)[0]) for field, expr in recipe.fields.items()
+            field: _css(record, _expression(scalar_expression(expr))[0])
+            for field, expr in recipe.fields.items()
         }
-        names = {
-            node: (node.tag, tuple(sorted(set(node.get("class", "").split()))))
-            for node in page._root.iter()
-        }
+        names = element_names(page)
         _mask(page)
         evidence = container_evidence(page, relocated, records, snapshot.fields, selected)
         fields = dict(recipe.fields)
         for field, fingerprint in snapshot.fields.items():
-            if _expression(recipe.fields[field])[0] == ":scope":
+            if _expression(scalar_expression(recipe.fields[field]))[0] == ":scope":
                 evidence.append(RepairEvidence(field=field, match_count=1))
                 continue
             # An element another field already reads is never a relocation target.
@@ -140,13 +136,16 @@ class ScraplingRelocation:
             if relocated and not selected[field] and not field_supported(matches, fingerprint):
                 return ()
             evidence.append(RepairEvidence(field=field, match_count=len(matches)))
-            paths = [_relative(record, node, names) for node in matches]
+            paths = [relative_path(record._root, node._root, names) for node in matches]
             if matches and [node._root for node in matches] != [
                 node._root for node in selected[field]
             ]:
-                _, suffix = _expression(fields[field])
+                _, suffix = _expression(scalar_expression(fields[field]))
                 fields[field] = ", ".join(
-                    [fields[field], *(path + suffix for path in paths if path is not None)]
+                    [
+                        scalar_expression(fields[field]),
+                        *(path + suffix for path in paths if path is not None),
+                    ]
                 )
         if fields == recipe.fields and record_selector == recipe.record_selector:
             return ()
@@ -191,28 +190,9 @@ def _css(page: Selector, expression: str) -> list[Selector]:
 
 
 def _records(html: str, recipe: CssRecipe, limits: Limits) -> tuple[Selector, list[Selector]]:
-    try:
-        size = len(html.encode())
-    except UnicodeError:
-        raise ConfigurationError("Relocation input must be valid UTF-8") from None
-    if size > limits.max_html_bytes:
-        raise ResourceLimitError("HTML input exceeds max_html_bytes")
-    try:
-        page = Selector(html or "<html></html>", adaptive=False, huge_tree=False)
-    except (ValueError, LxmlError):
-        raise ConfigurationError("Invalid relocation HTML") from None
+    page = bounded_page(html, limits, "relocation")
     if page._root is None:
         return page, []
-    for comment in page._root.xpath("//comment() | //processing-instruction()"):
-        parent = comment.getparent()
-        if parent is not None:
-            parent.remove(comment)
-    nodes = list(page._root.iter())
-    if len(nodes) > 4096:
-        raise ResourceLimitError("Relocation exceeds 4096 nodes")
-    for node in nodes:
-        if len(list(node.iterancestors())) >= 128 or len(node.attrib) > 100:
-            raise ResourceLimitError("Relocation exceeds structural budgets")
     records = _css(page, recipe.record_selector)
     if len(records) > limits.max_records:
         raise ResourceLimitError("Record count exceeds max_records")
@@ -247,25 +227,3 @@ def _fingerprint(node: Selector) -> ElementFingerprint:
     return ElementFingerprint.model_validate(
         {key: data[key] for key in ElementFingerprint.model_fields}
     )
-
-
-def _relative(
-    record: Selector, node: Selector, names: dict[Any, tuple[str, tuple[str, ...]]]
-) -> str | None:
-    """A tag+class child path from the record; None when a step is not unique.
-
-    Positional steps would read a sibling in a record that omits an optional child.
-    """
-    parts: list[str] = []
-    current = node._root
-    while current is not record._root:
-        parent = current.getparent()
-        if parent is None:
-            raise ConfigurationError("Relocation escaped the record")
-        siblings = [child for child in parent if isinstance(child.tag, str)]
-        if sum(names[child] == names[current] for child in siblings) != 1:
-            return None
-        tag, classes = names[current]
-        parts.append(identifier(tag) + "".join("." + identifier(c) for c in classes))
-        current = parent
-    return " > ".join([":scope", *reversed(parts)])

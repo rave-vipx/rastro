@@ -1,4 +1,4 @@
-"""HTML mutation operators on synthetic pages (MOCK-002)."""
+"""HTML mutation operators on synthetic pages."""
 
 import json
 

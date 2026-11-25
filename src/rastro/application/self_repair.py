@@ -1,4 +1,4 @@
-"""Value gate and candidate reuse on top of recipe CI (REPAIR-002, REPAIR-004, REC-006).
+"""Value gate and candidate reuse on top of recipe CI.
 
 ``gate_values`` downgrades a passing evaluation to quarantine when a relocated
 field's values no longer look like that field's retained values. Job repair can
@@ -8,6 +8,7 @@ candidate with an identical definition instead of creating a new version.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping, Sequence
 from datetime import datetime
 from typing import Protocol
@@ -22,11 +23,43 @@ from rastro.domain.memory import RecipeKey, StoredRecipe
 from rastro.domain.models import Limits, Recipe, Source
 from rastro.domain.recipe_compare import CandidateEvaluation, RecipeComparison
 from rastro.domain.repair import RepairCandidate
+from rastro.domain.results import RepairProposal, SelfRepair
+from rastro.domain.source_notes import CODE_PATTERN, RepairNote
 from rastro.domain.value_consistency import value_consistency
 from rastro.ports.parser import DocumentParser
 from rastro.ports.recipes import RecipeLifecycle, RecipeRepository
 
 _REUSE_WINDOW = 32  # newest versions scanned for an identical stored candidate
+_DECISIONS = {"promote": "promoted", "quarantine": "quarantined", "reject": "rejected"}
+_ORDER = ("promoted", "quarantined", "rejected")
+
+
+def repair_note(repair: SelfRepair) -> RepairNote:
+    """The report note for offline self-repair: the strongest decision among its candidates."""
+    decided = [(_DECISIONS[p.decision], p) for p in repair.candidates]
+    for decision in _ORDER:
+        match = next((p for d, p in decided if d == decision), None)
+        if match is not None:
+            return RepairNote(
+                decision=decision,  # type: ignore[arg-type]
+                candidate_version=match.version,
+                promotion_refused=_refusal(match) if decision == "quarantined" else None,
+                origin=repair.origin,
+                model_calls=repair.model_calls,
+            )
+    return RepairNote(origin=repair.origin, model_calls=repair.model_calls)
+
+
+def _refusal(proposal: RepairProposal) -> str | None:
+    """The first reason that is a code, other than the pass marker."""
+    return next(
+        (
+            r
+            for r in proposal.reasons
+            if r != "all_gates_passed" and len(r) <= 64 and re.fullmatch(CODE_PATTERN, r)
+        ),
+        None,
+    )
 
 
 class CandidateStore(RecipeRepository, RecipeLifecycle, Protocol):

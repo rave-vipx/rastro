@@ -4,6 +4,63 @@
       "name": "Rastro Contributors",
       "url": null
     },
+    "id": "generic-crawl",
+    "last_verified": "2026-11-16",
+    "license": "Apache-2.0",
+    "source_patterns": [
+      "generic-crawl.example"
+    ],
+    "trust": {
+      "days_since_verified": 0,
+      "format": 2,
+      "has_sample": true,
+      "replay_verified": true
+    },
+    "version": "1.0.0"
+  },
+  {
+    "author": {
+      "name": "Rastro Contributors",
+      "url": null
+    },
+    "id": "shopify-products",
+    "last_verified": "2026-11-16",
+    "license": "Apache-2.0",
+    "source_patterns": [
+      "shopify-products.example/products.json"
+    ],
+    "trust": {
+      "days_since_verified": 0,
+      "format": 2,
+      "has_sample": true,
+      "replay_verified": true
+    },
+    "version": "1.0.0"
+  },
+  {
+    "author": {
+      "name": "Rastro Contributors",
+      "url": null
+    },
+    "id": "sitemap-crawl",
+    "last_verified": "2026-11-16",
+    "license": "Apache-2.0",
+    "source_patterns": [
+      "sitemap-crawl.example/sitemap.xml"
+    ],
+    "trust": {
+      "days_since_verified": 0,
+      "format": 2,
+      "has_sample": true,
+      "replay_verified": true
+    },
+    "version": "1.0.0"
+  },
+  {
+    "author": {
+      "name": "Rastro Contributors",
+      "url": null
+    },
     "id": "synthetic-listing",
     "last_verified": "2026-11-16",
     "license": "Apache-2.0",
@@ -61,11 +118,11 @@
       "name": "Rastro Contributors",
       "url": null
     },
-    "id": "uy-sodre-agenda",
+    "id": "teatro-central-agenda",
     "last_verified": "2026-11-15",
     "license": "Apache-2.0",
     "source_patterns": [
-      "sodre.gub.uy/espectaculos"
+      "agenda.example/espectaculos"
     ],
     "trust": {
       "days_since_verified": 0,

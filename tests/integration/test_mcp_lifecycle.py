@@ -1,4 +1,4 @@
-"""MCP lifecycle tools through the real protocol (AGENT-002, AGENT-003, REPAIR-002-005, REC-006).
+"""MCP lifecycle tools through the real protocol.
 
 A synthetic job board: the job's title selector breaks, then the agent repairs, reviews,
 promotes and applies the recipe using MCP tools only.
@@ -81,7 +81,7 @@ def break_title(root: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_drift_status_before_any_load_creates_nothing(workspace: Path) -> None:
-    """AGENT-002: drift_status is read-only and says when there is no dataset yet."""
+    """Drift_status is read-only and says when there is no dataset yet."""
     failed, status = await call(workspace, "drift_status", path="jobs/job.toml")
     assert not failed and status["sources"] == [] and "note" in status
     assert not (workspace / "jobs" / "jobs.sqlite").exists()
@@ -89,7 +89,7 @@ async def test_drift_status_before_any_load_creates_nothing(workspace: Path) -> 
 
 @pytest.mark.asyncio
 async def test_extract_writes_no_dataset_and_load_does(workspace: Path) -> None:
-    """AGENT-003: job_extract is `rastro job run`; job_load is `rastro job load`."""
+    """Job_extract is `rastro job run`; job_load is `rastro job load`."""
     failed, extracted = await call(workspace, "job_extract", path="jobs/job.toml")
     assert not failed and extracted["job"]["status"] == "success"
     assert extracted["data_trust"] == "untrusted_source_data"
@@ -108,7 +108,7 @@ async def test_extract_writes_no_dataset_and_load_does(workspace: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_repair_proposes_then_promote_and_apply_through_mcp(workspace: Path) -> None:
-    """REPAIR-002/005, REC-006: repair never promotes on its own; promote needs a reason."""
+    """Repair never promotes on its own; promote needs a reason."""
     assert not (await call(workspace, "job_load", path="jobs/job.toml"))[0]
     break_title(workspace)
     failed, run = await call(workspace, "job_extract", path="jobs/job.toml")
@@ -143,7 +143,7 @@ async def test_repair_proposes_then_promote_and_apply_through_mcp(workspace: Pat
 
 @pytest.mark.asyncio
 async def test_override_gates_needs_the_operator_opt_in_at_server_start(workspace: Path) -> None:
-    """REPAIR-005, AGENT-003, SEC-011: page content can prompt-inject the MCP client, so
+    """Page content can prompt-inject the MCP client, so
     the client alone cannot override gates; the operator opts in when starting the server."""
     await call(workspace, "job_load", path="jobs/job.toml")
     break_title(workspace)
@@ -171,7 +171,7 @@ async def test_override_gates_needs_the_operator_opt_in_at_server_start(workspac
 
 @pytest.mark.asyncio
 async def test_repair_promotes_only_when_the_job_opts_in(workspace: Path) -> None:
-    """REPAIR-004: auto promotion comes from the job's own [repair] block."""
+    """Auto promotion comes from the job's own [repair] block."""
     job = workspace / "jobs" / "job.toml"
     job.write_text(JOB + "\n[repair]\nauto_promote = true\n", encoding="utf-8")
     await call(workspace, "job_load", path="jobs/job.toml")
@@ -185,7 +185,7 @@ async def test_repair_promotes_only_when_the_job_opts_in(workspace: Path) -> Non
 async def test_promote_rejects_unprintable_reasons_with_the_envelope(
     workspace: Path, reason: str
 ) -> None:
-    """AGENT-003: audit text is checked before any store is touched."""
+    """Audit text is checked before any store is touched."""
     failed, error = await call(
         workspace, "recipe_promote", path="jobs/job.toml", source=1, version=2, reason=reason
     )
@@ -204,7 +204,7 @@ async def test_history_without_memory_and_source_out_of_range(workspace: Path) -
 
 @pytest.mark.asyncio
 async def test_argument_bounds_use_the_envelope_without_echoing_input(workspace: Path) -> None:
-    """AGENT-002: schema violations are reported like tool errors, never with the input."""
+    """Schema violations are reported like tool errors, never with the input."""
     failed, error = await call(workspace, "recipe_history", path="jobs/job.toml", source=0)
     assert failed and set(error) == ENVELOPE and error["error"] == "validation_error"
     secret = "SECRET-" + "x" * 2000
@@ -213,7 +213,7 @@ async def test_argument_bounds_use_the_envelope_without_echoing_input(workspace:
 
 
 def test_bounded_caps_lists_and_strings() -> None:
-    """AGENT-002: every growing output is cut and flagged."""
+    """Every growing output is cut and flagged."""
     from rastro.mcp_tools import bounded
 
     payload = bounded({"rows": list(range(60)), "nested": {"text": "y" * 600}}, max_items=50)
@@ -224,7 +224,7 @@ def test_bounded_caps_lists_and_strings() -> None:
 
 @pytest.mark.asyncio
 async def test_drift_status_reports_open_drift_and_only_current_sources(workspace: Path) -> None:
-    """DRIFT-005, AGENT-002: open drift is reported; removed sources are listed as orphaned."""
+    """Open drift is reported; removed sources are listed as orphaned."""
     assert not (await call(workspace, "job_load", path="jobs/job.toml", drift=True))[0]
     one = CARD.format(n=1, cls="title")
     (workspace / "jobs" / "board.html").write_text(f"<html><body>{one}</body></html>")

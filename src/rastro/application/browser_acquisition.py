@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Mapping, Sequence
 from contextvars import ContextVar
 from dataclasses import replace
 from time import perf_counter
@@ -15,11 +16,16 @@ from rastro.application.acquisition_state import (
     charge_extra_requests,
     check_page_request,
 )
-from rastro.application.browser_policy import canonical_url, page_policy
+from rastro.application.browser_boxes import measure_rendered
+from rastro.application.browser_page_steps import run_page_steps
+from rastro.application.browser_policy import BROWSER_REGION, canonical_url, page_policy
+from rastro.application.browser_proxy import BROWSER_PROXY
 from rastro.application.browser_scroll_step import scroll_step
 from rastro.application.browser_sessions import SOURCE_SESSIONS
+from rastro.application.capability_gate import policy_capabilities, require
 from rastro.application.destinations import permitted_url, pin_destination
-from rastro.application.stealth_grant import require_stealth_grant
+from rastro.application.network_recipes import acquire_captured, record_captured
+from rastro.application.operator_trust import current_trust
 from rastro.domain.acquisition import (
     AcquisitionError,
     AcquisitionPolicy,
@@ -28,6 +34,7 @@ from rastro.domain.acquisition import (
     PinnedTarget,
 )
 from rastro.domain.models import ConfigurationError, Outcome, Representation, Source
+from rastro.domain.page_steps import PageStep
 from rastro.ports.acquisition import HttpTransport, Resolver
 from rastro.ports.browser import BrowserRenderer, BrowserSessions
 
@@ -43,36 +50,40 @@ class BrowserAcquirer(WebAcquirer):
         transport: HttpTransport,
         resolver: Resolver,
         allow_stealth: bool = False,
+        environ: Mapping[str, str] | None = None,
     ):
-        # First, before the renderer is looked at: no grant, no stealth browser (ADR 0034).
-        require_stealth_grant(
-            stealth=policy.render == "stealth",
-            solve_challenges=policy.solve_challenges,
-            allow=allow_stealth,
-        )
-        if policy.egress_profiles:
-            raise ConfigurationError("Browser modes do not support egress profiles")
+        # First, before the renderer is looked at: no grant, no stealth browser (ADR 0037).
+        require(policy_capabilities(policy), allow_stealth=allow_stealth)
         if policy.auth:
             raise ConfigurationError("auth headers are HTTP-engine only")
         super().__init__(
-            policy.model_copy(update={"max_retries": 0}), transport=transport, resolver=resolver
+            policy.model_copy(update={"max_retries": 0}),
+            transport=transport,
+            resolver=resolver,
+            environ=environ,
         )
         self._renderer = renderer
-        self._http = WebAcquirer(policy, transport=transport, resolver=resolver)
+        self._http = WebAcquirer(policy, transport=transport, resolver=resolver, environ=environ)
         self._http._hosts = self._hosts
 
     async def acquire(
         self, source: Source, *, max_bytes: int, representation: Representation = "html"
     ) -> AcquisitionResult:
-        if source.egress != "direct" or representation != "html":
-            raise ConfigurationError("Browser modes require direct egress and HTML representation")
+        if representation == "json":  # the page's own JSON, captured while it renders
+            return await acquire_captured(
+                self.policy, lambda: self.acquire(source, max_bytes=max_bytes)
+            )
+        if representation != "html":
+            raise ConfigurationError("Browser modes require the HTML or JSON representation")
         token = _render_seconds.set(0)
+        region = BROWSER_REGION.set((source.locale, source.timezone))  # the job's [region]
         try:
             result = await super().acquire(
                 source, max_bytes=max_bytes, representation=representation
             )
-            return replace(result, render_seconds=_render_seconds.get())
+            return replace(result, render_seconds=_render_seconds.get(), render=self.policy.render)
         finally:
+            BROWSER_REGION.reset(region)
             _render_seconds.reset(token)
 
     async def _robots(self, url: str, operation: _Operation) -> None:
@@ -107,6 +118,8 @@ class BrowserAcquirer(WebAcquirer):
                     operation.url = result.url
                     if result.url != url:
                         await self._robots(result.url, operation)
+                    operation.challenge_solved |= result.challenge_solved
+                    operation.screenshot = result.screenshot  # evidence of this render only
                     if result.status != Outcome.SUCCESS:
                         raise AcquisitionError(
                             result.issue_code or "browser_failure", result.status
@@ -123,7 +136,7 @@ class BrowserAcquirer(WebAcquirer):
                         len(body),
                     )
             finally:
-                host.next_request = perf_counter() + host.interval
+                host.next_request = max(host.next_request, perf_counter() + host.interval)
 
     async def _render(
         self,
@@ -140,6 +153,7 @@ class BrowserAcquirer(WebAcquirer):
         if scope is not None:  # the navigation is already charged: it stays inside the allowance
             allowance = min(allowance, scope.remaining + 1)
         policy = policy.model_copy(update={"max_requests": allowance})
+        token = BROWSER_PROXY.set(operation.proxy)  # the target was pinned and checked above
         try:
             result = await self._render_once(target, targets, policy, max_bytes)
         except AcquisitionError as error:
@@ -148,6 +162,8 @@ class BrowserAcquirer(WebAcquirer):
         except BaseException:  # a timeout or crash lost the browser's count: charge the allowance
             self._charge(operation, allowance)
             raise
+        finally:
+            BROWSER_PROXY.reset(token)
         self._charge(operation, result.requests)
         return result
 
@@ -172,6 +188,7 @@ class BrowserAcquirer(WebAcquirer):
                 scope.mark_rendered(self._renderer, None)  # unknown until this render returns
                 try:
                     result = await session.render(target, policy=policy, max_bytes=max_bytes)
+                    record_captured(session)
                 except BaseException:
                     await scope.discard(self._renderer)  # its final host is unknown: never reuse
                     raise
@@ -183,6 +200,12 @@ class BrowserAcquirer(WebAcquirer):
         return await self._renderer.render(
             target, policy=policy, max_bytes=max_bytes, targets=targets
         )
+
+    async def element_boxes(
+        self, url: str, selectors: Sequence[str]
+    ) -> Mapping[str, Sequence[Mapping[str, float]]]:
+        """Render ``url`` under this acquirer's policy and measure each selector's matches."""
+        return await measure_rendered(self, self._renderer, url, selectors)
 
     def renders_in_browser(self, url: str) -> bool:
         return True
@@ -206,4 +229,27 @@ class BrowserAcquirer(WebAcquirer):
             source,
             settle_ms=settle_ms,
             max_bytes=max_bytes,
+        )
+
+    def runs_steps(self, url: str) -> bool:
+        return True  # every render mode keeps the source's page open for its steps
+
+    async def run_steps(
+        self, source: Source, steps: tuple[PageStep, ...], *, max_bytes: int
+    ) -> AcquisitionResult:
+        """Run a recipe's page steps in the source's open page, under the same budget."""
+        policy = self.policy.with_grants(current_trust().network_grants())
+
+        async def robots(url: str) -> None:
+            await self._robots(url, _Operation(url, policy))
+
+        return await run_page_steps(
+            self._renderer,
+            self.policy,
+            self._hosts,
+            self._slots,
+            source,
+            steps,
+            max_bytes=max_bytes,
+            robots=robots,
         )

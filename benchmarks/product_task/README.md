@@ -1,4 +1,4 @@
-# Offline product-task comparison (DIFF-002)
+# Offline product-task comparison
 
 This combines the independent Scrapling + Pydantic baseline from the first
 evaluation step with the real Rastro validate/preview/load and scripted manual
@@ -52,7 +52,7 @@ nonnegative prices and UYU currency. This workload has prices on every record;
 price and currency are required by this baseline.
 
 `baseline/sources.json` contains explicit selectors and JSON-LD pointers for the
-two existing **synthetic** files under `examples/uy-dance-agenda/sample/` and a
+two existing **synthetic** files under `examples/event-agenda/sample/` and a
 third synthetic source under `fixtures/`. No downloads, browsers or model clients
 are used. URLs are provenance, never fetch targets. The baseline cannot see
 `fixtures/expected.json`; only the scorer reads that hand-written table.
@@ -62,14 +62,14 @@ identity. Seven initial observations produce six rows because `candombe-1` is
 shared. Distinct IDs stay distinct, including near-matching Gala titles and the
 Suite listings with conflicting times. This benchmark does not resolve those
 cross-source disagreements or measure fuzzy matching. Source order is fixed:
-SODRE, Tickantel, then Costa; the last observation of a shared ID wins. Every row
+Teatro Central, Tickets Example, then Costa; the last observation of a shared ID wins. Every row
 keeps the last source name, URL and full field mapping as extraction provenance.
 A whole source must validate before its transaction upserts anything. Failure,
 ambiguous identity and partial extraction preserve existing records; absence is
 never interpreted as deletion.
 
 The committed break changes Costa's record class from `.dance` to `.performance`
-and its price from 250 to 280. It is authored independently of cut 2's Mock Lab;
+and its price from 250 to 280. It is authored independently of Mock Lab;
 it is not a generated Mock Lab mutation. `fixtures/repair.json` changes exactly
 one selector. Repair is a **prewritten manual fix replay**, not automatic repair.
 Rastro runs on these same bytes, and its automatic candidate generator returns

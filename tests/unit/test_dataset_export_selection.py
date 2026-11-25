@@ -1,4 +1,4 @@
-"""--upcoming and HTML link rules for dataset export (DATA-004, SCHED-007)."""
+"""--upcoming and HTML link rules for dataset export."""
 
 from datetime import UTC, datetime
 
@@ -25,10 +25,10 @@ def test_starts_on_rows_survive_while_starts_at_none_is_dropped():
 
 
 def test_date_compares_with_today_in_the_given_timezone():
-    # 2026-11-09 01:00Z is still 2026-11-08 in Montevideo (UTC-3).
+    # 2026-11-09 01:00Z is still 2026-11-08 in Puerto Claro (UTC-3).
     now = datetime(2026, 11, 9, 1, tzinfo=UTC)
     rec = _record(starts_on="2026-11-08")
-    assert select_records((rec,), "starts_on", True, timezone="America/Montevideo", now=now)
+    assert select_records((rec,), "starts_on", True, timezone="Etc/GMT+3", now=now)
     assert not select_records((rec,), "starts_on", True, timezone="UTC", now=now)
     assert not select_records((rec,), "starts_on", True, now=now)
 

@@ -43,11 +43,12 @@ def test_explicit_extraction_supplies_regional_validation_context():
             assert info.context == {
                 "locale": "es-UY",
                 "languages": ("es-UY", "en"),
-                "timezone": "America/Montevideo",
+                "timezone": "Etc/GMT+3",
                 "currency": "UYU",
                 "egress": "direct",
                 "observed_at": observed[-1],
                 "source_url": "https://example.com/",
+                "field_issues": [],
             }
             return value
 
@@ -57,7 +58,7 @@ def test_explicit_extraction_supplies_regional_validation_context():
             url="https://example.com/",
             locale="es-UY",
             languages=("es-UY", "en"),
-            timezone="America/Montevideo",
+            timezone="Etc/GMT+3",
             currency="UYU",
         ),
         schema=RegionalPrice,

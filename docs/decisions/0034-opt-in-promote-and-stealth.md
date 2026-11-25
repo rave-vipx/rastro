@@ -1,7 +1,6 @@
 # ADR 0034: opt-in promote, stealth, and local code
 
-- **Status:** accepted 2026-11-16. The owner asked to include these with an activation choice, not as the default.
-- **Requirements:** N12 in `docs/product-needs.md`. REC-002, SEC-005, and P-005 stay.
+- **Status:** accepted 2026-11-16. These capabilities exist with an activation choice, not as the default.
 
 ## Decision
 
@@ -11,7 +10,7 @@ Three capabilities exist. None turns itself on because a page used JavaScript, b
 
 `[repair] auto_promote` stays `false` unless the operator sets it on the job they own, or turns the Studio switch on. That switch writes only that job key.
 
-When it is on, a candidate becomes active only if the gates already required today pass and the semantic judge agrees the values kept their meaning. A failed gate quarantines the candidate, leaves the previous recipe serving, and surfaces the alert from N5. A repair that extracted nothing is not a success.
+When it is on, a candidate becomes active only if the gates already required today pass and the semantic judge agrees the values kept their meaning. A failed gate quarantines the candidate, leaves the previous recipe serving, and surfaces the alert in Studio's Alerts view. A repair that extracted nothing is not a success.
 
 An imported or URL-installed bundle cannot set `auto_promote`. Install stays a candidate.
 
@@ -23,7 +22,7 @@ The job key is `render`, already shipped. Values are `http`, `browser`, and `ste
 
 Choosing `browser` or scroll does not check that switch and does not solve challenges. `solve_challenges` stays a separate job request and still needs the stealth grant. No proxy rotation and no external CAPTCHA service.
 
-Reusing one browser context across pages of the same source (N2) does not change this key. A fresh context per page is what N2 replaces, for one source, for one run.
+Reusing one browser context across pages of the same source does not change this key. It replaces a fresh context per page, for one source, for one run.
 
 ### Code and other people's pages
 

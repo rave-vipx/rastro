@@ -1,4 +1,4 @@
-"""One-call scraping: targets, items, discovery, failures (INT-001, INT-002, SEC-001)."""
+"""One-call scraping: targets, items, discovery, failures."""
 
 import asyncio
 import json
@@ -196,12 +196,14 @@ def test_url_target_failures_return_explicit_outcomes(monkeypatch):
         status=Outcome.ACCESS_RESTRICTION,
         issue_code="robots_disallowed",
     )
-    seen, _ = _fake_web(monkeypatch, blocked)
+    seen, acquirer = _fake_web(monkeypatch, blocked)
+    # A refusal climbs the acquisition ladder; here every level refuses too.
+    monkeypatch.setattr(scrape_target, "ladder_port", lambda rung: acquirer)
     for schema in (Offer, Product):
         result = rastro.scrape("http://acme.example/", schema)
         assert result.status == Outcome.ACCESS_RESTRICTION
         assert result.items == []
-        assert [issue.code for issue in result.issues] == ["robots_disallowed"]
+        assert [issue.code for issue in result.issues] == ["robots_disallowed", "ladder_exhausted"]
     assert seen["policy"].allow_http is True
 
 
@@ -221,14 +223,14 @@ def test_url_targets_without_the_http_extra_name_the_install(monkeypatch):
 
 @pytest.mark.parametrize("target", ["page.html", "./data/page.html", "C:\\pages\\a.htm"])
 def test_filename_strings_are_refused_with_a_path_hint(target):
-    """INT-001: a filename passed as str is not silently parsed as HTML."""
+    """A filename passed as str is not silently parsed as HTML."""
     with pytest.raises(ConfigurationError, match=r"pathlib\.Path"):
         rastro.scrape(target, Offer)
 
 
 @pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="needs POSIX FIFOs")
 def test_fifo_targets_are_refused_without_blocking(tmp_path):
-    """SEC-005: opening a FIFO with no writer must not hang."""
+    """Opening a FIFO with no writer must not hang."""
     fifo = tmp_path / "pipe.html"
     os.mkfifo(fifo)
     with pytest.raises(ConfigurationError, match="regular file"):
@@ -236,7 +238,7 @@ def test_fifo_targets_are_refused_without_blocking(tmp_path):
 
 
 def test_blank_required_text_is_a_validation_issue_not_an_empty_success():
-    """QUAL-004: a whitespace-only required value is missing, as in jobs."""
+    """A whitespace-only required value is missing, as in jobs."""
     html = HTML.replace("<h3>Engineer</h3>", "<h3> &nbsp; </h3>")
     result = rastro.scrape(html, Offer, url="https://acme.example/careers")
     assert result.status == Outcome.PARTIAL_SUCCESS
@@ -245,14 +247,14 @@ def test_blank_required_text_is_a_validation_issue_not_an_empty_success():
 
 
 def test_non_model_schemas_are_rejected():
-    """INT-001: the schema must be a Pydantic model class."""
+    """The schema must be a Pydantic model class."""
     for schema in (dict, Offer(title="x", url="https://a.example/")):
         with pytest.raises(ConfigurationError, match="schema must be a Pydantic model class"):
             rastro.scrape(HTML, schema)  # type: ignore[arg-type]
 
 
 def test_issues_carry_a_sanitized_message_without_the_input_value():
-    """P-005: issues explain the validation failure but never echo source values."""
+    """Issues explain the validation failure but never echo source values."""
     html = HTML.replace(">100<", ">secret-salary<")
     result = rastro.scrape(html, Offer, url="https://acme.example/careers")
     (issue,) = result.issues

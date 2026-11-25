@@ -1,7 +1,6 @@
 # ADR 0022: bring your own AI, with operator trust for job-declared models
 
 - **Status:** accepted for 0.6.0.
-- **Requirements:** AI-001–005, INT-002, REPAIR-001, SEC-004, SEC-005, SEC-011, P-001.
 
 ## Problem
 
@@ -15,7 +14,7 @@ command transport declared in a job would be arbitrary command execution from da
 ## Options
 
 1. **One adapter per product** (Claude, Codex, Gemini...). Every new product needs code;
-   rejected by the owner.
+   rejected: it does not scale and ties Rastro to vendors.
 2. **Generic transports plus documented presets.** OpenAI-compatible HTTP, any local
    command (no shell, prompt on stdin, bounded stdout, allow-listed environment) and an
    in-process function cover every product. Products are documented argv/endpoint presets.

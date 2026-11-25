@@ -1,4 +1,4 @@
-"""N3/N4/N9, SEC-008: Studio bounds follow domain contracts without copied caps."""
+"""Studio bounds follow domain contracts without copied caps."""
 
 import json
 import re
@@ -14,7 +14,7 @@ from rastro.domain.recipes import Pagination
 from rastro.domain.scroll import ScrollSpec
 from rastro.studio import bounds
 
-# bounds.js builds its labels with t(); the sliced code gets the real dictionary (N8).
+# bounds.js builds its labels with t(); the sliced code gets the real dictionary.
 I18N = Path("src/rastro/studio/static/i18n.js").resolve().as_uri()
 I18N_IMPORT = f'const {{ t }} = await import("{I18N}");\n'
 
@@ -45,13 +45,14 @@ def test_controls_follow_changed_domain_bounds(monkeypatch: pytest.MonkeyPatch) 
     from rastro.domain.spider import SpiderPolicy
 
     schema = SpiderPolicy.model_json_schema()["properties"]
-    for name in ("max_depth", "max_pages"):
-        assert payload["limits"]["spider"][name]["max"] == schema[name]["maximum"]
+    assert payload["limits"]["spider"]["max_depth"]["max"] == schema["max_depth"]["maximum"]
+    pages = next(item for item in schema["max_pages"]["anyOf"] if item.get("type") == "integer")
+    assert payload["limits"]["spider"]["max_pages"]["max"] == pages["maximum"]
 
 
 def test_no_copied_numeric_bounds() -> None:
     root = Path("src/rastro/studio")
-    for path in [root / "bounds.py", root / "routes_settings.py", *(root / "static").glob("*")]:
+    for path in [root / "bounds.py", root / "routes_settings.py", *(root / "static").rglob("*.*")]:
         text = path.read_text(encoding="utf-8")
         assert not re.search(
             r"\b(?:1\s*[-\u2013]\s*(?:4|30|50|100)|100\s*[-\u2013]\s*3000)\b", text
@@ -79,6 +80,9 @@ def check_browser_controls(payload: dict) -> None:
             "-e",
             """
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+const load = (url) => JSON.parse(readFileSync(new URL(url), 'utf8'));
+globalThis.fetch = async (url) => ({ ok: true, json: async () => load(url) });
 const nodes = {};
 const $ = id => nodes[id] ??= {};
 const show = (id, text) => { $(id).textContent = text; };
@@ -119,7 +123,7 @@ assert.equal($("scroll-steps-range").textContent, "");
 
 
 def test_unbounded_integer_does_not_break_controls() -> None:
-    """N3/N9: optional schema bounds do not make the controls payload fail."""
+    """Optional schema bounds do not make the controls payload fail."""
 
     class Unbounded(BaseModel):
         count: int
@@ -130,7 +134,7 @@ def test_unbounded_integer_does_not_break_controls() -> None:
 
 
 def test_acquisition_controls_have_separate_rows() -> None:
-    """N3/N9: link and scroll controls share a single-column layout."""
+    """Link and scroll controls share a single-column layout."""
     from lxml import html
 
     root = Path("src/rastro/studio/static")

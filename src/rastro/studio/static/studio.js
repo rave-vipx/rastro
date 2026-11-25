@@ -2,7 +2,7 @@
 // All source-derived text is set as plain text content; markup is never parsed.
 import { initPrefs } from "./prefs.js";
 import { $, api, bind, show, state, switchView } from "./dom.js";
-import { onLangChange, t } from "./i18n.js";
+import { advanced, onLangChange, setAdvanced, t } from "./i18n.js";
 import { initAI } from "./ai.js";
 import { fillControls, initControls } from "./controls.js";
 import { fillSelectors, initCorrect, resetCorrect } from "./correct.js";
@@ -15,6 +15,7 @@ import { initResults, loadRecords, render as renderResults, resetResults, view }
 import { initSources, loadSources, resetSources } from "./sources.js";
 import { initAlerts, loadAlerts, resetAlerts } from "./alerts.js";
 import { initWizard } from "./wizard.js";
+import { initSteps, loadSteps } from "./steps.js";
 
 // The token arrives in the URL fragment (never sent to the server); keep it in memory only.
 state.token = new URLSearchParams(location.hash.slice(1)).get("token") || "";
@@ -32,7 +33,7 @@ export async function openJob(name) {
   show("validation", t("open.valid", { notes: notes.join("; ") }), "good");
   $("crumb-project").textContent = name;
   if (!data.has_dataset) Object.assign(view, { ready: true, error: t("open.noDataset") });
-  await Promise.all([data.has_dataset ? loadRecords() : renderResults(), loadSources(), loadAlerts()]);
+  await Promise.all([data.has_dataset ? loadRecords() : renderResults(), loadSources(), loadAlerts(), loadSteps()]);
   fillFixSources(data.sources);
 }
 
@@ -68,8 +69,27 @@ function wireRequests() {
   });
 }
 
+// The Advanced switch is per viewer and off by default; blocked storage just forgets it.
+const ADVANCED_KEY = "rastro-studio-advanced";
+
+function initAdvanced() {
+  const toggle = $("pref-advanced");
+  let stored = null;
+  try { stored = window.localStorage.getItem(ADVANCED_KEY); } catch { /* storage blocked */ }
+  const apply = (on) => {
+    setAdvanced(on);
+    toggle.setAttribute("aria-checked", String(advanced()));
+  };
+  apply(stored === "on");
+  toggle.addEventListener("click", () => {
+    apply(!advanced());
+    try { window.localStorage.setItem(ADVANCED_KEY, advanced() ? "on" : "off"); } catch { /* blocked */ }
+  });
+}
+
 async function start() {
   initPrefs();
+  initAdvanced();
   if (!state.token) {
     show("listing", t("open.noToken"), "bad");
     return;
@@ -84,6 +104,7 @@ async function start() {
   for (const init of [initOperate, initResults, initProvenance, initSources, initAlerts, initCorrect, initFix]) init();
   wireRequests();
   initWizard({ openJob, refreshJobs, switchView });
+  initSteps({ openJob, switchView });
   initHome({ openJob, switchView });
   initRegistry();
   await initAI();

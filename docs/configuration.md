@@ -69,6 +69,7 @@ The record fields to extract, with their types. Docs: [jobs.md#target-fields-and
 | --- | --- | --- | --- | --- |
 | `fields[].name` | string | required | `length >= 1, length <= 64, pattern ^[A-Za-z][A-Za-z0-9_]{0,63}$` | Field name: a letter, then letters, digits or underscores. |
 | `fields[].required` | boolean | `true` |  | When true, a record without this field is rejected. |
+| `fields[].null_values` | array of string | `[]` | `items <= 16` | Text placeholders rejected after stripping whitespace and case folding. |
 | `fields[].type` | string | `"string"` | `always "string"` | Value type; it decides which of the keys below apply. |
 | `fields[].min_length` | integer | - | `>= 0, <= 1000000` | Shortest allowed text. |
 | `fields[].max_length` | integer | - | `>= 1, <= 1000000` | Longest allowed text. |
@@ -80,6 +81,7 @@ The record fields to extract, with their types. Docs: [jobs.md#target-fields-and
 | --- | --- | --- | --- | --- |
 | `fields[].name` | string | required | `length >= 1, length <= 64, pattern ^[A-Za-z][A-Za-z0-9_]{0,63}$` | Field name: a letter, then letters, digits or underscores. |
 | `fields[].required` | boolean | `true` |  | When true, a record without this field is rejected. |
+| `fields[].null_values` | array of string | `[]` | `items <= 16` | Text placeholders rejected after stripping whitespace and case folding. |
 | `fields[].type` | string | `"integer"` | `always "integer"` | Value type; it decides which of the keys below apply. |
 | `fields[].ge` | integer | - |  | Smallest allowed value. |
 | `fields[].le` | integer | - |  | Largest allowed value. |
@@ -90,6 +92,7 @@ The record fields to extract, with their types. Docs: [jobs.md#target-fields-and
 | --- | --- | --- | --- | --- |
 | `fields[].name` | string | required | `length >= 1, length <= 64, pattern ^[A-Za-z][A-Za-z0-9_]{0,63}$` | Field name: a letter, then letters, digits or underscores. |
 | `fields[].required` | boolean | `true` |  | When true, a record without this field is rejected. |
+| `fields[].null_values` | array of string | `[]` | `items <= 16` | Text placeholders rejected after stripping whitespace and case folding. |
 | `fields[].type` | string | `"number"` | `always "number"` | Value type; it decides which of the keys below apply. |
 | `fields[].ge` | number | - |  | Smallest allowed value. |
 | `fields[].le` | number | - |  | Largest allowed value. |
@@ -100,6 +103,7 @@ The record fields to extract, with their types. Docs: [jobs.md#target-fields-and
 | --- | --- | --- | --- | --- |
 | `fields[].name` | string | required | `length >= 1, length <= 64, pattern ^[A-Za-z][A-Za-z0-9_]{0,63}$` | Field name: a letter, then letters, digits or underscores. |
 | `fields[].required` | boolean | `true` |  | When true, a record without this field is rejected. |
+| `fields[].null_values` | array of string | `[]` | `items <= 16` | Text placeholders rejected after stripping whitespace and case folding. |
 | `fields[].type` | string | `"boolean"` | `always "boolean"` | Value type; it decides which of the keys below apply. |
 
 #### `type = "decimal"`
@@ -108,6 +112,7 @@ The record fields to extract, with their types. Docs: [jobs.md#target-fields-and
 | --- | --- | --- | --- | --- |
 | `fields[].name` | string | required | `length >= 1, length <= 64, pattern ^[A-Za-z][A-Za-z0-9_]{0,63}$` | Field name: a letter, then letters, digits or underscores. |
 | `fields[].required` | boolean | `true` |  | When true, a record without this field is rejected. |
+| `fields[].null_values` | array of string | `[]` | `items <= 16` | Text placeholders rejected after stripping whitespace and case folding. |
 | `fields[].type` | string | `"decimal"` | `always "decimal"` | Value type; it decides which of the keys below apply. |
 | `fields[].ge` | number or string | - |  | Smallest allowed value. |
 | `fields[].le` | number or string | - |  | Largest allowed value. |
@@ -118,6 +123,7 @@ The record fields to extract, with their types. Docs: [jobs.md#target-fields-and
 | --- | --- | --- | --- | --- |
 | `fields[].name` | string | required | `length >= 1, length <= 64, pattern ^[A-Za-z][A-Za-z0-9_]{0,63}$` | Field name: a letter, then letters, digits or underscores. |
 | `fields[].required` | boolean | `true` |  | When true, a record without this field is rejected. |
+| `fields[].null_values` | array of string | `[]` | `items <= 16` | Text placeholders rejected after stripping whitespace and case folding. |
 | `fields[].type` | string | `"date"` | `always "date"` | Value type; it decides which of the keys below apply. |
 | `fields[].localized` | boolean | `false` |  | Also parse non-ISO dates written in the source language. |
 
@@ -127,6 +133,7 @@ The record fields to extract, with their types. Docs: [jobs.md#target-fields-and
 | --- | --- | --- | --- | --- |
 | `fields[].name` | string | required | `length >= 1, length <= 64, pattern ^[A-Za-z][A-Za-z0-9_]{0,63}$` | Field name: a letter, then letters, digits or underscores. |
 | `fields[].required` | boolean | `true` |  | When true, a record without this field is rejected. |
+| `fields[].null_values` | array of string | `[]` | `items <= 16` | Text placeholders rejected after stripping whitespace and case folding. |
 | `fields[].type` | string | `"datetime"` | `always "datetime"` | Value type; it decides which of the keys below apply. |
 | `fields[].localized` | boolean | `false` |  | Also parse non-ISO dates written in the source language. |
 
@@ -136,7 +143,30 @@ The record fields to extract, with their types. Docs: [jobs.md#target-fields-and
 | --- | --- | --- | --- | --- |
 | `fields[].name` | string | required | `length >= 1, length <= 64, pattern ^[A-Za-z][A-Za-z0-9_]{0,63}$` | Field name: a letter, then letters, digits or underscores. |
 | `fields[].required` | boolean | `true` |  | When true, a record without this field is rejected. |
+| `fields[].null_values` | array of string | `[]` | `items <= 16` | Text placeholders rejected after stripping whitespace and case folding. |
 | `fields[].type` | string | `"url"` | `always "url"` | Value type; it decides which of the keys below apply. |
+
+#### `type = "list"`
+
+| Key | Type | Default | Bounds | Description |
+| --- | --- | --- | --- | --- |
+| `fields[].name` | string | required | `length >= 1, length <= 64, pattern ^[A-Za-z][A-Za-z0-9_]{0,63}$` | Field name: a letter, then letters, digits or underscores. |
+| `fields[].required` | boolean | `true` |  | When true, a record without this field is rejected. |
+| `fields[].null_values` | array of string | `[]` | `items <= 16` | Text placeholders rejected after stripping whitespace and case folding. |
+| `fields[].type` | string | `"list"` | `always "list"` | Value type; it decides which of the keys below apply. |
+| `fields[].item` | table | required |  | Scalar or object item contract; its name is ignored. Same keys as `fields[]`. |
+| `fields[].min_items` | integer | `0` | `>= 0, <= 1000` | Minimum valid items. |
+| `fields[].max_items` | integer | `100` | `>= 1, <= 1000` | Maximum input items. |
+
+#### `type = "object"`
+
+| Key | Type | Default | Bounds | Description |
+| --- | --- | --- | --- | --- |
+| `fields[].name` | string | required | `length >= 1, length <= 64, pattern ^[A-Za-z][A-Za-z0-9_]{0,63}$` | Field name: a letter, then letters, digits or underscores. |
+| `fields[].required` | boolean | `true` |  | When true, a record without this field is rejected. |
+| `fields[].null_values` | array of string | `[]` | `items <= 16` | Text placeholders rejected after stripping whitespace and case folding. |
+| `fields[].type` | string | `"object"` | `always "object"` | Value type; it decides which of the keys below apply. |
+| `fields[].members` | array of tables | required | `items >= 1, items <= 32` | Uniquely named scalar members of an object. Same keys as `fields[]`. |
 
 ### `[acquisition]`
 
@@ -147,6 +177,7 @@ How URLs are fetched: allowed hosts, rendering, pacing, budgets. Docs: [acquisit
 | `acquisition.allowed_hosts` | array of string | required | `items >= 1, items <= 64` | Exact hosts Rastro may fetch; nothing else is reached. |
 | `acquisition.render` | string | `"http"` | `one of http, browser, stealth` | http fetches HTML; browser renders JavaScript; stealth needs the --allow-stealth grant. |
 | `acquisition.solve_challenges` | boolean | `false` |  | Let the stealth browser solve challenge pages. |
+| `acquisition.robots` | string | `"obey"` | `one of obey, ignore` | "ignore" neither fetches nor enforces robots.txt for this job: the operator asserts permission. Jobs from agent tools, bundles, registry recipes and model output need the robots_ignore grant. |
 | `acquisition.allow_http` | boolean | `false` |  | Allow plain http:// URLs (https only by default). |
 | `acquisition.session` | boolean | `false` |  | Keep cookies in memory across the requests of one job run. |
 | `acquisition.max_concurrency` | integer | `4` | `>= 1, <= 32` | Requests in flight at the same time. |
@@ -163,6 +194,27 @@ How URLs are fetched: allowed hosts, rendering, pacing, budgets. Docs: [acquisit
 | `acquisition.egress_profiles.<name>.proxy_url` | string | required | `length >= 1, length <= 2048` | Proxy URL, without credentials. |
 | `acquisition.egress_profiles.<name>.username_env` | string | - | `pattern ^[A-Z_][A-Z0-9_]{0,127}$` | Environment variable holding the proxy user name. |
 | `acquisition.egress_profiles.<name>.password_env` | string | - | `pattern ^[A-Z_][A-Z0-9_]{0,127}$` | Environment variable holding the proxy password. |
+| `acquisition.rotate_egress` | array of string | `[]` | `items <= 16` | Egress profile names to rotate over, in order: each transfer of a source whose egress is "direct" uses the next one, and a proxy failure retries on the next. |
+| `acquisition.hosts` | map of tables | - | `keys <= 64` | Pacing and concurrency for one allowed host, overriding the job-wide min_interval_seconds and max_concurrency for it. |
+| `acquisition.hosts.<name>.min_interval_seconds` | number or integer | - | `>= 0, <= 60` | Seconds between requests to this host; unset keeps the job-wide value. |
+| `acquisition.hosts.<name>.max_concurrency` | integer | - | `>= 1, <= 32` | Transfers in flight to this host at once; unset keeps the job-wide value. |
+| `acquisition.hosts.<name>.autothrottle` | boolean | `false` |  | Widen the spacing when the host slows down or answers 429. |
+| `acquisition.browser` | table | - |  | How browser sources load and observe a page: wait selector, resource and ad blocking, screenshot, and the operator-granted real Chrome, remote browser and persistent session. |
+| `acquisition.browser.wait_selector` | string | - | `length >= 1, length <= 1024` | CSS selector to wait for before the page is read, instead of network quiet. |
+| `acquisition.browser.wait_state` | string | `"attached"` | `one of attached, visible, hidden, detached` | State the wait_selector element must reach. |
+| `acquisition.browser.network_idle` | boolean | `false` |  | Also wait for network quiet when a wait_selector is set. |
+| `acquisition.browser.disable_resources` | boolean | `true` |  | Skip images, media and fonts; false loads them. |
+| `acquisition.browser.block_ads` | boolean | `false` |  | Refuse requests to a built-in list of ad-serving domains. |
+| `acquisition.browser.blocked_domains` | array of string | `[]` | `items <= 64` | Hosts (and their subdomains) the page may not request. |
+| `acquisition.browser.pierce_shadow` | boolean | `false` |  | Let selectors reach into closed shadow roots (stealth only). |
+| `acquisition.browser.screenshot` | boolean | `false` |  | Keep one PNG of the rendered page as evidence; needs the screenshots grant. |
+| `acquisition.browser.capture_network` | array of string | `[]` | `items <= 8` | Path regular expressions; matching responses are captured. |
+| `acquisition.browser.session_profile` | string | - | `pattern ^[a-z][a-z0-9_-]{0,63}$` | Name of a persistent browser profile under RASTRO_PROFILE_DIR; grant-only. |
+| `acquisition.browser.real_chrome` | boolean | `false` |  | Drive the installed Chrome instead of bundled Chromium; grant-only. |
+| `acquisition.browser.cdp_url_env` | string | - | `pattern ^[A-Z_][A-Z0-9_]{0,127}$` | Environment variable holding a remote browser DevTools URL; grant-only. |
+| `acquisition.http` | table | - |  | HTTP transport settings: which browser to impersonate and which protocol version to ask for. |
+| `acquisition.http.impersonate` | string or value | `"off"` | `always "off"` | Browser whose TLS and header fingerprint the HTTP client copies. |
+| `acquisition.http.http_version` | string | `"1.1"` | `one of 1.1, 2, 3` | HTTP protocol version the transport asks for. |
 | `acquisition.auth` | array of tables | `[]` | `items <= 8` | Request headers whose values come from environment variables. |
 | `acquisition.auth[].host` | string | required |  | Allowed host that receives the header. |
 | `acquisition.auth[].header` | string | `"Authorization"` | `` pattern ^[!#$%&'*+.^_`\|~0-9A-Za-z-]{1,64}$ `` | Header name. |
@@ -213,7 +265,10 @@ How records are found on a page; one of four strategies. Docs: [api.md#recipe-va
 | Key | Type | Default | Bounds | Description |
 | --- | --- | --- | --- | --- |
 | `recipe.strategy` | string | `"css"` | `always "css"` | Recipe kind; it decides which of the keys below apply. |
-| `recipe.fields` | table of string | required | `keys >= 1, keys <= 100` | Maps each declared field name to its selector or pointer. |
+| `recipe.fields` | map of tables or string or array | required | `keys >= 1, keys <= 100` | Maps each declared field name to its selector or pointer. |
+| `recipe.fields.<name>.each` | string | required | `length >= 1, length <= 1024` | Relative CSS scope selector or absolute JSON pointer with one wildcard segment. |
+| `recipe.fields.<name>.members` | table of string | - | `keys <= 32` | Named scalar expressions relative to each item; excludes value. |
+| `recipe.fields.<name>.value` | string | - | `length >= 1, length <= 1024` | One scalar expression relative to each item; excludes members. |
 | `recipe.version` | integer | `1` | `>= 1, <= 2147483647` | Recipe version number, kept in history and memory. |
 | `recipe.require_evidence` | boolean | `false` |  | Reject a record when a required field has no evidence. |
 | `recipe.fallbacks` | array of tables | `[]` | `items <= 3` | Up to 3 other recipes, tried in order when this one finds nothing. Same keys as `recipe`. |
@@ -221,13 +276,14 @@ How records are found on a page; one of four strategies. Docs: [api.md#recipe-va
 | `recipe.pagination.next` | string | required | `length >= 1, length <= 1024` | Expression that finds the next-page link. |
 | `recipe.pagination.max_pages` | integer | `5` | `>= 1, <= 50` | Most pages followed per source. |
 | `recipe.record_selector` | string | required | `length >= 1, length <= 1024` | CSS selector of one record; fields are relative to it. |
+| `recipe.steps` | array of value | `[]` | `items <= 20` | Browser actions (click, type, select, scroll, wait, follow) run before extraction; data only, never code. |
 
 #### `strategy = "jsonld"`
 
 | Key | Type | Default | Bounds | Description |
 | --- | --- | --- | --- | --- |
 | `recipe.strategy` | string | `"jsonld"` | `always "jsonld"` | Recipe kind; it decides which of the keys below apply. |
-| `recipe.fields` | table of string or array of string | required | `keys >= 1, keys <= 100` | Maps each declared field name to its selector or pointer. |
+| `recipe.fields` | map of tables or string or array | required | `keys >= 1, keys <= 100` | Maps each declared field name to its selector or pointer. Same keys as `recipe.fields.<name>`. |
 | `recipe.version` | integer | `1` | `>= 1, <= 2147483647` | Recipe version number, kept in history and memory. |
 | `recipe.require_evidence` | boolean | `false` |  | Reject a record when a required field has no evidence. |
 | `recipe.fallbacks` | array of tables | `[]` | `items <= 3` | Up to 3 other recipes, tried in order when this one finds nothing. Same keys as `recipe`. |
@@ -239,19 +295,20 @@ How records are found on a page; one of four strategies. Docs: [api.md#recipe-va
 | Key | Type | Default | Bounds | Description |
 | --- | --- | --- | --- | --- |
 | `recipe.strategy` | string | `"json"` | `always "json"` | Recipe kind; it decides which of the keys below apply. |
-| `recipe.fields` | table of string | required | `keys >= 1, keys <= 100` | Maps each declared field name to its selector or pointer. |
+| `recipe.fields` | map of tables or string or array | required | `keys >= 1, keys <= 100` | Maps each declared field name to its selector or pointer. Same keys as `recipe.fields.<name>`. |
 | `recipe.version` | integer | `1` | `>= 1, <= 2147483647` | Recipe version number, kept in history and memory. |
 | `recipe.require_evidence` | boolean | `false` |  | Reject a record when a required field has no evidence. |
 | `recipe.fallbacks` | array of tables | `[]` | `items <= 3` | Up to 3 other recipes, tried in order when this one finds nothing. Same keys as `recipe`. |
 | `recipe.pagination` | table | - |  | Follow next-page links with this recipe (keys below). Same keys as `recipe.pagination`. |
 | `recipe.record_path` | string | required | `length <= 1024` | JSON pointer to the list of records; empty means the whole document. |
+| `recipe.capture` | string | - | `length >= 1, length <= 256` | Path regular expression choosing a captured network response to read. |
 
 #### `strategy = "embedded_json"`
 
 | Key | Type | Default | Bounds | Description |
 | --- | --- | --- | --- | --- |
 | `recipe.strategy` | string | `"embedded_json"` | `always "embedded_json"` | Recipe kind; it decides which of the keys below apply. |
-| `recipe.fields` | table of string | required | `keys >= 1, keys <= 100` | Maps each declared field name to its selector or pointer. |
+| `recipe.fields` | map of tables or string or array | required | `keys >= 1, keys <= 100` | Maps each declared field name to its selector or pointer. Same keys as `recipe.fields.<name>`. |
 | `recipe.version` | integer | `1` | `>= 1, <= 2147483647` | Recipe version number, kept in history and memory. |
 | `recipe.require_evidence` | boolean | `false` |  | Reject a record when a required field has no evidence. |
 | `recipe.fallbacks` | array of tables | `[]` | `items <= 3` | Up to 3 other recipes, tried in order when this one finds nothing. Same keys as `recipe`. |
@@ -391,6 +448,7 @@ Run interval for `rastro job watch`. Docs: [operations.md#scheduler](operations.
 | Key | Type | Default | Bounds | Description |
 | --- | --- | --- | --- | --- |
 | `schedule.every` | string | required |  | Run interval such as "30m", "6h" or "1d". |
+| `schedule.at` | string | - |  | Time of day as "HH:MM" in the job timezone; needs every in whole days. |
 | `schedule.jitter` | string | - |  | Random delay added to each run, at most a quarter of every. |
 
 ### `[scroll]`
@@ -411,12 +469,16 @@ Follow links from listing pages to detail pages. Docs: [jobs.md#spider](jobs.md#
 | --- | --- | --- | --- | --- |
 | `spider.mode` | string | `"list"` | `one of list, spider` | list reads only the sources; spider follows links from them. |
 | `spider.seed` | string | `"page"` | `one of page, sitemap` | page starts from each source; sitemap reads a sitemap source. |
+| `spider.seed_order` | string | `"document"` | `one of document, reverse, lastmod` | Order sitemap locs before max_pages: document, reverse or lastmod (newest first). |
 | `spider.max_depth` | integer | `2` | `>= 1, <= 4` | Link levels followed from a start page. |
-| `spider.max_pages` | integer | `25` | `>= 1, <= 100` | Most pages fetched per start URL. |
+| `spider.max_pages` | integer or string | `25` | `>= 1, <= 100; always "unbounded"` | Most pages fetched per start URL (1-100), or "unbounded" to crawl until the time budget runs out and resume from a checkpoint on the next run. |
+| `spider.time_budget_seconds` | integer | `1800` | `>= 60, <= 86400` | Seconds a crawl may run per start URL; an unbounded crawl saves its checkpoint when the budget runs out. |
 | `spider.same_host` | boolean | `true` |  | Stay on the start page's host. |
 | `spider.allow` | array of string | `[]` | `items <= 32` | Path prefixes (whole segments); only matching links are followed. |
 | `spider.deny` | array of string | `[]` | `items <= 32` | Path prefixes (whole segments) that are never followed; deny wins. |
-| `spider.links` | string | - | `length >= 1, length <= 1024` | CSS expression ending in ::attr(name); every match is a link. |
+| `spider.allow_pattern` | string | - | `length >= 1, length <= 512` | Regular expression a link's path must match; deny still wins. |
+| `spider.deny_pattern` | string | - | `length >= 1, length <= 512` | Reject matching decoded paths before the page cap (linear-time regex). |
+| `spider.links` | value or array of value | - | `items >= 1, items <= 8` | One CSS attribute expression or a list (up to eight); no comma groups. |
 | `spider.link_field` | string | - | `length >= 1, length <= 128` | Declared field whose value in each record is a link. |
 
 ## Python keyword arguments
@@ -479,7 +541,7 @@ Docs: [api.md#declarative-jobs](api.md#declarative-jobs).
 | `model=` | `ModelPort \| None` | - | A ModelPort that replaces the job's [model]. |
 | `allow_remote=` | `bool` | `false` | Operator grant: allow job-declared remote model endpoints. |
 | `allow_egress=` | `bool` | `false` | Operator grant: use the job's egress proxies. |
-| `allow_stealth=` | `bool` | `false` | Operator grant: allow render = "stealth". |
+| `allow_stealth=` | `bool` | `false` | Deprecated: your own jobs need no grant. |
 | `allow_env=` | `Iterable[str]` | `[]` | Operator grant: extra environment variables the job may read. |
 | `allow_private_network=` | `bool` | `false` | Operator grant: reach private addresses of allowed hosts. |
 | `allow_ports=` | `Iterable[int]` | `[]` | Operator grant: ports allowed besides 80 and 443. |
@@ -494,7 +556,9 @@ Only the person running Rastro can grant these; a job file never can.
 | Flag | Also | What it allows | Docs |
 | --- | --- | --- | --- |
 | `--allow-remote` | env RASTRO_ALLOW_REMOTE, Python allow_remote= | Job-declared models may use non-loopback endpoints; page content leaves the machine. | [jobs.md#operator-opt-in](jobs.md#operator-opt-in) |
-| `--allow-stealth` | env RASTRO_ALLOW_STEALTH, Python allow_stealth= | Allow render = "stealth" and challenge solving. | [acquisition.md#javascript-pages](acquisition.md#javascript-pages) |
+| `--allow-stealth` | env RASTRO_ALLOW_STEALTH, Python allow_stealth= | Deprecated: your own jobs need no grant. Grants stealth and challenge solving to agent tools, bundles, registry recipes and model output. | [acquisition.md#capabilities-and-input-origin](acquisition.md#capabilities-and-input-origin) |
+| `--allow-capability` | env RASTRO_ALLOW_CAPABILITIES | Let your own jobs use a grant-only capability: persistent_session, real_chrome, cdp or solver_plugins. | [acquisition.md#capabilities-and-input-origin](acquisition.md#capabilities-and-input-origin) |
+| `--allow-untrusted` | env RASTRO_ALLOW_UNTRUSTED | Grant one capability to one untrusted origin (mcp, bundle, registry or model), as ORIGIN:NAME, such as mcp:stealth. | [acquisition.md#capabilities-and-input-origin](acquisition.md#capabilities-and-input-origin) |
 | `--allow-egress` | env RASTRO_ALLOW_EGRESS, Python allow_egress= | Use the egress proxies the job declares. | [acquisition.md#network-egress](acquisition.md#network-egress) |
 | `--allow-env` | env RASTRO_ALLOWED_ENV, Python allow_env= | Environment variables, besides RASTRO_*, that job keys and proxy credentials may read. | [jobs.md#operator-opt-in](jobs.md#operator-opt-in) |
 | `--allow-private-network` | env RASTRO_ALLOW_PRIVATE_NETWORK, Python allow_private_network= | Reach private, loopback and CGNAT addresses of allowed hosts. | [acquisition.md#operator-permissions](acquisition.md#operator-permissions) |
@@ -511,7 +575,20 @@ Besides the grant variables above. Values are never stored in job files.
 | --- | --- | --- |
 | `RASTRO_MODEL` | Default model spec, such as "ollama:qwen3"; used by scrape(model="env"), Studio Ask AI, `new --search model` and [repair] model = true. | [ai.md#connect-a-model](ai.md#connect-a-model) |
 | `RASTRO_MODEL_LOCAL` | Set to 1 to declare that a RASTRO_MODEL command keeps content local. | [ai.md#privacy](ai.md#privacy) |
+| `RASTRO_NOTIFY` | Comma list of notification channels (email, slack, telegram, webhook) for job load, run or watch. | [operations.md#notifications](operations.md#notifications) |
+| `RASTRO_NOTIFY_WEBHOOK_URL` | Secret https URL the webhook channel posts the content-free message to. | [operations.md#notifications](operations.md#notifications) |
+| `RASTRO_NOTIFY_SLACK_WEBHOOK_URL` | Secret Slack incoming webhook URL for the slack channel. | [operations.md#notifications](operations.md#notifications) |
+| `RASTRO_NOTIFY_TELEGRAM_TOKEN` | Secret Telegram bot token for the telegram channel. | [operations.md#notifications](operations.md#notifications) |
+| `RASTRO_NOTIFY_TELEGRAM_CHAT_ID` | Telegram chat id or @channel the telegram channel writes to. | [operations.md#notifications](operations.md#notifications) |
+| `RASTRO_NOTIFY_SMTP_HOST` | SMTP server for the email channel. | [operations.md#notifications](operations.md#notifications) |
+| `RASTRO_NOTIFY_SMTP_PORT` | SMTP port for the email channel (default 587, or 465 with ssl). | [operations.md#notifications](operations.md#notifications) |
+| `RASTRO_NOTIFY_SMTP_SECURITY` | starttls (default) or ssl for the email channel. | [operations.md#notifications](operations.md#notifications) |
+| `RASTRO_NOTIFY_SMTP_USERNAME` | SMTP login name for the email channel. | [operations.md#notifications](operations.md#notifications) |
+| `RASTRO_NOTIFY_SMTP_PASSWORD` | Secret SMTP password for the email channel. | [operations.md#notifications](operations.md#notifications) |
+| `RASTRO_NOTIFY_EMAIL_FROM` | Sender address of notification email. | [operations.md#notifications](operations.md#notifications) |
+| `RASTRO_NOTIFY_EMAIL_TO` | Comma list of up to 10 notification email recipients. | [operations.md#notifications](operations.md#notifications) |
 | `RASTRO_ON_FAILURE` | Command run with a JSON summary when job load, run or watch needs attention. | [operations.md#failure-hook](operations.md#failure-hook) |
+| `RASTRO_PROFILE_DIR` | Directory holding the persistent browser profiles that browser.session_profile names. | [browser.md#persistent-sessions](browser.md#persistent-sessions) |
 | `RASTRO_SEARXNG_URL` | SearXNG endpoint for `rastro new --goal --search searxng`. | [jobs.md#start-from-a-goal](jobs.md#start-from-a-goal) |
 
 ## Command line
@@ -524,12 +601,14 @@ Output is JSON unless a flag says otherwise.
 | --- | --- | --- | --- | --- |
 | `--verbose` | flag | - |  | Write structured logs to stderr |
 | `--allow-remote` | flag | - |  | Let job-declared models use non-loopback endpoints (page content leaves) |
-| `--allow-stealth` | flag | - |  | Allow stealth browser rendering (also RASTRO_ALLOW_STEALTH=1) |
+| `--allow-stealth` | flag | - |  | Deprecated: your own jobs need no grant; grants stealth and challenge solving to untrusted origins (also RASTRO_ALLOW_STEALTH=1) |
 | `--allow-egress` | flag | - |  | Use the egress proxies the job declares (also RASTRO_ALLOW_EGRESS=1) |
 | `--allow-env` | NAME (repeatable) | - |  | Let the job's model keys and egress proxy credentials read this environment variable besides RASTRO_* (repeatable; also RASTRO_ALLOWED_ENV) |
 | `--allow-private-network` | flag | - |  | Reach private, loopback and CGNAT addresses of allowed hosts; link-local and cloud metadata stay blocked (also RASTRO_ALLOW_PRIVATE_NETWORK=1) |
 | `--allow-port` | N (repeatable) | - |  | Also allow this port besides 80/443 (repeatable; also RASTRO_ALLOWED_PORTS) |
 | `--ignore-robots` | HOST (repeatable) | - |  | Do not fetch or enforce robots.txt for this exact host: you assert you have permission (repeatable; also RASTRO_IGNORE_ROBOTS) |
+| `--allow-capability` | NAME (repeatable) | - |  | Let your own jobs use a grant-only capability such as cdp or real_chrome (repeatable; also RASTRO_ALLOW_CAPABILITIES) |
+| `--allow-untrusted` | ORIGIN:NAME (repeatable) | - |  | Let jobs from mcp, bundle, registry or model input use one capability, such as mcp:stealth (repeatable; also RASTRO_ALLOW_UNTRUSTED) |
 
 ### `rastro demo`
 
@@ -556,6 +635,16 @@ Serve jobs and datasets to an agent over stdio MCP. Docs: [mcp.md#install-and-co
 | `--root` | Path | `"."` |  | Workspace root (default: cwd) |
 | `--allow-override-gates` | flag | - |  | Let the agent call recipe_promote with override_gates (off: page content can prompt-inject the agent; run rastro recipe promote --override-gates yourself) |
 
+### `rastro shell`
+
+Open an interactive Python shell on a job source's parsed page. Docs: [jobs.md#cli-commands-and-exit-codes](jobs.md#cli-commands-and-exit-codes).
+
+| Flag | Value | Default | Choices | Description |
+| --- | --- | --- | --- | --- |
+| `FILE` | Path | required |  | Job file (.toml or .json) |
+| `--source` | int | `1` |  | One-based source (default: 1) |
+| `--allow-absolute-paths` | flag | - |  | Allow absolute paths for local source files |
+
 ### `rastro job`
 
 Validate, run, or inspect declarative jobs. Docs: [jobs.md#cli-commands-and-exit-codes](jobs.md#cli-commands-and-exit-codes).
@@ -579,6 +668,7 @@ Execute a TOML or JSON job file. Docs: [jobs.md#cli-commands-and-exit-codes](job
 | `--output` | value | `"json"` | one of json | Machine-readable output format (default: json) |
 | `--allow-absolute-paths` | flag | - |  | Allow absolute paths for local source files and recipe memory |
 | `--on-failure` | CMD | - |  | Run CMD (no shell) with a JSON summary on stdin when the job exits non-zero; overrides RASTRO_ON_FAILURE |
+| `--notify` | CHANNEL (repeatable) | - |  | Notify email, slack, telegram, webhook when the job exits non-zero (repeatable); overrides RASTRO_NOTIFY |
 | `--max-model-cost` | USD | - |  | Stop calling the model once this cost would be exceeded (needs --model-cost-per-call or the job's [model] cost_per_call; overrides max_cost) |
 | `--model-cost-per-call` | USD | - |  | Price of one model call; overrides the job's [model] cost_per_call |
 
@@ -611,6 +701,7 @@ Run a job and load approved observed fields. Docs: [jobs.md#cli-commands-and-exi
 | `--output` | value | `"json"` | one of json | Machine-readable output format |
 | `--allow-absolute-paths` | flag | - |  | Allow absolute paths in the job file |
 | `--on-failure` | CMD | - |  | Run CMD (no shell) with a JSON summary on stdin when the job exits non-zero; overrides RASTRO_ON_FAILURE |
+| `--notify` | CHANNEL (repeatable) | - |  | Notify email, slack, telegram, webhook when the job exits non-zero (repeatable); overrides RASTRO_NOTIFY |
 | `--max-model-cost` | USD | - |  | Stop calling the model once this cost would be exceeded (needs --model-cost-per-call or the job's [model] cost_per_call; overrides max_cost) |
 | `--model-cost-per-call` | USD | - |  | Price of one model call; overrides the job's [model] cost_per_call |
 
@@ -635,6 +726,15 @@ Forget the status and drift state of a source no longer in the job. Docs: [jobs.
 | `--url` | value | required |  | The source URL as `dataset status` shows |
 | `--allow-absolute-paths` | flag | - |  | Allow absolute paths in the job file |
 
+### `rastro job estimate`
+
+Estimate maximum requests and crawl duration from job caps and pacing; never fetches. Docs: [jobs.md#cli-commands-and-exit-codes](jobs.md#cli-commands-and-exit-codes).
+
+| Flag | Value | Default | Choices | Description |
+| --- | --- | --- | --- | --- |
+| `FILE` | Path | required |  | Job file (.toml or .json) |
+| `--allow-absolute-paths` | flag | - |  | Allow absolute paths for local source files and recipe memory |
+
 ### `rastro job stats`
 
 Per-source throughput, latency, error rate, freshness and coverage. Docs: [jobs.md#cli-commands-and-exit-codes](jobs.md#cli-commands-and-exit-codes).
@@ -642,9 +742,18 @@ Per-source throughput, latency, error rate, freshness and coverage. Docs: [jobs.
 | Flag | Value | Default | Choices | Description |
 | --- | --- | --- | --- | --- |
 | `FILE` | Path | required |  | Job file (.toml or .json) |
-| `--since` | value | - |  | Only runs finished within this window, e.g. 7d or 12h |
+| `--since` | value | - |  | Only runs finished within this window, e.g. 7d, 12h or 30m |
 | `--by` | value | `"source"` | one of source, host, strategy, day | Grouping (default source) |
 | `--allow-absolute-paths` | flag | - |  | Allow absolute paths in the job file |
+
+### `rastro job schedule`
+
+Read a schedule in words and show its next runs. Docs: [jobs.md#cli-commands-and-exit-codes](jobs.md#cli-commands-and-exit-codes).
+
+| Flag | Value | Default | Choices | Description |
+| --- | --- | --- | --- | --- |
+| `WORDS` | value | required |  | For example "every day at 8:00" or "cada 6 horas" |
+| `--timezone` | value | `"UTC"` |  | IANA timezone for the time of day |
 
 ### `rastro job watch`
 
@@ -658,6 +767,7 @@ Run due job sources on their [schedule]. Docs: [jobs.md#cli-commands-and-exit-co
 | `--output` | value | `"json"` | one of json | Machine-readable output format |
 | `--allow-absolute-paths` | flag | - |  | Allow absolute paths in the job file |
 | `--on-failure` | CMD | - |  | Run CMD (no shell) with a JSON summary on stdin when the job exits non-zero; overrides RASTRO_ON_FAILURE |
+| `--notify` | CHANNEL (repeatable) | - |  | Notify email, slack, telegram, webhook when the job exits non-zero (repeatable); overrides RASTRO_NOTIFY |
 
 ### `rastro job template`
 
@@ -673,13 +783,14 @@ Read dataset records and freshness. Docs: [dataset.md#load-inspect-and-export-a-
 
 ### `rastro dataset export`
 
-Print a dataset's records as JSON, JSONL or an HTML table. Docs: [dataset.md#load-inspect-and-export-a-job](dataset.md#load-inspect-and-export-a-job).
+Print a dataset's records as JSON, JSONL, CSV, XLSX or an HTML table. Docs: [dataset.md#load-inspect-and-export-a-job](dataset.md#load-inspect-and-export-a-job).
 
 | Flag | Value | Default | Choices | Description |
 | --- | --- | --- | --- | --- |
 | `PATH` | Path | required |  | Dataset SQLite file |
 | `--dataset` | value | - |  | Dataset name (required if file contains multiple datasets) |
-| `--format` | value | `"json"` | one of json, jsonl, html | Output format |
+| `--format` | value | `"json"` | one of json, jsonl, html, csv, xlsx | Output format |
+| `--output` | Path | - |  | File to write (needed for xlsx) |
 | `--sort-field` | value | - |  | Field to sort records by (ISO date for --upcoming) |
 | `--upcoming` | flag | - |  | Only records dated today or later |
 | `--timezone` | value | `"UTC"` |  | IANA timezone that decides today |
@@ -693,6 +804,27 @@ Show each source's freshness and last load. Docs: [dataset.md#load-inspect-and-e
 | `PATH` | Path | required |  | Dataset SQLite file |
 | `--dataset` | value | - |  | Dataset name (required if file contains multiple datasets) |
 | `--format` | value | `"json"` | one of json, jsonl | Output format |
+
+### `rastro dataset changes`
+
+List new, removed and changed records since a time or an earlier copy. Docs: [dataset.md#load-inspect-and-export-a-job](dataset.md#load-inspect-and-export-a-job).
+
+| Flag | Value | Default | Choices | Description |
+| --- | --- | --- | --- | --- |
+| `PATH` | Path | required |  | Dataset SQLite file |
+| `--dataset` | value | - |  | Dataset name (required if file contains multiple datasets) |
+| `--format` | value | `"json"` | one of json, jsonl | Output format |
+| `--since` | value | - |  | ISO time; list records first seen after it |
+| `--against` | Path | - |  | Earlier copy of the dataset file to compare with |
+
+### `rastro dataset migrate`
+
+Migrate a dataset SQLite file forward to a schema version. Docs: [dataset.md#load-inspect-and-export-a-job](dataset.md#load-inspect-and-export-a-job).
+
+| Flag | Value | Default | Choices | Description |
+| --- | --- | --- | --- | --- |
+| `PATH` | Path | required |  | Dataset SQLite file |
+| `--to` | int | `4` |  | Target dataset schema version |
 
 ### `rastro health`
 
@@ -859,6 +991,80 @@ Open the local Studio (needs rastro[studio]). Docs: [studio.md#install-and-start
 | `--model` | value | - |  | Model spec for Ask AI (default: RASTRO_MODEL); any provider works |
 | `--allow-remote` | flag | - |  | Allow sending page content to a non-loopback or hosted model |
 
+### `rastro hub`
+
+Share recipes through the hub: publish, search by URL, install a candidate. Docs: [jobs.md#cli-commands-and-exit-codes](jobs.md#cli-commands-and-exit-codes).
+
+### `rastro hub publish`
+
+Write a job's recipe, sample, field descriptions and engine needs into a local hub checkout, ready for a pull request. Docs: [jobs.md#cli-commands-and-exit-codes](jobs.md#cli-commands-and-exit-codes).
+
+| Flag | Value | Default | Choices | Description |
+| --- | --- | --- | --- | --- |
+| `FILE` | Path | required |  | Job file whose recipe memory holds the recipe |
+| `--source` | int | `1` |  | One-based source index |
+| `--sample` | Path | required |  | Synthetic sample you may redistribute |
+| `--registry` | Path | required |  | Local hub checkout |
+| `--id` | value | required |  | Package identifier |
+| `--version` | value | required |  | Semver |
+| `--author` | value | required |  | Package author name |
+| `--author-url` | value | - |  | Optional package author URL |
+| `--license` | value | required |  | SPDX license |
+| `--describe` | FIELD=TEXT (repeatable) | - |  | What a field holds; once per field of the job |
+| `--allow-absolute-paths` | flag | - |  | Allow absolute paths in the job file |
+
+### `rastro hub search`
+
+Offer hub recipes for a URL's domain. Docs: [jobs.md#cli-commands-and-exit-codes](jobs.md#cli-commands-and-exit-codes).
+
+| Flag | Value | Default | Choices | Description |
+| --- | --- | --- | --- | --- |
+| `URL` | value | required |  | The page you want to scrape |
+| `--registry` | Path | - |  | Local hub checkout instead of a URL |
+| `--registry-url` | URL | - |  | https registry URL (default: the public hub, https://raw.githubusercontent.com/rave-vipx/rastro/main/hub/) |
+
+### `rastro hub install`
+
+Install a hub package as a candidate. Docs: [jobs.md#cli-commands-and-exit-codes](jobs.md#cli-commands-and-exit-codes).
+
+| Flag | Value | Default | Choices | Description |
+| --- | --- | --- | --- | --- |
+| `PACKAGE` | value | required |  | Package id or id@version |
+| `--store` | Path | required |  | Recipe SQLite file |
+| `--registry` | Path | - |  | Local hub checkout instead of a URL |
+| `--registry-url` | URL | - |  | https registry URL (default: the public hub, https://raw.githubusercontent.com/rave-vipx/rastro/main/hub/) |
+
+### `rastro notify`
+
+Check notification channels. Docs: [jobs.md#cli-commands-and-exit-codes](jobs.md#cli-commands-and-exit-codes).
+
+### `rastro notify test`
+
+Send a test notification to each channel. Docs: [jobs.md#cli-commands-and-exit-codes](jobs.md#cli-commands-and-exit-codes).
+
+| Flag | Value | Default | Choices | Description |
+| --- | --- | --- | --- | --- |
+| `CHANNELS` | CHANNEL | required | one of email, slack, telegram, webhook | Channels to test |
+
+### `rastro model`
+
+Find local AI models and test a model. Docs: [jobs.md#cli-commands-and-exit-codes](jobs.md#cli-commands-and-exit-codes).
+
+### `rastro model detect`
+
+List models running on this machine (loopback only). Docs: [jobs.md#cli-commands-and-exit-codes](jobs.md#cli-commands-and-exit-codes).
+
+### `rastro model test`
+
+Make one small call and show what it costs. Docs: [jobs.md#cli-commands-and-exit-codes](jobs.md#cli-commands-and-exit-codes).
+
+| Flag | Value | Default | Choices | Description |
+| --- | --- | --- | --- | --- |
+| `--model` | SPEC | - |  | Model spec, or 'env' for RASTRO_MODEL |
+| `--allow-remote` | flag | - |  | Allow a hosted model |
+| `--max-model-cost` | USD | - |  | Stop calling the model once this cost would be exceeded (needs --model-cost-per-call or the job's [model] cost_per_call; overrides max_cost) |
+| `--model-cost-per-call` | USD | - |  | Price of one model call; overrides the job's [model] cost_per_call |
+
 ### `rastro suggest`
 
 Suggest a CSS recipe from a saved page and example values. Docs: [suggest.md#from-the-command-line](suggest.md#from-the-command-line).
@@ -886,6 +1092,8 @@ Create a job file from a saved page, known sites or a goal. Docs: [suggest.md#cr
 | `--output-file` | Path | - |  | New .toml job file |
 | `--from` | Path | - |  | Saved HTML page |
 | `--goal` | value | - |  | Research goal text for source discovery |
+| `--explore` | JOB | - |  | Explore JOB's first page with a model and write its recipe with page steps |
+| `--expect` | N | - |  | With --explore: stop once N records show |
 | `--site` | URL (repeatable) | - |  | Page URLs to scrape |
 | `--fields` | A,B (repeatable) | - |  | Field names to propose |
 | `--search` | value | - | one of searxng, model | How --goal finds candidate sources |

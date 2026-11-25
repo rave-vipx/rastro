@@ -1,4 +1,4 @@
-"""Run any local model CLI as a ModelPort, without a shell (AI-001-005, SEC-004/005/011).
+"""Run any local model CLI as a ModelPort, without a shell.
 
 The prompt goes to stdin, the answer is read from stdout within the policy's byte and
 time budgets, and stderr is discarded so provider messages never surface. Only an

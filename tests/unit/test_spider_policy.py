@@ -1,9 +1,9 @@
-"""The `[spider]` job table and the pure link rules (N3; SEC-001, SEC-003)."""
+"""The `[spider]` job table and the pure link rules."""
 
 import pytest
 from pydantic import ValidationError
 
-from rastro.application.spider_links import classify_link, path_matches
+from rastro.application.spider_links import classify_link, path_matches, pattern_matches
 from rastro.domain.jobs import parse_job
 from rastro.domain.models import Recipe
 from rastro.domain.spider import SpiderPolicy
@@ -119,6 +119,20 @@ def test_a_job_without_spider_serialises_as_before():
 )
 def test_prefixes_match_whole_segments(path, prefix, expected):
     assert path_matches(path, (prefix,)) is expected
+
+
+@pytest.mark.parametrize(
+    ("path", "pattern", "expected"),
+    [
+        ("/evento/e-150", r"/evento/e-1[45]\d$", True),
+        ("/evento/e-99", r"/evento/e-1[45]\d$", False),
+        ("//evento;sid=1/e-150", r"^/evento/e-150$", True),
+        ("/evento/e%2D150", r"e-150$", True),
+    ],
+)
+def test_allow_pattern_matches_normalized_path(path, pattern, expected):
+    """Allow_pattern matches the tidied, percent-decoded path."""
+    assert pattern_matches(path, pattern) is expected
 
 
 @pytest.mark.parametrize(

@@ -1,6 +1,5 @@
 """rastro.scrape with a model: zero-selector recipes, model repair, semantic gate.
 
-Requirements: INT-002, REPAIR-001, REPAIR-002, QUAL-005, QUAL-006, AI-001. Every model
 here is a deterministic fake ModelPort; nothing leaves the process.
 """
 
@@ -15,24 +14,24 @@ from rastro import Outcome, SQLiteRecipeRepository
 from rastro.adapters.scrapling_relocation import ScraplingRelocation
 from rastro.domain.repair import RepairCandidate
 
-pytestmark = pytest.mark.usefixtures("offline_cli_loop")
+pytestmark = pytest.mark.usefixtures("offline_cli_loop", "model_path_only")
 
 URL = "https://acme.example/careers"
 V1 = """<main><ul>
-<li class="job"><h3 class="title">Engineer</h3><span class="city">Montevideo</span></li>
+<li class="job"><h3 class="title">Engineer</h3><span class="city">Puerto Claro</span></li>
 <li class="job"><h3 class="title">Designer</h3><span class="city">Salto</span></li>
 </ul></main>"""
 V2 = V1.replace('<h3 class="title">', '<h2 class="heading">').replace("</h3>", "</h2>")
 # The renamed title now sits next to a district label that no field ever read.
 V2_AREA = V2.replace(
-    '<span class="city">Montevideo</span>',
-    '<span class="city">Montevideo</span><i class="area">Centro</i>',
+    '<span class="city">Puerto Claro</span>',
+    '<span class="city">Puerto Claro</span><i class="area">Centro</i>',
 ).replace(
     '<span class="city">Salto</span>', '<span class="city">Salto</span><i class="area">Norte</i>'
 )
 # Fully rewritten: list items became a grid of cards with new tags and classes.
 V3 = """<main><div class="grid">
-<div class="card"><p class="name">Engineer</p><em class="place">Montevideo</em></div>
+<div class="card"><p class="name">Engineer</p><em class="place">Puerto Claro</em></div>
 <div class="card"><p class="name">Designer</p><em class="place">Salto</em></div>
 </div></main>"""
 # The model sees only the new page; Rastro unions each locator with the serving one.
@@ -87,7 +86,7 @@ def test_model_rescues_a_rewrite_relocation_cannot_repair(tmp_path):
     healed = _scrape(V3, memory, model)
     assert healed.status == Outcome.SUCCESS
     assert [(o.title, o.city) for o in healed.items] == [
-        ("Engineer", "Montevideo"),
+        ("Engineer", "Puerto Claro"),
         ("Designer", "Salto"),
     ]
     assert healed.repair.promoted and healed.repair.origin == "model"
@@ -116,12 +115,12 @@ def test_without_a_model_shape_gates_promote_a_wrong_title(tmp_path, monkeypatch
     _scrape(V1, memory)
     _misplace_title(monkeypatch)
     wrong = _scrape(V2_AREA, memory)
-    assert wrong.repair.promoted and wrong.repair.origin is None
+    assert wrong.repair.promoted and wrong.repair.origin == "relocation"
     assert [o.title for o in wrong.items] == ["Centro", "Norte"]
 
 
 def test_semantic_judge_blocks_a_wrong_title_that_passes_shape_gates(tmp_path, monkeypatch):
-    """QUAL-005: a relocated candidate is judged too; a mismatch vetoes it."""
+    """A relocated candidate is judged too; a mismatch vetoes it."""
     memory = tmp_path / "recipes.db"
     _scrape(V1, memory)
     _misplace_title(monkeypatch)
@@ -139,7 +138,7 @@ def test_semantic_judge_blocks_a_wrong_title_that_passes_shape_gates(tmp_path, m
 
 
 def test_a_recipe_that_still_serves_never_calls_the_judge(tmp_path):
-    """QUAL-005: no repair, no judgement."""
+    """No repair, no judgement."""
     memory = tmp_path / "recipes.db"
     _scrape(V1, memory)
     model = FakeModel()
@@ -148,7 +147,7 @@ def test_a_recipe_that_still_serves_never_calls_the_judge(tmp_path):
 
 
 def test_semantic_judge_blocks_a_model_candidate_that_passes_value_checks(tmp_path):
-    """QUAL-005, QUAL-006: the judge vetoes after every deterministic check passed."""
+    """The judge vetoes after every deterministic check passed."""
     memory = tmp_path / "recipes.db"
     _scrape(V1, memory)
     model = FakeModel([RESCUE], verdict="mismatch")

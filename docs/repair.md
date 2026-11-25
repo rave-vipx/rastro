@@ -1,6 +1,5 @@
 # Recipe CI and controlled repair
 
-**Requirements:** REPAIR-001–006, REC-005/006, SCR-002, QUAL-005/006.
 
 Load a successful job with both `recipe_memory = "recipes.sqlite"` and a separate
 `[dataset]` first. `job load` retains the last successful sanitized Mock Lab sample
@@ -15,7 +14,7 @@ The next successful load captures the container without a migration or backfill.
 If the document exceeds relocation's structural budget
 or uses unsupported selectors, the historical fixture is still retained. The successful
 load keeps its exit code and reports `relocation_retention_skipped` in that source's
-`issues` array (DATA-001, SCR-002). If the sample cannot be retained at all (for example,
+`issues` array. If the sample cannot be retained at all (for example,
 the sanitizer refuses it or the evidence write fails), the rows are already committed: the
 load keeps its exit code, reports `evidence_retention_failed` for that source and keeps the
 previous evidence. No issue array is emitted when retention succeeds.
@@ -118,8 +117,10 @@ has a `[model]` table, when `[repair] model = true` (the `RASTRO_MODEL` spec, th
 `rastro.model`), or when `rastro recipe repair --model SPEC [--allow-remote]` or
 `repair_job_source(..., model=...)` overrides both.
 
-1. **Escalation.** Relocation, declared fallbacks and discovery run first. The model
-   proposes only when none of their candidates would pass every gate, so it cannot
+1. **Escalation.** Relocation, declared fallbacks and discovery run first, then adaptive
+   candidates: elements similar to the remembered records, found without a model. A
+   passing adaptive candidate ends repair with no model call (`origin = "adaptive"`). The
+   model proposes only when none of these candidates would pass every gate, so it cannot
    compete with a passing deterministic candidate. The prompt carries the serving
    recipe and the field types and descriptions. Each changed selector is composed as
    `"<serving>, <proposed>"`, as relocation does, so historical pages keep matching; the

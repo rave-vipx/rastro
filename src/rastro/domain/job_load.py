@@ -1,4 +1,4 @@
-"""Versioned load report: DATA-001/003, SYNC-008; values are untrusted source data."""
+"""Versioned load report: values are untrusted source data."""
 
 from collections.abc import Iterable
 from typing import Any, Literal, Self
@@ -11,6 +11,7 @@ from rastro.domain.drift import DriftAssessment
 from rastro.domain.health import OpenDrift
 from rastro.domain.job_results import JobExitCode, JobRunStatus, JobSummary
 from rastro.domain.models import Contract, Issue, Outcome
+from rastro.domain.run_report import RunReport
 
 
 class LoadedSource(Contract):
@@ -69,6 +70,8 @@ class JobLoadResult(Contract):
     """Unacknowledged elevated or high drift of this job's sources, with or without ``--drift``."""
     status: LoadStatus = "success"
     """Derived from ``job.status``, consistency and ``open_drift`` unless ``storage_error``."""
+    report: RunReport | None = Field(default=None, exclude_if=lambda v: v is None)
+    """A content-free summary of this load; see ``docs/run-report.md``."""
 
     @model_validator(mode="before")
     @classmethod

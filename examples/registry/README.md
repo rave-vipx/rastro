@@ -1,15 +1,22 @@
-# Synthetic recipe registry (N6)
+# Synthetic recipe registry
 
 This is a usable Git-directory registry, distributed under Apache-2.0. Every page
 and expected record is synthetic; the `.example` hosts are placeholders, not live
-scrape targets. The original `uy-sodre-agenda` also uses synthetic HTML; its real
-source URL is metadata, not evidence of coverage of that website.
+scrape targets. The `teatro-central-agenda` package uses the invented Teatro Central
+and a reserved source URL.
 
 | Package | Fields | Offline consumer |
 | --- | --- | --- |
 | `synthetic-listing@1.0.0` | title, location | `listing.json` |
 | `synthetic-news@1.0.0` | title, section | `news.json` |
 | `synthetic-product@1.0.0` | title, price_text | `product.json` |
+| `sitemap-crawl@1.0.0` | title, summary | `sitemap-crawl.json` (template, needs a real site) |
+| `shopify-products@1.0.0` | title, price | `shopify-products.json` (template, needs a real site) |
+| `generic-crawl@1.0.0` | title, summary | `generic-crawl.json` (template, needs a real site) |
+
+The last three are starting points for crawling: install one, point the job's URL and
+`allowed_hosts` at your site, then adjust the selectors or JSON pointers. Their `.example`
+hosts do not resolve, so only the recipe replay runs offline.
 
 Each package under `recipes/<id>/<version>/` has a format-2 public manifest with
 version, author, license, source patterns, minimum engine version and verification
@@ -63,5 +70,5 @@ rastro recipe publish ./my-bundle --registry ./my-registry
 
 The job needs recipe memory with a serving recipe. Publish verifies replay and
 scans for secrets before writing; it prints Git commands and never runs them.
-See [Hub](../../docs/hub.md) for limits and the **pending** `--registry-url` path.
+See [Hub](../../docs/hub.md) for limits and the `--registry-url` option.
 No accounts, executable shared recipes or operator grants travel in a package.

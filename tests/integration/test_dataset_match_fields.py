@@ -1,4 +1,4 @@
-"""PR 61 review regressions: DATA-001/002/003, SYNC-008."""
+"""PR 61 review regressions."""
 
 import shutil
 from pathlib import Path
@@ -12,7 +12,7 @@ from rastro.domain.models import ConfigurationError
 
 @pytest.fixture
 def sample(tmp_path):
-    shutil.copytree(Path("examples/uy-dance-agenda/sample"), tmp_path / "sample")
+    shutil.copytree(Path("examples/event-agenda/sample"), tmp_path / "sample")
     return tmp_path / "sample"
 
 

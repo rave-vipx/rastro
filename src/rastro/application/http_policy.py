@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import re
 import sys
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
 from email.message import Message
 from email.utils import parsedate_to_datetime
@@ -68,6 +68,37 @@ def resolve_proxy(
             raise AcquisitionError("egress_credentials_unavailable", Outcome.PERMANENT_FAILURE)
         credentials.append(value)
     return ProxyRoute(egress, profile.proxy_url, *credentials)
+
+
+class ProxyRotation:
+    """Cyclic order over rotated profiles, shared by every source of one client.
+
+    Each call of the returned picker hands out the next route, wrapping around, the same
+    order as Scrapling's cyclic ``ProxyRotator``; the policy checks around it stay Rastro's.
+    """
+
+    def __init__(self) -> None:
+        self._index = 0
+
+    def picker(
+        self, egress: str, policy: AcquisitionPolicy, environ: Mapping[str, str] | None
+    ) -> Callable[[], ProxyRoute] | None:
+        """None unless the source uses direct egress under a rotating policy.
+
+        Every rotated profile's credentials are resolved first, so a missing one fails the
+        source before DNS or any request.
+        """
+        if egress != "direct" or not policy.rotate_egress:
+            return None
+        routes = [resolve_proxy(name, policy, environ) for name in policy.rotate_egress]
+
+        def pick() -> ProxyRoute:
+            route = routes[self._index % len(routes)]
+            self._index = (self._index + 1) % len(routes)
+            assert route is not None  # rotated names are declared profiles, never "direct"
+            return route
+
+        return pick
 
 
 def request_headers(source: Source, representation: Representation) -> dict[str, str]:

@@ -1,4 +1,4 @@
-"""Instant Mock Lab: labeled, sanitized, reproducible test artifacts (MOCK-001 to MOCK-006).
+"""Instant Mock Lab: labeled, sanitized, reproducible test artifacts.
 
 Operators for structural mutations live in ``rastro.mocklab.mutations``.
 """

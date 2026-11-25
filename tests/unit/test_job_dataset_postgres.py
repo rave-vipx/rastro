@@ -1,4 +1,4 @@
-"""SEC-011: optional PostgreSQL config and credential boundaries."""
+"""Optional PostgreSQL config and credential boundaries."""
 
 import sys
 
@@ -174,7 +174,7 @@ def test_invalid_adapter_options_have_typed_error():
 
 
 def test_driver_errors_do_not_leak_through_context():
-    """SEC-011: neither __cause__ nor __context__ carries the driver error, DSN or server text."""
+    """Neither __cause__ nor __context__ carries the driver error, DSN or server text."""
     pytest.importorskip("psycopg")
     import traceback
 

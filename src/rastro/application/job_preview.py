@@ -1,4 +1,4 @@
-"""Read-only job preview: run the job pipeline and show what would be loaded (DATA-002)."""
+"""Read-only job preview: run the job pipeline and show what would be loaded."""
 
 from __future__ import annotations
 
@@ -108,7 +108,7 @@ def preview_job(
 ) -> JobPreview:
     """Preview an already loaded job with a ``[dataset]`` block. Writes no file: recipe
     memory, when declared, is read through a read-only connection and never created.
-    ``allow_stealth`` is the operator's grant for a job requesting stealth (N12)."""
+    ``allow_stealth`` is the operator's grant for a job requesting stealth."""
     if job.dataset is None:
         raise ConfigurationError("job preview requires a [dataset] block in the job file")
     report = run_job(
@@ -198,7 +198,7 @@ def bounded_preview(
     preview: JobPreview, *, max_records: int = 50, max_chars: int = 500
 ) -> dict[str, Any]:
     """JSON form of a preview for agents and Studio: at most ``max_records`` records per
-    source and string values cut to ``max_chars``, with ``truncated`` saying so (AGENT-002)."""
+    source and string values cut to ``max_chars``, with ``truncated`` saying so."""
     payload: dict[str, Any] = preview.model_dump(mode="json")
     truncated = False
     for source in payload["sources"]:

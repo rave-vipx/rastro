@@ -1,4 +1,4 @@
-"""Read-only endpoints for the Projects, Sources and Alerts views (N5, P-008).
+"""Read-only endpoints for the Projects, Sources and Alerts views.
 
 ``GET /api/projects`` summarises every job under the root; ``POST /api/sources`` and
 ``POST /api/alerts`` take a root-relative ``file``. Responses carry statuses, counts, dates
@@ -28,6 +28,7 @@ def _unknown(rel: str) -> dict[str, Any]:
         "name": display_name(Path(rel).stem),
         "dataset": None,
         "health": "unknown",
+        "light": "grey",
         "last_run": None,
         "records": 0,
         "sources_total": 0,
@@ -77,7 +78,7 @@ def routes(studio: Studio) -> list[Route]:
         data = await body(request)
         path, _, job = studio.load(text(data, "file"))
         state = await run_in_threadpool(job_state, studio.root, path, job)
-        return reply({"alerts": alerts(state)})
+        return reply({"alerts": alerts(state, state.report)})
 
     return [
         studio.route("/api/projects", listing),

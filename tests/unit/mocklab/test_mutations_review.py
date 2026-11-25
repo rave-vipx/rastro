@@ -1,4 +1,4 @@
-"""Regressions from the PR #48 review, each with the failing input it reported (MOCK-002)."""
+"""Regressions from the PR #48 review, each with the failing input it reported."""
 
 import json
 

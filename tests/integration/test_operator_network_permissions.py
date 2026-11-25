@@ -1,7 +1,4 @@
-"""Operator network permissions through the acquirer and the job entry points (offline).
-
-Requirement IDs: SEC-001, SEC-002, SEC-003, SEC-004, SEC-011.
-"""
+"""Operator network permissions through the acquirer and the job entry points (offline)."""
 
 from __future__ import annotations
 
@@ -278,6 +275,7 @@ async def test_job_auth_refuses_a_missing_or_malformed_value_without_echo(monkey
 @pytest.mark.parametrize(
     "acquisition", ['render = "browser"', 'render = "stealth"', "solve_challenges = true"]
 )
+@pytest.mark.filterwarnings("ignore:allow_stealth= is deprecated:DeprecationWarning")
 async def test_job_auth_is_http_engine_only(monkeypatch, acquisition):
     with pytest.raises(ConfigurationError, match="HTTP-engine only"):
         await _run(_job(acquisition=acquisition), monkeypatch, allow_stealth=True)
@@ -301,7 +299,7 @@ async def test_job_auth_refuses_an_http_source_unless_loopback_with_the_grant(mo
 
 
 def test_conditional_digest_and_job_dump_hold_names_never_values(monkeypatch):
-    """SYNC-004/SEC-004: the digest reads the job, which names the variable but not its value."""
+    """The digest reads the job, which names the variable but not its value."""
     from rastro.application.conditional_inputs import extraction_inputs
 
     job = parse_job(_job(), format="toml")

@@ -1,7 +1,6 @@
 # ADR 0003: exact-context SQLite recipe memory
 
 - **Status:** accepted for M3, v0.1 development preview.
-- **Requirements:** REC-001–003, GEO-003, SEC-004/009; additive OBS-001/002 evidence.
 
 ## Problem
 

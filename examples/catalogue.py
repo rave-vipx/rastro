@@ -1,14 +1,12 @@
-"""Fetch one public scraping-demo page; run twice to verify persistent recipe reuse."""
+"""Extract a synthetic catalogue page offline; run twice to verify persistent recipe reuse."""
 
 import argparse
-import asyncio
 import re
 from decimal import Decimal
 
 from pydantic import BaseModel, Field, ValidationError, ValidationInfo, field_validator
 
 from rastro import (
-    AcquisitionPolicy,
     CssRecipe,
     Outcome,
     Rastro,
@@ -20,7 +18,7 @@ from rastro import (
 )
 
 SOURCE = Source(
-    url="https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html",
+    url="https://books.example/catalogue/synthetic-book/index.html",
     locale="en-GB",
     languages=("en-GB", "en"),
     timezone="Europe/London",
@@ -52,7 +50,7 @@ class Book(BaseModel):
         return value[1:]
 
 
-async def main() -> int:
+def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--database", default="rastro-catalogue.db")
     args = parser.parse_args()
@@ -60,16 +58,18 @@ async def main() -> int:
         repository = SQLiteRecipeRepository(args.database)
         key = RecipeKey.for_source(SOURCE, Book, CONTEXT)
         recipe = RECIPE if repository.get(key) is None else None
-        engine = Rastro.web(
-            AcquisitionPolicy(allowed_hosts=("books.toscrape.com",)), repository=repository
+        html = (
+            '<div class="product_main"><h1>Synthetic Book</h1>'
+            '<p class="price_color">£12.50</p></div>'
         )
-        result = await engine.extract(source=SOURCE, schema=Book, recipe=recipe, context=CONTEXT)
+        result = Rastro(repository=repository).extract_html(
+            html, source=SOURCE, schema=Book, recipe=recipe, context=CONTEXT
+        )
     except (ValidationError, RastroError):
-        parser.exit(2, "Invalid configuration. Check the HTTP extra and recipe database.\n")
+        parser.exit(2, "Invalid configuration. Check the recipe database.\n")
     print(result.model_dump_json(indent=2))
     return 0 if result.status == Outcome.SUCCESS else 1
 
 
 if __name__ == "__main__":
-    with asyncio.Runner(loop_factory=asyncio.SelectorEventLoop) as runner:
-        raise SystemExit(runner.run(main()))
+    raise SystemExit(main())

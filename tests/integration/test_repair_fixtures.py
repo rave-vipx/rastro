@@ -1,4 +1,4 @@
-"""REPAIR-002/REC-006: every configured historical fixture participates or fails visibly."""
+"""Every configured historical fixture participates or fails visibly."""
 
 import json
 from datetime import UTC, datetime

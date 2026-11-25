@@ -50,7 +50,7 @@ def test_schema_1_rows_keep_loading_with_highest_version_active(old_database, ke
     assert served.recipe.fields == recipe.fields
     assert repo.get(first, version=1).metadata.successful_runs == 3
     assert repo.get(second).metadata.state is A
-    assert markers(old_database) == (2, 0x52535452)
+    assert markers(old_database) == (3, 0x52535452)
     history = repo.history(first)
     assert {item.version: item.state for item in history.versions} == {1: R, 2: R, 3: A}
     # Every schema 1 row passed validation, so each remains a rollback target.
@@ -100,7 +100,7 @@ def test_failed_migration_leaves_schema_1_file_untouched(old_database, keys):
     assert markers(old_database) == (1, 0x52535452)
 
 
-@pytest.mark.parametrize(("version", "application"), [(3, 0x52535452), (1, 7), (2, 7), (2, 0)])
+@pytest.mark.parametrize(("version", "application"), [(4, 0x52535452), (1, 7), (2, 7), (2, 0)])
 def test_newer_or_foreign_versioned_files_are_not_migrated(tmp_path, keys, version, application):
     path = tmp_path / "other.db"
     with closing(sqlite3.connect(path)) as db:

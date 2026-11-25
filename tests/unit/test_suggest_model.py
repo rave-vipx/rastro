@@ -1,4 +1,4 @@
-"""rastro.suggest with a model: optional examples, same verification (INT-002, AI-001).
+"""rastro.suggest with a model: optional examples, same verification.
 
 The models are deterministic fakes; nothing leaves the process.
 """
@@ -15,7 +15,7 @@ from rastro.cli import main
 pytestmark = pytest.mark.usefixtures("offline_cli_loop")
 
 PAGE = """<html><body><main>
-<div class="card"><p class="name">Engineer</p><em class="place">Montevideo</em></div>
+<div class="card"><p class="name">Engineer</p><em class="place">Puerto Claro</em></div>
 <div class="card"><p class="name">Designer</p><em class="place">Salto</em></div>
 </main></body></html>"""
 GOOD = {
@@ -52,7 +52,7 @@ def test_without_examples_the_model_proposes_a_verified_recipe():
 
 def test_examples_must_be_reproduced_by_the_model_recipe():
     model = FakeModel(SWAPPED, GOOD)
-    examples = [{"title": "Engineer", "city": "Montevideo"}]
+    examples = [{"title": "Engineer", "city": "Puerto Claro"}]
 
     class Refusing:
         def suggest(self, *args, **kwargs):

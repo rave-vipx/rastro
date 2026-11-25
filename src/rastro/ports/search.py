@@ -1,4 +1,4 @@
-"""Search provider port for turning research terms into candidate source URLs (DISC-001)."""
+"""Search provider port for turning research terms into candidate source URLs."""
 
 from __future__ import annotations
 

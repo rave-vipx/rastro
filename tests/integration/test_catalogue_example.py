@@ -1,4 +1,4 @@
-"""Synthetic equivalent of the opt-in live example; never fetch the public website."""
+"""The catalogue example extracts synthetic HTML and reuses its recipe offline."""
 
 import pytest
 from pydantic import ValidationError
@@ -28,3 +28,16 @@ def test_catalogue_contract_and_recipe_survive_restart(tmp_path) -> None:
 def test_example_rejects_ambiguous_or_invalid_currency(value) -> None:
     with pytest.raises(ValidationError):
         Book.model_validate({"name": "Synthetic Book", "price_gbp": value})
+
+
+def test_catalogue_command_reuses_a_recipe_without_network(tmp_path, monkeypatch, capsys) -> None:
+    import json
+
+    from examples.catalogue import main
+
+    monkeypatch.setattr("sys.argv", ["catalogue.py", "--database", str(tmp_path / "recipes.db")])
+    for reused in (False, True):
+        assert main() == 0
+        result = json.loads(capsys.readouterr().out)
+        assert result["recipe_reused"] is reused
+        assert result["records"][0]["data"]["name"] == "Synthetic Book"

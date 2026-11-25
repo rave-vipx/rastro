@@ -1,4 +1,4 @@
-"""HUB-001: Git-friendly recipe bundles are verified offline before they are stored."""
+"""Git-friendly recipe bundles are verified offline before they are stored."""
 
 import json
 import os
@@ -12,7 +12,7 @@ from rastro.cli import main
 from rastro.domain.lifecycle import RecipeState
 from rastro.domain.recipe_bundle import MANIFEST_FILE, canonical_json, sha256_hex
 
-SAMPLE = Path(__file__).parents[2] / "examples/uy-dance-agenda/sample"
+SAMPLE = Path(__file__).parents[2] / "examples/event-agenda/sample"
 
 pytestmark = pytest.mark.usefixtures("offline_cli_loop")
 
@@ -30,7 +30,7 @@ def exported(tmp_path, capsys):
     )
     assert main(["job", "load", str(job)]) == 0
     bundle = tmp_path / "bundle"
-    args = ["recipe", "export", str(job), "--sample", str(folder / "sodre-cartelera.html")]
+    args = ["recipe", "export", str(job), "--sample", str(folder / "teatro-central-cartelera.html")]
     assert main([*args, "--to", str(bundle)]) == 0
     capsys.readouterr()
     return folder, job, bundle
@@ -61,13 +61,13 @@ def test_export_is_deterministic_and_complete(exported, tmp_path):
     }
     before = {p.name: p.read_bytes() for p in bundle.iterdir()}
     again = tmp_path / "again"
-    sample = folder / "sodre-cartelera.html"
+    sample = folder / "teatro-central-cartelera.html"
     assert main(["recipe", "export", str(job), "--sample", str(sample), "--to", str(again)]) == 0
     after = {p.name: p.read_bytes() for p in again.iterdir()}
     assert after == before
     manifest = json.loads((bundle / "bundle.json").read_text(encoding="utf-8"))
     assert manifest["format_version"] == 2
-    assert manifest["source"]["url"] == "https://sodre.gub.uy/espectaculos/"
+    assert manifest["source"]["url"] == "https://agenda.example/espectaculos/"
     assert manifest["files"]["sample.html"] == sha256_hex(sample.read_bytes())
     assert b"\r" not in before["recipe.json"]
 
@@ -100,7 +100,7 @@ def test_git_roundtrip_serves_the_recipe_without_the_author(exported, tmp_path, 
     fields = "".join(lines[91:139])
     (consumer / "job.toml").write_text(
         top + '[[sources]]\nkind = "file"\npath = "page.html"\n'
-        'url = "https://sodre.gub.uy/espectaculos/"\n\n' + fields,
+        'url = "https://agenda.example/espectaculos/"\n\n' + fields,
         encoding="utf-8",
     )
     shutil.copy(store, consumer / "b.sqlite")

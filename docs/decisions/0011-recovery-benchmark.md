@@ -1,14 +1,11 @@
 # ADR 0011: freeze the recovery benchmark before repair code exists
 
 - **Status:** accepted for v0.2 planning.
-- **Requirements:** DIFF-001, REPAIR-001–006, DRIFT-001–005, QUAL-005/006, MOCK-002/003,
-  specification section 17 (recovery success rate, mean time to detect degradation,
-  mean time to restore, false success, silent error detection).
 
 ## Context
 
-The held-out DIFF-001 evaluation (v0.1) measured one-shot mutations of a working
-integration and found no advantage in silent error detection. DIFF-001 therefore
+The held-out evaluation (v0.1) measured one-shot mutations of a working
+integration and found no advantage in silent error detection. The comparison therefore
 remains open for recovery. v0.2 adds repair candidates, drift signals and promotion
 rules, all of which can be tuned until a benchmark passes. A recovery claim is only
 meaningful if scenarios, metrics, thresholds and the comparison target are fixed
@@ -25,7 +22,7 @@ by someone who has not yet seen the implementation.
    episodes (removed field, empty or soft-error page, partial page) reward honest
    non-success and punish a bad repair.
 3. **Two executors that differ by capability.** `baseline_adapted` has generic fallbacks
-   and an alarm but no repair loop, so Rastro is compared with a competent maintainer's
+   and an alarm but no repair loop, so Rastro is compared with a competent engineer's
    code, not a strawman. `baseline_static`, `always_alarm` and `never_alarm` are
    controls against gaming.
 4. **Exact formulas and criteria now.** Absolute and relative thresholds (C1–C8) are
@@ -47,7 +44,7 @@ by someone who has not yet seen the implementation.
 - **Statistical significance criteria.** Rejected for this size; mechanism-level
   claims are scoped to the synthetic corpus.
 - **Mutating real captured pages.** Rejected: licensing, private-content and
-  reproducibility risks (MOCK-005).
+  reproducibility risks.
 
 ## Consequences
 

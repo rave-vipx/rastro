@@ -1,0 +1,10 @@
+# Keep text files LF on every platform; generated docs and schemas are compared byte for byte.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
+*.sqlite binary
+*.whl binary
+*.gz binary
+*.xlsx binary

@@ -1,4 +1,4 @@
-"""Write every case as reviewable files under ``cases/`` (QUAL-001).
+"""Write every case as reviewable files under ``cases/``.
 
 Each case folder holds ``before.html``, ``after.html``, ``expected.json`` (the records
 a correct extraction of the after page returns) and ``case.json`` (kind, base recipe,

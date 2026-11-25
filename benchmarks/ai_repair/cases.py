@@ -1,4 +1,4 @@
-"""Named breakage per base layout, with the recipe a correct repair needs (QUAL-001).
+"""Named breakage per base layout, with the recipe a correct repair needs.
 
 Each case pairs a base layout (``before``) with a mutated one (``after``). ``fix`` is the
 correct recipe for the mutated page, as overrides of the base recipe; the scripted

@@ -1,4 +1,4 @@
-"""DATA-001 / SCR-002: optional relocation cannot misreport a committed load."""
+"""Optional relocation cannot misreport a committed load."""
 
 import json
 
@@ -17,7 +17,7 @@ pytestmark = pytest.mark.usefixtures("offline_cli_loop")
 @pytest.mark.parametrize("case", ["optional", "nodes", "mixed"])
 def test_load_retains_fixture_and_honest_success_when_relocation_is_limited(tmp_path, capsys, case):
     folder, job = setup_sample(tmp_path)
-    path = folder / "sodre-cartelera.html"
+    path = folder / "teatro-central-cartelera.html"
     html = path.read_text(encoding="utf-8")
     if case == "optional":
         html = html.replace('<span class="cyg--precio">450</span>', "", 1)
@@ -36,7 +36,7 @@ def test_load_retains_fixture_and_honest_success_when_relocation_is_limited(tmp_
     assert output["job"]["status"] == "success"
     assert output["job"]["records_accepted"] == 7
     store = SQLiteDatasetStore(folder / "agenda.sqlite")
-    before = store.records("uy_dance_agenda")
+    before = store.records("event_agenda")
     assert len(before) == 6  # The cross-source performance shares an identity.
     context = RepairContext.load(job, False)
     source, key, recipe = context.source(1)
@@ -53,4 +53,4 @@ def test_load_retains_fixture_and_honest_success_when_relocation_is_limited(tmp_
         assert output["sources"][0]["issues"][0]["code"] == "relocation_retention_skipped"
     assert main(["job", "load", str(job)]) == 0
     capsys.readouterr()
-    assert [r.fields for r in store.records("uy_dance_agenda")] == [r.fields for r in before]
+    assert [r.fields for r in store.records("event_agenda")] == [r.fields for r in before]

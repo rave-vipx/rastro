@@ -20,6 +20,7 @@ from rastro.domain.models import (
     Source,
     schema_fingerprint,
 )
+from rastro.domain.source_notes import LadderLevel
 
 
 class RecipeContext(Contract):
@@ -87,6 +88,9 @@ class RecipeMetadata(Contract):
     successful_runs: int = Field(ge=1)
     # Metadata built without lifecycle data describes the version that serves reuse.
     state: RecipeState = RecipeState.ACTIVE
+    # The lowest acquisition level that last returned the page, and runs since it was set.
+    start_level: LadderLevel | None = None
+    level_runs: int = Field(default=0, ge=0)
 
     @model_validator(mode="after")
     def valid_history(self) -> Self:

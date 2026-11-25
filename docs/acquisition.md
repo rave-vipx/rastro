@@ -79,6 +79,7 @@ emit a warning; use the selector configuration above when warnings are errors.
 | `backoff_seconds` | `1` | Initial exponential retry delay. |
 | `max_retry_delay_seconds` | `30` | Cap on local backoff; fallback cooldown for 429 with missing/invalid Retry-After. Never shortens a valid server delay. |
 | `egress_profiles` | `{}` | Up to 16 named, administrator-declared HTTP(S) proxies. See [network egress](#network-egress). |
+| `rotate_egress` | `[]` | Profile names to rotate over, one transfer each, for sources on `direct` egress. See [rotation](egress.md#rotation). |
 
 `Limits.max_html_bytes` (`max_json_bytes` for JSON requests) bounds decoded response bytes during transfer and UTF-8
 input bytes before extraction. Redirect bodies obey the same limit. Robots bodies
@@ -182,7 +183,7 @@ Regional recipe isolation is documented in [recipe memory](memory.md).
 ## Network egress
 
 Egress is the **network origin** of the HTTP connection. It is not browser
-geolocation: Rastro v0.1 has no browser adapter, so a `geolocation` value on `Source`
+geolocation: the browser adapter renders pages but does not emulate location, so a `geolocation` value on `Source`
 is rejected rather than silently ignored, and a proxy never implies a browser-reported
 location. Validators receive the egress profile name, never the proxy endpoint.
 
@@ -212,7 +213,7 @@ source = Source(url="https://example.com/article", egress="eu-office")
   Policy validation errors never include input values, so a rejected inline
   credential is not echoed. The proxy host is not checked against
   `allowed_hosts` or public-address rules: declaring it is the administrator's
-  explicit permission (SEC-002), so keep untrusted input out of policy construction.
+  explicit permission, so keep untrusted input out of policy construction.
 - **Credentials are environment references only.** `username_env`/`password_env`
   name variables read from the process environment when each source is acquired.
   A password reference requires a username reference. Values never appear in
@@ -222,10 +223,12 @@ source = Source(url="https://example.com/article", egress="eu-office")
 - **Fail before network.** An unknown profile name returns `permanent_failure` with
   `unsupported_egress`, and a missing, empty or control-character credential
   returns `egress_credentials_unavailable`, both before DNS or any request.
-- **No rotation or fallback.** There are no proxy pools, rotation or automatic
-  fallback to another egress. A 401/403/429/451 through a proxy remains an
-  `access_restriction`; the client's per-host denial and cooldown also apply to
-  later sources using a different egress, so changing origin cannot bypass it.
+- **Rotation, no fallback.** `rotate_egress` cycles a source's transfers over listed
+  profiles and retries a proxy failure on the next one; see [rotation](egress.md#rotation).
+  There is no automatic fallback to direct egress. A 401/403/429/451 through a proxy
+  remains an `access_restriction`; the client's per-host denial and cooldown also apply
+  to later transfers through another profile or egress, so changing origin cannot bypass
+  it. The source's run report entry carries a [blocked hint](egress.md#reading-a-blocked-source).
 - **Same target checks.** Every hop, including robots and redirects, is allowlisted,
   resolved locally and rejected if any address is non-public **before** it is sent to
   the proxy. The proxy is used as a CONNECT tunnel (also for `http://` targets), TLS
@@ -252,11 +255,11 @@ hostname for TLS verification. IPv4/IPv6 private, loopback, metadata, reserved,
 multicast, mapped, and known transition addresses are rejected. Standard ports
 only. The operator can widen the first and the last
 ([Operator permissions](#operator-permissions)); a job file never can. Ambient (environment) proxies, ambient cookies, netrc, impersonation, and
-automatic redirects or transport retries are disabled; only an explicitly selected egress
-profile uses a proxy. There is no identity rotation or restriction bypass.
+automatic redirects or transport retries are disabled; only a selected or rotated egress
+profile uses a proxy. Rotation never retries a refusal elsewhere: there is no restriction bypass.
 
 For direct egress, connection failures can fall back sequentially to up to three
-validated addresses in DNS order (SEC-001/002/003). All resolved addresses are
+validated addresses in DNS order. All resolved addresses are
 validated before any connection, even addresses beyond that three-address cap;
 a private address anywhere rejects the entire answer. Each connection keeps the
 original URL, Host header and TLS hostname. A refused connection or connect timeout
@@ -283,8 +286,9 @@ call may finish after cancellation. Parsing/validation runs in a worker thread a
 can also finish after cancellation. Acquisition deadlines do not forcibly stop
 trusted validators or native parsers. Use process isolation for hostile workloads.
 
-Browser geolocation, SOCKS or rotating proxies and discovered-link crawling are not
-implemented; JavaScript rendering and sessions are opt-in (see below). Optional [recipe memory](memory.md) and
+Browser geolocation and SOCKS proxies are not implemented. Following
+discovered links is the job of the bounded [spider](jobs.md#spider); JavaScript
+rendering and sessions are opt-in (see below). Optional [recipe memory](memory.md) and
 [recipe learning](intelligence.md) integrate with the async SDK. See the
 [transport ADR](decisions/0002-policy-aware-acquisition.md) for the documented use of
 curl_cffi, Scrapling's HTTP engine, to expose public DNS-pinning controls.
@@ -297,7 +301,7 @@ Four widenings of the policy come only from the operator running Rastro, exactly
 and `load_job_file` (or the `operator_trust(...)` scope), or a `RASTRO_*` environment
 variable. A job file, a bundle, an MCP argument or a model output can never grant any of
 them: the first three are not job fields (unknown keys are rejected). Without a grant,
-behavior is unchanged (SEC-001, SEC-002, SEC-003, SEC-004, SEC-011).
+behavior is unchanged.
 
 | Permission | CLI | Environment | SDK |
 | --- | --- | --- | --- |
@@ -332,10 +336,50 @@ exact host over HTTPS (or loopback HTTP when the private network is granted), ne
 robots.txt, a redirect to another host, or a proxy, and never appears in a log, error,
 repr, result or digest. The browser engine does not support it.
 
+## Capabilities and input origin
+
+Rastro decides where a job came from by how it entered, never by what the job says
+([ADR 0037](decisions/0037-input-origin-and-capabilities.md)):
+
+| Entry point | Origin |
+| --- | --- |
+| `rastro job run`, `job load`, `job preview`, Studio, the Python API | `operator` |
+| `rastro mcp` tools | `mcp` |
+| `rastro recipe install` from a registry, Studio installs | `registry` |
+| `rastro recipe import` of a bundle | `bundle` |
+| Recipes proposed by a model | `model` |
+
+A job requests capabilities through the settings it uses: `render = "stealth"` requests
+`stealth`, `solve_challenges = true` requests `solve_challenges`, `[acquisition] robots =
+"ignore"` requests `robots_ignore`, page steps request `page_actions`. Your own jobs get
+every capability except four that touch your own browser, profile or installed code:
+`persistent_session`, `real_chrome`, `cdp` and `solver_plugins`. Those need
+`--allow-capability NAME` (repeatable; `RASTRO_ALLOW_CAPABILITIES="cdp,real_chrome"`).
+
+The other origins get nothing until you grant one capability to one origin with
+`--allow-untrusted ORIGIN:NAME` (repeatable; `RASTRO_ALLOW_UNTRUSTED="mcp:stealth"`). A
+refused job stops before any renderer, client or request exists with the error
+`capability_refused`, which names the origin, each refused capability and the flag that
+grants it, never a job value. A bundle or registry package whose recipe requests a
+capability that is not granted is not imported.
+
+**Robots as a job setting.** `[acquisition] robots = "ignore"` neither fetches nor enforces
+robots.txt for any host of the job (the default is `"obey"`). It is honored for your own
+jobs and logged once per run as a `robots_ignored` INFO line without hosts or URLs; the
+result's `metrics.robots_overridden` is `true`. For other origins it needs
+`--allow-untrusted ORIGIN:robots_ignore`. Allowlist, destination checks, pacing and the
+401/403/451/429 handling still apply, and by setting it you assert permission to fetch.
+
+`--allow-stealth` (`RASTRO_ALLOW_STEALTH`, `allow_stealth=True`) is deprecated: it
+changes nothing for your own jobs and grants `stealth` and `solve_challenges` to every
+untrusted origin. The CLI prints a `deprecated_flag` warning on stderr when it is used.
+Private networks, extra ports, robots overrides per host, secret names, egress profiles and
+commands stay the operator grants described above; no capability widens them.
+
 ## Sessions
 
 `[acquisition] session = true` enables a bounded, in-memory cookie jar for one job
-run (SCHED-005, SEC-005). The default is `false`. In the SDK, the jar belongs to
+run. The default is `false`. In the SDK, the jar belongs to
 the `WebAcquirer` client: create a fresh client for each run. Cookies never enter
 jobs, recipes, datasets, results, logs or object representations; they are discarded
 with the client. There are no login flows or cookie credential fields.
@@ -351,8 +395,7 @@ disabled, and separate `Set-Cookie` response headers are preserved.
 ## Spider
 
 A job's `[spider]` table (`mode = "spider"`, see [Spider in jobs](jobs.md#spider)) follows
-links from the job's own sources. It adds no acquisition path and no grant (N3, SEC-001,
-SEC-003, SEC-008):
+links from the job's own sources. It adds no acquisition path and no grant:
 
 - **One entry point.** Every page, including pagination pages, is fetched by one
   function, `fetch_spider_page`, through the normal `AcquisitionPort`. Anything that
@@ -377,7 +420,7 @@ Hitting a cap ends the run as `partial_success` with the accepted records kept.
 ## Conditional requests
 
 `rastro job load` automatically revalidates HTTP sources when the job declares a
-`[dataset]` (SYNC-004, ALERT-006). After a successful HTTP 200 extraction and approved
+`[dataset]`. After a successful HTTP 200 extraction and approved
 load, it stores `ETag` and `Last-Modified` in the dataset database. The next load
 sends `If-None-Match` and `If-Modified-Since` when available. Robots lookups are
 unconditional. Validators follow only their exact document URL, including across
@@ -419,8 +462,9 @@ scrapling install
 Set `[acquisition] render = "browser"` for a job default, or set `render` on an
 individual URL source. An explicit source value overrides the default. Values are
 `"http"` (the normal default), `"browser"` (plain Chromium, honest Rastro User-Agent)
-and `"stealth"` (Scrapling's browser fingerprints). Browser modes require HTML and
-direct egress; they reject egress profiles.
+and `"stealth"` (Scrapling's browser fingerprints). Browser modes require HTML. They
+use egress profiles and rotation like HTTP; see [browser and stealth
+modes](egress.md#browser-and-stealth-modes).
 
 ```toml
 [acquisition]
@@ -432,16 +476,17 @@ url = "https://example.com/events"
 render = "stealth"
 ```
 
-Stealth additionally needs operator consent: `rastro --allow-stealth job run job.toml`,
-`run_job_file("job.toml", allow_stealth=True)` (`load_job_file` and the `repair_job_*`
-functions take the same keyword), or `RASTRO_ALLOW_STEALTH=1` (also `true`
-or `yes`). A job file cannot grant consent. Cloudflare solving is off unless
-`[acquisition] solve_challenges = true` and consent is present. Challenge domains must
-also be explicitly allowlisted; there is no third-party solver or rotation.
+Your own jobs, run from the CLI, the Python API or Studio, use stealth without any flag.
+A job that arrives through an agent tool, a bundle, a registry recipe or model output
+needs the grant for its origin, such as `--allow-untrusted mcp:stealth` (see
+[Capabilities and input origin](#capabilities-and-input-origin)). Cloudflare solving is
+off unless `[acquisition] solve_challenges = true`; it is the `solve_challenges`
+capability. Challenge domains must also be explicitly allowlisted; there is no
+third-party solver.
 
 A URL the job does not declare (for example a next page) uses the render mode shared by
 the declared sources on the same exact host, else the `[acquisition]` default; a stealth
-default therefore needs consent whenever the job renders at all.
+default therefore counts as a stealth request whenever the job renders at all.
 
 Robots, pacing, public DNS checks and request budgets still apply. Robots are checked
 again for the final URL when the browser was redirected to another path. A spent
@@ -457,8 +502,8 @@ boundaries and limitations. Live browser tests require `RASTRO_LIVE_BROWSER=1`.
 
 ### Browser contexts
 
-Pages of one source share one browser context for one run (N2,
-[ADR 0034](decisions/0034-opt-in-promote-and-stealth.md)). The source's first rendered page
+Pages of one source share one browser context for one run
+([ADR 0034](decisions/0034-opt-in-promote-and-stealth.md)). The source's first rendered page
 opens the context; its pagination pages and scroll steps reuse it, then it is closed. The
 next source starts a fresh context, so two sources never share cookies or storage, and a
 page on a different host inside one run renders in its own fresh context, never in the first
@@ -479,8 +524,8 @@ outer one, so a crawl can wrap its whole start source in one.
 
 ### Scroll
 
-A job can scroll a rendered page to load more records (N9,
-[ADR 0033](decisions/0033-scroll-registry-url-and-spec-amendments.md)); see the
+A job can scroll a rendered page to load more records
+([ADR 0033](decisions/0033-scroll-registry-url-and-spec-amendments.md)); see the
 [`[scroll]` reference](jobs.md#scroll). Each step scrolls the source's open context once,
 waits at most `settle_ms`, and extracts again with the recipe. The first extraction must
 find records; a step that finds no new record (by record equality) ends the scroll normally.

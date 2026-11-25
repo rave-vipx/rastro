@@ -1,4 +1,4 @@
-"""PR #55 review fixes: read-only preview, separate stores, containment (DATA-001/002/005)."""
+"""PR #55 review fixes: read-only preview, separate stores, containment."""
 
 import json
 import os
@@ -52,7 +52,7 @@ def _code(argv: list[str], capsys: pytest.CaptureFixture[str]) -> tuple[int, str
 def test_preview_with_missing_recipe_memory_uses_the_job_recipe_and_creates_nothing(
     tmp_path, capsys
 ):
-    """DATA-002: preview of a memory-enabled job never creates the recipe store."""
+    """Preview of a memory-enabled job never creates the recipe store."""
     job = _job(tmp_path, extra='recipe_memory = "memory.sqlite"')
     assert main(["job", "preview", str(job), "--output", "json"]) == JobExitCode.SUCCESS
     record = json.loads(capsys.readouterr().out)["sources"][0]["records"][0]
@@ -61,7 +61,7 @@ def test_preview_with_missing_recipe_memory_uses_the_job_recipe_and_creates_noth
 
 
 def test_preview_with_existing_recipe_memory_leaves_the_file_untouched(tmp_path, capsys):
-    """DATA-002: the store is read with mode=ro; bytes and mtime stay identical."""
+    """The store is read with mode=ro; bytes and mtime stay identical."""
     job = _job(tmp_path, extra='recipe_memory = "memory.sqlite"')
     assert main(["job", "load", str(job)]) == JobExitCode.SUCCESS
     store = tmp_path / "memory.sqlite"
@@ -80,7 +80,7 @@ def test_preview_with_existing_recipe_memory_leaves_the_file_untouched(tmp_path,
 
 
 def test_preview_uses_a_newer_stored_serving_recipe(tmp_path, capsys):
-    """DATA-002, REC-001: a stored serving version above the job recipe's version wins."""
+    """A stored serving version above the job recipe's version wins."""
     body = BODY.replace('fields = { title = "b::text" }', 'fields = { title = "i::text" }')
     job = _job(tmp_path, extra='recipe_memory = "memory.sqlite"', body=body)
     (tmp_path / "page.html").write_text("<ul><li><b>Tango</b><i>Milonga</i></li></ul>")
@@ -98,7 +98,7 @@ def test_preview_uses_a_newer_stored_serving_recipe(tmp_path, capsys):
 
 
 def test_preview_refuses_an_old_schema_store_without_migrating_it(tmp_path, capsys):
-    """DATA-002: read-only access never migrates; an unknown file fails and stays as is."""
+    """Read-only access never migrates; an unknown file fails and stays as is."""
     job = _job(tmp_path, extra='recipe_memory = "memory.sqlite"')
     existing = tmp_path / "memory.sqlite"
     existing.write_bytes(b"not touched")
@@ -108,7 +108,7 @@ def test_preview_refuses_an_old_schema_store_without_migrating_it(tmp_path, caps
 
 
 def test_read_only_repository_refuses_writes(tmp_path):
-    """DATA-002: a read-only repository fails every write before touching the file."""
+    """A read-only repository fails every write before touching the file."""
     repository = SQLiteRecipeRepository(tmp_path / "missing.sqlite", read_only=True)
     with pytest.raises(RecipeStorageError, match="read-only"):
         repository.delete(RecipeKey.model_validate(_KEY))

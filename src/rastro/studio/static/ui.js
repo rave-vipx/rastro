@@ -1,7 +1,7 @@
 // Named components shared by the views: status shapes, chips, empty states and the
 // placeholders for links and images that come from data. Text is always plain text content.
 import { el } from "./dom.js";
-import { t } from "./i18n.js";
+import { onLangChange, t } from "./i18n.js";
 
 // A status is a shape plus a word, never a color alone: circle ok, triangle warning,
 // octagon failure, minus-circle "nothing there".
@@ -82,6 +82,33 @@ export function emptyState(title, text, ...actions) {
   return box;
 }
 
+// Loading: skeleton lines for the shape of what is coming, plus a sentence a screen reader
+// hears. With reduced motion the skeleton stays still and the sentence still reads.
+export function loadingState(text, lines = 3) {
+  const box = el("div", undefined, "loading-state");
+  box.setAttribute("aria-busy", "true");
+  const sketch = el("div", undefined, "skel-lines");
+  sketch.setAttribute("aria-hidden", "true");
+  for (let i = 0; i < lines; i += 1) sketch.append(el("div", undefined, "skel"));
+  const status = el("p", text || t("state.loading"), "muted");
+  status.setAttribute("role", "status");
+  status.setAttribute("aria-live", "polite");
+  box.append(sketch, status);
+  return box;
+}
+
+// Error: what happened, what to do, and one button. Announced at once (role="alert").
+export function errorState(what, todo, retry) {
+  const box = el("div", undefined, "error-state");
+  box.setAttribute("role", "alert");
+  const head = el("p", undefined, "error-what");
+  head.append(shape("fail"), document.createTextNode(what || t("state.errorTitle")));
+  box.append(head);
+  if (todo) box.append(el("p", todo, "muted"));
+  if (retry) box.append(actionButton(t("state.retry"), retry, "primary"));
+  return box;
+}
+
 export function actionButton(label, run, className) {
   const node = el("button", label, className);
   node.type = "button";
@@ -96,3 +123,13 @@ export function actionButton(label, run, className) {
   });
   return node;
 }
+
+// A box whose content is built in JS is rebuilt when the language or Advanced changes;
+// a null render forgets the box (its content is then left as the caller set it).
+const redraws = new Map();
+export function redrawable(box, render) {
+  if (!render) { redraws.delete(box); return; }
+  redraws.set(box, render);
+  box.replaceChildren(render());
+}
+onLangChange(() => { for (const [box, render] of redraws) box.replaceChildren(render()); });

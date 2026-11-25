@@ -1,4 +1,4 @@
-"""Value-consistency gate for relocated fields (REPAIR-002, REPAIR-004)."""
+"""Value-consistency gate for relocated fields."""
 
 from rastro.domain.value_consistency import (
     OTHER_FIELD,
@@ -8,7 +8,12 @@ from rastro.domain.value_consistency import (
 )
 
 HISTORY = [
-    {"title": "Platform engineer", "city": "Montevideo", "price": 10, "url": "https://a.example/1"},
+    {
+        "title": "Platform engineer",
+        "city": "Puerto Claro",
+        "price": 10,
+        "url": "https://a.example/1",
+    },
     {"title": "Product designer", "city": "Salto", "price": 25, "url": "https://a.example/2"},
 ]
 
@@ -21,7 +26,7 @@ def test_same_values_and_new_similar_values_pass():
 def test_values_borrowed_from_another_field_fail():
     current = [{"title": "Salto", "city": "Salto"}]
     assert OTHER_FIELD in value_consistency(current, HISTORY, ("title",))
-    same_shape = [{"title": "Montevideo", "city": "Montevideo"}]
+    same_shape = [{"title": "Puerto Claro", "city": "Puerto Claro"}]
     assert value_consistency(same_shape, HISTORY, ("title",)) == (OTHER_FIELD,)
 
 

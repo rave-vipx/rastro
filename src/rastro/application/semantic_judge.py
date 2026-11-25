@@ -1,4 +1,4 @@
-"""Ask a model whether repaired values still mean what each field means (QUAL-005, QUAL-006).
+"""Ask a model whether repaired values still mean what each field means.
 
 Shape gates cannot tell a title from a city: both are short strings. Before an automatic
 promotion, the judge sends each changed field's name, type and description, a few
@@ -7,7 +7,9 @@ untrusted page data), and asks for a strict JSON verdict per field. The model ju
 it never supplies values. Any ``mismatch`` blocks promotion, ``unsure`` promotes only
 when every deterministic gate is strong, and a failed or malformed answer blocks too.
 Values that look like instructions carry ``content_flags`` (field and rule ids, never the
-text); recipe CI has already refused to promote such a candidate on its own (N19).
+text); recipe CI has already refused to promote such a candidate on its own.
+List and object fields also send each member's values separately under ``members``, so
+a price read into a name is visible without decoding the whole list.
 """
 
 from __future__ import annotations
@@ -77,6 +79,34 @@ def _values(rows: Sequence[Mapping[str, JsonValue]], name: str) -> list[str]:
     return list(dict.fromkeys(_clip(value) for value in _present(rows, name)))[:MAX_VALUES]
 
 
+def _items(rows: Sequence[Mapping[str, JsonValue]], name: str) -> list[Mapping[str, JsonValue]]:
+    """The objects inside a list or object field, so each member is sampled on its own."""
+    items: list[Mapping[str, JsonValue]] = []
+    for value in _present(rows, name):
+        items.extend(
+            v for v in (value if isinstance(value, list) else [value]) if isinstance(v, dict)
+        )
+    return items
+
+
+def _members(
+    name: str, rows: Sequence[Mapping[str, JsonValue]], history: Sequence[Mapping[str, JsonValue]]
+) -> dict[str, object]:
+    current, earlier = _items(rows, name), _items(history, name)
+    members = sorted({key for item in (*current, *earlier) for key in item})
+    if not members:
+        return {}
+    return {
+        "members": {
+            member: {
+                "reference_values": _values(earlier, member),
+                "untrusted_candidate_values": _values(current, member),
+            }
+            for member in members
+        }
+    }
+
+
 def _flags(name: str, *groups: Sequence[Mapping[str, JsonValue]]) -> dict[str, object]:
     rules = sorted(
         {
@@ -103,6 +133,7 @@ def judge_request(
                 **hints[name],
                 "reference_values": _values(history, name),
                 "untrusted_candidate_values": _values(rows, name),
+                **_members(name, rows, history),
                 **_flags(name, history, rows),
             }
             for name in fields

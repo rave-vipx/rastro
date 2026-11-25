@@ -1,0 +1,18 @@
+{
+  "engine_needs": {
+    "capabilities": [],
+    "render": "http",
+    "representation": "json"
+  },
+  "fields": [
+    {
+      "description": "The page or product title",
+      "name": "title"
+    },
+    {
+      "description": "Price as printed",
+      "name": "price"
+    }
+  ],
+  "format": 1
+}

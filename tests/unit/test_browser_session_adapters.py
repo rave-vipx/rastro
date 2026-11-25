@@ -1,4 +1,4 @@
-"""N2, N9, SEC-005/008: the Chromium and Scrapling sessions, against fake drivers (no browser)."""
+"""The Chromium and Scrapling sessions, against fake drivers (no browser)."""
 
 from contextlib import asynccontextmanager
 from types import SimpleNamespace
@@ -136,7 +136,7 @@ class Engine:
     def __init__(self):
         self.urls, self.entered, self.exited = [], 0, 0
 
-    async def fetch(self, url):
+    async def fetch(self, url, **options):
         self.urls.append(url)
         return SimpleNamespace(url=url, html_content="<p>ok</p>", status=200)
 
@@ -226,7 +226,7 @@ async def test_stealth_session_guard_is_idle_after_each_fetch(monkeypatch):
         active_in_fetch = []
         original = Engine.fetch
 
-        async def fetch(self, url):
+        async def fetch(self, url, **options):
             active_in_fetch.append(guard.active)
             return await original(self, url)
 

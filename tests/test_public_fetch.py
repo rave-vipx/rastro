@@ -1,5 +1,4 @@
-"""rastro.fetch: one URL under the job acquirer's policy, explicit outcomes (N15; SEC-001,
-SEC-003, SEC-008).
+"""rastro.fetch: one URL under the job acquirer's policy, explicit outcomes.
 
 Offline: the real ``WebAcquirer`` runs against a fake transport and resolver, so robots.txt,
 the host allowlist and the byte bound are exercised exactly as for ``rastro.scrape`` URLs.
@@ -160,3 +159,16 @@ def test_fetch_refuses_a_running_loop_and_fetch_async_works_there(transport):
 
     with asyncio.Runner(loop_factory=asyncio.SelectorEventLoop) as runner:
         assert runner.run(inside()).body == PAGE
+
+
+def test_fetched_text_decodes(transport):
+    html = "<html><body><h1>Fiesta — música</h1></body></html>"
+    transport.body = html.encode("utf-8")
+    fetched = rastro.fetch("https://events.example/fiesta")
+    assert fetched.status == Outcome.SUCCESS
+    assert fetched.text == html
+    assert fetched.text == fetched.body
+    transport.robots = b"User-agent: *\nDisallow: /\n"
+    failed = rastro.fetch("https://events.example/fiesta")
+    assert failed.status == Outcome.ACCESS_RESTRICTION
+    assert failed.text is None

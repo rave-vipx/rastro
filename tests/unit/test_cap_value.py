@@ -1,4 +1,4 @@
-"""The reached cap of a result and its configured value (N5, SYNC-002, OBS-003)."""
+"""The reached cap of a result and its configured value."""
 
 from datetime import UTC, datetime
 

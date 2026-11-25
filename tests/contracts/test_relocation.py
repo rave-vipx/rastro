@@ -1,4 +1,4 @@
-"""Offline repair candidates preserve evidence and activation gates (REPAIR-001, SCR-002)."""
+"""Offline repair candidates preserve evidence and activation gates."""
 
 from pydantic import BaseModel
 
@@ -57,7 +57,7 @@ def test_unchanged_template_yields_no_relocation_candidate():
 
 
 def test_tied_matches_are_not_silently_selected():
-    """REPAIR-002: two identical siblings have no unique tag+class path, so no proposal."""
+    """Two identical siblings have no unique tag+class path, so no proposal."""
     html = "<article>" + '<h2 class="new">Synthetic dance</h2>' * 2 + "</article>"
     assert ScraplingRelocation().relocate(html, RECIPE, successful_snapshot(), Limits()) == ()
 
@@ -205,7 +205,7 @@ def test_empty_and_unparsable_html_never_exposes_parser_exceptions():
 
 
 def test_success_without_observed_fields_cannot_be_fingerprinted():
-    """SCR-002: an inconsistent success report cannot create an empty snapshot."""
+    """An inconsistent success report cannot create an empty snapshot."""
     import pytest
 
     from rastro import ConfigurationError

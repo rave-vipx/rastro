@@ -1,10 +1,17 @@
-"""Presentation and selection of dataset records (DATA-004, SCHED-007)."""
+"""Presentation and selection of dataset records."""
 
+import csv
+import io
+import sys
 from datetime import UTC, date, datetime
 from html import escape
+from pathlib import Path
 from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from rastro.adapters.sqlite_dataset import SQLiteDatasetStore
+from rastro.application.changes import changes_between, changes_since
+from rastro.application.tabular import records_table
 from rastro.domain.dataset import DatasetRecordKey, StoredRecord
 from rastro.domain.models import ConfigurationError
 
@@ -104,3 +111,51 @@ def html_export(
         f"{escape(datetime.now(UTC).isoformat())}</p><table><thead><tr>{headers}</tr></thead>"
         f"<tbody>{''.join(rows)}</tbody></table></body></html>"
     )
+
+
+def csv_export(records: tuple[StoredRecord, ...]) -> str:
+    """One row per record; nested fields flattened by ``flatten``, then ``last_observed_at``."""
+    header, rows = records_table(records)
+    buffer = io.StringIO()
+    writer = csv.writer(buffer, lineterminator="\n")
+    writer.writerow(header)
+    writer.writerows(rows)
+    return buffer.getvalue()
+
+
+def write_xlsx(records: tuple[StoredRecord, ...], output: Path | None) -> None:
+    """XLSX is binary: write to `output`, or to standard output when it is piped."""
+    from rastro.adapters.xlsx_export import xlsx_export
+
+    data = xlsx_export(records)
+    if output is not None:
+        output.write_bytes(data)
+    elif sys.stdout.isatty():
+        raise ConfigurationError("XLSX is binary: pass --output FILE or pipe standard output")
+    else:
+        sys.stdout.buffer.write(data)
+
+
+def changes_report(
+    store: SQLiteDatasetStore, dataset: str, *, since: str | None, against: Path | None
+) -> dict[str, object]:
+    """New, removed and changed records, as plain data for the CLI and Studio."""
+    records = store.records(dataset)
+    if against is not None:
+        if not against.exists():
+            raise ConfigurationError("The --against dataset file does not exist")
+        result = changes_between(SQLiteDatasetStore(against).records(dataset), records)
+    elif since is not None:
+        try:
+            moment = datetime.fromisoformat(since)
+        except ValueError:
+            raise ConfigurationError("--since must be an ISO datetime") from None
+        if moment.tzinfo is None:
+            moment = moment.replace(tzinfo=UTC)
+        done = {
+            s.source_url: s.last_success for s in store.source_status(dataset) if s.last_success
+        }
+        result = changes_since(records, moment, latest_success=done)
+    else:
+        raise ConfigurationError("Choose --since or --against")
+    return {"dataset": dataset, **result.model_dump(mode="json")}

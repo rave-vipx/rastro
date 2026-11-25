@@ -1,0 +1,18 @@
+{
+  "engine_needs": {
+    "capabilities": [],
+    "render": "http",
+    "representation": "html"
+  },
+  "fields": [
+    {
+      "description": "The page or product title",
+      "name": "title"
+    },
+    {
+      "description": "A short description of the page",
+      "name": "summary"
+    }
+  ],
+  "format": 1
+}

@@ -1,4 +1,4 @@
-"""A card with several dates becomes one record per date, idempotently (DATA-004/005, JOB-002)."""
+"""A card with several dates becomes one record per date, idempotently."""
 
 from pathlib import Path
 
@@ -11,7 +11,7 @@ JOB = """format_version = 1
 [region]
 locale = "es-UY"
 languages = ["es-UY", "es"]
-timezone = "America/Montevideo"
+timezone = "Etc/GMT+3"
 [dataset]
 name = "multi"
 path = "multi.sqlite"

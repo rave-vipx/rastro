@@ -1,6 +1,6 @@
 # Recipe memory
 
-M3 adds optional, local SQLite memory. A successful extraction can be repeated
+Recipe memory is optional and local (SQLite). A successful extraction can be repeated
 without supplying its recipe, including after restarting Python. Extracted records
 are validated again on every run; memory stores extraction instructions, not data.
 
@@ -49,14 +49,14 @@ Only `success` with validated records is remembered. Missing, invalid, ambiguous
 partial, restricted or failed results do not activate a recipe or update its last
 success. A failed new version leaves previously successful versions available.
 By default there is no inference or automatic discovery when memory is empty:
-`RecipeNotFoundError` reports an exact-context miss. M4 adds explicit opt-in
+`RecipeNotFoundError` reports an exact-context miss. Explicit opt-in
 [asynchronous recipe learning](intelligence.md) through `discover_recipes=True` or
 `model=`. Learned recipes carry `require_evidence=True`; required-field observations
 are enforced on every reuse, including after restart.
 
 `Rastro.web(policy, repository=repository)` supports the same `context` and optional
 `recipe` arguments through `await extract(...)` and `await extract_many(...)`.
-Acquisition still fetches the source and enforces all M2 policies on every call.
+Acquisition still fetches the source and enforces all acquisition policies on every call.
 Lookup happens before fetching; without discovery enabled, a missing recipe fails
 without a network request. Missing pinned versions always fail before acquisition.
 
@@ -110,7 +110,7 @@ Memory preserves the whole definition and the index of the alternative that
 actually succeeded (`0` is the primary). Reuse executes **only that validated
 alternative**. An unexecuted fallback is never silently promoted. If reuse fails,
 the failure is returned; retrying other candidates requires explicitly supplying
-the definition again. This is not automatic repair or the v0.2 lifecycle system.
+the definition again. This is not automatic repair; see [recipe lifecycle](recipe-lifecycle.md).
 
 Results include `recipe_version`, `recipe_reused` and ordered `recipe_attempts`
 with each attempted index and outcome. Records/issues come from the final attempt;
@@ -175,7 +175,7 @@ schema versions: 0 → 1 creates the recipe table and 1 → 2 adds
 [lifecycle states and history](recipe-lifecycle.md). Unknown or newer versions,
 foreign databases and corrupt rows fail explicitly; they are never silently reset,
 and a failed migration leaves the file unchanged. Recipe payloads written by earlier
-releases, including M3 payloads without `require_evidence` and 0.1.0 payloads with
+releases, including payloads without `require_evidence` and 0.1.0 payloads with
 `null` selectors for other strategies, load as the matching recipe variant and are
 left as written. Writes serialize with a bounded lock
 timeout (default 5 seconds, configurable above 0 and at most 30 seconds).

@@ -198,7 +198,7 @@ def test_migration_records_application_and_schema_version(tmp_path, source, sche
     path = tmp_path / "db"
     assert SQLiteRecipeRepository(path).get(RecipeKey.for_source(source, schema)) is None
     with closing(sqlite3.connect(path)) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 2
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 3
         assert db.execute("PRAGMA application_id").fetchone()[0] == 0x52535452
 
 

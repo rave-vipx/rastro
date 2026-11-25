@@ -1,4 +1,4 @@
-"""Studio's content-free run log: what a load reported that the dataset does not keep (N5).
+"""Studio's content-free run log: what a load reported that the dataset does not keep.
 
 The dataset keeps source status, run metrics and drift. A load result also names issue codes
 (for example ``evidence_retention_failed``) and a promotion can be refused; Studio keeps the
@@ -24,6 +24,7 @@ from rastro.application.atomic_files import fsync_directory
 from rastro.domain.issue_codes import KNOWN_CODES
 from rastro.domain.job_load import JobLoadResult
 from rastro.domain.models import ConfigurationError
+from rastro.domain.run_report import RunReport
 from rastro.domain.sources import Contract
 
 CODE_PATTERN = r"^[a-z][a-z0-9_]{0,63}$"
@@ -53,6 +54,7 @@ class LoggedRun(Contract):
     at: AwareDatetime
     kind: Literal["load", "promote_refused"] = "load"
     sources: tuple[LoggedSource, ...] = Field(default=(), max_length=MAX_SOURCES)
+    report: RunReport | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
 class RunLog(Contract):
@@ -137,7 +139,7 @@ def from_load(result: JobLoadResult, at: datetime) -> LoggedRun:
         sources.append(
             LoggedSource(url=item["source_url"], read=read, issues=_issues(item.get("issues")))
         )
-    return LoggedRun(at=at, sources=tuple(sources))
+    return LoggedRun(at=at, sources=tuple(sources), report=result.report)
 
 
 def refused(url: str, at: datetime) -> LoggedRun:

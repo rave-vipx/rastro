@@ -1,9 +1,8 @@
-# ADR 0001: Deliver a usable offline slice before network acquisition
+# ADR 0001: Deliver a usable offline release before network acquisition
 
 - Status: Accepted
 - Date: 2026-10-24
-- Release: v0.1, milestone M1
-- Requirements: INT-002/003/004, REC-002, QUAL-001–004, SEC-004/005/007/008
+- Release: 0.1
 
 ## Context
 

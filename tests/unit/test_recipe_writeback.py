@@ -1,4 +1,4 @@
-"""REC-006: recipe write-back keeps job text, and the newer recipe version is the one used."""
+"""Recipe write-back keeps job text, and the newer recipe version is the one used."""
 
 import tomllib
 from types import SimpleNamespace

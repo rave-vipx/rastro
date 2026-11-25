@@ -1,6 +1,5 @@
 # Semantic consistency
 
-**Requirements:** QUAL-005 (historical consistency checks), QUAL-006 (separate indicators).
 
 A recipe can return valid values that mean the wrong thing: a ticket sale date in the
 event-date path passes every datetime validator. Consistency rules catch this. They are
@@ -8,7 +7,7 @@ declarative, generic and optional; a job without rules is unchanged.
 
 ## Rules
 
-Declared as `[[consistency]]` entries (the example is `examples/uy-dance-agenda/sample/job.toml`).
+Declared as `[[consistency]]` entries (the example is `examples/event-agenda/sample/job.toml`).
 
 | `kind` | Fails when | Parameters |
 | --- | --- | --- |
@@ -16,7 +15,7 @@ Declared as `[[consistency]]` entries (the example is `examples/uy-dance-agenda/
 | `distinct_ratio` | distinct values / records is below `min_ratio` | `min_ratio` (0.5), `min_records` (3) |
 | `historical_shift` | the median of `field` moved more than `max_shift` versus dataset history | `max_shift`, `unit` = `days` or `ratio` (days), `min_history` (3) |
 
-Unknown kinds and keys are rejected. Rules name fields and thresholds only; dance-specific
+Unknown kinds and keys are rejected. Rules name fields and thresholds only; site-specific
 choices live in the example, never in the engine.
 
 ## Report

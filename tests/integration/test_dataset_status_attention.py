@@ -1,4 +1,4 @@
-"""Attention exits non-zero; failures suggest repair and keep a reason (DATA-004/005)."""
+"""Attention exits non-zero; failures suggest repair and keep a reason."""
 
 import json
 
@@ -35,7 +35,7 @@ def test_missing_data_suggests_repair_and_dataset_status_exits_4(job, capsys):
 
 
 def test_load_records_the_failure_detail_of_a_denied_source(job):
-    """DATA-005: a 403 is stored as reason access_restriction with detail http_403."""
+    """A 403 is stored as reason access_restriction with detail http_403."""
     from rastro.adapters.sqlite_dataset import SQLiteDatasetStore
     from rastro.application.dataset_load import load_results
     from rastro.application.job_loader import load_job

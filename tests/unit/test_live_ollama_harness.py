@@ -1,4 +1,4 @@
-"""Offline checks for the opt-in live Ollama harness inputs (AI-001, INT-002, REC-004)."""
+"""Offline checks for the opt-in live Ollama harness inputs."""
 
 import pytest
 

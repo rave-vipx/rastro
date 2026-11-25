@@ -1,7 +1,4 @@
-"""Offline bounded spider: depth, page and request caps, hosts, paths, robots (N3).
-
-Requirements: N3, SEC-001 (hosts), SEC-003 (robots), SEC-008 (budget), SYNC-002 (retention).
-"""
+"""Offline bounded spider: depth, page and request caps, hosts, paths, robots."""
 
 import logging
 from pathlib import Path

@@ -1,4 +1,4 @@
-"""Plain Chromium and shared browser network restrictions (SEC-005/008)."""
+"""Plain Chromium and shared browser network restrictions."""
 
 from __future__ import annotations
 
@@ -8,8 +8,16 @@ from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack, asynccontextmanager
 from typing import TYPE_CHECKING, Any
 
+from rastro.adapters.browser_controls_apply import request_allowed
+from rastro.adapters.browser_network import (
+    browser_flags,
+    launch_options,
+    proxy_option,
+    resolver_rules,
+    route_allowed,
+)
+from rastro.adapters.playwright_launch import load_page, open_context
 from rastro.application.destinations import permitted_url
-from rastro.application.http_policy import USER_AGENT
 from rastro.domain.acquisition import (
     AcquisitionError,
     AcquisitionPolicy,
@@ -17,6 +25,17 @@ from rastro.domain.acquisition import (
     PinnedTarget,
 )
 from rastro.domain.models import ConfigurationError, Outcome
+
+__all__ = [
+    "INSTALL",
+    "NetworkGuard",
+    "PlaywrightBrowser",
+    "browser_flags",
+    "launch_options",
+    "proxy_option",
+    "resolver_rules",
+    "route_allowed",
+]
 
 if TYPE_CHECKING:
     from rastro.adapters.playwright_session import PlaywrightSession
@@ -27,37 +46,12 @@ INSTALL = (
 )
 
 
-def route_allowed(url: str, resource_type: str, policy: AcquisitionPolicy) -> bool:
-    if resource_type.lower() in {"image", "media", "font", "websocket"}:
-        return False
-    try:
-        permitted_url(url, policy)
-        return True
-    except AcquisitionError:
-        return False
-
-
-def resolver_rules(targets: tuple[PinnedTarget, ...]) -> str:
-    return ", ".join(
-        [*(f"MAP {t.host} {t.address}" for t in targets), "MAP * ~NOTFOUND", "EXCLUDE localhost"]
-    )
-
-
-def browser_flags(targets: tuple[PinnedTarget, ...]) -> list[str]:
-    return [
-        f"--host-resolver-rules={resolver_rules(targets)}",
-        "--disable-quic",
-        "--no-proxy-server",
-        "--disable-background-networking",
-        "--force-webrtc-ip-handling-policy=disable_non_proxied_udp",
-    ]
-
-
 class NetworkGuard:
     def __init__(self, policy: AcquisitionPolicy):
         self.policy = policy
         self.requests = 0
         self.issue: str | None = None
+        self.challenged = False  # a document answered with a challenge during this step
         # A reused page stays open between steps: only an active step may make requests.
         self.active = True
         self._guarded: weakref.WeakSet[Any] = weakref.WeakSet()
@@ -65,6 +59,7 @@ class NetworkGuard:
     def begin(self, policy: AcquisitionPolicy) -> None:
         """Arm the guard for the next navigation or scroll step, under the budget left for it."""
         self.policy, self.requests, self.issue, self.active = policy, 0, None, True
+        self.challenged = False
 
     def end(self) -> None:
         """Idle: every request of a page that stays open between steps fails and is not counted."""
@@ -80,7 +75,7 @@ class NetworkGuard:
                 if (
                     not self.active
                     or request.frame.page != page
-                    or not route_allowed(request.url, request.resource_type, self.policy)
+                    or not request_allowed(request.url, request.resource_type, self.policy)
                 ):
                     await route.abort()
                 else:
@@ -91,7 +86,7 @@ class NetworkGuard:
             session = await page.context.new_cdp_session(page)
 
             async def paused(event: dict[str, Any]) -> None:
-                allowed = self.active and route_allowed(
+                allowed = self.active and request_allowed(
                     event["request"]["url"], event.get("resourceType", ""), self.policy
                 )
                 if self.active:
@@ -109,7 +104,18 @@ class NetworkGuard:
                     },
                 )
 
+            async def responded(event: dict[str, Any]) -> None:
+                response = event.get("response", {})
+                headers = {k.lower(): v for k, v in response.get("headers", {}).items()}
+                if (
+                    event.get("type") == "Document"
+                    and str(headers.get("cf-mitigated", "")).lower() == "challenge"
+                ):
+                    self.challenged = True
+
             session.on("Fetch.requestPaused", paused)
+            session.on("Network.responseReceived", responded)
+            await session.send("Network.enable", {})
             await session.send(
                 "Fetch.enable", {"patterns": [{"urlPattern": "*", "requestStage": "Request"}]}
             )
@@ -145,7 +151,13 @@ class NetworkGuard:
                 "challenge_unsolved", Outcome.ACCESS_RESTRICTION, requests=self.requests
             )
         return AcquisitionResult(
-            url, body, Outcome.SUCCESS, None, http_status=status, requests=self.requests
+            url,
+            body,
+            Outcome.SUCCESS,
+            None,
+            http_status=status,
+            requests=self.requests,
+            challenge_solved=self.challenged,  # challenged, then a clean page came back
         )
 
 
@@ -166,30 +178,12 @@ class PlaywrightBrowser:
     ) -> AcquisitionResult:
         guard = NetworkGuard(policy)
         try:
-            async with self.api.async_playwright() as driver:
-                browser = await driver.chromium.launch(args=browser_flags(targets))
-                try:
-                    context = await browser.new_context(
-                        user_agent=USER_AGENT,
-                        accept_downloads=False,
-                        permissions=[],
-                        service_workers="block",
-                    )
-                    page = await context.new_page()
-                    await guard.setup(page)
-                    response = await page.goto(
-                        target.url,
-                        timeout=policy.request_timeout_seconds * 1000,
-                        wait_until="networkidle",
-                    )
-                    return guard.result(
-                        page.url,
-                        await page.content(),
-                        response.status if response else 0,
-                        max_bytes,
-                    )
-                finally:
-                    await browser.close()
+            async with AsyncExitStack() as stack:
+                driver = await stack.enter_async_context(self.api.async_playwright())
+                context = await open_context(stack, driver, targets, policy)
+                page = await context.new_page()
+                await guard.setup(page)
+                return await load_page(page, guard, target.url, policy, max_bytes)
         except AcquisitionError:
             raise
         except Exception:
@@ -208,14 +202,7 @@ class PlaywrightBrowser:
         async with AsyncExitStack() as stack:
             try:
                 driver = await stack.enter_async_context(self.api.async_playwright())
-                browser = await driver.chromium.launch(args=browser_flags(targets))
-                stack.push_async_callback(browser.close)
-                context = await browser.new_context(
-                    user_agent=USER_AGENT,
-                    accept_downloads=False,
-                    permissions=[],
-                    service_workers="block",
-                )
+                context = await open_context(stack, driver, targets, policy)
             except Exception:
                 raise AcquisitionError(
                     "browser_navigation_failed", Outcome.TRANSIENT_FAILURE

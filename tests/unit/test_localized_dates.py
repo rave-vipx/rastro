@@ -1,4 +1,4 @@
-"""Spanish source dates preserve explicit times (DATA-005)."""
+"""Spanish source dates preserve explicit times."""
 
 from datetime import date, datetime
 from types import SimpleNamespace
@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-TZ = ZoneInfo("America/Montevideo")
+TZ = ZoneInfo("Etc/GMT+3")
 NOW = datetime(2026, 11, 7, 12, tzinfo=TZ)
 
 

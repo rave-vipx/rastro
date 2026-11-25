@@ -1,4 +1,4 @@
-"""Job schedule, per-source intervals and deterministic jitter (SCHED-001/006/007, SYNC-001)."""
+"""Job schedule, per-source intervals and deterministic jitter."""
 
 from __future__ import annotations
 
@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from rastro.domain.jobs import Job
 
 _DURATION_RE = re.compile(r"^([0-9]+)([smhd])$")
+_TIME_RE = re.compile(r"^[0-9]{2}:[0-9]{2}$")
 _UNITS = {"s": 1, "m": 60, "h": 3_600, "d": 86_400}
 MIN_EVERY, MAX_EVERY = timedelta(minutes=1), timedelta(days=30)
 
@@ -36,18 +37,41 @@ def parse_duration(
     return td
 
 
+def _check_time_of_day(at: object, every: timedelta) -> None:
+    if (
+        not isinstance(at, str)
+        or _TIME_RE.fullmatch(at) is None
+        or int(at[:2]) > 23
+        or int(at[3:]) > 59
+    ):
+        raise ConfigurationError("at must be HH:MM (24 hours)", location="schedule.at")
+    if every % timedelta(days=1):
+        raise ConfigurationError("at needs every in whole days", location="schedule.at")
+
+
 class ScheduleSpec(RedactedContract):
-    """Optional `[schedule]` block in a job file (`every` and bounded `jitter`)."""
+    """Optional `[schedule]` block: `every`, an optional `at` time of day, bounded `jitter`."""
 
     every: StrictStr
+    at: StrictStr | None = Field(
+        default=None,
+        exclude_if=lambda v: v is None,
+        description='Time of day as "HH:MM" in the job timezone; needs every in whole days.',
+    )
     jitter: StrictStr | None = Field(default=None, exclude_if=lambda v: v is None)
 
     @model_validator(mode="wrap")
     @classmethod
     def validate_schedule(cls, data: Any, handler: ModelWrapValidatorHandler[Self]) -> Self:
-        if not isinstance(data, dict) or set(data) - {"every", "jitter"} or not data.get("every"):
+        if (
+            not isinstance(data, dict)
+            or set(data) - {"every", "jitter", "at"}
+            or not data.get("every")
+        ):
             raise ConfigurationError("Invalid [schedule] configuration", location="schedule")
         every_td = parse_duration(data["every"], location="schedule.every")
+        if data.get("at") is not None:
+            _check_time_of_day(data["at"], every_td)
         if data.get("jitter") is not None:
             jitter_td = parse_duration(data["jitter"], location="schedule.jitter", allow_zero=True)
             if jitter_td > every_td / 4:
@@ -88,6 +112,15 @@ def source_every(job: Job, source: JobSource) -> timedelta:
     return job.schedule.every_delta
 
 
+def source_next_due(job: Job, source: JobSource, last_attempt: datetime) -> datetime:
+    """Next due time; a job-level time of day applies when the source has no own interval."""
+    if source.every is None and job.schedule is not None and job.schedule.at is not None:
+        from rastro.domain.schedule_words import next_due_at
+
+        return next_due_at(job.schedule, last_attempt, job.region.timezone)
+    return last_attempt + source_every(job, source)
+
+
 def deterministic_jitter(job_path: str | Path, source_url: str, max_jitter: timedelta) -> timedelta:
     """Deterministic offset in `[0, max_jitter]` seeded from job path and source URL."""
     if max_jitter <= timedelta(0):
@@ -112,7 +145,7 @@ def due_sources(
         s
         for s in job.sources
         if (st := by_url.get(source_evidence_url(job, s))) is None
-        or now >= st.last_attempt + source_every(job, s)
+        or now >= source_next_due(job, s, st.last_attempt)
     )
 
 
@@ -130,7 +163,7 @@ def next_sleep_seconds(
         (
             now
             if (st := by_url.get(u := source_evidence_url(job, s))) is None
-            else st.last_attempt + source_every(job, s)
+            else source_next_due(job, s, st.last_attempt)
         )
         + deterministic_jitter(job_path, u, min(base, source_every(job, s) / 4))
         for s in job.sources

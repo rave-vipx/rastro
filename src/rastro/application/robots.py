@@ -2,15 +2,17 @@
 
 import math
 import re
+from typing import TYPE_CHECKING
 from urllib.parse import urlsplit
 
-from protego import Protego
+if TYPE_CHECKING:
+    from protego import Protego
 
 from rastro.domain.acquisition import AcquisitionError, HttpResponse
 from rastro.domain.models import Outcome
 
 
-def parse_robots(body: bytes) -> Protego:
+def parse_robots(body: bytes) -> "Protego":
     try:
         text = body.decode("utf-8-sig", errors="strict")
     except UnicodeError:
@@ -56,12 +58,14 @@ def parse_robots(body: bytes) -> Protego:
             # Time-window scheduling is outside this milestone; never ignore a restriction.
             raise AcquisitionError("unsupported_robots_rule", Outcome.ACCESS_RESTRICTION)
     try:
+        from protego import Protego  # optional: the http extra
+
         return Protego.parse(text)
     except ValueError:
         raise AcquisitionError("invalid_robots", Outcome.ACCESS_RESTRICTION) from None
 
 
-def parse_robots_response(response: HttpResponse) -> tuple[Protego, float]:
+def parse_robots_response(response: HttpResponse) -> tuple["Protego", float]:
     """Validate a 200 robots.txt response and return its parsed rules and min interval."""
     if "html" in response.headers.get("content-type", "").lower():
         raise AcquisitionError("invalid_robots", Outcome.ACCESS_RESTRICTION)

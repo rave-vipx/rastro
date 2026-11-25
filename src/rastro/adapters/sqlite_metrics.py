@@ -1,4 +1,4 @@
-"""``run_metrics`` rows of the SQLite dataset (OBS-003); counts and timings only."""
+"""``run_metrics`` rows of the SQLite dataset; counts and timings only."""
 
 from __future__ import annotations
 
@@ -55,7 +55,7 @@ class SQLiteMetricsMixin:
         with connection(self._path, self._limits) as db:
             if not has_metrics(db):
                 return ()
-            # A schema 3 file is read as is: its rows lack the schema 4 columns (N5).
+            # A schema 3 file is read as is: its rows lack the schema 4 columns.
             present = metric_columns(db)
             chosen = ", ".join(name if name in present else "NULL" for name in NAMES)
             cursor = db.execute(

@@ -1,13 +1,19 @@
 # Reproducible extraction comparison
 
-The [v0.2 product-task comparison](comparison-v02.md) measures loading two sources,
-adding a third, and scripted repair to a SQLite database (DIFF-002).
+The [product-task benchmark](comparison-v02.md) measures loading two sources,
+adding a third, and scripted repair to a SQLite database.
 
-These experiments support **DIFF-001**, **QUAL-003**, **REC-001**, **OBS-001** and
-specification sections 05 and 17–18. They compare Rastro with an independent
+!!! note "Historical measurements"
+    The numbers on this page were recorded on Rastro 0.1.0 (and a development
+    build before it). They document the method and the baseline comparison at that
+    time; re-run the commands on this page to refresh them. Repair, drift
+    detection and monitoring shipped in later releases and are covered by the
+    [AI repair evidence](ai-evidence.md) and the [repair suite](repair.md).
+
+These experiments cover differentiation, recipe reuse and evidence. They compare Rastro with an independent
 Scrapling + Pydantic baseline written for this repository.
 
-**DIFF-001 status: partially demonstrated.** On the [held-out evaluation](#held-out-evaluation)
+**Status: partially demonstrated.** On the [held-out evaluation](#held-out-evaluation)
 below, Rastro needed the same source-specific configuration as the adapted
 baseline required by section 17 (10 versus 10 entries). The adapted baseline needs
 33 more lines of one-time adapter code; versus hand-written per-source mappings
@@ -17,7 +23,7 @@ SQLite memory made 0.017 calls per successful record and Rastro without memory m
 0.167. The baseline makes no model calls. Rastro showed **no** advantage in silent
 error detection or extraction accuracy. Every executor had 3 silent errors in 24
 mutations. Rastro was slower on every page. The
-[first regression result](#first-recorded-result) shows no advantage either. DIFF-001
+[first regression result](#first-recorded-result) shows no advantage either. The differentiation claim
 remains open for accuracy, silent error detection, maintenance and recovery.
 
 ## Same task, side by side
@@ -105,9 +111,9 @@ uv run python -m benchmarks.run --repetitions 50 --warmup 5 --output report.json
 
 The comparison is offline, needs no browser/model, and adds no runtime dependency.
 The source distribution includes it; the runtime wheel does not.
-[Raw report](https://github.com/rave-vipx/rastro/blob/dev/benchmarks/results/offline.json),
-[corpus](https://github.com/rave-vipx/rastro/blob/dev/benchmarks/corpus.json),
-and [baseline](https://github.com/rave-vipx/rastro/blob/dev/benchmarks/baseline.py)
+[Raw report](https://github.com/rave-vipx/rastro/blob/main/benchmarks/results/offline.json),
+[corpus](https://github.com/rave-vipx/rastro/blob/main/benchmarks/corpus.json),
+and [baseline](https://github.com/rave-vipx/rastro/blob/main/benchmarks/baseline.py)
 are versioned with the implementation. Use the files in the same checkout when
 reviewing an unmerged branch. The raw report records the parent Git revision,
 dirty status, and SHA-256 hashes of the exact benchmark/runtime sources and lock.
@@ -207,8 +213,7 @@ cannot represent website latency. This fixed corpus is a small regression set,
 not a representative independent test set or an adversarial-input evaluation.
 
 The [held-out evaluation](#held-out-evaluation) below adds held-out sources and
-mutations. See the [release evidence register](release-evidence.md) and
-[ADR 0005](decisions/0005-reproducible-release-evidence.md).
+mutations. See [ADR 0005](decisions/0005-reproducible-release-evidence.md).
 
 ### Re-run after the baseline refactor
 
@@ -222,7 +227,7 @@ Rastro 0.242–0.411 ms and 11.870 ms.
 
 ## Held-out evaluation
 
-This second experiment targets the DIFF-001 dimensions where Rastro's integration
+This second experiment targets the dimensions where Rastro's integration
 could plausibly matter. The 14-case regression corpus does not cover them. It was
 added after that corpus and **no engine code changed for it**. The engine is under
 `src/rastro`, which this change does not touch.
@@ -240,10 +245,10 @@ produced by the same command with that path as `--output`; overwrite it only whe
 deliberately regenerating the recorded result.
 
 The run is offline and deterministic except for latency, and needs no model or browser.
-Inputs: [corpus](https://github.com/rave-vipx/rastro/blob/dev/benchmarks/heldout.json),
-[runner and scorer](https://github.com/rave-vipx/rastro/blob/dev/benchmarks/heldout.py),
-[baseline](https://github.com/rave-vipx/rastro/blob/dev/benchmarks/baseline.py),
-[raw report](https://github.com/rave-vipx/rastro/blob/dev/benchmarks/results/heldout.json).
+Inputs: [corpus](https://github.com/rave-vipx/rastro/blob/main/benchmarks/heldout.json),
+[runner and scorer](https://github.com/rave-vipx/rastro/blob/main/benchmarks/heldout.py),
+[baseline](https://github.com/rave-vipx/rastro/blob/main/benchmarks/baseline.py),
+[raw report](https://github.com/rave-vipx/rastro/blob/main/benchmarks/results/heldout.json).
 
 ### Dataset
 
@@ -279,7 +284,7 @@ All executors receive the same pages and Pydantic model; only the scorer sees or
 | --- | --- | --- |
 | `baseline` | Hand-written Scrapling mappings for each source (JSON pointers or CSS) | Re-runs those mappings |
 | `baseline_adapted` | Structured sources: none. A one-time `structured_mappings` adapter maps schema.org JSON-LD (top level, `offers` object, or a one-element `offers` list) and microdata. CSS sources: the same mappings as `baseline` | Re-runs the adapter on every page |
-| `rastro_memory` | Structured sources: none (`discover_recipes=True`). CSS sources: one explicit recipe identical to the baseline mapping | Reuses the recipe stored in SQLite on the original page. In v0.1, a failing stored recipe does not trigger rediscovery |
+| `rastro_memory` | Structured sources: none (`discover_recipes=True`). CSS sources: one explicit recipe identical to the baseline mapping | Reuses the recipe stored in SQLite on the original page. In this experiment, a failing stored recipe does not trigger rediscovery |
 | `rastro_rediscover` | As above, without a repository | Discovers again on every page |
 
 The baseline rejects ambiguous and missing fields, validates every record, and
@@ -303,8 +308,8 @@ on every original page before the mutation run, and the runner checks this.
 - **Model calls:** a deterministic `ScriptedModel` replays the developer's own CSS
   selectors. A second script returns one invalid proposal first. Each run creates
   a new engine instance (a simulated restart) over the same SQLite file. These numbers
-  measure call accounting, **not model quality**. Live models are covered in the
-  [live Ollama evidence](live-ollama-evidence.md).
+  measure call accounting, **not model quality**. Live model results are in
+  `benchmarks/results/live-ollama.json` and on the [AI repair evidence](ai-evidence.md) page.
 - **Visibility:** a checklist observed from real results and captured log events.
   It is not a score.
 - **Latency:** as in the first experiment: alternating order, 3 warmups and 30 samples
@@ -315,9 +320,8 @@ on every original page before the mutation run, and the runner checks this.
 Recorded on 2026-10-30 UTC from commit `20ad721`, which includes the PR #17 and #18 engine
 changes: Python 3.12.16, Darwin 25.6.0,
 arm64; Rastro 0.1.0.dev0, Scrapling 0.5, Pydantic 2.14.1, lxml
-6.1.3. `git_dirty` is true only because of untracked, unrelated `node_modules/` and
-`package.json` files in the worktree. The source hashes in the report identify the
-measured code.
+6.1.3. `git_dirty` is true only because of untracked, unrelated files in the working
+tree. The source hashes in the report identify the measured code.
 
 **1. Integration effort (source-specific configuration, all five sources)**
 
@@ -446,16 +450,16 @@ is small next to network acquisition, which was not measured here.
   rate limiting, real model, repair, or developer-time study.
 - Configuration counts favor schemas named after schema.org vocabulary. A different
   naming convention makes Rastro's discovery count equal to `baseline` (25 entries)
-  unless aliases are added. Aliases are unsupported in v0.1.
+  unless aliases are added. Aliases were unsupported when this was measured.
 - Silent errors that a schema cannot distinguish (duplicates, reassigned classes)
-  need historical or semantic checks (QUAL-005, v0.2). Neither engine has them.
-- Recovery after a mutation (repair) is out of v0.1 scope and was not measured. A
-  stored recipe that fails is reported, never replaced automatically.
+  need historical or semantic checks. Neither engine had them in this experiment.
+- Recovery after a mutation (repair) was out of scope for this experiment and was not
+  measured here. A stored recipe that fails is reported, never replaced automatically.
 
 ## Latency profile
 
-This profile explains the slowdown above for **DIFF-001** and follows principle
-**P-010** (measure before optimizing). An initial baseline profile (commit `e70a642`)
+This profile explains the slowdown above and follows principle
+**(measure before optimizing). An initial baseline profile (commit `e70a642`)
 attributed cost before any engine change; the top two candidates were then implemented
 and re-profiled into `benchmarks/results/latency-profile.json`.
 
@@ -472,8 +476,8 @@ Three corpus cases stand in for the workload: `static` (small CSS page), `metada
 compared above, reconstructed per call, with Rastro completion logging disabled.
 `cProfile` wraps 30 calls per executor after 5 warmups; the same 30 calls are also
 timed without the profiler, so every row carries a profiled per-call total and an
-unprofiled median. [Raw report](https://github.com/rave-vipx/rastro/blob/dev/benchmarks/results/latency-profile.json),
-[profiler](https://github.com/rave-vipx/rastro/blob/dev/benchmarks/profile_latency.py).
+unprofiled median. [Raw report](https://github.com/rave-vipx/rastro/blob/main/benchmarks/results/latency-profile.json),
+[profiler](https://github.com/rave-vipx/rastro/blob/main/benchmarks/profile_latency.py).
 
 ### Cost per call
 

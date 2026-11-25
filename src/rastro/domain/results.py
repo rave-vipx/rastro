@@ -9,6 +9,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from rastro.domain.recipes import Recipe
+from rastro.domain.source_notes import SourceNotes
 from rastro.domain.sources import EGRESS_NAME, Contract
 from rastro.domain.spider_report import SpiderReport
 
@@ -65,7 +66,7 @@ class Metrics(Contract):
     storage_seconds: float = 0
     acquisition_method: Literal["provided_html", "provided_json", "http"] = "provided_html"
     egress: str = Field(default="direct", pattern=EGRESS_NAME)
-    # Only present when the operator disabled robots.txt for a host of this source (SEC-003).
+    # Only present when the operator disabled robots.txt for a host of this source.
     robots_overridden: bool = Field(default=False, exclude_if=lambda value: value is False)
     acquisition_seconds: float = 0
     network_seconds: float = 0
@@ -113,7 +114,9 @@ class SelfRepair(Contract):
     promoted_version: int | None = None
     candidates: tuple[RepairProposal, ...] = ()
     # With a model: where the candidates came from, and the model calls repair made.
-    origin: Literal["relocation", "model"] | None = Field(default=None, exclude_if=_absent)
+    origin: Literal["relocation", "adaptive", "model"] | None = Field(
+        default=None, exclude_if=_absent
+    )
     model_calls: int = Field(default=0, ge=0, exclude_if=lambda v: not v)
 
 
@@ -136,10 +139,11 @@ class ExtractionResult[T: BaseModel](Contract):
             "spider_page_limit",
             "spider_budget",
             "spider_page_failed",
+            "spider_time_budget",
         ]
         | None
     ) = Field(default=None, exclude_if=_absent)
-    # Present only for a spider run: every discovered URL and its outcome (N3).
+    # Present only for a spider run: every discovered URL and its outcome.
     spider: SpiderReport | None = Field(default=None, exclude_if=_absent)
     learned_recipe: Recipe | None = None
     recipe_version: int | None = None
@@ -161,6 +165,8 @@ class ExtractionResult[T: BaseModel](Contract):
     metrics: Metrics
     # Results without a repair serialize byte-for-byte as they did before the field.
     repair: SelfRepair | None = Field(default=None, exclude_if=_absent)
+    # Names and counts about how this source was fetched and crawled; absent when unused.
+    notes: SourceNotes | None = Field(default=None, exclude_if=_absent)
 
     @property
     def items(self) -> list[T]:

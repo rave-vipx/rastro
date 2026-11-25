@@ -2,11 +2,76 @@
 
 A recipe is data, so it can travel in a plain Git repository. A bundle lets one
 person publish a working recipe and another application use it without the author's
-help (HUB-001..HUB-006; master spec section 09). Phase 1 ships local export and
-import (`rastro recipe export`/`import`); Phase 2 adds package metadata, reproducible
-trust indicators, and a Git-directory community registry (`publish`, `search`,
-`install`). Rastro reads and writes local directories; it never runs `git` and never
-makes network requests for a registry.
+help. Export and import (`rastro recipe export`/`import`) work
+on local directories, and a registry adds package metadata, reproducible trust
+indicators and `publish`, `search` and `install`. A registry is a local directory
+or any HTTPS URL that serves the same layout. Rastro never runs `git`; it makes
+network requests for a registry only when you pass `--registry-url`, under the same
+network safeguards as a scrape.
+
+## The shared hub (`rastro hub`)
+
+The hub is a registry shared between users: a static Git repository with the registry
+layout below, served raw over HTTPS. Rastro points at the public hub by default
+(`https://raw.githubusercontent.com/rave-vipx/rastro/main/hub/`, the constant
+`rastro.application.registry_url.DEFAULT_HUB_URL`); `--registry-url URL` points at a
+self-hosted hub with the same layout and `--registry DIR` at a local checkout. There are no
+accounts, no Rastro-operated server and no telemetry.
+
+### Find a recipe for a URL
+
+```console
+$ rastro hub search https://listing.example/cards/page-2
+{"schema_version": 1, "candidates": [{"id": "synthetic-listing", "version": "1.0.0", "state": "candidate", "card": {...}, "health": {...}, ...}]}
+```
+
+Search matches the URL's domain (`host[:port]`, case-insensitive; the path is ignored, a
+subdomain is a different domain) against each package's `source_patterns` and offers the newest
+version of at most five packages. An offer is only a `candidate`: search never writes to a
+recipe store. The SDK equivalent is `rastro.hub_candidates(url)`, and
+`rastro.application.hub_search.install_candidate(offer, repository, parser_for, at=...)`
+installs the offered version. Studio searches the hub when you enter a URL; `rastro new`
+does not contact the registry, so run `rastro hub search URL` first if you want an offer.
+
+`rastro hub install ID[@VERSION] --store recipes.sqlite` runs exactly the gates of
+`rastro recipe install` (digests, selector policy, offline replay, index match, compatibility)
+and stores a `candidate`. Nothing serves until `rastro recipe promote` passes the candidate gate
+on your own page. A failed gate leaves the store unchanged.
+
+### Publish in one step
+
+```console
+$ rastro hub publish job.toml --source 1 --sample synthetic-page.html --registry ./hub \
+    --id listing-cards --version 1.0.0 --author "Your Name" --license Apache-2.0 \
+    --describe title="The card's headline" --describe price_text="Price as printed"
+```
+
+`publish` takes the job's serving recipe and writes, into the local checkout, the verified
+bundle, the sample you chose, and `card.json` with a description of every top-level field and
+the recipe's engine needs (representation, render mode and capabilities such as page actions or
+stealth). Every field must be described, and nothing else; descriptions are one line of 1-500
+printable characters. All gates of `export` and `publish` below apply, including the secret
+and personal-data scan, which also covers `card.json`. The sample must be synthetic or yours to
+redistribute: Rastro never copies a page on its own. Publish never uses the network; it prints
+the `git` commands to commit, push and open a pull request against the hub.
+The hub lives in the `hub/` folder of the Rastro repository (see `hub/README.md`): run
+`python hub/build.py` to refresh its summaries and open a pull request that only touches `hub/`.
+
+### Cards and health
+
+Two optional files sit beside the registry layout. Both are untrusted, size-bounded and
+validated strictly; an invalid one stops the search with `RegistryError` rather than being
+ignored.
+
+| File | Written by | Content |
+| --- | --- | --- |
+| `recipes/<id>/<version>/card.json` | `rastro hub publish` | `format` (`1`), `fields` (`name`, `description`), `engine_needs` (`representation`, `render`, `capabilities`). At most 64 KiB. |
+| `health.json` | the hub's CI | `format` (`1`) and `packages`: `id`, `version`, `last_verified` (date), `rastro_version`, `passed`. Read-only in Rastro. |
+
+The engine needs in a card are informative: an install grants nothing, and a recipe that
+needs a capability is still refused unless the operator granted it for registry input. Health
+says when the hub last re-ran a package's replay and with which Rastro version; your install
+recomputes trust itself.
 
 ## Bundle layout (format 2)
 
@@ -28,7 +93,7 @@ Format 1 bundles (without package metadata) remain supported on import. Unknown
 
 ```console
 $ rastro recipe export job.toml --source 1 --sample page.html --to ./my-recipe \
-    --id uy-sodre-agenda --version 1.0.0 --author "Rastro Contributors" \
+    --id teatro-central-agenda --version 1.0.0 --author "Rastro Contributors" \
     --license Apache-2.0 --public
 ```
 
@@ -38,7 +103,7 @@ the right to redistribute it (use a synthetic or trimmed page). Export refuses t
 write anything unless the recipe extracts the sample cleanly, and refuses source URLs
 with a query string or fragment.
 
-By default, exported bundles have `"visibility": "private"` (HUB-004). Pass `--public`
+By default, exported bundles have `"visibility": "private"`. Pass `--public`
 together with `--id` (`^[a-z0-9][a-z0-9-]{1,63}$`), `--version` (`MAJOR.MINOR.PATCH`),
 `--author` (and optional `--author-url`), and `--license` (SPDX identifier) when
 preparing a package for a shared registry.
@@ -81,10 +146,10 @@ $ rastro recipe publish ./my-recipe --registry ./registry
 
 `publish` enforces four gates before writing to `<registry>`:
 
-1. **Public visibility (HUB-004):** private bundles are refused with a hint to re-export using `--public`.
-2. **Offline verification (HUB-003):** file digests, untrusted-selector policy, and sample replay must pass.
+1. **Public visibility:** private bundles are refused with a hint to re-export using `--public`.
+2. **Offline verification:** file digests, untrusted-selector policy, and sample replay must pass.
 3. **Immutability:** an existing `<id>@<version>` in the registry is never overwritten.
-4. **Secret scanning (HUB-004):** every bundle file is scanned with the Mock Lab secret and personal-data detectors (`src/rastro/mocklab/detectors.py`); any hit is refused naming only the file and detector category, never echoing the matched value.
+4. **Secret scanning:** every bundle file is scanned with the Mock Lab secret and personal-data detectors (`src/rastro/mocklab/detectors.py`); any hit is refused naming only the file and detector category, never echoing the matched value.
 
 When all checks pass, Rastro writes `<registry>/recipes/<id>/<version>/`, updates
 `<registry>/index.json` atomically, and prints the `git` commands you may run to commit
@@ -96,9 +161,9 @@ publish created (and nothing else), leaves `index.json` as it was, and exits wit
 ### Search and install
 
 ```console
-$ rastro recipe search sodre --registry ./examples/registry
-$ rastro recipe install uy-sodre-agenda --registry ./examples/registry --store recipes.sqlite
-$ rastro recipe install uy-sodre-agenda@1.0.0 --registry ./examples/registry --store recipes.sqlite
+$ rastro recipe search teatro --registry ./examples/registry
+$ rastro recipe install teatro-central-agenda --registry ./examples/registry --store recipes.sqlite
+$ rastro recipe install teatro-central-agenda@1.0.0 --registry ./examples/registry --store recipes.sqlite
 ```
 
 `search` matches the query against `id` and `source_patterns`. `install` selects the
@@ -108,7 +173,7 @@ recipe as a `candidate`. A package that declares `compatibility` is also checked
 against this install: it is refused (`RegistryError`, store unchanged) when the running
 `rastro-engine` version is below its `min_rastro`, or when the bundle's source URL does
 not match any of its `source_patterns` (a host such as `example.com`, or a
-`host/path-prefix` that matches whole path segments; the port must match when given). Imported packages never execute code (HUB-005): only JSON,
+`host/path-prefix` that matches whole path segments; the port must match when given). Imported packages never execute code: only JSON,
 HTML, and declarative selector data are read.
 
 ### Install from a registry URL
@@ -120,8 +185,8 @@ account system and no Rastro-operated server. Install the `http` extra first
 (`pip install 'rastro-engine[http]'`).
 
 ```console
-$ rastro recipe search sodre --registry-url https://registry.example.org/catalog/
-$ rastro recipe install uy-sodre-agenda --registry-url https://registry.example.org/catalog/ --store recipes.sqlite
+$ rastro recipe search teatro --registry-url https://registry.example.org/catalog/
+$ rastro recipe install teatro-central-agenda --registry-url https://registry.example.org/catalog/ --store recipes.sqlite
 ```
 
 `--registry-url` replaces `--registry`; give one of them, not both. The SDK equivalents are
@@ -143,7 +208,7 @@ unchanged. Error messages carry a short category such as `destination_denied` or
 `body_too_large`, never the URL query or a response body. A missing `index.json` is an error,
 not an empty registry.
 
-### Trust indicators (HUB-006)
+### Trust indicators
 
 Trust indicators are computed from offline verification, never self-declared:
 
@@ -161,7 +226,7 @@ A consumer job needs `recipe_memory`, a `[dataset]` and no recipe of its own for
 source. Import or install the bundle into the job's store, promote the candidate, then load:
 
 ```console
-$ rastro recipe install uy-sodre-agenda --registry ./examples/registry --store recipes.sqlite
+$ rastro recipe install teatro-central-agenda --registry ./examples/registry --store recipes.sqlite
 $ rastro recipe promote job.toml --source 1 --version 1 --reason "Reviewed shared recipe"
 $ rastro job load job.toml
 ```
@@ -195,7 +260,7 @@ proposals. Recipes you write in your own job file are not checked.
 Metadata files are capped at 1 MiB and the sample at the job's input limit. The
 JSON Schema in `schema.json` is not used for verification; the field definitions are.
 
-## Synthetic examples (N6)
+## Synthetic examples
 
 The [example registry](https://github.com/rave-vipx/rastro/tree/main/examples/registry)
 contains `synthetic-listing`, `synthetic-news` and `synthetic-product`, plus the
@@ -213,28 +278,19 @@ these example jobs explicitly choose a file source so the tutorial works offline
 Keep source URL, regional context and field definitions aligned with the bundle
 when adopting it. Installs cannot modify your job's auto-promote policy or grant stealth.
 
-## Host a static registry (N10)
+## Host a static registry
 
 Serve the unchanged registry directory over HTTPS: `index.json` and
 `recipes/<id>/<version>/` with the exact exported bytes. No account system or
 Rastro-operated service is needed. Publishing remains a local write; commit/push
-or upload the directory yourself after reviewing it.
+or upload the directory yourself after reviewing it, then point
+`--registry-url` at it (see [Install from a registry URL](#install-from-a-registry-url)).
+Studio's registry section accepts the same `https://` address; without the `http`
+extra it answers `503 registry_url_unavailable_install_http_extra` and local registry
+directories keep working.
 
-**Pending in this branch:** the registry fetcher and CLI integration must land
-before these commands work; this checkout's help exposes only `--registry`. Until
-then Studio's registry section answers an `https://` address with
-`503 registry_url_unavailable_install_http_extra`; local registry directories work:
-
-```sh
-# Planned N10 flags; replace this reserved example host with your static host.
-rastro recipe search synthetic --registry-url https://registry.example/catalogue/
-rastro recipe install synthetic-listing@1.0.0 \
-  --registry-url https://registry.example/catalogue/ --store recipes.sqlite
-```
-
-The URL path must retain the same local-layout verification gates: HTTPS only,
-public-address/SSRF checks and redirect re-checks, byte limits, digests, selector
+The URL path keeps the same verification gates as a local registry: HTTPS only,
+public-address checks and redirect re-checks, byte limits, digests, selector
 policy and offline replay before candidate storage. A URL, bundle or model cannot
-grant private-network access or enable stealth. Until integration is verified,
-clone the registry and use `--registry` locally. There is no executable recipe
-format, unbounded crawl or multi-tenant hosted registry in this cut.
+grant private-network access or enable stealth. There is no executable recipe
+format and no multi-tenant hosted registry.

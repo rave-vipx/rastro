@@ -2,7 +2,7 @@
 
 A candidate recipe is re-run with every field as optional text; a field is blamed only when
 its raw page value reproduces the example yet fails validation with the caller's schema.
-Messages describe the page text by length and shape, never by content (INT-002, INT-003).
+Messages describe the page text by length and shape, never by content.
 """
 
 from __future__ import annotations

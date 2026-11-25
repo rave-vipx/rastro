@@ -1,4 +1,4 @@
-"""One acquisition port per load keeps host pacing across sources (SCHED-004, SEC-008)."""
+"""One acquisition port per load keeps host pacing across sources."""
 
 from __future__ import annotations
 
@@ -72,7 +72,7 @@ identity = ["title"]
             job.acquisition, transport=transport, resolver=Resolver(), conditional=conditional
         )
 
-    monkeypatch.setattr("rastro.application.job_dataset._web_acquirer", one_acquirer)
+    monkeypatch.setattr("rastro.application.job_dataset.job_web_acquirer", one_acquirer)
     loaded = load_job_file(job_file)
     assert [s.status.value for s in loaded.sources] == ["success", "success"]
     assert len(built) == 1

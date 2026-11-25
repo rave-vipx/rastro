@@ -1,7 +1,7 @@
 # Repair suite
 
-Measures automatic recipe repair on breakage modeled on three Uruguayan source shapes
-(REPAIR-001–005, DIFF-002 repair metric). It is not the recovery benchmark and does not touch
+Measures automatic recipe repair on breakage modeled on three synthetic source shapes
+(repair metric). It is not the recovery benchmark and does not touch
 `benchmarks/recovery/`. Pages are synthetic copies of the structures, not captured content.
 
 ## Method
@@ -24,9 +24,9 @@ point (`rastro.cli.main`):
 
 ## Cases
 
-* `cases/sodre`: 6 venue cards (`.item .cyg--info.espectaculo`).
-* `cases/tickantel`: JSON-LD array of 3 `Event`s with `offers.validFrom` (the sale-date trap).
-* `cases/zitarrosa`: `main > ul > li.evento`, 5 items.
+* `cases/venue-cards`: 6 venue cards (`.item .cyg--info.espectaculo`).
+* `cases/jsonld-events`: JSON-LD array of 3 `Event`s with `offers.validFrom` (the sale-date trap).
+* `cases/list-events`: `main > ul > li.evento`, 5 items.
 * Each has `job.toml` (with `[repair]` and `[[consistency]]`), `page.html`, `expected.json`.
 * `mutations.py` defines the named transforms: structural (should be repaired) and traps
   (must not be promoted wrongly). A mutation can turn out harmless for a page's selectors;
@@ -36,12 +36,12 @@ point (`rastro.cli.main`):
 
 ```sh
 UV_PYTHON=/opt/homebrew/bin/python3.12 uv run python benchmarks/repair_suite/measure.py
-# one case: --case sodre:field_class_rename
+# one case: --case venue-cards:field_class_rename
 ```
 
 It prints one row per case and writes `results.json`; the numbers there are the only claim.
 
-## After B3 (QUAL-005/006, SYNC-006)
+## Consistency gates
 
 Job loads now gate snapshots on the job's declared consistency rules. The suite jobs
 also declare `distinct_ratio` on `title` (minimum ratio 0.5 over at least 3 records):
@@ -60,10 +60,10 @@ these agendas expect varied titles. This is a user-declared rule, not an engine 
 | held | 6 |
 
 This table is generated from the current `results.json` run. All six date/title traps,
-including SODRE's `h2.cyg--display-3` venue trap, are held; no trap is promoted wrongly.
+including the venue cards’ `h2.cyg--display-3` venue trap, are held; no trap is promoted wrongly.
 This measures detection, not recovery of those recipes.
 
 The load gate compares every source against the same history captured before any source
-is written (QUAL-005). Held runs retain earlier rows and cannot become successful drift
-baselines (SYNC-006, DRIFT-001). Partial loads include rejected candidates in their
-structural-validity denominator (QUAL-006).
+is written. Held runs retain earlier rows and cannot become successful drift
+baselines. Partial loads include rejected candidates in their
+structural-validity denominator.

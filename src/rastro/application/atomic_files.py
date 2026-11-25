@@ -1,4 +1,4 @@
-"""Same-directory atomic file replacement that never follows symlinks (SEC-008)."""
+"""Same-directory atomic file replacement that never follows symlinks."""
 
 from __future__ import annotations
 

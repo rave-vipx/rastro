@@ -2,7 +2,7 @@
 
 The dataset is a separate SQLite file containing approved extracted fields and
 provenance. Recipe memory continues to store extraction instructions. This API
-implements DATA-001/003/004/005 and SYNC-002/003/005/006/008.
+implements the dataset store.
 The CLI loads a declarative job without Python.
 
 ```python
@@ -76,7 +76,7 @@ content or credentials. `source_status()` returns a tuple ordered by URL with
 source, an optional content-free `detail` (`robots_denied`, `http_403`, `http_429`,
 `timeout` or the issue code). Staleness reflects
 the last attempt, not elapsed wall-clock time. Missing records are retained;
-there is no deletion or retention operation in v0.2.
+there is no deletion or retention operation.
 
 `records()` returns a tuple of `StoredRecord` objects. Each keeps `key`, `fields`,
 `provenance`, `source_url`, `observed_at`, `first_observed_at`, `last_observed_at`,
@@ -174,15 +174,15 @@ Requires uv, SQLite's CLI and jq. From the repository root:
 ```sh
 DEMO=$(mktemp -d)
 DEMO=$(cd "$DEMO" && pwd -P)
-cp -R examples/uy-dance-agenda/sample "$DEMO/agenda"
+cp -R examples/event-agenda/sample "$DEMO/agenda"
 uv run rastro job validate "$DEMO/agenda/job.toml" | jq -c '{valid, source_count}'
 uv run rastro job preview "$DEMO/agenda/job.toml" --output json | jq -c '{written, status: .job.status, accepted: .job.records_accepted}'
 uv run rastro job load "$DEMO/agenda/job.toml" | jq -c '{counts: [.sources[].counts], stale_sources}'
 uv run rastro job load "$DEMO/agenda/job.toml" | jq -c '{counts: [.sources[].counts], stale_sources}'
 cp "$DEMO/agenda/v2/"*.html "$DEMO/agenda/"
 uv run rastro job load "$DEMO/agenda/job.toml" | jq -c '{counts: [.sources[].counts], stale_sources}'
-sqlite3 "$DEMO/agenda/agenda.sqlite" < examples/uy-dance-agenda/queries/upcoming.sql
-printf '<html>Source unavailable</html>\n' > "$DEMO/agenda/tickantel-evento.html"
+sqlite3 "$DEMO/agenda/agenda.sqlite" < examples/event-agenda/queries/upcoming.sql
+printf '<html>Source unavailable</html>\n' > "$DEMO/agenda/tickets-event.html"
 # The mixed run intentionally returns exit 3; jq prints its stale-origin report.
 uv run rastro job load "$DEMO/agenda/job.toml" | jq -c '{status: .job.status, stale_sources: [.stale_sources[] | {source_url, last_success, affected_records: (.affected_keys | length)}]}'
 uv run rastro dataset status "$DEMO/agenda/agenda.sqlite" | jq -c '{data_trust, stale: [.stale_sources[] | {source_url, last_success, affected_records: (.affected_keys | length)}]}'
@@ -198,14 +198,14 @@ Observed stdout (2026-11-07; observation times vary on later runs):
 {"counts":[{"created":4,"updated":0,"unchanged":0,"missing":0,"uncertain":0},{"created":2,"updated":0,"unchanged":1,"missing":0,"uncertain":0}],"stale_sources":[]}
 {"counts":[{"created":0,"updated":0,"unchanged":4,"missing":0,"uncertain":0},{"created":0,"updated":0,"unchanged":3,"missing":0,"uncertain":0}],"stale_sources":[]}
 {"counts":[{"created":0,"updated":1,"unchanged":3,"missing":0,"uncertain":0},{"created":0,"updated":1,"unchanged":2,"missing":0,"uncertain":0}],"stale_sources":[]}
-2026-11-20T20:30:00-03:00|Candombe de Invierno|Auditorio Nelly Goitiño|2026-11-07T20:35:08.627915Z
-2026-11-21T20:30:00-03:00|Candombe de Invierno|Auditorio Nelly Goitiño|2026-11-07T20:35:08.627296Z
-2026-11-26T20:00:00-03:00|Gala Anual 2026: Área Tango y Milonga|Auditorio Nelly Goitiño|2026-11-07T20:35:08.627915Z
-2026-11-26T20:00:00-03:00|Gala Anual 26: Tango y Milonga|Auditorio Nelly Goitiño|2026-11-07T20:35:08.627296Z
+2026-11-20T20:30:00-03:00|Candombe de Invierno|Auditorio Horizonte|2026-11-07T20:35:08.627915Z
+2026-11-21T20:30:00-03:00|Candombe de Invierno|Auditorio Horizonte|2026-11-07T20:35:08.627296Z
+2026-11-26T20:00:00-03:00|Gala Anual 2026: Área Tango y Milonga|Auditorio Horizonte|2026-11-07T20:35:08.627915Z
+2026-11-26T20:00:00-03:00|Gala Anual 26: Tango y Milonga|Auditorio Horizonte|2026-11-07T20:35:08.627296Z
 2026-11-28T21:00:00-03:00|Suite del Río de la Plata|Auditorio Nacional Adela Reta|2026-11-07T20:35:08.627296Z
 2026-11-28T21:00:00-03:00|Suite del Río de la Plata|Auditorio Nacional Adela Reta|2026-11-07T20:35:08.627915Z
-{"status":"partial_success","stale_sources":[{"source_url":"https://tickantel.com.uy/ng/espectaculo/9900102/gala-anual-2026-area-tango-y-milonga","last_success":"2026-11-07T20:35:08.627915Z","affected_records":3}]}
-{"data_trust":"untrusted_source_data","stale":[{"source_url":"https://tickantel.com.uy/ng/espectaculo/9900102/gala-anual-2026-area-tango-y-milonga","last_success":"2026-11-07T20:35:08.627915Z","affected_records":3}]}
+{"status":"partial_success","stale_sources":[{"source_url":"https://tickets.example/event/9900102/annual-gala-tango-and-milonga","last_success":"2026-11-07T20:35:08.627915Z","affected_records":3}]}
+{"data_trust":"untrusted_source_data","stale":[{"source_url":"https://tickets.example/event/9900102/annual-gala-tango-and-milonga","last_success":"2026-11-07T20:35:08.627915Z","affected_records":3}]}
        6
 
 ```

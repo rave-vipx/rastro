@@ -2,8 +2,8 @@
 
 `rastro.mocklab.mutations` changes the structure of an HTML or JSON document in controlled,
 reproducible ways, so you can check offline which layout or API drift a recipe survives
-(MOCK-002, MOCK-006). Mutated documents carry the Mock Lab synthetic label from
-[ADR 0014](decisions/0014-mock-lab.md) (MOCK-004).
+. Mutated documents carry the Mock Lab synthetic label from
+[ADR 0014](decisions/0014-mock-lab.md).
 
 ## Apply a plan
 
@@ -36,7 +36,7 @@ required price disappear, and the result becomes `invalid_data`.
 
 ## Operators
 
-Each MOCK-002 category has one HTML and one JSON operator. Every operator is a typed, frozen
+Each mutation category has one HTML and one JSON operator. Every operator is a typed, frozen
 Pydantic model, identified by its `operator` name.
 
 | Category | HTML | JSON |

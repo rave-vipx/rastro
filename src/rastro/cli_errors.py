@@ -1,4 +1,4 @@
-"""Machine-readable `rastro job` error objects (AGENT-001, AGENT-003).
+"""Machine-readable `rastro job` error objects.
 
 Every job configuration or usage failure becomes one JSON object on stderr:
 ``{"error": <stable code>, "message": <safe text>, "location": <field path or null>}``,
@@ -85,6 +85,7 @@ def classify(error: BaseException) -> dict[str, Any]:
         location = error.location
     elif isinstance(error, RastroError):
         message, location = str(error) or message, error.location
+        code = getattr(error, "error_code", code)  # such as capability_refused
     elif isinstance(error, OSError):
         code, message = "file_error", f"File could not be read: {error.strerror or 'I/O error'}"
     elif isinstance(error, ValueError):

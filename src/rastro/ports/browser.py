@@ -1,5 +1,6 @@
 """Optional rendered-document capability, independent of browser libraries."""
 
+from collections.abc import Mapping, Sequence
 from contextlib import AbstractAsyncContextManager
 from typing import Protocol, runtime_checkable
 
@@ -31,6 +32,15 @@ class BrowserSession(Protocol):
     ) -> AcquisitionResult:
         """Scroll the current page once, wait at most ``settle_ms``, return its document."""
         ...
+
+
+@runtime_checkable
+class BoxMeasuringSession(Protocol):
+    """Optional: a session that can say where matched elements sit on its rendered page."""
+
+    async def element_boxes(
+        self, selectors: Sequence[str]
+    ) -> Mapping[str, Sequence[Mapping[str, float]]]: ...
 
 
 @runtime_checkable

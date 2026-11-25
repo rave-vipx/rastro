@@ -12,6 +12,7 @@ Harassment, discriminatory language, threats, sexual attention, publishing priva
 
 ## Reporting and enforcement
 
-Report concerns privately to **admin@rave-app.com**, including links or screenshots when safe to share. The project maintainer will assess reports, protect reporter privacy as far as practical, and may request changes, remove content, limit participation, or ban repeat or severe offenders. People involved in a report should disclose conflicts of interest.
+<!-- contact: pending maintainer decision -->
+Report concerns privately by contacting the maintainers through the repository's private security advisory form or GitHub profile, including links or screenshots when safe to share. The project maintainer will assess reports, protect reporter privacy as far as practical, and may request changes, remove content, limit participation, or ban repeat or severe offenders. People involved in a report should disclose conflicts of interest.
 
 This policy covers repository issues, pull requests, discussions, and other spaces operated by the Rastro project. Good-faith reports will not result in retaliation.

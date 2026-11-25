@@ -1,4 +1,4 @@
-"""Generate and replay reproducible fixtures from successful extractions (MOCK-001, MOCK-006).
+"""Generate and replay reproducible fixtures from successful extractions.
 
 ``build_fixture`` sanitizes the acquired body, records the expected extraction and
 synthesizes schema-valid records, then proves the bundle clean and replayable

@@ -1,4 +1,8 @@
-"""robots.txt enforcement for one request, with the run's cache (N10, SEC-008, SEC-003)."""
+"""robots.txt enforcement for one request, with the run's cache.
+
+robots.txt is skipped for a host the operator listed with ``--ignore-robots`` and for a job
+with ``robots = "ignore"``, which needs the ``robots_ignore`` capability for its origin.
+"""
 
 from __future__ import annotations
 
@@ -10,6 +14,7 @@ from urllib.parse import urlsplit, urlunsplit
 import structlog
 
 from rastro.application.acquisition_state import _Host, _Operation
+from rastro.application.capability_gate import require
 from rastro.application.http_policy import REDIRECT_STATUSES, check_status, redirect_target
 from rastro.application.robots import parse_robots_response
 from rastro.application.robots_cache import RobotsEntry, raise_failure
@@ -29,10 +34,15 @@ async def check_robots(
     parsed = urlsplit(url)
     hostname = parsed.hostname or ""
     if hostname in operation.policy.grants.ignore_robots:
-        # The operator asserts permission (SEC-003); every other check still applies.
+        # The operator asserts permission; every other check still applies.
         if hostname not in operation.overridden:
             operation.overridden.add(hostname)
             _LOG.info("robots_overridden", host=hostname)
+        return
+    if operation.policy.robots == "ignore":
+        # Checked again here so a policy built outside a job is refused for untrusted input.
+        require(frozenset({"robots_ignore"}))
+        operation.overridden.add(hostname)  # flags the result; the job gate logs it once
         return
     origin = urlunsplit((parsed.scheme, parsed.netloc, "", "", ""))
     async with operation.robots.lock(origin):

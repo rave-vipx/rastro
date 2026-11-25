@@ -1,5 +1,4 @@
-"""Agent-in-the-loop MCP tools through the real protocol (AGENT-002, AGENT-003, REPAIR-001-005,
-INT-001, QUAL-006).
+"""Agent-in-the-loop MCP tools through the real protocol.
 
 The MCP client's own model plays the repair proposer: a synthetic job board breaks, the agent
 reads repair_context, proposes recipes and judges meaning; Rastro gates and stores them.
@@ -92,7 +91,7 @@ async def broken(root: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_repair_context_gives_a_model_what_it_needs(workspace: Path) -> None:
-    """AGENT-002: failing recipe, fields, last success values, current issues, outline."""
+    """Failing recipe, fields, last success values, current issues, outline."""
     await broken(workspace)
     memory = workspace / "jobs" / "recipes.sqlite"
     before = memory.stat().st_mtime_ns
@@ -118,7 +117,7 @@ async def test_repair_context_before_any_load_creates_no_store(workspace: Path) 
 
 @pytest.mark.asyncio
 async def test_a_correct_proposal_is_stored_reviewed_and_promoted(workspace: Path) -> None:
-    """REPAIR-002/003/005: the agent's recipe is composed with the serving locator, passes the
+    """The agent's recipe is composed with the serving locator, passes the
     gates, waits for the agent's promotion, is reused when proposed again, and comes back with
     the side-by-side values the agent judges."""
     await broken(workspace)
@@ -173,7 +172,7 @@ async def test_a_correct_proposal_is_stored_reviewed_and_promoted(workspace: Pat
 @pytest.mark.asyncio
 @pytest.mark.parametrize("auto", [False, True])
 async def test_wrong_proposal_title_to_city_is_never_promoted(workspace: Path, auto: bool) -> None:
-    """REPAIR-003, QUAL-006: a semantically wrong mapping is never promoted, even with the
+    """A semantically wrong mapping is never promoted, even with the
     serving union and the job's auto_promote; the side-by-side values expose it."""
     if auto:
         job = workspace / "jobs" / "job.toml"
@@ -198,7 +197,7 @@ async def test_wrong_proposal_title_to_city_is_never_promoted(workspace: Path, a
 
 @pytest.mark.asyncio
 async def test_proposal_never_auto_promotes_the_agent_judges(workspace: Path) -> None:
-    """REPAIR-004/005: the calling agent is the semantic judge, so even a job with
+    """The calling agent is the semantic judge, so even a job with
     auto_promote keeps the passing proposal a candidate until recipe_promote."""
     job = workspace / "jobs" / "job.toml"
     job.write_text(JOB + "\n[repair]\nauto_promote = true\n", encoding="utf-8")
@@ -247,7 +246,7 @@ async def test_propose_refuses_unprintable_reasons(workspace: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_author_a_recipe_for_a_new_page_with_context_and_try(workspace: Path) -> None:
-    """INT-001: suggest_context then recipe_try lets an agent iterate without examples."""
+    """Suggest_context then recipe_try lets an agent iterate without examples."""
     failed, context = await call(
         workspace, "suggest_context", page_path="jobs/board.html", fields=["job_id", "title"]
     )
@@ -286,7 +285,7 @@ async def test_agent_tools_stay_inside_the_workspace(workspace: Path, page: str)
 
 @pytest.mark.asyncio
 async def test_outline_is_bounded_on_a_huge_page(workspace: Path) -> None:
-    """AGENT-002: the outline has its own size limit; other values are cut and flagged."""
+    """The outline has its own size limit; other values are cut and flagged."""
     rows = "".join(f'<div class="row r{n}"><p>{"word " * 50}</p></div>' for n in range(3000))
     (workspace / "jobs" / "big.html").write_text(f"<html><body>{rows}</body></html>")
     failed, context = await call(

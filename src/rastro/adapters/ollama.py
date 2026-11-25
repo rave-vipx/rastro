@@ -1,4 +1,4 @@
-"""Optional, local-only Ollama chat adapter (AI-001-004). Install rastro-engine[ollama]."""
+"""Optional, local-only Ollama chat adapter. Install rastro-engine[ollama]."""
 
 from __future__ import annotations
 

@@ -1,6 +1,6 @@
-"""`rastro capabilities` and `rastro init --agent`: tell a coding agent what Rastro does (N18,
-AGENT-001, SEC-008). `init` writes only inside ``--path``, never follows symlinks and replaces
-files atomically; failures are ``ConfigurationError`` (JSON on stderr, exit 2).
+"""`rastro capabilities` and `rastro init --agent`: tell a coding agent what Rastro does. `init`
+writes only inside ``--path``, never follows symlinks and replaces files atomically; failures
+are ``ConfigurationError`` (JSON on stderr, exit 2).
 
 Every step is anchored to directory descriptors opened with ``O_NOFOLLOW``, so a directory
 swapped for a symlink mid-run cannot redirect the write. Where ``dir_fd`` is unsupported
@@ -78,7 +78,7 @@ def init_project(root: Path, agent: str, fmt: str) -> dict[str, str]:
     """Write the agent block or skill under ``root``; report the file and what changed."""
     if root.is_symlink() or not root.is_dir():
         raise ConfigurationError("--path must be an existing directory, not a symbolic link")
-    if not _ANCHORED:  # no race-free directory-relative writes on this platform (SEC-008)
+    if not _ANCHORED:  # no race-free directory-relative writes on this platform
         raise ConfigurationError(
             "rastro init needs directory-relative file operations, unavailable on this "
             "platform; run `rastro capabilities --output markdown` and paste it instead"

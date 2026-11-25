@@ -1,5 +1,5 @@
 """MCP authoring tools: suggest a recipe, create a job, extract once from a saved page
-(AGENT-002, INT-001, INT-002, JOB-001).
+.
 
 Pages are workspace files read with a byte bound and never through a symlink. These tools
 never fetch the network: ``url`` only sets the address used for relative links.
@@ -15,7 +15,7 @@ from pydantic import BaseModel, ValidationError
 
 from rastro.application.job_new import new_job
 from rastro.application.suggest import suggest
-from rastro.cli_suggest import suggestion_payload
+from rastro.cli_suggest_output import suggestion_payload
 from rastro.domain.injection import record_flags
 from rastro.domain.job_fields import StringField, build_job_schema
 from rastro.domain.models import ConfigurationError, Limits, Recipe

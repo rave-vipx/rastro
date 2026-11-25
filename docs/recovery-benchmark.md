@@ -1,18 +1,15 @@
-# Recovery benchmark protocol (v0.2, frozen before implementation)
+# Recovery benchmark protocol
 
-This page fixes how Rastro v0.2 automatic recovery will be evaluated **before any
-repair code exists**. It supports **DIFF-001** (recovery effectiveness, silent error
-detection, maintenance effort, AI inference usage), specification section 17
-(recovery success rate, mean time to detect degradation, mean time to restore,
-false success, silent error detection), **REPAIR-001–006**, **DRIFT-001–005**,
-**QUAL-005/006**, **MOCK-002/003** and **MOCK-004/005** (labelled synthetic fixtures).
+This page fixes how Rastro's automatic recovery is evaluated, so the pass criteria
+cannot be tuned after seeing results. It measures recovery success rate, mean time to detect degradation, mean time to
+restore, false success and silent error detection on labelled synthetic fixtures.
 See [ADR 0011](decisions/0011-recovery-benchmark.md) for the reasoning.
 
-**Status: protocol and corpus frozen; no results exist.** v0.1 documentation states
-that recovery is unmeasured. Nothing here is a claim of superiority.
-Everything below the "[Reproducibility](#reproducibility)" heading describes commands
-that v0.2 must implement; only corpus verification exists today
-(`tests/unit/test_recovery_corpus.py`).
+**Status: the protocol and corpus are frozen and verifiable; the full runner is not
+implemented, so no recovery results are published.** Corpus verification exists
+(`tests/unit/test_recovery_corpus.py`). Nothing here is a claim of superiority; the
+commands under "[Reproducibility](#reproducibility)" marked as not implemented describe
+the intended interface.
 
 ## 1. Scenario model
 
@@ -40,11 +37,11 @@ data, never visible to executors):
 | `requires_warning` | An explicit non-success outcome or a degradation flag is required. |
 | `expected` | Expected records (`sku`, `name`, `price`, `priceCurrency`) as `Decimal`-normalised strings. |
 
-Change kinds cover the MOCK-002 structural mutations that apply to the
+Change kinds cover the structural mutations that apply to the
 selector-based corpus: `class_rename`, `wrapper_insertion`, `reordering`,
 `field_move`, `duplicated_candidate`, `removed_field`, `empty_container`, plus
 `semantic_trap` (stale-but-valid values). Changed labels and modified pagination are
-**not** covered by corpus v1; MOCK-003 transport failures (403, 429, timeout) belong to
+**not** covered by corpus v1; transport failures (403, 429, timeout) belong to
 acquisition tests, not this corpus. The soft-error page and the empty or no-results
 page are the corpus's invalid-response scenarios. Corpus v1 is HTML-only: JSON and
 JSON-LD recovery is out of scope and no claim may extend to it.
@@ -96,7 +93,7 @@ fails an executor module that contains a scenario id or an HTML fixture substrin
 | --- | --- |
 | `baseline_static` | Scrapling + Pydantic with the initial mapping only, strict: ambiguous, missing or invalid fields reject the record. Control. |
 | `baseline_adapted` | The comparison target: the same plus what a competent maintainer would write **without** scenario knowledge. (a) An ordered, scenario-independent fallback library applied identically everywhere: schema.org `itemprop`/`meta` selectors, `data-*` attributes named after the field, class-substring selectors (`[class*=price]`, `[class*=name]`, `[class*=title]`), and the first fallback that yields complete valid records wins. (b) A minimal alarm: no records, fewer than half the previous record count, any record missing a field, or a validation failure raises `degraded`. It never edits its own mappings, makes no model calls and activates nothing. |
-| `rastro` | Rastro v0.2 through its public SDK with default thresholds and one fixed configuration for every scenario, split and run. Model: either a deterministic generic proposer that sees only what the real prompt contains, or a pinned local model at temperature 0 whose ID and digest are recorded. A replay cache is allowed only if recorded from a live run of the same split. |
+| `rastro` | Rastro through its public SDK with default thresholds and one fixed configuration for every scenario, split and run. Model: either a deterministic generic proposer that sees only what the real prompt contains, or a pinned local model at temperature 0 whose ID and digest are recorded. A replay cache is allowed only if recorded from a live run of the same split. |
 | `always_alarm`, `never_alarm` | Gaming controls: report non-success for everything, or success with the initial integration's records and no flag. They must score as the metrics section predicts (false alarms 100%, recovery 0%; silent errors high). |
 
 The baseline's fallback library is fixed in the first harness pull request and its
@@ -149,9 +146,9 @@ A zero denominator is `null`, never 0% or 100%. With 8 to 12 episodes per split 
 intervals are wide; results describe mechanisms on a synthetic corpus, not
 real-world rates.
 
-## 4. Pass criteria for a DIFF-001 recovery claim
+## 4. Pass criteria for a recovery claim
 
-Decided now; they cannot be edited after the first v0.2 result. Evaluate `rastro`
+Decided in advance; they cannot be edited after the first published result. Evaluate `rastro`
 against `baseline_adapted`, both splits, same machine, `deny_all`, one configuration.
 
 | ID | Criterion (sealed split; development must satisfy it too unless stated) |
@@ -169,7 +166,7 @@ Verdicts, checked top to bottom, first match wins: **negative** if C2 or C3 fail
 either split; **no advantage** if `RSR_1(rastro) <= RSR_1(baseline_adapted)` on either split; **partially demonstrated** if C1 fails but C5 holds (C2 and C3
 already hold at this point); **not demonstrated** if any other criterion fails;
 **demonstrated on this synthetic corpus** only if C1–C8 all hold on both splits. A "demonstrated"
-verdict permits the sentence "on the Rastro v0.2 recovery benchmark, corpus v1,
+verdict permits the sentence "on the Rastro recovery benchmark, corpus v1,
 Rastro recovered more episodes than an adapted Scrapling + Pydantic baseline without
 bad activations", with the model, environment and counts. It permits no claim about
 JSON, browsers, live sites, accuracy outside this corpus, latency, or general
@@ -221,8 +218,8 @@ contains the current hashes.
 
 ## Reproducibility
 
-Planned for v0.2. Only the first command and the `benchmarks.recovery.corpus.load_split`
-integrity loader exist today; the rest are not implemented:
+Only the first command and the `benchmarks.recovery.corpus.load_split`
+integrity loader exist today; the rest are not implemented yet:
 
 ```bash
 uv run pytest tests/unit/test_recovery_corpus.py          # exists today

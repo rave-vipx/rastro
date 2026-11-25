@@ -1,5 +1,4 @@
-"""MCP job and recipe lifecycle tools: extract, repair, promote, apply, history, drift (AGENT-002,
-AGENT-003, REPAIR-002-005, REC-006, DRIFT-001).
+"""MCP job and recipe lifecycle tools: extract, repair, promote, apply, history, drift.
 
 Each function wraps the public API used by the CLI with workspace-relative paths, so the same
 containment, gates and policies apply. Results are bounded JSON-ready dicts.

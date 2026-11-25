@@ -53,7 +53,7 @@ def _validate_endpoint(url: str, *, allow_path: bool, allow_remote: bool, model:
 
 
 class PricedProvider(RedactedContract):
-    """Optional USD price and per-run limit for a model's calls (COST-002)."""
+    """Optional USD price and per-run limit for a model's calls."""
 
     cost_per_call: float | None = Field(default=None, ge=0, le=1000, allow_inf_nan=False)
     max_cost: float | None = Field(default=None, gt=0, le=1_000_000, allow_inf_nan=False)

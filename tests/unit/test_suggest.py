@@ -1,4 +1,4 @@
-"""Example-driven recipe suggestions on synthetic layouts (INT-002, DISC-003, P-003)."""
+"""Example-driven recipe suggestions on synthetic layouts."""
 
 from __future__ import annotations
 
@@ -254,7 +254,7 @@ PRICED = """<ul><li class="p"><b>Teclado mecánico</b><span>59.90 EUR</span></li
 
 
 def test_type_failure_blames_only_the_field_whose_page_value_fails_the_schema():
-    """B3: found on the page but not valid for the type is not 'not reproduced' (INT-003)."""
+    """B3: found on the page but not valid for the type is not 'not reproduced'."""
     with pytest.raises(SuggestionError) as caught:
         rastro.suggest(PRICED, Priced, examples=[{"name": "Teclado mecánico", "price": "59.90"}])
     message = str(caught.value)

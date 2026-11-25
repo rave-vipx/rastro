@@ -15,7 +15,6 @@ from rastro.adapters.sqlite_files import create_private, restrict
 from rastro.adapters.sqlite_lifecycle import (
     apply_changes,
     delete_events,
-    drop_orphan_events,
     next_version,
     read_history,
     serving_status,
@@ -30,7 +29,9 @@ from rastro.adapters.sqlite_records import (
     find_serving,
     insert_candidate,
 )
+from rastro.adapters.sqlite_retention import prune_versions
 from rastro.adapters.sqlite_schema import check_current, migrate
+from rastro.adapters.sqlite_start_level import store_start_level
 from rastro.domain.lifecycle import RecipeState, plan_creation, plan_rollback, plan_transition
 from rastro.domain.lifecycle_history import LifecycleHistory
 from rastro.domain.memory import (
@@ -41,6 +42,7 @@ from rastro.domain.memory import (
     utc_timestamp,
 )
 from rastro.domain.models import ConfigurationError, Recipe
+from rastro.domain.source_notes import LadderLevel
 
 
 class SQLiteRecipeRepository:
@@ -149,10 +151,17 @@ class SQLiteRecipeRepository:
             )
             return self._read(db, key, identity, recipe.version)
 
+    def save_start_level(
+        self, key: RecipeKey, version: int, level: LadderLevel, *, runs: int
+    ) -> None:
+        """Remember the acquisition level ``version`` last worked at (ADR 0039)."""
+        with self._connection(write=True) as db:
+            store_start_level(db, key.canonical(), version, level, runs)
+
     def save_candidate(
         self, key: RecipeKey, recipe: Recipe, *, selected_index: int, at: datetime
     ) -> StoredRecipe:
-        """Store an evaluated proposal as a new candidate version (REC-006).
+        """Store an evaluated proposal as a new candidate version.
 
         Candidates never touch existing versions: any stored version number conflicts.
         """
@@ -201,7 +210,7 @@ class SQLiteRecipeRepository:
             return self._read(db, key, identity, version)
 
     def rollback(self, key: RecipeKey, version: int, *, reason: str, at: datetime) -> StoredRecipe:
-        """Return a retired version that previously served to active service (REPAIR-006)."""
+        """Return a retired version that previously served to active service."""
         check_version(version, required=True)
         reason = check_lifecycle_input(reason, at)
         identity = key.canonical()
@@ -237,18 +246,5 @@ class SQLiteRecipeRepository:
         issued twice for different recipes.
         """
         cutoff = utc_timestamp(before)
-        where = (
-            "last_success_at < ? AND version < "
-            "(SELECT MAX(newest.version) FROM recipes AS newest WHERE newest.key = recipes.key)"
-        ) + (" AND state NOT IN ('active', 'degraded')" if keep_serving else "")
         with self._connection(write=not dry_run) as db:
-            if dry_run:
-                return int(
-                    db.execute(f"SELECT COUNT(*) FROM recipes WHERE {where}", (cutoff,)).fetchone()[
-                        0
-                    ]
-                )
-            count = db.execute(f"DELETE FROM recipes WHERE {where}", (cutoff,)).rowcount
-            if count:
-                drop_orphan_events(db)
-            return count
+            return prune_versions(db, cutoff, keep_serving=keep_serving, dry_run=dry_run)

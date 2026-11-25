@@ -1,11 +1,11 @@
-"""Why a discovered link is not fetched, decided before a page slot is spent (N3)."""
+"""Why a discovered link is not fetched, decided before a page slot is spent."""
 
 from __future__ import annotations
 
 from rastro.application.acquisition_state import PaginationScope, pagination_boundary
 from rastro.application.destinations import permitted_url
 from rastro.application.operator_trust import current_trust
-from rastro.application.spider_links import Link, path_matches
+from rastro.application.spider_links import Link, path_matches, pattern_matches
 from rastro.domain.acquisition import AcquisitionError, AcquisitionPolicy
 from rastro.domain.spider import SpiderPolicy
 from rastro.domain.spider_report import SpiderOutcome
@@ -29,7 +29,7 @@ def link_refusal(
     spider: SpiderPolicy,
     policy: AcquisitionPolicy | None,
     *,
-    paths: bool = True,  # False for a child sitemap: allow/deny are for pages (N16)
+    paths: bool = True,  # False for a child sitemap: allow/deny are for pages
 ) -> SpiderOutcome | None:
     boundary = pagination_boundary(link.url, scope.host, scope.secure, scope.hosts)
     if boundary:
@@ -39,7 +39,9 @@ def link_refusal(
         return refusal
     if paths and (
         path_matches(link.path, spider.deny)
+        or (spider.deny_pattern and pattern_matches(link.path, spider.deny_pattern))
         or (spider.allow and not path_matches(link.path, spider.allow))
+        or (spider.allow_pattern and not pattern_matches(link.path, spider.allow_pattern))
     ):
         return "path_denied"
     return None

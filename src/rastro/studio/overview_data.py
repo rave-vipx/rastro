@@ -1,4 +1,4 @@
-"""Read-only state behind the Projects and Sources views (N5): one job's dataset status,
+"""Read-only state behind the Projects and Sources views: one job's dataset status,
 run metrics, open drift, waiting candidates and Studio's run log, reduced to plain statuses.
 
 Every code shown comes from Rastro's own vocabulary (``KNOWN_CODES``); anything else read
@@ -25,6 +25,8 @@ from rastro.domain.jobs import Job
 from rastro.domain.lifecycle import RecipeState
 from rastro.domain.metrics import RunMetric
 from rastro.domain.models import Outcome
+from rastro.domain.run_report import RunReport
+from rastro.studio.overview_say import RANK, hint, light
 from rastro.studio.run_log import LoggedRun, LoggedSource, read_runs
 
 FAILED = frozenset(o.value for o in Outcome) - {"success", "unchanged", "partial_success"}
@@ -60,6 +62,8 @@ class JobState:
     records: int = 0
     # Configured URL -> the final URL a redirect stored it under (from the run metrics).
     redirects: dict[str, str] = field(default_factory=dict)
+    # The run report of the latest logged load, if Studio kept one.
+    report: RunReport | None = None
 
 
 def _dataset(state: JobState, root: Path, path: Path) -> None:
@@ -100,6 +104,7 @@ def job_state(root: Path, path: Path, job: Job) -> JobState:
     _dataset(state, root, path)
     _candidates(state, root, path)
     state.runs = read_runs(root, path)
+    state.report = next((r.report for r in reversed(state.runs) if r.report), None)
     return state
 
 
@@ -164,9 +169,12 @@ def source_row(state: JobState, url: str) -> dict[str, Any]:
         metric.finished_at if metric else None,
     ]
     last = next((m for m in moments if m is not None), None)
+    say = hint(state.report, url)
     return {
         "url": url,
         "status": kind,
+        "light": light(kind, say),
+        "say": say,
         "issue_code": issue,
         "last_fetch": last.isoformat() if last else None,
         **_counts(metric, item),
@@ -207,6 +215,7 @@ def project(rel: str, state: JobState) -> dict[str, Any]:
         health = "warnings"
     else:
         health = "ok"
+    lights = [r["light"] for r in rows]
     moments = [r["last_fetch"] for r in rows if r["last_fetch"]]
     last = max(moments, key=datetime.fromisoformat) if moments else None
     spec = state.job.dataset
@@ -215,6 +224,7 @@ def project(rel: str, state: JobState) -> dict[str, Any]:
         "name": display_name(spec.name if spec else Path(rel).stem),
         "dataset": spec.name if spec else None,
         "health": health,
+        "light": max(lights, key=RANK.__getitem__) if lights else "grey",
         "last_run": last,
         "records": state.records,
         "sources_total": len(rows),

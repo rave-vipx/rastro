@@ -1,4 +1,4 @@
-"""COST-002: remote-model cost notice and an enforced model cost limit."""
+"""Remote-model cost notice and an enforced model cost limit."""
 
 import asyncio
 import json
