@@ -49,10 +49,10 @@ mkdir my-scrapers && rastro studio --root my-scrapers
 
 Open the loopback URL printed in the terminal, choose **Start from a URL**, paste a page you
 have permission to scrape, name the fields you want and give one example value for each (with
-a model, names alone are enough). Studio shows the records it found before anything is saved:
+a model, names alone are enough). Studio shows the records it found, and where on the page each field was read, before anything is saved:
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/rave-vipx/rastro/main/docs/assets/studio-review.png" alt="Studio's guided create, review step: six records found on a synthetic catalogue page, with name, price and stock columns." width="100%">
+  <img src="https://raw.githubusercontent.com/rave-vipx/rastro/main/docs/assets/studio-review.png" alt="Studio's guided create, review step: six records found on a synthetic catalogue page, and the page snapshot with each field outlined where it was read." width="100%">
 </p>
 
 Name the project, save it, and press **Load into dataset**. Load again later to update the

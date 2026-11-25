@@ -15,7 +15,7 @@ does the rest. **AI writes the scraper once, recipes keep it running.**
 No model is required: example values build a recipe deterministically, and repair also runs
 without one.
 
-![Studio's guided create, review step: records found on a synthetic catalogue page](assets/studio-review.png)
+![Studio's guided create, review step: records found on a synthetic catalogue page, with each field outlined on the page snapshot](assets/studio-review.png)
 
 ## Start here
 
