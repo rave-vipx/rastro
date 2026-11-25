@@ -12,6 +12,9 @@ from rastro.domain.acquisition import AcquisitionPolicy, HttpResponse
 from rastro.domain.browser_controls import HostLimits
 from rastro.domain.models import Source
 
+# Timers on some platforms (Windows) tick every ~15 ms; intervals are checked with that slack.
+CLOCK_SLACK = 0.02
+
 
 class Resolver:
     async def resolve(self, host, port):
@@ -90,7 +93,7 @@ async def test_widened_delay_spaces_the_next_request():
     client = _acquirer(transport, throttle)
     for index in range(2):
         await client.acquire(Source(url=f"https://a.example/{index}"), max_bytes=1000)
-    assert transport.starts[1] - transport.starts[0] >= 0.25
+    assert transport.starts[1] - transport.starts[0] >= 0.25 - CLOCK_SLACK
 
 
 @pytest.mark.asyncio
@@ -100,7 +103,7 @@ async def test_the_delay_never_drops_below_the_configured_interval():
     client = _acquirer(transport, throttle, min_interval_seconds=0.2)
     for index in range(2):
         await client.acquire(Source(url=f"https://a.example/{index}"), max_bytes=1000)
-    assert transport.starts[1] - transport.starts[0] >= 0.2
+    assert transport.starts[1] - transport.starts[0] >= 0.2 - CLOCK_SLACK
 
 
 @pytest.mark.asyncio
@@ -122,7 +125,7 @@ async def test_slow_host_widens_its_spacing_with_the_engine_throttle():
     for index in range(3):
         await client.acquire(Source(url=f"https://a.example/{index}"), max_bytes=1000)
     # Each gap is the transfer plus a delay that follows the observed latency.
-    assert transport.starts[2] - transport.starts[1] >= 0.25
+    assert transport.starts[2] - transport.starts[1] >= 0.25 - CLOCK_SLACK
 
 
 def test_autothrottle_without_the_engine_uses_the_stdlib_throttle(monkeypatch):

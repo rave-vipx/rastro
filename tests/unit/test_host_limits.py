@@ -11,6 +11,9 @@ from rastro.domain.acquisition import AcquisitionPolicy, HttpResponse
 from rastro.domain.browser_controls import HostLimits
 from rastro.domain.models import Source
 
+# Timers on some platforms (Windows) tick every ~15 ms; intervals are checked with that slack.
+CLOCK_SLACK = 0.02
+
 
 class Resolver:
     async def resolve(self, host, port):
@@ -57,7 +60,7 @@ async def test_host_interval_overrides_global():
     started = time.perf_counter()
     await _fetch_all(client, ["https://a.example/1", "https://a.example/2"])
     gap = transport.starts[1] - transport.starts[0]
-    assert 0.15 <= gap < 5
+    assert 0.15 - CLOCK_SLACK <= gap < 5
     assert time.perf_counter() - started < 5
 
 
@@ -70,7 +73,7 @@ async def test_host_without_entry_keeps_global_interval():
         hosts={"a.example": HostLimits(min_interval_seconds=0)},
     )
     await _fetch_all(client, ["https://b.example/1", "https://b.example/2"])
-    assert transport.starts[1] - transport.starts[0] >= 0.15
+    assert transport.starts[1] - transport.starts[0] >= 0.15 - CLOCK_SLACK
 
 
 @pytest.mark.asyncio
