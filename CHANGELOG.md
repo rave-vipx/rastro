@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- The public recipe hub now lives in this repository under `hub/` (three starter recipes, `health.json`, a CC0 license for recipes and `hub/build.py` to replay every package offline). `rastro hub` reads `https://raw.githubusercontent.com/rave-vipx/rastro/main/hub/` by default, and a `Hub` workflow verifies hub-only pull requests.
+
 ## [1.0.0] - 2026-11-24
 
 First stable release. The public Python names, the job file format, the run report schema and the CLI exit codes are frozen under the policy in `docs/stability.md`.

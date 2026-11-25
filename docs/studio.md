@@ -241,7 +241,7 @@ proxies), Studio stops at a plain-language prompt first: **Allow only for this s
 recipe use those permissions for jobs whose every address is on that site, while Studio installs
 and runs them; other sites, jobs that also read another site, and other kinds of input get
 nothing. The choice is kept in memory for this Studio run only and is never written to a job or
-a file. **Publish** prepares a proposal for the hub repository from your project, with a
+a file. **Publish** prepares a proposal for the `hub/` folder of the repository from your project, with a
 description per field and a synthetic sample; it says what is uploaded (never your data or
 credentials) and pushes nothing.
 

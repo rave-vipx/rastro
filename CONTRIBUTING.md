@@ -26,6 +26,10 @@ PR; documentation deploys only from `main`.
 
 Keep each commit focused, with a descriptive `feat:`, `fix:`, `test:`, or `docs:` message. Commit `uv.lock` whenever dependency resolution changes.
 
+## Publishing a recipe to the hub
+
+The public recipe hub is the `hub/` folder. Publish with `rastro hub publish ... --registry <checkout>/hub`, run `uv run python hub/build.py`, and open a pull request that only touches `hub/`. Hub-only pull requests may target `main` directly; the Hub workflow replays every package offline and rejects anything else. Library changes still go through `dev`. See `hub/README.md` for the rules (synthetic sample, every field described, no credentials or personal data).
+
 ## Verify
 
 ```bash

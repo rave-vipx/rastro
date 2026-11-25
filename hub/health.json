@@ -1,0 +1,26 @@
+{
+  "format": 1,
+  "packages": [
+    {
+      "id": "generic-crawl",
+      "last_verified": "2026-11-24",
+      "passed": true,
+      "rastro_version": "1.0.0",
+      "version": "1.0.0"
+    },
+    {
+      "id": "shopify-products",
+      "last_verified": "2026-11-24",
+      "passed": true,
+      "rastro_version": "1.0.0",
+      "version": "1.0.0"
+    },
+    {
+      "id": "sitemap-crawl",
+      "last_verified": "2026-11-24",
+      "passed": true,
+      "rastro_version": "1.0.0",
+      "version": "1.0.0"
+    }
+  ]
+}

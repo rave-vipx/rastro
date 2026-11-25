@@ -96,7 +96,7 @@ RECIPES_CAPABILITIES: tuple[Capability, ...] = (
         python=_names("hub_candidates HubCandidate"),
         cli=("rastro hub search", "rastro hub install", "rastro hub publish"),
         limits="Offers are candidates until your local gates pass; publish writes locally, "
-        "sharing is a pull request to the hub repository",
+        "sharing is a pull request that only touches `hub/`",
         instead_of="writing a recipe for a site someone already scraped",
         docs="docs/hub.md",
     ),

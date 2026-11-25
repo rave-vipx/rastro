@@ -256,7 +256,7 @@ What Rastro already does, for people and for AI coding agents. Use these before 
 - **Use:** `rastro hub search URL` offers recipes for the URL's domain from the public hub or any hub URL; `rastro hub install` stores one as a candidate; `rastro hub publish` writes your recipe, a synthetic sample and field descriptions into a hub checkout
 - **Python:** `hub_candidates`, `HubCandidate`
 - **CLI:** `rastro hub search`, `rastro hub install`, `rastro hub publish`
-- **Limits:** Offers are candidates until your local gates pass; publish writes locally, sharing is a pull request to the hub repository
+- **Limits:** Offers are candidates until your local gates pass; publish writes locally, sharing is a pull request that only touches `hub/`
 - **Do not build:** writing a recipe for a site someone already scraped
 - **Docs:** [hub.md](hub.md)
 

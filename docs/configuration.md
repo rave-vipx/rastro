@@ -1021,7 +1021,7 @@ Offer hub recipes for a URL's domain. Docs: [jobs.md#cli-commands-and-exit-codes
 | --- | --- | --- | --- | --- |
 | `URL` | value | required |  | The page you want to scrape |
 | `--registry` | Path | - |  | Local hub checkout instead of a URL |
-| `--registry-url` | URL | - |  | https registry URL (default: the public hub, https://raw.githubusercontent.com/rave-vipx/rastro-hub/main/) |
+| `--registry-url` | URL | - |  | https registry URL (default: the public hub, https://raw.githubusercontent.com/rave-vipx/rastro/main/hub/) |
 
 ### `rastro hub install`
 
@@ -1032,7 +1032,7 @@ Install a hub package as a candidate. Docs: [jobs.md#cli-commands-and-exit-codes
 | `PACKAGE` | value | required |  | Package id or id@version |
 | `--store` | Path | required |  | Recipe SQLite file |
 | `--registry` | Path | - |  | Local hub checkout instead of a URL |
-| `--registry-url` | URL | - |  | https registry URL (default: the public hub, https://raw.githubusercontent.com/rave-vipx/rastro-hub/main/) |
+| `--registry-url` | URL | - |  | https registry URL (default: the public hub, https://raw.githubusercontent.com/rave-vipx/rastro/main/hub/) |
 
 ### `rastro notify`
 

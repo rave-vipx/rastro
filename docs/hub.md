@@ -13,7 +13,7 @@ network safeguards as a scrape.
 
 The hub is a registry shared between users: a static Git repository with the registry
 layout below, served raw over HTTPS. Rastro points at the public hub by default
-(`https://raw.githubusercontent.com/rave-vipx/rastro-hub/main/`, the constant
+(`https://raw.githubusercontent.com/rave-vipx/rastro/main/hub/`, the constant
 `rastro.application.registry_url.DEFAULT_HUB_URL`); `--registry-url URL` points at a
 self-hosted hub with the same layout and `--registry DIR` at a local checkout. There are no
 accounts, no Rastro-operated server and no telemetry.
@@ -41,7 +41,7 @@ on your own page. A failed gate leaves the store unchanged.
 ### Publish in one step
 
 ```console
-$ rastro hub publish job.toml --source 1 --sample synthetic-page.html --registry ./rastro-hub \
+$ rastro hub publish job.toml --source 1 --sample synthetic-page.html --registry ./hub \
     --id listing-cards --version 1.0.0 --author "Your Name" --license Apache-2.0 \
     --describe title="The card's headline" --describe price_text="Price as printed"
 ```
@@ -54,6 +54,8 @@ printable characters. All gates of `export` and `publish` below apply, including
 and personal-data scan, which also covers `card.json`. The sample must be synthetic or yours to
 redistribute: Rastro never copies a page on its own. Publish never uses the network; it prints
 the `git` commands to commit, push and open a pull request against the hub.
+The hub lives in the `hub/` folder of the Rastro repository (see `hub/README.md`): run
+`python hub/build.py` to refresh its summaries and open a pull request that only touches `hub/`.
 
 ### Cards and health
 

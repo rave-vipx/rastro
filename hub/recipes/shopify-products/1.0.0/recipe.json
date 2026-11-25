@@ -1,0 +1,11 @@
+{
+  "fallbacks": [],
+  "fields": {
+    "price": "/variants/0/price",
+    "title": "/title"
+  },
+  "record_path": "/products",
+  "require_evidence": true,
+  "strategy": "json",
+  "version": 1
+}

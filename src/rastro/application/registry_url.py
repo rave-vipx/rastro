@@ -14,7 +14,7 @@ from rastro.domain.acquisition import AcquisitionPolicy
 from rastro.domain.acquisition_base import exact_host
 from rastro.domain.registry import RegistryError
 
-DEFAULT_HUB_URL = "https://raw.githubusercontent.com/rave-vipx/rastro-hub/main/"
+DEFAULT_HUB_URL = "https://raw.githubusercontent.com/rave-vipx/rastro/main/hub/"
 """The public recipe hub: a static Git repository served raw, with the registry layout."""
 
 _SEGMENT = re.compile(r"[A-Za-z0-9._~-]{1,128}")
