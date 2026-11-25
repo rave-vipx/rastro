@@ -34,8 +34,9 @@ def test_a_saved_checkpoint_is_private_versioned_json_and_loads_back(tmp_path):
     cp = store(tmp_path)
     secret_page = "https://shop.example/item?id=1&token=abc123"
     assert cp.save([(1, "https://shop.example/a"), (2, secret_page)], [seen_key(secret_page)])
-    assert stat.S_IMODE(cp.path.stat().st_mode) == 0o600
-    assert stat.S_IMODE(cp.path.parent.stat().st_mode) == 0o700
+    if os.name != "nt":  # Windows has no POSIX modes; the folder's access rules apply
+        assert stat.S_IMODE(cp.path.stat().st_mode) == 0o600
+        assert stat.S_IMODE(cp.path.parent.stat().st_mode) == 0o700
     raw = json.loads(cp.path.read_text())
     assert raw["version"] == 1
     assert all(len(item) == 32 and "token" not in item for item in raw["seen"])

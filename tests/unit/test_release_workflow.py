@@ -10,6 +10,8 @@ from pathlib import Path
 
 import pytest
 
+pytestmark = pytest.mark.skipif(os.name == "nt", reason="runs the workflow's bash script")
+
 WORKFLOW = Path(".github/workflows/release.yml")
 RELEASING = Path("docs/releasing.md")
 STABILITY = Path("docs/stability.md")
